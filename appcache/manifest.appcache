@@ -1,0 +1,19 @@
+CACHE MANIFEST
+#ver:2018-7-2 15:24:47
+#plugin:4.9.1
+
+CACHE:
+./js/vendor.js?eabb04e8aa6ecf2c80e7
+./js/entry.js?1cb837db8af137ce7034
+./js/manifest.js?9b7d75f4126e24d1f4d2
+./css/vendor.css?eabb04e8aa6ecf2c80e7
+./css/entry.css?1cb837db8af137ce7034
+./js/vendor.js.map?eabb04e8aa6ecf2c80e7
+./css/vendor.css.map?eabb04e8aa6ecf2c80e7
+./js/entry.js.map?1cb837db8af137ce7034
+./css/entry.css.map?1cb837db8af137ce7034
+./js/manifest.js.map?9b7d75f4126e24d1f4d2
+./
+
+NETWORK:
+*
