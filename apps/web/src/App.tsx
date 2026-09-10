@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { createProceduralAudioEngine, weatherCue } from "@lemonade/audio";
 import {
+  availableOperatingFunds,
   createInitialState,
   createSeededRandom,
   dayNumber,
+  financeRulesForTier,
   generateEnvironment,
   glassCount,
   moneyCents,
+  predictableFixedObligations,
   seed,
   signCount,
   simulateDay,
@@ -52,11 +55,43 @@ const moneyFormatter = new Intl.NumberFormat("en-US", {
 
 const formatMoney = (cents: number): string => moneyFormatter.format(cents / 100);
 
-const decisionLimit = (state: GameState): Readonly<{ glasses: number; signs: number }> =>
-  Object.freeze({
-    glasses: Math.min(250, Math.floor(Number(state.cash) / Number(state.unitCost))),
-    signs: Math.min(25, Math.floor(Number(state.cash) / Number(state.signCost))),
+const decisionBudget = (state: GameState): number =>
+  Math.max(
+    0,
+    Number(availableOperatingFunds(state)) - Number(predictableFixedObligations(state)),
+  );
+
+const decisionLimit = (state: GameState): Readonly<{ glasses: number; signs: number }> => {
+  const budget = decisionBudget(state);
+  return Object.freeze({
+    glasses: Math.min(250, Math.floor(budget / Number(state.unitCost))),
+    signs: Math.min(25, Math.floor(budget / Number(state.signCost))),
   });
+};
+
+const financeSummary = (state: GameState): string => {
+  const rules = financeRulesForTier(state.tier);
+  const parts: string[] = [];
+
+  if (Number(rules.supplierFee) > 0) {
+    parts.push(`${formatMoney(Number(rules.supplierFee))} supplier fee`);
+  }
+  if (Number(rules.taxRate) > 0) {
+    parts.push(`${(Number(rules.taxRate) / 100).toFixed(1)}% positive-profit tax`);
+  }
+  if (Number(rules.bankFee) > 0) {
+    parts.push(`${formatMoney(Number(rules.bankFee))} bank fee`);
+  }
+  if (Number(rules.creditLimit) > 0) {
+    parts.push(`${formatMoney(Number(rules.creditLimit))} working-capital limit`);
+    parts.push(`${(Number(rules.loanInterestRate) / 100).toFixed(2)}% daily loan interest`);
+    parts.push(`${(Number(rules.savingsInterestRate) / 100).toFixed(2)}% daily cash interest`);
+  }
+
+  return parts.length === 0
+    ? "Classic neighborhood rules — no added finance obligations."
+    : parts.join(" · ");
+};
 
 export const App = () => {
   const [random] = useState(() => createSeededRandom(seed(0x1e_ad_2026)));
@@ -71,8 +106,11 @@ export const App = () => {
   const [price, setPrice] = useState(10);
 
   const limits = useMemo(() => decisionLimit(game), [game]);
-  const spend = glasses * Number(game.unitCost) + signs * Number(game.signCost);
-  const affordable = spend <= Number(game.cash);
+  const fixedObligations = Number(predictableFixedObligations(game));
+  const operatingFunds = Number(availableOperatingFunds(game));
+  const spend =
+    glasses * Number(game.unitCost) + signs * Number(game.signCost) + fixedObligations;
+  const affordable = spend <= operatingFunds;
 
   useEffect(() => {
     const onVisibilityChange = (): void => {
@@ -114,6 +152,9 @@ export const App = () => {
       audio.play("day:submit");
       const resultCue = Number(resolution.entry.net) >= 0 ? "day:profit" : "day:loss";
       window.setTimeout(() => audio.play(resultCue), 220);
+      if (resolution.nextState.tier !== game.tier) {
+        window.setTimeout(() => audio.play("progression:unlock"), 520);
+      }
     });
   };
 
@@ -157,6 +198,12 @@ export const App = () => {
             <dt>Cash</dt>
             <dd>{formatMoney(Number(game.cash))}</dd>
           </div>
+          {(game.tier >= 3 || Number(game.loanBalance) > 0) && (
+            <div>
+              <dt>Debt</dt>
+              <dd>{formatMoney(Number(game.loanBalance))}</dd>
+            </div>
+          )}
         </dl>
       </header>
 
@@ -181,6 +228,11 @@ export const App = () => {
         </div>
       </section>
 
+      <aside className="obligation-strip" aria-label="Business finance rules">
+        <strong>Business tier {game.tier}</strong>
+        <span>{financeSummary(game)}</span>
+      </aside>
+
       <LemonsvilleScene
         environment={environment}
         visibleSigns={sceneSigns}
@@ -197,7 +249,7 @@ export const App = () => {
               <h2>Three decisions. Then sell.</h2>
             </div>
             <p className={affordable ? "spend" : "spend spend-warning"}>
-              Spend {formatMoney(spend)} of {formatMoney(Number(game.cash))}
+              Spend {formatMoney(spend)} of {formatMoney(operatingFunds)} operating funds
             </p>
           </header>
 
@@ -257,7 +309,7 @@ export const App = () => {
 
           {!affordable && (
             <p className="inline-error" role="alert">
-              This plan costs more cash than the stand has. Reduce glasses or signs.
+              This plan exceeds available cash and credit. Reduce glasses or signs.
             </p>
           )}
 
@@ -282,7 +334,7 @@ export const App = () => {
 
           <dl className="results-grid">
             <div>
-              <dt>Revenue</dt>
+              <dt>Sales</dt>
               <dd>{formatMoney(Number(phase.resolution.entry.revenue))}</dd>
             </div>
             <div>
@@ -294,12 +346,35 @@ export const App = () => {
               <dd>{formatMoney(Number(phase.resolution.entry.endingCash))}</dd>
             </div>
             <div>
-              <dt>Potential demand</dt>
-              <dd>{Number(phase.resolution.entry.potentialDemand)}</dd>
+              <dt>Ending debt</dt>
+              <dd>{formatMoney(Number(phase.resolution.entry.endingLoanBalance))}</dd>
             </div>
           </dl>
 
+          <div className="ledger-breakdown">
+            <h3>Day ledger</h3>
+            <table>
+              <caption>Credits, operating expenses and financing movements for this day</caption>
+              <tbody>
+                {phase.resolution.entry.lines.map((line, index) => (
+                  <tr key={`${line.kind}-${index}`}>
+                    <th scope="row">{line.label}</th>
+                    <td className={line.direction === "credit" ? "ledger-credit" : "ledger-debit"}>
+                      {line.direction === "credit" ? "+" : "−"}
+                      {formatMoney(Number(line.amount))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
           <p className="event-note">{eventLabel[phase.resolution.entry.environment.event.kind]}</p>
+          {phase.resolution.nextState.tier !== game.tier && (
+            <p className="progression-note">
+              Tier {phase.resolution.nextState.tier} unlocks tomorrow. New finance rules will be shown before you sell.
+            </p>
+          )}
           <button className="next-button" type="button" onClick={planNextDay}>
             Plan next day
           </button>
