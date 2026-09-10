@@ -29,6 +29,6 @@ test("prevents an unaffordable plan before submission", async ({ page }) => {
   await signs.focus();
   await page.keyboard.press("End");
 
-  await expect(page.getByRole("alert")).toContainText("costs more cash");
+  await expect(page.getByRole("alert")).toContainText("available cash and credit");
   await expect(page.getByRole("button", { name: "Sell for the day" })).toBeDisabled();
 });
