@@ -6,6 +6,7 @@ const typedSources = [
   "e2e/**/*.ts",
   "*.config.ts",
 ];
+const scopeTypedConfig = (config) => ({ ...config, files: typedSources });
 
 export default tseslint.config(
   {
@@ -14,12 +15,13 @@ export default tseslint.config(
       "build/**",
       "dist/**",
       "node_modules/**",
+      "public/**",
       "*.js",
       "legacy/**",
     ],
   },
-  ...tseslint.configs.strictTypeChecked,
-  ...tseslint.configs.stylisticTypeChecked,
+  ...tseslint.configs.strictTypeChecked.map(scopeTypedConfig),
+  ...tseslint.configs.stylisticTypeChecked.map(scopeTypedConfig),
   {
     files: typedSources,
     languageOptions: {
