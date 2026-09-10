@@ -129,4 +129,25 @@ describe("finance progression", () => {
     expect(Number(result.entry.endingCash)).toBe(986);
     expect(result.entry.lines.some((line) => line.kind === "savings-interest")).toBe(true);
   });
+
+  it("conserves business equity across operating and financing flows", () => {
+    const states = [
+      stateFor(14, 2, 1_000),
+      stateFor(21, 3, 5),
+      stateFor(21, 3, 100, 500),
+      stateFor(35, 4, 750, 250),
+    ] as const;
+
+    for (const state of states) {
+      const result = simulateDay(state, decision(10, 0, 10), neutralEnvironment());
+      const openingEquity = Number(state.cash) - Number(state.loanBalance);
+      const endingEquity =
+        Number(result.entry.endingCash) - Number(result.entry.endingLoanBalance);
+
+      expect(endingEquity).toBe(openingEquity + Number(result.entry.net));
+      expect(Number(result.entry.cashDelta)).toBe(
+        Number(result.entry.endingCash) - Number(state.cash),
+      );
+    }
+  });
 });
