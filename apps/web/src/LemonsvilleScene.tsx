@@ -54,9 +54,13 @@ export const LemonsvilleScene = ({
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onChange = (): void => setReducedMotion(media.matches);
+    const onChange = (): void => {
+      setReducedMotion(media.matches);
+    };
     media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
+    return () => {
+      media.removeEventListener("change", onChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -70,7 +74,9 @@ export const LemonsvilleScene = ({
     }
 
     controllerRef.current = controller;
-    const resize = (): void => controller.resize(canvas.clientWidth, canvas.clientHeight);
+    const resize = (): void => {
+      controller.resize(canvas.clientWidth, canvas.clientHeight);
+    };
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
     resize();
@@ -86,7 +92,7 @@ export const LemonsvilleScene = ({
     controllerRef.current?.update(sceneState);
   }, [sceneState]);
 
-  const description = `${environment.weather.kind.replaceAll("-", " ")} weather; ${environment.sentiment.kind.replaceAll("-", " ")} market sentiment; ${visibleSigns} advertising signs visible.`;
+  const description = `${environment.weather.kind.replaceAll("-", " ")} weather; ${environment.sentiment.kind.replaceAll("-", " ")} market sentiment; ${String(visibleSigns)} advertising signs visible.`;
 
   return (
     <section className="stand-stage" aria-label="Lemonsville lemonade stand">
