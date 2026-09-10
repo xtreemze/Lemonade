@@ -1,18 +1,8 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./public/",
-    "sourceMap": true,
-    "noImplicitAny": true,
-    "module": "commonjs",
-    // "module": "es6",
-    "target": "es6",
-    // "allowJs": true,
-    // "removeComments": true,
-    // "declaration": true,
-    "pretty": true
-    // "strict": true
+    "noEmit": true,
+    "types": ["node", "@playwright/test"]
   },
-  "include": ["app"],
-  "exclude": ["node_modules"],
-  "types": []
+  "include": ["playwright.config.ts", "e2e/**/*.ts"]
 }
