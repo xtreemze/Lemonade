@@ -4,19 +4,22 @@
   "private": true,
   "description": "A modern revival of the classic Lemonade Stand business simulation",
   "type": "module",
+  "packageManager": "pnpm@12.4.0",
   "engines": {
-    "node": "24.x"
+    "node": "24.x",
+    "pnpm": ">=12.4.0 <13"
   },
   "scripts": {
     "dev": "pnpm --filter @lemonade/web dev",
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",
-    "lint": "pnpm -r --if-present lint",
+    "lint": "eslint .",
     "test": "pnpm -r --if-present test",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "eslint": "^10.10.0",
     "typescript": "^6.0.0",
     "vitest": "^5.0.0"
   },
