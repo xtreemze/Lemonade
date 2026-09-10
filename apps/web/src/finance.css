@@ -1,0 +1,102 @@
+.obligation-strip {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 2px solid #211d14;
+  background: #fff9e4;
+  box-shadow: 4px 4px 0 #211d14;
+}
+
+.obligation-strip strong {
+  flex: 0 0 auto;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  text-transform: uppercase;
+}
+
+.obligation-strip span {
+  color: #5d5749;
+  font-size: 0.86rem;
+  text-align: right;
+}
+
+.ledger-breakdown {
+  margin: 18px 0;
+  border: 2px solid #211d14;
+  background: #fffdf3;
+}
+
+.ledger-breakdown h3 {
+  margin: 0;
+  padding: 12px 14px;
+  border-bottom: 2px solid #211d14;
+  background: #f7cf52;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ledger-breakdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-breakdown caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.ledger-breakdown th,
+.ledger-breakdown td {
+  padding: 9px 14px;
+  border-bottom: 1px solid #d9cda9;
+}
+
+.ledger-breakdown th {
+  font-weight: 650;
+  text-align: left;
+}
+
+.ledger-breakdown td {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-weight: 800;
+  text-align: right;
+}
+
+.ledger-breakdown tr:last-child > * {
+  border-bottom: 0;
+}
+
+.ledger-credit {
+  color: #236f5e;
+}
+
+.ledger-debit {
+  color: #9a2e26;
+}
+
+.progression-note {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 2px solid #211d14;
+  background: #f7cf52;
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .obligation-strip {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .obligation-strip span {
+    text-align: left;
+  }
+}
