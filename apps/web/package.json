@@ -10,6 +10,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@lemonade/audio": "workspace:*",
     "@lemonade/scene": "workspace:*",
     "@lemonade/simulation": "workspace:*",
     "react": "^19.3.0",
