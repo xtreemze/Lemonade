@@ -3,6 +3,7 @@ import type {
   DayNumber,
   GlassCount,
   MoneyCents,
+  SignedMoneyCents,
   SignCount,
 } from "./primitives.js";
 
@@ -61,7 +62,7 @@ export type DailyLedgerEntry = Readonly<{
   sold: GlassCount;
   revenue: MoneyCents;
   expenses: MoneyCents;
-  net: number;
+  net: SignedMoneyCents;
   endingCash: MoneyCents;
   lines: readonly LedgerLine[];
 }>;
