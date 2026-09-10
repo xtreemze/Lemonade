@@ -3,7 +3,6 @@ import {
   basisPoints,
   moneyCents,
   type BasisPoints,
-  type DayNumber,
   type MoneyCents,
 } from "./primitives.js";
 
@@ -17,6 +16,13 @@ export type FinanceRules = Readonly<{
   creditLimit: MoneyCents;
   workingCashReserve: MoneyCents;
 }>;
+
+export const EQUITY_TIER_THRESHOLDS_CENTS = Object.freeze({
+  tier1: 500,
+  tier2: 2_000,
+  tier3: 5_000,
+  tier4: 10_000,
+});
 
 const RULES: Readonly<Record<ProgressionTier, FinanceRules>> = Object.freeze({
   0: Object.freeze({
@@ -73,13 +79,20 @@ const RULES: Readonly<Record<ProgressionTier, FinanceRules>> = Object.freeze({
 
 export const financeRulesForTier = (tier: ProgressionTier): FinanceRules => RULES[tier];
 
-export const progressionTierForDay = (day: DayNumber): ProgressionTier => {
-  const value = Number(day);
-  if (value < 7) return 0;
-  if (value < 14) return 1;
-  if (value < 21) return 2;
-  if (value < 35) return 3;
+export const progressionTierForEquity = (equityCents: number): ProgressionTier => {
+  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier1) return 0;
+  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier2) return 1;
+  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier3) return 2;
+  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier4) return 3;
   return 4;
+};
+
+export const nextProgressionTier = (
+  currentTier: ProgressionTier,
+  equityCents: number,
+): ProgressionTier => {
+  const candidate = progressionTierForEquity(equityCents);
+  return candidate > currentTier ? candidate : currentTier;
 };
 
 export const remainingCredit = (state: GameState): MoneyCents => {
