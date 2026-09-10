@@ -5,6 +5,7 @@ type Brand<Value, Name extends string> = Value & {
 };
 
 export type MoneyCents = Brand<number, "MoneyCents">;
+export type SignedMoneyCents = Brand<number, "SignedMoneyCents">;
 export type GlassCount = Brand<number, "GlassCount">;
 export type SignCount = Brand<number, "SignCount">;
 export type DayNumber = Brand<number, "DayNumber">;
@@ -27,6 +28,11 @@ const requireNonNegativeInteger = (value: number, name: string): void => {
 export const moneyCents = (value: number): MoneyCents => {
   requireNonNegativeInteger(value, "money cents");
   return value as MoneyCents;
+};
+
+export const signedMoneyCents = (value: number): SignedMoneyCents => {
+  requireSafeInteger(value, "signed money cents");
+  return value as SignedMoneyCents;
 };
 
 export const glassCount = (value: number): GlassCount => {
