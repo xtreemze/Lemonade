@@ -5,6 +5,7 @@ import { projectLedger, sellThroughBasisPoints, type LedgerPoint } from "./ledge
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 180;
 const CHART_PADDING = 18;
+const CHART_VIEW_BOX = "0 0 720 180";
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -90,7 +91,7 @@ export const LedgerHistory = ({ entries }: LedgerHistoryProps) => {
           <figcaption>Cash and debt over time</figcaption>
           <svg
             className="history-chart"
-            viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+            viewBox={CHART_VIEW_BOX}
             role="img"
             aria-label={`Balance history from ${formatMoney(first.endingCashCents)} cash and ${formatMoney(first.endingDebtCents)} debt to ${formatMoney(latest.endingCashCents)} cash and ${formatMoney(latest.endingDebtCents)} debt`}
           >
@@ -114,9 +115,9 @@ export const LedgerHistory = ({ entries }: LedgerHistoryProps) => {
           <figcaption>Prepared vs sold</figcaption>
           <svg
             className="history-chart"
-            viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+            viewBox={CHART_VIEW_BOX}
             role="img"
-            aria-label={`Inventory history across ${points.length} day${points.length === 1 ? "" : "s"}`}
+            aria-label={`Inventory history across ${String(points.length)} day${points.length === 1 ? "" : "s"}`}
           >
             <line
               className="chart-axis"
