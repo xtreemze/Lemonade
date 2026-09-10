@@ -1,0 +1,29 @@
+name: stack validation
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.0
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Install workspace without persisting generated lockfile
+        run: pnpm install --no-frozen-lockfile
+      - name: Typecheck lint unit test and build
+        run: pnpm check
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run browser acceptance tests
+        run: pnpm test:e2e
