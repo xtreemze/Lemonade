@@ -15,6 +15,7 @@ import {
   type DayResolution,
   type GameState,
 } from "@lemonade/simulation";
+import { LedgerHistory } from "@lemonade/ui";
 
 import { LemonsvilleScene } from "./LemonsvilleScene.js";
 
@@ -137,6 +138,8 @@ export const App = () => {
   const sceneSold = phase.kind === "report" ? Number(phase.resolution.entry.sold) : 0;
   const scenePrepared =
     phase.kind === "report" ? Number(phase.resolution.entry.decision.glasses) : glasses;
+  const historyEntries =
+    phase.kind === "report" ? phase.resolution.nextState.ledger : game.ledger;
 
   return (
     <main className="game-shell">
@@ -302,6 +305,8 @@ export const App = () => {
           </button>
         </section>
       )}
+
+      <LedgerHistory entries={historyEntries} />
     </main>
   );
 };
