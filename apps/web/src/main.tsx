@@ -5,6 +5,7 @@ import { App } from "./App.js";
 import "./styles.css";
 import "./scene.css";
 import "./history.css";
+import "./finance.css";
 
 const root = document.getElementById("root");
 if (root === null) {
