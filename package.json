@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "pnpm --filter @lemonade/web dev",
     "build": "pnpm -r --if-present build",
-    "typecheck": "pnpm -r --if-present typecheck",
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm -r --if-present typecheck",
     "lint": "eslint .",
     "test": "pnpm -r --if-present test",
     "test:e2e": "playwright test",
