@@ -92,7 +92,19 @@ export const nextProgressionTier = (
   equityCents: number,
 ): ProgressionTier => {
   const candidate = progressionTierForEquity(equityCents);
-  return candidate > currentTier ? candidate : currentTier;
+  if (candidate <= currentTier) return currentTier;
+
+  switch (currentTier) {
+    case 0:
+      return 1;
+    case 1:
+      return 2;
+    case 2:
+      return 3;
+    case 3:
+    case 4:
+      return 4;
+  }
 };
 
 export const remainingCredit = (state: GameState): MoneyCents => {
