@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
 
 import { createProceduralAudioEngine, weatherCue } from "@lemonade/audio";
 import {
@@ -132,7 +132,7 @@ export const App = () => {
     };
   }, [audio]);
 
-  const sell = (event: FormEvent<HTMLFormElement>): void => {
+  const sell = (event: SyntheticEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (!affordable || phase.kind !== "deciding") return;
 
@@ -151,9 +151,13 @@ export const App = () => {
       if (!enabled) return;
       audio.play("day:submit");
       const resultCue = Number(resolution.entry.net) >= 0 ? "day:profit" : "day:loss";
-      window.setTimeout(() => audio.play(resultCue), 220);
+      window.setTimeout(() => {
+        audio.play(resultCue);
+      }, 220);
       if (resolution.nextState.tier !== game.tier) {
-        window.setTimeout(() => audio.play("progression:unlock"), 520);
+        window.setTimeout(() => {
+          audio.play("progression:unlock");
+        }, 520);
       }
     });
   };
@@ -267,7 +271,9 @@ export const App = () => {
               max={limits.glasses}
               step="1"
               value={glasses}
-              onChange={(event) => setGlasses(event.currentTarget.valueAsNumber)}
+              onChange={(event) => {
+                setGlasses(event.currentTarget.valueAsNumber);
+              }}
             />
           </label>
 
@@ -285,7 +291,9 @@ export const App = () => {
               max={limits.signs}
               step="1"
               value={signs}
-              onChange={(event) => setSigns(event.currentTarget.valueAsNumber)}
+              onChange={(event) => {
+                setSigns(event.currentTarget.valueAsNumber);
+              }}
             />
           </label>
 
@@ -303,7 +311,9 @@ export const App = () => {
               max="100"
               step="1"
               value={price}
-              onChange={(event) => setPrice(event.currentTarget.valueAsNumber)}
+              onChange={(event) => {
+                setPrice(event.currentTarget.valueAsNumber);
+              }}
             />
           </label>
 
@@ -357,7 +367,7 @@ export const App = () => {
               <caption>Credits, operating expenses and financing movements for this day</caption>
               <tbody>
                 {phase.resolution.entry.lines.map((line, index) => (
-                  <tr key={`${line.kind}-${index}`}>
+                  <tr key={`${line.kind}-${String(index)}`}>
                     <th scope="row">{line.label}</th>
                     <td className={line.direction === "credit" ? "ledger-credit" : "ledger-debit"}>
                       {line.direction === "credit" ? "+" : "−"}
