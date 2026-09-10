@@ -1,6 +1,11 @@
 import tseslint from "typescript-eslint";
 
-const typedSources = ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"];
+const typedSources = [
+  "apps/**/*.{ts,tsx}",
+  "packages/**/*.{ts,tsx}",
+  "e2e/**/*.ts",
+  "*.config.ts",
+];
 
 export default tseslint.config(
   {
