@@ -2,7 +2,7 @@ import {
   applyBasisPoints,
   availableOperatingFunds,
   financeRulesForTier,
-  progressionTierForDay,
+  nextProgressionTier,
 } from "./finance.js";
 import type {
   DailyLedgerEntry,
@@ -137,7 +137,10 @@ export const simulateDay = (
   const endingLoanBalance = moneyCents(loanBalanceCents);
   const cashDelta = signedMoneyCents(Number(endingCash) - openingCashCents);
   const nextDay = dayNumber(Number(state.day) + 1);
-  const nextTier = progressionTierForDay(nextDay);
+  const nextTier = nextProgressionTier(
+    state.tier,
+    Number(endingCash) - Number(endingLoanBalance),
+  );
 
   const lines: LedgerLine[] = [
     ledgerLine("revenue", "Lemonade sales", revenue, "credit"),
