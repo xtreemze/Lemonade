@@ -15,6 +15,8 @@ import {
   type GameState,
 } from "@lemonade/simulation";
 
+import { LemonsvilleScene } from "./LemonsvilleScene.js";
+
 type Phase =
   | Readonly<{ kind: "deciding" }>
   | Readonly<{ kind: "report"; resolution: DayResolution }>;
@@ -96,6 +98,12 @@ export const App = () => {
     setPhase(Object.freeze({ kind: "deciding" }));
   };
 
+  const sceneSigns =
+    phase.kind === "report" ? Number(phase.resolution.entry.decision.signs) : signs;
+  const sceneSold = phase.kind === "report" ? Number(phase.resolution.entry.sold) : 0;
+  const scenePrepared =
+    phase.kind === "report" ? Number(phase.resolution.entry.decision.glasses) : glasses;
+
   return (
     <main className="game-shell">
       <header className="topline">
@@ -136,20 +144,13 @@ export const App = () => {
         </div>
       </section>
 
-      <section className="stand-stage" aria-label="Lemonade stand activity">
-        <div className={`weather-orb weather-${environment.weather.kind}`} aria-hidden="true" />
-        <div className="street" aria-hidden="true">
-          <div className="house house-left" />
-          <div className="stand">
-            <div className="awning" />
-            <div className="counter">LEMONADE</div>
-          </div>
-          <div className="house house-right" />
-        </div>
-        <p className="scene-equivalent">
-          {weatherLabel[environment.weather.kind]}. {sentimentLabel[environment.sentiment.kind]} customers.
-        </p>
-      </section>
+      <LemonsvilleScene
+        environment={environment}
+        visibleSigns={sceneSigns}
+        phase={phase.kind}
+        sold={sceneSold}
+        prepared={scenePrepared}
+      />
 
       {phase.kind === "deciding" ? (
         <form className="decision-panel" onSubmit={sell}>
