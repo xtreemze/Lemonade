@@ -8,7 +8,7 @@ import {
   glassCount,
   moneyCents,
   neutralEnvironment,
-  progressionTierForDay,
+  progressionTierForEquity,
   signCount,
   simulateDay,
   type DayDecision,
@@ -39,24 +39,25 @@ const stateFor = (
   });
 
 describe("finance progression", () => {
-  it("unlocks finance complexity by day without adding decision variables", () => {
-    expect(progressionTierForDay(dayNumber(1))).toBe(0);
-    expect(progressionTierForDay(dayNumber(7))).toBe(1);
-    expect(progressionTierForDay(dayNumber(14))).toBe(2);
-    expect(progressionTierForDay(dayNumber(21))).toBe(3);
-    expect(progressionTierForDay(dayNumber(35))).toBe(4);
+  it("unlocks finance complexity from business equity without adding decision variables", () => {
+    expect(progressionTierForEquity(0)).toBe(0);
+    expect(progressionTierForEquity(500)).toBe(1);
+    expect(progressionTierForEquity(2_000)).toBe(2);
+    expect(progressionTierForEquity(5_000)).toBe(3);
+    expect(progressionTierForEquity(10_000)).toBe(4);
 
     expect(Number(financeRulesForTier(0).creditLimit)).toBe(0);
     expect(Number(financeRulesForTier(3).creditLimit)).toBeGreaterThan(0);
   });
 
-  it("advances the stored tier at the boundary for the next forecast", () => {
+  it("advances the stored tier when ending equity crosses a threshold", () => {
     const result = simulateDay(
-      stateFor(6, 0, 1_000),
+      stateFor(6, 0, 440),
       decision(10, 0, 10),
       neutralEnvironment(),
     );
 
+    expect(Number(result.entry.endingCash)).toBe(500);
     expect(result.entry.tier).toBe(0);
     expect(result.nextState.tier).toBe(1);
   });
