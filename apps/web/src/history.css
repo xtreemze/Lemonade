@@ -54,11 +54,19 @@
 }
 
 .chart-cash,
-.chart-sold {
+.chart-sold,
+.legend-cash,
+.legend-sold {
   color: #236f5e;
 }
 
-.chart-prepared {
+.chart-debt,
+.legend-debt {
+  color: #9a2e26;
+}
+
+.chart-prepared,
+.legend-prepared {
   color: #a9631a;
 }
 
@@ -83,14 +91,6 @@
   background: currentColor;
 }
 
-.legend-prepared {
-  color: #a9631a;
-}
-
-.legend-sold {
-  color: #236f5e;
-}
-
 .history-table-wrap {
   overflow-x: auto;
   margin-top: 18px;
@@ -99,7 +99,7 @@
 
 .history-table {
   width: 100%;
-  min-width: 720px;
+  min-width: 1120px;
   border-collapse: collapse;
   background: #fffdf3;
   font-variant-numeric: tabular-nums;
