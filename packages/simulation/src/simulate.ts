@@ -26,7 +26,9 @@ export class UnaffordableDecisionError extends Error {
     public readonly requiredCents: number,
     public readonly availableCents: number,
   ) {
-    super(`decision costs ${requiredCents} cents but only ${availableCents} are available`);
+    super(
+      `decision costs ${String(requiredCents)} cents but only ${String(availableCents)} are available`,
+    );
     this.name = "UnaffordableDecisionError";
   }
 }
