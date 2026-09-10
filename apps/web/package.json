@@ -13,6 +13,7 @@
     "@lemonade/audio": "workspace:*",
     "@lemonade/scene": "workspace:*",
     "@lemonade/simulation": "workspace:*",
+    "@lemonade/ui": "workspace:*",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
