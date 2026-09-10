@@ -295,18 +295,20 @@ Tauri commands must be narrow, permission-minimized, validated, and versioned at
 
 ## Tooling baseline
 
-Target stack for the migration tracked by #1:
+As of September 10, 2026, the target stack for the migration tracked by #1 is:
 
 - Node 24 LTS;
 - pnpm workspaces;
-- TypeScript 7 strict mode;
-- React 19;
-- Vite 8;
+- TypeScript 6 strict mode, with TypeScript 7 migration compatibility treated as a design constraint;
+- React 19.3;
+- Vite 8.1;
 - Vitest 5;
 - Playwright;
 - ESLint flat configuration;
 - Three.js-compatible renderer;
-- Tauri 2/Rust only when native capability work begins.
+- Tauri 2.11.x/Rust only when native capability work begins.
+
+TypeScript 6 is intentionally the current baseline: it is the stable transition release for the upcoming native TypeScript 7 compiler. Resolve its documented deprecations instead of relying on settings TypeScript 7 removes.
 
 Use exact versions from the generated lockfile, not README prose, as the reproducible source of package versions.
 
