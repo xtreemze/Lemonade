@@ -37,6 +37,8 @@ export type DayDecision = Readonly<{
   price: MoneyCents;
 }>;
 
+export type ProgressionTier = 0 | 1 | 2 | 3 | 4;
+
 export type LedgerLineKind =
   | "revenue"
   | "production"
@@ -45,7 +47,9 @@ export type LedgerLineKind =
   | "tax"
   | "bank-fee"
   | "savings-interest"
-  | "loan-interest";
+  | "loan-interest"
+  | "loan-draw"
+  | "loan-repayment";
 
 export type LedgerLine = Readonly<{
   kind: LedgerLineKind;
@@ -56,22 +60,27 @@ export type LedgerLine = Readonly<{
 
 export type DailyLedgerEntry = Readonly<{
   day: DayNumber;
+  tier: ProgressionTier;
   decision: DayDecision;
   environment: DayEnvironment;
   potentialDemand: GlassCount;
   sold: GlassCount;
   revenue: MoneyCents;
+  financeIncome: MoneyCents;
   expenses: MoneyCents;
   net: SignedMoneyCents;
+  cashDelta: SignedMoneyCents;
+  borrowed: MoneyCents;
+  repaid: MoneyCents;
   endingCash: MoneyCents;
+  endingLoanBalance: MoneyCents;
   lines: readonly LedgerLine[];
 }>;
-
-export type ProgressionTier = 0 | 1 | 2 | 3 | 4;
 
 export type GameState = Readonly<{
   day: DayNumber;
   cash: MoneyCents;
+  loanBalance: MoneyCents;
   unitCost: MoneyCents;
   signCost: MoneyCents;
   tier: ProgressionTier;
