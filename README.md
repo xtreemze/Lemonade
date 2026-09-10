@@ -67,17 +67,17 @@ See [`docs/architecture.md`](docs/architecture.md).
 
 ## Tooling direction
 
-The modernization work targets a current, conservative stack:
+As of September 10, 2026, the modernization work targets a current, conservative stack:
 
 - **Node 24 LTS** for automation and development.
 - **pnpm workspaces** for deterministic monorepo dependency management.
-- **TypeScript 7** with strict compiler settings and advanced types where they encode real invariants.
-- **React 19** for application UI.
-- **Vite 8** for the web build.
+- **TypeScript 6** in strict mode, resolving its migration deprecations now so the codebase is ready for the upcoming native TypeScript 7 compiler.
+- **React 19.3** for application UI.
+- **Vite 8.1** for the web build.
 - **Vitest 5** for unit/property tests.
 - **Playwright** for browser acceptance and accessibility-critical flows.
 - **Three.js-compatible rendering** for the vector 3D scene.
-- **Tauri 2 + Rust**, only where native capabilities materially improve the game.
+- **Tauri 2.11.x + Rust**, only where native capabilities materially improve the game.
 
 Exact patch versions belong in the generated lockfile during the workspace migration. Generated dependency files must never be hand-edited through a connector.
 
