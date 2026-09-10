@@ -12,9 +12,14 @@ import {
 
 import { projectLedger, sellThroughBasisPoints } from "../src/ledger.js";
 
-const entry = (day: number, prepared: number, sold: number): DailyLedgerEntry =>
-  Object.freeze({
+const entry = (day: number, prepared: number, sold: number): DailyLedgerEntry => {
+  const revenue = sold * 10;
+  const expenses = prepared * 2 + 15;
+  const net = revenue - expenses;
+
+  return Object.freeze({
     day: dayNumber(day),
+    tier: 0,
     decision: Object.freeze({
       glasses: glassCount(prepared),
       signs: signCount(1),
@@ -27,12 +32,18 @@ const entry = (day: number, prepared: number, sold: number): DailyLedgerEntry =>
     }),
     potentialDemand: glassCount(sold),
     sold: glassCount(sold),
-    revenue: moneyCents(sold * 10),
-    expenses: moneyCents(prepared * 2 + 15),
-    net: signedMoneyCents(sold * 10 - (prepared * 2 + 15)),
-    endingCash: moneyCents(200 + sold * 10 - (prepared * 2 + 15)),
+    revenue: moneyCents(revenue),
+    financeIncome: moneyCents(0),
+    expenses: moneyCents(expenses),
+    net: signedMoneyCents(net),
+    cashDelta: signedMoneyCents(net),
+    borrowed: moneyCents(0),
+    repaid: moneyCents(0),
+    endingCash: moneyCents(200 + net),
+    endingLoanBalance: moneyCents(0),
     lines: Object.freeze([]),
   });
+};
 
 const onlyPoint = (value: readonly DailyLedgerEntry[]) => {
   const point = projectLedger(value).at(0);
