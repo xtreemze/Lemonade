@@ -35,10 +35,16 @@ const seriesPoints = (
     .join(" ");
 };
 
-const cashTrend = (points: readonly LedgerPoint[]): string => {
-  const values = points.map((point) => point.endingCashCents);
-  if (values.length === 0) return "";
-  return seriesPoints(values, Math.min(...values), Math.max(...values));
+const balanceTrends = (
+  points: readonly LedgerPoint[],
+): Readonly<{ cash: string; debt: string }> => {
+  const cash = points.map((point) => point.endingCashCents);
+  const debt = points.map((point) => point.endingDebtCents);
+  const maximum = Math.max(1, ...cash, ...debt);
+  return Object.freeze({
+    cash: seriesPoints(cash, 0, maximum),
+    debt: seriesPoints(debt, 0, maximum),
+  });
 };
 
 const inventoryTrends = (
@@ -61,10 +67,11 @@ export const LedgerHistory = ({ entries }: LedgerHistoryProps) => {
   const points = projectLedger(entries);
   if (points.length === 0) return null;
 
-  const cash = cashTrend(points);
+  const balances = balanceTrends(points);
   const inventory = inventoryTrends(points);
   const latest = points.at(-1);
-  if (latest === undefined) return null;
+  const first = points.at(0);
+  if (latest === undefined || first === undefined) return null;
 
   return (
     <section className="ledger-history" aria-labelledby="ledger-history-title">
@@ -80,12 +87,12 @@ export const LedgerHistory = ({ entries }: LedgerHistoryProps) => {
 
       <div className="chart-grid">
         <figure className="chart-card">
-          <figcaption>Cash over time</figcaption>
+          <figcaption>Cash and debt over time</figcaption>
           <svg
             className="history-chart"
             viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
             role="img"
-            aria-label={`Cash history from ${formatMoney(points[0]?.endingCashCents ?? 0)} to ${formatMoney(latest.endingCashCents)}`}
+            aria-label={`Balance history from ${formatMoney(first.endingCashCents)} cash and ${formatMoney(first.endingDebtCents)} debt to ${formatMoney(latest.endingCashCents)} cash and ${formatMoney(latest.endingDebtCents)} debt`}
           >
             <line
               className="chart-axis"
@@ -94,8 +101,13 @@ export const LedgerHistory = ({ entries }: LedgerHistoryProps) => {
               x2={CHART_WIDTH - CHART_PADDING}
               y2={CHART_HEIGHT - CHART_PADDING}
             />
-            <polyline className="chart-line chart-cash" points={cash} />
+            <polyline className="chart-line chart-cash" points={balances.cash} />
+            <polyline className="chart-line chart-debt" points={balances.debt} />
           </svg>
+          <div className="chart-legend" aria-hidden="true">
+            <span><i className="legend-cash" />Cash</span>
+            <span><i className="legend-debt" />Debt</span>
+          </div>
         </figure>
 
         <figure className="chart-card">
@@ -125,30 +137,40 @@ export const LedgerHistory = ({ entries }: LedgerHistoryProps) => {
 
       <div className="history-table-wrap">
         <table className="history-table">
-          <caption>Complete values represented by the sales-history charts</caption>
+          <caption>Complete values represented by the sales-history charts and finance ledger</caption>
           <thead>
             <tr>
               <th scope="col">Day</th>
+              <th scope="col">Tier</th>
               <th scope="col">Prepared</th>
               <th scope="col">Sold</th>
               <th scope="col">Price</th>
-              <th scope="col">Revenue</th>
+              <th scope="col">Sales</th>
+              <th scope="col">Finance income</th>
               <th scope="col">Expenses</th>
               <th scope="col">Net</th>
+              <th scope="col">Borrowed</th>
+              <th scope="col">Repaid</th>
               <th scope="col">Cash</th>
+              <th scope="col">Debt</th>
             </tr>
           </thead>
           <tbody>
             {points.map((point) => (
               <tr key={point.day}>
                 <th scope="row">{point.day}</th>
+                <td>{point.tier}</td>
                 <td>{point.prepared}</td>
                 <td>{point.sold}</td>
                 <td>{formatMoney(point.priceCents)}</td>
                 <td>{formatMoney(point.revenueCents)}</td>
+                <td>{formatMoney(point.financeIncomeCents)}</td>
                 <td>{formatMoney(point.expensesCents)}</td>
                 <td>{point.netCents >= 0 ? "+" : "−"}{formatMoney(Math.abs(point.netCents))}</td>
+                <td>{formatMoney(point.borrowedCents)}</td>
+                <td>{formatMoney(point.repaidCents)}</td>
                 <td>{formatMoney(point.endingCashCents)}</td>
+                <td>{formatMoney(point.endingDebtCents)}</td>
               </tr>
             ))}
           </tbody>
