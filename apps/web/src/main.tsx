@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App.js";
 import "./styles.css";
 import "./scene.css";
+import "./history.css";
 
 const root = document.getElementById("root");
 if (root === null) {
