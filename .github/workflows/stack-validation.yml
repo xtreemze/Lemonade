@@ -19,6 +19,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+          package-manager-cache: false
       - name: Install workspace without persisting generated lockfile
         run: pnpm install --no-frozen-lockfile
       - name: Typecheck lint unit test and build
