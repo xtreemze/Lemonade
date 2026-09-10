@@ -1,5 +1,6 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
+import { createProceduralAudioEngine, weatherCue } from "@lemonade/audio";
 import {
   createInitialState,
   createSeededRandom,
@@ -58,6 +59,7 @@ const decisionLimit = (state: GameState): Readonly<{ glasses: number; signs: num
 
 export const App = () => {
   const [random] = useState(() => createSeededRandom(seed(0x1e_ad_2026)));
+  const [audio] = useState(() => createProceduralAudioEngine());
   const [game, setGame] = useState<GameState>(() => createInitialState());
   const [environment, setEnvironment] = useState<DayEnvironment>(() =>
     generateEnvironment(dayNumber(1), random),
@@ -70,6 +72,26 @@ export const App = () => {
   const limits = useMemo(() => decisionLimit(game), [game]);
   const spend = glasses * Number(game.unitCost) + signs * Number(game.signCost);
   const affordable = spend <= Number(game.cash);
+
+  useEffect(() => {
+    const onVisibilityChange = (): void => {
+      if (document.visibilityState === "hidden") {
+        void audio.suspend();
+      } else {
+        void audio.resume();
+      }
+    };
+    const onPageHide = (): void => {
+      void audio.dispose();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide, { once: true });
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [audio]);
 
   const sell = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -85,17 +107,29 @@ export const App = () => {
       environment,
     );
     setPhase(Object.freeze({ kind: "report", resolution }));
+
+    void audio.enable().then((enabled) => {
+      if (!enabled) return;
+      audio.play("day:submit");
+      const resultCue = Number(resolution.entry.net) >= 0 ? "day:profit" : "day:loss";
+      window.setTimeout(() => audio.play(resultCue), 220);
+    });
   };
 
   const planNextDay = (): void => {
     if (phase.kind !== "report") return;
 
     const nextState = phase.resolution.nextState;
+    const nextEnvironment = generateEnvironment(nextState.day, random);
     setGame(nextState);
-    setEnvironment(generateEnvironment(nextState.day, random));
+    setEnvironment(nextEnvironment);
     setGlasses((current) => Math.min(current, decisionLimit(nextState).glasses));
     setSigns((current) => Math.min(current, decisionLimit(nextState).signs));
     setPhase(Object.freeze({ kind: "deciding" }));
+
+    void audio.enable().then((enabled) => {
+      if (enabled) audio.play(weatherCue(nextEnvironment.weather.kind));
+    });
   };
 
   const sceneSigns =
