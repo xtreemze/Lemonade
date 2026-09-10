@@ -12,6 +12,7 @@ export const createInitialState = (): GameState =>
   Object.freeze({
     day: dayNumber(1),
     cash: moneyCents(200),
+    loanBalance: moneyCents(0),
     unitCost: moneyCents(2),
     signCost: moneyCents(15),
     tier: 0,
