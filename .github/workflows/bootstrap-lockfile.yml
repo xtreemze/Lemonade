@@ -1,0 +1,43 @@
+name: bootstrap generated lockfile
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'revival/workspace-bootstrap' &&
+      hashFiles('pnpm-lock.yaml') == ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.0
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Generate dependency graph with pnpm
+        run: pnpm install --no-frozen-lockfile
+      - name: Validate generated dependency graph
+        run: pnpm check
+      - name: Ensure pnpm did not mutate workspace policy
+        run: git diff --exit-code -- pnpm-workspace.yaml
+      - name: Commit exact generated lockfile
+        run: |
+          test -f pnpm-lock.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m "build: generate pnpm lockfile"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
