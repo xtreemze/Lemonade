@@ -90,5 +90,10 @@ export const remainingCredit = (state: GameState): MoneyCents => {
 export const availableOperatingFunds = (state: GameState): MoneyCents =>
   moneyCents(Number(state.cash) + Number(remainingCredit(state)));
 
+export const predictableFixedObligations = (state: GameState): MoneyCents => {
+  const rules = financeRulesForTier(state.tier);
+  return moneyCents(Number(rules.supplierFee) + Number(rules.bankFee));
+};
+
 export const applyBasisPoints = (amountCents: number, rate: BasisPoints): MoneyCents =>
   moneyCents(Math.round((amountCents * Number(rate)) / 10_000));
