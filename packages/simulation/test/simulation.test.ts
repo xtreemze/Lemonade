@@ -71,7 +71,7 @@ describe("day resolution", () => {
   it("rejects spending that exceeds available cash", () => {
     expect(() =>
       simulateDay(createInitialState(), decision(100, 1, 10), neutralEnvironment()),
-    ).toThrowError(UnaffordableDecisionError);
+    ).toThrow(UnaffordableDecisionError);
   });
 
   it("keeps thunderstorms economically decisive without presentation timing", () => {
