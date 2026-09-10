@@ -31,12 +31,12 @@ packages/audio
 packages/config
 ```
 
-Tooling baseline:
+Current baseline as of September 10, 2026:
 
 - Node 24 LTS;
 - pinned pnpm workspace;
-- TypeScript 7 strict mode;
-- React 19 + Vite 8;
+- TypeScript 6 strict mode, configured for a clean future move to the native TypeScript 7 compiler;
+- React 19.3 + Vite 8.1;
 - Vitest 5;
 - Playwright;
 - ESLint flat config and explicit formatting checks.
