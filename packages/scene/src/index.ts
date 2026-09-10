@@ -126,11 +126,21 @@ const createCustomer = (index: number): THREE.Group => {
   return customer;
 };
 
+type DisposableMesh = THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>;
+
+const isDisposableMesh = (object: THREE.Object3D): object is DisposableMesh =>
+  object instanceof THREE.Mesh;
+
 const disposeObject = (object: THREE.Object3D): void => {
-  if (!(object instanceof THREE.Mesh)) return;
+  if (!isDisposableMesh(object)) return;
   object.geometry.dispose();
-  const materials = Array.isArray(object.material) ? object.material : [object.material];
-  for (const material of materials) material.dispose();
+  if (Array.isArray(object.material)) {
+    for (const material of object.material) {
+      material.dispose();
+    }
+  } else {
+    object.material.dispose();
+  }
 };
 
 export const createLemonsvilleScene = (
@@ -182,7 +192,9 @@ export const createLemonsvilleScene = (
   const customers = Array.from({ length: 12 }, (_, index) => createCustomer(index));
   for (const customer of customers) scene.add(customer);
 
-  const render = (): void => renderer.render(scene, camera);
+  const render = (): void => {
+    renderer.render(scene, camera);
+  };
 
   const update = (state: LemonsvilleSceneState): void => {
     renderer.setClearColor(skyColor[state.weather], 1);
