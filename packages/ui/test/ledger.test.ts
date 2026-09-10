@@ -34,6 +34,12 @@ const entry = (day: number, prepared: number, sold: number): DailyLedgerEntry =>
     lines: Object.freeze([]),
   });
 
+const onlyPoint = (value: readonly DailyLedgerEntry[]) => {
+  const point = projectLedger(value).at(0);
+  if (point === undefined) throw new Error("expected one ledger point");
+  return point;
+};
+
 describe("ledger projection", () => {
   it("projects immutable historical values without recomputing them", () => {
     const points = projectLedger([entry(1, 20, 15), entry(2, 24, 24)]);
@@ -43,11 +49,11 @@ describe("ledger projection", () => {
       expect.objectContaining({ day: 2, prepared: 24, sold: 24, priceCents: 10 }),
     ]);
     expect(Object.isFrozen(points)).toBe(true);
-    expect(Object.isFrozen(points[0])).toBe(true);
+    expect(Object.isFrozen(points.at(0))).toBe(true);
   });
 
   it("reports sell-through in basis points and handles zero inventory", () => {
-    expect(sellThroughBasisPoints(projectLedger([entry(1, 20, 15)])[0]!)).toBe(7_500);
-    expect(sellThroughBasisPoints(projectLedger([entry(1, 0, 0)])[0]!)).toBe(0);
+    expect(sellThroughBasisPoints(onlyPoint([entry(1, 20, 15)]))).toBe(7_500);
+    expect(sellThroughBasisPoints(onlyPoint([entry(1, 0, 0)]))).toBe(0);
   });
 });
