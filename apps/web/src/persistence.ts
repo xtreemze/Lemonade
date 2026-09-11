@@ -1,22 +1,27 @@
 import {
   SIMULATION_SCHEMA_VERSION,
   basisPoints,
+  createSeededRandom,
   dayNumber,
+  generateEnvironment,
   glassCount,
   moneyCents,
   seed,
   signedMoneyCents,
   signCount,
+  simulateDay,
   type DayDecision,
   type DayEnvironment,
   type DailyLedgerEntry,
+  type DayResolution,
   type GameState,
   type LedgerLine,
   type ProgressionTier,
+  type RandomSource,
   type Seed,
 } from "@lemonade/simulation";
 
-export const RUN_SAVE_SCHEMA_VERSION = 1 as const;
+export const RUN_SAVE_SCHEMA_VERSION = 2 as const;
 
 const DATABASE_NAME = "lemonade";
 const DATABASE_VERSION = 1;
@@ -40,12 +45,18 @@ const weatherKinds = ["sunny", "cloudy", "hot-and-dry", "thunderstorm"] as const
 const sentimentKinds = ["very-cold", "cold", "neutral", "warm", "hot"] as const;
 const eventKinds = ["none", "street-work", "workers-buy-out"] as const;
 const directions = ["credit", "debit"] as const;
+const phaseKinds = ["deciding", "report"] as const;
+
+export type RunPhase =
+  | Readonly<{ kind: "deciding" }>
+  | Readonly<{ kind: "report"; resolution: DayResolution }>;
 
 export type RunSnapshot = Readonly<{
   seed: Seed;
   state: GameState;
   environment: DayEnvironment;
   draft: DayDecision;
+  phase: RunPhase;
 }>;
 
 type SerializedDecision = Readonly<{
@@ -101,7 +112,22 @@ type SerializedGameState = Readonly<{
   ledger: readonly SerializedLedgerEntry[];
 }>;
 
+type SerializedPhase =
+  | Readonly<{ kind: "deciding" }>
+  | Readonly<{ kind: "report"; nextState: SerializedGameState }>;
+
 type RunSaveDocumentV1 = Readonly<{
+  saveSchemaVersion: 1;
+  simulationSchemaVersion: number;
+  run: Readonly<{
+    seed: number;
+    state: unknown;
+    environment: unknown;
+    draft: unknown;
+  }>;
+}>;
+
+type RunSaveDocumentV2 = Readonly<{
   saveSchemaVersion: typeof RUN_SAVE_SCHEMA_VERSION;
   simulationSchemaVersion: typeof SIMULATION_SCHEMA_VERSION;
   run: Readonly<{
@@ -109,6 +135,7 @@ type RunSaveDocumentV1 = Readonly<{
     state: SerializedGameState;
     environment: SerializedEnvironment;
     draft: SerializedDecision;
+    phase: SerializedPhase;
   }>;
 }>;
 
@@ -375,7 +402,15 @@ const serializeGameState = (state: GameState): SerializedGameState =>
     ledger: Object.freeze(state.ledger.map(serializeLedgerEntry)),
   });
 
-export const createRunSaveDocument = (snapshot: RunSnapshot): RunSaveDocumentV1 =>
+const serializePhase = (phase: RunPhase): SerializedPhase =>
+  phase.kind === "deciding"
+    ? Object.freeze({ kind: "deciding" })
+    : Object.freeze({
+        kind: "report",
+        nextState: serializeGameState(phase.resolution.nextState),
+      });
+
+export const createRunSaveDocument = (snapshot: RunSnapshot): RunSaveDocumentV2 =>
   Object.freeze({
     saveSchemaVersion: RUN_SAVE_SCHEMA_VERSION,
     simulationSchemaVersion: SIMULATION_SCHEMA_VERSION,
@@ -384,6 +419,7 @@ export const createRunSaveDocument = (snapshot: RunSnapshot): RunSaveDocumentV1 
       state: serializeGameState(snapshot.state),
       environment: serializeEnvironment(snapshot.environment),
       draft: serializeDecision(snapshot.draft),
+      phase: serializePhase(snapshot.phase),
     }),
   });
 
@@ -394,15 +430,27 @@ const migrateVersionZero = (value: Record<string, unknown>): RunSaveDocumentV1 =
   );
 
   return Object.freeze({
-    saveSchemaVersion: RUN_SAVE_SCHEMA_VERSION,
-    simulationSchemaVersion: simulationSchemaVersion as typeof SIMULATION_SCHEMA_VERSION,
+    saveSchemaVersion: 1,
+    simulationSchemaVersion,
     run: Object.freeze({
       seed: asNonNegativeInteger(value["seed"], "seed"),
-      state: value["state"] as SerializedGameState,
-      environment: value["environment"] as SerializedEnvironment,
+      state: value["state"],
+      environment: value["environment"],
       draft: Object.freeze({ glasses: 20, signs: 1, price: 10 }),
     }),
   });
+};
+
+const migrateVersionOne = (value: Record<string, unknown>): Record<string, unknown> => {
+  const run = asRecord(value["run"], "save.run");
+  return {
+    ...value,
+    saveSchemaVersion: RUN_SAVE_SCHEMA_VERSION,
+    run: {
+      ...run,
+      phase: Object.freeze({ kind: "deciding" }),
+    },
+  };
 };
 
 export const migrateRunSaveDocument = (value: unknown): unknown => {
@@ -417,13 +465,74 @@ export const migrateRunSaveDocument = (value: unknown): unknown => {
     );
   }
 
-  if (version === 0) return migrateVersionZero(record);
+  if (version === 0) {
+    return migrateVersionOne(asRecord(migrateVersionZero(record), "save"));
+  }
+  if (version === 1) return migrateVersionOne(record);
   if (version === RUN_SAVE_SCHEMA_VERSION) return record;
 
   throw new RunPersistenceError(
     "unsupported-save-version",
     `Save schema version ${String(version)} is not supported.`,
   );
+};
+
+const serializedStatesEqual = (left: GameState, right: GameState): boolean =>
+  JSON.stringify(serializeGameState(left)) === JSON.stringify(serializeGameState(right));
+
+const parsePhase = (
+  value: unknown,
+  state: GameState,
+  environment: DayEnvironment,
+  draft: DayDecision,
+  path: string,
+): RunPhase => {
+  const record = asRecord(value, path);
+  const kind = asLiteral(record["kind"], phaseKinds, `${path}.kind`);
+  if (kind === "deciding") return Object.freeze({ kind: "deciding" });
+
+  const nextState = parseGameState(record["nextState"], `${path}.nextState`);
+  const expected = simulateDay(state, draft, environment);
+  if (!serializedStatesEqual(nextState, expected.nextState)) {
+    return invalidSave(path, "report state does not match the deterministic day resolution");
+  }
+
+  const entry = nextState.ledger.at(-1);
+  if (entry === undefined) return invalidSave(path, "report state must contain the resolved day");
+
+  return Object.freeze({
+    kind: "report",
+    resolution: Object.freeze({ previousState: state, nextState, entry }),
+  });
+};
+
+const environmentsEqual = (left: DayEnvironment, right: DayEnvironment): boolean =>
+  left.weather.kind === right.weather.kind &&
+  Number(left.weather.demandMultiplier) === Number(right.weather.demandMultiplier) &&
+  left.sentiment.kind === right.sentiment.kind &&
+  Number(left.sentiment.demandMultiplier) === Number(right.sentiment.demandMultiplier) &&
+  left.event.kind === right.event.kind &&
+  Number(left.event.demandMultiplier) === Number(right.event.demandMultiplier);
+
+export const restoreEnvironmentRandom = (
+  snapshot: Pick<RunSnapshot, "seed" | "state" | "environment">,
+): RandomSource => {
+  const random = createSeededRandom(snapshot.seed);
+  const currentDay = Number(snapshot.state.day);
+
+  for (let day = 1; day <= currentDay; day += 1) {
+    const generated = generateEnvironment(dayNumber(day), random);
+    const historical = snapshot.state.ledger[day - 1]?.environment;
+    const expected = day === currentDay ? snapshot.environment : historical;
+    if (expected === undefined || !environmentsEqual(generated, expected)) {
+      return invalidSave(
+        `save.run.environmentSequence[${String(day)}]`,
+        "environment does not match the stored seed and simulation schema",
+      );
+    }
+  }
+
+  return random;
 };
 
 export const decodeRunSaveDocument = (value: unknown): RunSnapshot => {
@@ -451,12 +560,19 @@ export const decodeRunSaveDocument = (value: unknown): RunSnapshot => {
   }
 
   const run = asRecord(migrated["run"], "save.run");
-  return Object.freeze({
+  const state = parseGameState(run["state"], "save.run.state");
+  const environment = parseEnvironment(run["environment"], "save.run.environment");
+  const draft = parseDecision(run["draft"], "save.run.draft");
+  const snapshot = Object.freeze({
     seed: seed(asNonNegativeInteger(run["seed"], "save.run.seed")),
-    state: parseGameState(run["state"], "save.run.state"),
-    environment: parseEnvironment(run["environment"], "save.run.environment"),
-    draft: parseDecision(run["draft"], "save.run.draft"),
-  });
+    state,
+    environment,
+    draft,
+    phase: parsePhase(run["phase"], state, environment, draft, "save.run.phase"),
+  }) satisfies RunSnapshot;
+
+  restoreEnvironmentRandom(snapshot);
+  return snapshot;
 };
 
 export const exportRunSnapshot = (snapshot: RunSnapshot): string =>
@@ -564,7 +680,9 @@ export const loadCurrentRun = async (): Promise<RunSnapshot | null> => {
     );
     await transactionComplete(transaction);
     if (stored === undefined) return null;
-    if (typeof stored !== "string") return invalidSave("browser storage", "expected a text run document");
+    if (typeof stored !== "string") {
+      return invalidSave("browser storage", "expected a text run document");
+    }
     return importRunSnapshot(stored);
   } catch (error) {
     if (error instanceof RunPersistenceError) throw error;

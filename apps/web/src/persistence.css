@@ -1,0 +1,98 @@
+.run-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 24px 0 18px;
+  padding: 14px 16px;
+  border: 2px solid #211d14;
+  background: rgb(255 249 228 / 88%);
+  box-shadow: 5px 5px 0 #211d14;
+}
+
+.run-tools-copy {
+  min-width: 0;
+}
+
+.run-tools .eyebrow {
+  margin-bottom: 4px;
+}
+
+.run-status {
+  color: #4f493d;
+  font-size: 0.9rem;
+}
+
+.run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.utility-button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 2px solid #211d14;
+  background: #f6df8f;
+  color: #211d14;
+  box-shadow: 3px 3px 0 #211d14;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.utility-button:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 #211d14;
+}
+
+.utility-button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #211d14;
+}
+
+.utility-button-danger {
+  background: #f2c2a8;
+}
+
+.utility-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.bootstrap-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding-block: 32px;
+}
+
+.bootstrap-recovery {
+  width: min(720px, 100%);
+  margin-top: 0;
+}
+
+.bootstrap-recovery h1 {
+  margin-bottom: 18px;
+  font-size: clamp(2rem, 7vw, 4.6rem);
+}
+
+.bootstrap-recovery > p:not(.eyebrow) {
+  margin-bottom: 18px;
+  max-width: 62ch;
+}
+
+@media (max-width: 760px) {
+  .run-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .run-actions {
+    justify-content: stretch;
+  }
+
+  .utility-button {
+    flex: 1 1 9rem;
+  }
+}
