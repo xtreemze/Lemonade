@@ -2,6 +2,7 @@ import "./styles.css";
 import "./scene.css";
 import "./history.css";
 import "./finance.css";
+import "./persistence.css";
 
 import { LemonadeApp, createFreshRunSnapshot } from "./app.js";
 import { RunPersistenceError, clearCurrentRun, loadCurrentRun } from "./persistence.js";
