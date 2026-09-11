@@ -3,7 +3,6 @@ import {
   availableOperatingFunds,
   createInitialState,
   createSeededRandom,
-  dayNumber,
   financeRulesForTier,
   generateEnvironment,
   glassCount,
@@ -13,16 +12,25 @@ import {
   signCount,
   simulateDay,
   type DayEnvironment,
-  type DayResolution,
   type GameState,
+  type RandomSource,
+  type Seed,
 } from "@lemonade/simulation";
 import { renderLedgerHistory } from "@lemonade/ui";
 
+import {
+  RunPersistenceError,
+  clearCurrentRun,
+  exportRunSnapshot,
+  importRunSnapshot,
+  restoreEnvironmentRandom,
+  saveCurrentRun,
+  type RunPhase,
+  type RunSnapshot,
+} from "./persistence.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 
-type Phase =
-  | Readonly<{ kind: "deciding" }>
-  | Readonly<{ kind: "report"; resolution: DayResolution }>;
+const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
 
 const weatherLabel: Record<DayEnvironment["weather"]["kind"], string> = {
   sunny: "Sunny",
@@ -91,6 +99,28 @@ const financeSummary = (state: GameState): string => {
     : parts.join(" · ");
 };
 
+const persistenceMessage = (error: unknown): string =>
+  error instanceof RunPersistenceError
+    ? error.message
+    : "Run storage failed unexpectedly. Export your run before leaving this page.";
+
+export const createFreshRunSnapshot = (): RunSnapshot => {
+  const state = createInitialState();
+  const random = createSeededRandom(DEFAULT_RUN_SEED);
+  const environment = generateEnvironment(state.day, random);
+  return Object.freeze({
+    seed: DEFAULT_RUN_SEED,
+    state,
+    environment,
+    draft: Object.freeze({
+      glasses: glassCount(20),
+      signs: signCount(1),
+      price: moneyCents(10),
+    }),
+    phase: Object.freeze({ kind: "deciding" }),
+  });
+};
+
 const SHELL_MARKUP = `
   <main class="game-shell">
     <header class="topline">
@@ -104,6 +134,20 @@ const SHELL_MARKUP = `
         <div id="status-debt-group" hidden><dt>Debt</dt><dd id="status-debt"></dd></div>
       </dl>
     </header>
+
+    <section class="run-tools" aria-label="Run data">
+      <div class="run-tools-copy">
+        <p class="eyebrow">Run data</p>
+        <p id="run-status" class="run-status" role="status" aria-live="polite"></p>
+        <p id="run-error" class="inline-error" role="alert" hidden></p>
+      </div>
+      <div class="run-actions">
+        <button id="export-run" class="utility-button" type="button">Export run</button>
+        <button id="import-run" class="utility-button" type="button">Import run</button>
+        <input id="import-file" type="file" accept="application/json,.json" hidden />
+        <button id="reset-run" class="utility-button utility-button-danger" type="button">Reset run</button>
+      </div>
+    </section>
 
     <section class="conditions" aria-labelledby="conditions-title">
       <div>
@@ -214,6 +258,12 @@ type AppElements = Readonly<{
   statusCash: HTMLElement;
   statusDebtGroup: HTMLElement;
   statusDebt: HTMLElement;
+  runStatus: HTMLElement;
+  runError: HTMLElement;
+  exportRun: HTMLButtonElement;
+  importRun: HTMLButtonElement;
+  importFile: HTMLInputElement;
+  resetRun: HTMLButtonElement;
   conditionWeather: HTMLElement;
   conditionSentiment: HTMLElement;
   conditionProduction: HTMLElement;
@@ -255,6 +305,12 @@ const collectElements = (root: HTMLElement): AppElements =>
     statusCash: requireElement(root, "#status-cash", HTMLElement),
     statusDebtGroup: requireElement(root, "#status-debt-group", HTMLElement),
     statusDebt: requireElement(root, "#status-debt", HTMLElement),
+    runStatus: requireElement(root, "#run-status", HTMLElement),
+    runError: requireElement(root, "#run-error", HTMLElement),
+    exportRun: requireElement(root, "#export-run", HTMLButtonElement),
+    importRun: requireElement(root, "#import-run", HTMLButtonElement),
+    importFile: requireElement(root, "#import-file", HTMLInputElement),
+    resetRun: requireElement(root, "#reset-run", HTMLButtonElement),
     conditionWeather: requireElement(root, "#condition-weather", HTMLElement),
     conditionSentiment: requireElement(root, "#condition-sentiment", HTMLElement),
     conditionProduction: requireElement(root, "#condition-production", HTMLElement),
@@ -293,21 +349,48 @@ const collectElements = (root: HTMLElement): AppElements =>
 const numericInputValue = (input: HTMLInputElement, fallback: number): number =>
   Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : fallback;
 
+export type LemonadeAppOptions = Readonly<{
+  persistenceEnabled: boolean;
+  initialPersistenceError: string | null;
+}>;
+
+const DEFAULT_OPTIONS: LemonadeAppOptions = Object.freeze({
+  persistenceEnabled: true,
+  initialPersistenceError: null,
+});
+
 export class LemonadeApp {
   readonly #elements: AppElements;
-  readonly #random = createSeededRandom(seed(0x1e_ad_2026));
+  readonly #runSeed: Seed;
+  readonly #random: RandomSource;
   readonly #audio = createProceduralAudioEngine();
   readonly #scene: LemonsvilleSceneView;
+  readonly #persistenceEnabled: boolean;
 
-  #game = createInitialState();
-  #environment = generateEnvironment(dayNumber(1), this.#random);
-  #phase: Phase = Object.freeze({ kind: "deciding" });
-  #glasses = 20;
-  #signs = 1;
-  #price = 10;
+  #game: GameState;
+  #environment: DayEnvironment;
+  #phase: RunPhase;
+  #glasses: number;
+  #signs: number;
+  #price: number;
+  #saveChain: Promise<void> = Promise.resolve();
   #disposed = false;
 
-  constructor(root: HTMLElement) {
+  constructor(
+    root: HTMLElement,
+    initialRun: RunSnapshot = createFreshRunSnapshot(),
+    options: LemonadeAppOptions = DEFAULT_OPTIONS,
+  ) {
+    this.#runSeed = initialRun.seed;
+    this.#random = restoreEnvironmentRandom(initialRun);
+    this.#game = initialRun.state;
+    this.#environment = initialRun.environment;
+    this.#phase = initialRun.phase;
+    this.#glasses = Number(initialRun.draft.glasses);
+    this.#signs = Number(initialRun.draft.signs);
+    this.#price = Number(initialRun.draft.price);
+    this.#persistenceEnabled = options.persistenceEnabled;
+
     root.innerHTML = SHELL_MARKUP;
     this.#elements = collectElements(root);
     this.#scene = createLemonsvilleSceneView({
@@ -322,10 +405,24 @@ export class LemonadeApp {
     this.#elements.glasses.addEventListener("input", this.#onGlassesInput);
     this.#elements.signs.addEventListener("input", this.#onSignsInput);
     this.#elements.price.addEventListener("input", this.#onPriceInput);
+    this.#elements.exportRun.addEventListener("click", this.#onExportRun);
+    this.#elements.importRun.addEventListener("click", this.#onImportRun);
+    this.#elements.importFile.addEventListener("change", this.#onImportFileChange);
+    this.#elements.resetRun.addEventListener("click", this.#onResetRun);
     document.addEventListener("visibilitychange", this.#onVisibilityChange);
     window.addEventListener("pagehide", this.#onPageHide, { once: true });
 
+    this.#elements.importRun.disabled = !this.#persistenceEnabled;
+    this.#elements.resetRun.disabled = !this.#persistenceEnabled;
     this.#render();
+
+    if (options.initialPersistenceError !== null) {
+      this.#showPersistenceError(options.initialPersistenceError);
+    } else if (this.#persistenceEnabled) {
+      this.#queueSave("Run saved locally.");
+    } else {
+      this.#elements.runStatus.textContent = "Autosave is unavailable in this browser context.";
+    }
   }
 
   dispose(): void {
@@ -336,6 +433,10 @@ export class LemonadeApp {
     this.#elements.glasses.removeEventListener("input", this.#onGlassesInput);
     this.#elements.signs.removeEventListener("input", this.#onSignsInput);
     this.#elements.price.removeEventListener("input", this.#onPriceInput);
+    this.#elements.exportRun.removeEventListener("click", this.#onExportRun);
+    this.#elements.importRun.removeEventListener("click", this.#onImportRun);
+    this.#elements.importFile.removeEventListener("change", this.#onImportFileChange);
+    this.#elements.resetRun.removeEventListener("click", this.#onResetRun);
     document.removeEventListener("visibilitychange", this.#onVisibilityChange);
     window.removeEventListener("pagehide", this.#onPageHide);
     this.#scene.dispose();
@@ -390,6 +491,7 @@ export class LemonadeApp {
     const previousTier = this.#game.tier;
     this.#phase = Object.freeze({ kind: "report", resolution });
     this.#render();
+    this.#queueSave("Day report saved locally.");
 
     void this.#audio.enable().then((enabled) => {
       if (!enabled) return;
@@ -419,11 +521,110 @@ export class LemonadeApp {
     this.#signs = Math.min(this.#signs, limits.signs);
     this.#phase = Object.freeze({ kind: "deciding" });
     this.#render();
+    this.#queueSave("Next day saved locally.");
 
     void this.#audio.enable().then((enabled) => {
       if (enabled) this.#audio.play(weatherCue(nextEnvironment.weather.kind));
     });
   };
+
+  readonly #onExportRun = (): void => {
+    try {
+      const documentText = exportRunSnapshot(this.#snapshot());
+      const blob = new Blob([documentText], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `lemonade-run-day-${String(Number(this.#game.day))}.json`;
+      link.click();
+      window.setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 0);
+      this.#showPersistenceStatus("Portable run exported.");
+    } catch (error) {
+      this.#showPersistenceError(persistenceMessage(error));
+    }
+  };
+
+  readonly #onImportRun = (): void => {
+    if (!this.#persistenceEnabled) return;
+    this.#elements.importFile.click();
+  };
+
+  readonly #onImportFileChange = (): void => {
+    const file = this.#elements.importFile.files?.item(0);
+    this.#elements.importFile.value = "";
+    if (file === null || file === undefined) return;
+    void this.#importFile(file);
+  };
+
+  readonly #onResetRun = (): void => {
+    if (!this.#persistenceEnabled) return;
+    const confirmed = window.confirm(
+      "Reset this run? The local run will be deleted. Export it first if you want a portable copy.",
+    );
+    if (confirmed) void this.#resetRun();
+  };
+
+  async #importFile(file: File): Promise<void> {
+    try {
+      const imported = importRunSnapshot(await file.text());
+      await this.#saveChain;
+      await saveCurrentRun(imported);
+      window.location.reload();
+    } catch (error) {
+      this.#showPersistenceError(persistenceMessage(error));
+    }
+  }
+
+  async #resetRun(): Promise<void> {
+    try {
+      await this.#saveChain;
+      await clearCurrentRun();
+      window.location.reload();
+    } catch (error) {
+      this.#showPersistenceError(persistenceMessage(error));
+    }
+  }
+
+  #snapshot(): RunSnapshot {
+    return Object.freeze({
+      seed: this.#runSeed,
+      state: this.#game,
+      environment: this.#environment,
+      draft: Object.freeze({
+        glasses: glassCount(this.#glasses),
+        signs: signCount(this.#signs),
+        price: moneyCents(this.#price),
+      }),
+      phase: this.#phase,
+    });
+  }
+
+  #queueSave(successMessage: string): void {
+    if (!this.#persistenceEnabled) return;
+    const snapshot = this.#snapshot();
+    this.#saveChain = this.#saveChain
+      .then(async () => {
+        await saveCurrentRun(snapshot);
+        if (!this.#disposed) this.#showPersistenceStatus(successMessage);
+      })
+      .catch((error: unknown) => {
+        if (!this.#disposed) this.#showPersistenceError(persistenceMessage(error));
+      });
+  }
+
+  #showPersistenceStatus(message: string): void {
+    this.#elements.runStatus.textContent = message;
+    this.#elements.runError.hidden = true;
+    this.#elements.runError.textContent = "";
+  }
+
+  #showPersistenceError(message: string): void {
+    this.#elements.runStatus.textContent = "Run storage needs attention.";
+    this.#elements.runError.textContent = message;
+    this.#elements.runError.hidden = false;
+  }
 
   #affordability(): Readonly<{ affordable: boolean; operatingFunds: number; spend: number }> {
     const fixedObligations = Number(predictableFixedObligations(this.#game));
@@ -450,7 +651,9 @@ export class LemonadeApp {
     this.#elements.statusDay.textContent = String(Number(this.#game.day));
     this.#elements.statusCash.textContent = formatMoney(Number(this.#game.cash));
     this.#elements.statusDebt.textContent = formatMoney(Number(this.#game.loanBalance));
-    this.#elements.statusDebtGroup.hidden = !(this.#game.tier >= 3 || Number(this.#game.loanBalance) > 0);
+    this.#elements.statusDebtGroup.hidden = !(
+      this.#game.tier >= 3 || Number(this.#game.loanBalance) > 0
+    );
 
     this.#elements.conditionWeather.textContent = weatherLabel[this.#environment.weather.kind];
     this.#elements.conditionSentiment.textContent = sentimentLabel[this.#environment.sentiment.kind];
@@ -474,7 +677,9 @@ export class LemonadeApp {
     this.#elements.price.value = String(this.#price);
     this.#elements.priceOutput.textContent = formatMoney(this.#price);
     this.#elements.decisionSpend.textContent = `Spend ${formatMoney(affordability.spend)} of ${formatMoney(affordability.operatingFunds)} operating funds`;
-    this.#elements.decisionSpend.className = affordability.affordable ? "spend" : "spend spend-warning";
+    this.#elements.decisionSpend.className = affordability.affordable
+      ? "spend"
+      : "spend spend-warning";
     this.#elements.decisionError.hidden = affordability.affordable;
     this.#elements.sellButton.disabled = !affordability.affordable;
   }
@@ -520,7 +725,8 @@ export class LemonadeApp {
     const phase = this.#phase;
     this.#scene.update({
       environment: this.#environment,
-      visibleSigns: phase.kind === "report" ? Number(phase.resolution.entry.decision.signs) : this.#signs,
+      visibleSigns:
+        phase.kind === "report" ? Number(phase.resolution.entry.decision.signs) : this.#signs,
       phase: phase.kind,
       sold: phase.kind === "report" ? Number(phase.resolution.entry.sold) : 0,
       prepared:
