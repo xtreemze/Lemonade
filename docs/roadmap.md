@@ -118,7 +118,25 @@ Delivered:
 
 The simulation package remains storage-agnostic. Native file integration should be added only if a future desktop shell earns that capability surface.
 
-## Phase 9 — optional Tauri/native capabilities
+## Phase 9 — balance and gameplay certification (#22)
+
+Status: implemented as a deterministic simulation certification loop.
+
+The certification baseline provides:
+
+- seven understandable strategy profiles spanning conservative, aggressive, advertising-heavy, high-price, intentionally poor, adaptive, and progression play;
+- sixteen fixed seeds and a 90-day certification horizon;
+- per-day accounting, cash-flow, inventory, debt, day-continuity, and immutable-ledger invariants;
+- survival/bankruptcy, equity distribution, sell-through/waste, pricing, advertising, environment, event, progression, and finance-burden metrics;
+- controlled price, advertising, weather, and sentiment probes;
+- broad gameplay guardrails that detect implausible regressions without defining a single optimal strategy;
+- explicit verification that the progression fixture reaches every current finance tier;
+- deterministic Markdown reporting through `pnpm certify`;
+- CI execution of the certification command in addition to unit and browser acceptance coverage.
+
+Balance changes should now be reviewed against this evidence. Guardrails are product decisions, not snapshots to update mechanically: a deliberate guardrail change must explain the intended player behavior and any simulation-schema/replay implications.
+
+## Phase 10 — optional Tauri/native capabilities
 
 Begin only when a native capability has a measured product benefit.
 
@@ -132,11 +150,11 @@ Potential use cases:
 
 Do not port simulation code to Rust merely to justify Tauri. If shared logic ever exists in more than one language, require conformance fixtures across implementations.
 
-## Balance and certification loop
+## Ongoing balance and certification loop
 
 For each ruleset version:
 
-- run seeded strategy fixtures;
+- run the fixed certification corpus and inspect the deterministic report;
 - inspect bankruptcy and runaway-growth rates;
 - verify weather/sentiment uncertainty matters without dominating player decisions;
 - verify advertising has diminishing returns;
@@ -145,4 +163,4 @@ For each ruleset version:
 - verify accounting identities and rounding boundaries;
 - run the complete keyboard/browser acceptance flow.
 
-Changes to balance constants require tests/fixture updates and an explicit note that replay outcomes may differ under the new ruleset.
+Changes to balance constants require explicit review of fixture/report movement and an explicit note when replay outcomes may differ under the new ruleset.
