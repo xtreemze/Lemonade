@@ -1,0 +1,33 @@
+.scene-canvas {
+  display: block;
+  width: 100%;
+  height: 310px;
+}
+
+.scene-canvas-hidden {
+  display: none;
+}
+
+.scene-fallback {
+  min-height: 310px;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  padding: 28px;
+  text-align: center;
+  background:
+    linear-gradient(180deg, #7bc6d6 0 58%, #9cb976 58% 76%, #b99a71 76%);
+}
+
+.scene-fallback strong {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: clamp(1.6rem, 5vw, 3.2rem);
+}
+
+@media (max-width: 760px) {
+  .scene-canvas,
+  .scene-fallback {
+    height: 245px;
+    min-height: 245px;
+  }
+}

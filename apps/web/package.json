@@ -1,0 +1,21 @@
+{
+  "name": "@lemonade/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@lemonade/audio": "workspace:*",
+    "@lemonade/scene": "workspace:*",
+    "@lemonade/simulation": "workspace:*",
+    "@lemonade/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^8.1.0"
+  }
+}

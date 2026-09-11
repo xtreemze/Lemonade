@@ -1,158 +1,124 @@
 # Revival roadmap
 
-The revival is organized to preserve a playable comparison target while moving business rules into deterministic, testable packages. The migration should not replace the legacy implementation all at once.
+The revival is organized around one invariant: preserve the classic game's tiny decision surface while making the simulation deterministic, inspectable, accessible, and maintainable with current tooling.
+
+The 2017 Webpack application served as product archaeology during migration. Functional parity has now been reached by the modern implementation, so the duplicate legacy source/build output has been removed from the active tree and remains available through Git history.
 
 ## Phase 0 — product and engineering contract
 
-Status: started in Epic #8.
+Status: complete.
 
-Deliverables:
+Delivered:
 
 - reverse-engineered classic design model;
 - target architecture;
 - strict AI executor rules;
 - scoped implementation issues;
-- repository README/presentation that explains the actual game rather than stale build badges.
-
-Exit condition: future contributors can determine what must remain invariant without reconstructing the project from the 2017 implementation.
+- repository presentation that explains the actual game and engineering constraints.
 
 ## Phase 1 — workspace/tooling migration (#1)
 
-Introduce the modern workspace while preserving legacy source for comparison.
+Status: complete in the revival branch.
 
-Target:
-
-```text
-apps/web
-packages/simulation
-packages/ui
-packages/scene
-packages/audio
-packages/config
-```
-
-Current baseline as of September 10, 2026:
+Current baseline:
 
 - Node 24 LTS;
-- pinned pnpm workspace;
-- TypeScript 6 strict mode, configured for a clean future move to the native TypeScript 7 compiler;
-- React 19.3 + Vite 8.1;
+- pnpm 12 workspace with generated lockfile;
+- TypeScript 6 strict mode;
+- native HTML/DOM/CSS application UI;
+- Vite 8 as a thin development/build layer;
 - Vitest 5;
 - Playwright;
-- ESLint flat config and explicit formatting checks.
+- ESLint flat config with type-aware rules;
+- `pnpm/setup@v1` CI provisioning for pnpm + Node;
+- no Webpack, Babel, Travis, PostCSS compatibility layer, or runtime UI framework.
 
-Migration rule: dependency changes and `pnpm-lock.yaml` are one generated transaction performed by tooling. Never hand-edit the lockfile through GitHub.
-
-Exit condition: clean checkout -> one install -> typecheck/lint/test/build all have documented commands and CI jobs.
+Dependency changes and `pnpm-lock.yaml` remain one generated transaction performed by tooling. Never hand-edit the lockfile.
 
 ## Phase 2 — deterministic simulation (#2)
 
-Implement the smallest pure engine capable of one complete classic-style day.
+Status: implemented.
 
-Order:
+The simulation package provides:
 
 1. branded/fixed-precision primitives;
 2. weather, sentiment, event and progression unions;
-3. three-variable decision type and validation;
+3. three-variable decision validation;
 4. classic-inspired price and advertising curves;
 5. seeded randomness/environment generation;
 6. accounting and immutable daily ledger;
-7. deterministic replay/golden/property tests.
+7. deterministic replay and invariant tests.
 
-Start with a neutral market-sentiment multiplier so classic conformance fixtures remain easy to understand, then introduce the bounded sentiment model as a separate tested rule.
-
-Exit condition: a test can run an entire multi-day game without importing a browser API.
+The package is independent of browser APIs and presentation code.
 
 ## Phase 3 — primary web loop (#3)
 
-Build the real user experience around the simulation package.
+Status: implemented with native browser primitives.
 
-Primary screen must expose only:
+The primary screen exposes only:
 
 - glasses;
 - signs;
 - price;
 - Sell for the day.
 
-Before submit, show:
+Before submit it presents weather, sentiment, assets, costs, projected spend, and affordability. After submit it presents the day report and material events. The flow is keyboard-operable and covered by Playwright.
 
-- weather forecast;
-- qualitative market sentiment;
-- current assets;
-- current production/sign costs;
-- projected spend and affordability.
+## Phase 4 — ledger and charts (#6)
 
-After submit, show a single coherent report containing sales, revenue, costs, profit/loss, assets and material events.
+Status: ledger/history visualization implemented; durable persistence remains a future enhancement.
 
-Exit condition: a complete game day can be played with mouse/touch or keyboard and is covered by Playwright.
+The current UI uses native DOM + SVG rather than a charting framework. Historical values are exposed in a semantic table so the chart is never the only representation.
 
-## Phase 4 — persistence, ledger and charts (#6)
-
-Persist versioned state and the immutable ledger. Add small analytical views that answer gameplay questions rather than decorating the dashboard.
-
-Initial charts:
-
-- assets over time;
-- revenue / expense / profit;
-- prepared / sold / sell-through;
-- price and demand history.
-
-Exit condition: reload preserves the current run, old ledger results do not change after balance updates, and every chart has accessible values/table equivalence.
+Future persistence work should add a versioned storage adapter without changing the simulation API.
 
 ## Phase 5 — vector 3D Lemonsville (#4)
 
-Introduce presentation only after simulation/UI fixtures exist.
+Status: initial implementation complete.
 
-Milestones:
+The scene communicates:
 
-1. static stand/neighborhood composition;
-2. weather variants;
-3. visible signs and stand progression;
-4. customer/traffic intensity bands;
-5. day-resolution animation;
-6. reduced-motion and non-WebGL fallback;
-7. measured quality tiers.
+- weather variants;
+- visible advertising signs;
+- customer activity;
+- sell-through/day-resolution state;
+- reduced-motion preference;
+- textual and non-WebGL fallback.
 
-Exit condition: the 3D scene communicates state, stays inside frame budgets, and can be removed without affecting a simulation test.
+Three.js remains intentionally isolated to `packages/scene`; it solves meaningful scene-graph/WebGL complexity and does not own game rules.
 
 ## Phase 6 — procedural audio (#5)
 
-Build original event-driven cues with Web Audio.
+Status: initial implementation complete.
 
-Milestones:
-
-- audio context lifecycle and explicit user enablement;
-- synth voices/envelopes/noise;
-- tiny typed sequencer;
-- forecast/day/result/progression cue families;
-- suspend/resume and reduced-sensory handling;
-- optional Web MIDI output where supported.
-
-Native SoundFont/system MIDI support is deferred to a capability-specific Tauri issue if the web implementation proves insufficient.
-
-Exit condition: audio can be disabled entirely and the simulation/UI remains behaviorally equivalent.
+The browser audio layer provides original event-driven Web Audio cues with explicit gesture enablement and lifecycle handling. MIDI/SoundFont support remains an optional platform adapter rather than a browser assumption.
 
 ## Phase 7 — progressive finance (#7)
 
-Add complexity through rule modules, not more daily sliders.
+Status: initial progression implemented.
 
-Suggested order:
+Current finance progression includes named ledger treatment for supplier fees, taxes, banking costs, savings/loan interest, debt, repayment, and working-capital limits while preserving the three-control daily interface.
 
-1. production/input-cost changes;
-2. fixed operating/permit fees;
-3. predictable tax settlement;
-4. banking fees;
-5. savings interest;
-6. optional borrowing and loan interest;
-7. mature market cycles.
+Further balance work should be driven by deterministic simulation fixtures rather than additional mandatory controls.
 
-Every mechanic is previewed before first charge, appears as a named ledger line, and has deterministic rounding/boundary tests.
+## Phase 8 — persistence and run portability
 
-Exit condition: progression meaningfully changes strategy while the daily operating surface remains three controls plus submit.
+Next architectural priority after the consolidated revival is stable run persistence.
 
-## Phase 8 — optional Tauri/native capabilities
+Required properties:
 
-Only begin this phase when a native capability has a measured product benefit.
+- explicit save schema version;
+- simulation/ruleset version;
+- validated load boundary;
+- immutable historical ledger preservation;
+- seed/environment identity sufficient for diagnostics and replay;
+- import/export format that does not depend on a UI framework.
+
+Start with a browser adapter. Add native file integration only if the desktop shell is justified.
+
+## Phase 9 — optional Tauri/native capabilities
+
+Begin only when a native capability has a measured product benefit.
 
 Potential use cases:
 
@@ -162,19 +128,19 @@ Potential use cases:
 - MIDI/SoundFont backend;
 - platform integrations that cannot be implemented reliably in the browser.
 
-Do not port simulation code to Rust just to justify Tauri. If a native implementation of any shared logic becomes necessary, require conformance fixtures across languages.
+Do not port simulation code to Rust merely to justify Tauri. If shared logic ever exists in more than one language, require conformance fixtures across implementations.
 
-## Balance/certification loop
-
-Once Phases 2-3 are functional, treat game balance as data backed by simulation rather than ad-hoc UI tweaking.
+## Balance and certification loop
 
 For each ruleset version:
 
 - run seeded strategy fixtures;
 - inspect bankruptcy and runaway-growth rates;
-- verify that weather/sentiment uncertainty matters but does not dominate player decisions;
+- verify weather/sentiment uncertainty matters without dominating player decisions;
 - verify advertising has diminishing returns;
 - verify plausible price choices have meaningful trade-offs;
-- verify new progression costs arrive only after the player has learned preceding mechanics.
+- verify new progression costs arrive only after preceding mechanics are understandable;
+- verify accounting identities and rounding boundaries;
+- run the complete keyboard/browser acceptance flow.
 
-Changes to balance constants require tests/fixture updates and an explicit PR note that replay outcomes may differ under the new ruleset.
+Changes to balance constants require tests/fixture updates and an explicit note that replay outcomes may differ under the new ruleset.

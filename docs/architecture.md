@@ -4,70 +4,74 @@
 
 Lemonade is a **web-first deterministic simulation** with optional platform capability adapters.
 
-The web app owns composition and user experience. A pure TypeScript simulation package owns business rules. Rendering, audio, persistence, charts, and Tauri are consumers/adapters around that package.
+The browser application owns composition and user experience. A pure TypeScript simulation package owns business rules. Rendering, audio, persistence, charts, and any future Tauri shell are consumers/adapters around that package.
+
+The default implementation rule is **standards first**: use semantic HTML, CSS, the DOM, native form controls, SVG, Web Audio, and browser lifecycle APIs directly when they solve the problem cleanly. A library is justified when it removes substantial domain-specific complexity, as Three.js does for the low-poly 3D scene. A UI framework is not currently justified.
 
 Tauri is deliberately not the foundation. It may package the web app and expose native capabilities when those capabilities have a clear benefit, but the game remains fully playable in a browser.
 
-## Proposed workspace
+## Workspace
 
 ```text
 apps/
   web/
     src/
-      app/
-      features/
-      adapters/
-  desktop/
-    src-tauri/
+      app.ts       application controller and DOM composition
+      scene.ts     browser-to-scene adapter
+      main.ts      bootstrap
 packages/
-  simulation/
-    src/
-      model/
-      rules/
-      progression/
-      rng/
-      persistence/
-  ui/
-    src/
-      decisions/
-      reports/
-      charts/
-  scene/
-    src/
-  audio/
-    src/
-  config/
+  simulation/      deterministic business model
+  ui/              ledger projections + native DOM/SVG reporting
+  scene/           typed Three.js renderer
+  audio/           procedural Web Audio engine
 ```
 
-`apps/desktop` is introduced only after the web application and package boundaries exist. It should be possible to delete the desktop package without changing a single simulation rule.
+`apps/desktop` should be introduced only if a native capability earns the additional platform surface. It must be possible to delete a future desktop package without changing a simulation rule.
 
 ## Dependency direction
 
 Dependencies point inward toward stable, pure contracts.
 
 ```text
-simulation <- ui projections <- apps/web
-simulation <- scene adapter  <- apps/web
-simulation <- audio events   <- apps/web
-simulation <- persistence adapter <- apps/web
-apps/web <- optional native bridge <- apps/desktop
+simulation <- ui projections/renderers <- apps/web
+simulation <- scene adapter           <- apps/web
+simulation <- audio events            <- apps/web
+simulation <- persistence adapter      <- apps/web
+apps/web   <- optional native bridge   <- apps/desktop
 ```
 
 Forbidden dependency directions:
 
-- `simulation -> React`
-- `simulation -> DOM/browser`
+- `simulation -> DOM/browser APIs`
+- `simulation -> UI framework/runtime`
 - `simulation -> Three.js`
 - `simulation -> Web Audio`
 - `simulation -> Tauri`
 - `simulation -> IndexedDB/localStorage`
 - `simulation -> chart library`
 
+## Native web application
+
+The application is deliberately imperative and small. `LemonadeApp` owns browser-side mutable presentation state, binds event listeners once, calls the pure simulation, and projects results back into semantic DOM nodes.
+
+Use browser primitives before adding abstractions:
+
+- `<form>`, `<label>`, `<input type="range">`, `<output>`, `<button>`, `<table>`, `<dl>` for interaction and data;
+- DOM events for user input;
+- `hidden`, ARIA attributes, semantic headings and live regions for state presentation;
+- `matchMedia()` for user preferences;
+- `ResizeObserver` for canvas sizing;
+- native SVG DOM for charts;
+- Web Audio for procedural cues;
+- Canvas/WebGL through the scene adapter.
+
+Do not add a component framework simply to obtain templating, state setters, or lifecycle callbacks that are already straightforward at this scale. Revisit this only when measured application complexity demonstrates a concrete benefit.
+
+Web Components are permitted when a reusable element genuinely benefits from encapsulated lifecycle or custom-element semantics. They are not a default requirement.
+
 ## Domain API
 
-The core day resolution should be representable by a small pure contract.
-
-Illustrative TypeScript:
+The core day resolution is a small pure contract:
 
 ```ts
 type DayDecision = Readonly<{
@@ -81,16 +85,9 @@ type DayEnvironment = Readonly<{
   sentiment: MarketSentiment;
   event: DayEvent;
 }>;
-
-type SimulateDay = (
-  state: GameState,
-  decision: DayDecision,
-  environment: DayEnvironment,
-  rng: RandomSource,
-) => DayResolution;
 ```
 
-The exact API may evolve, but the important properties do not:
+The exact public API may evolve, but the important properties do not:
 
 - explicit inputs;
 - immutable output;
@@ -110,48 +107,36 @@ Useful opaque/branded primitives include:
 - `SignCount`
 - `DayNumber`
 - `Seed`
-- `BasisPoints` or another fixed-precision rate representation
+- `BasisPoints`
 
-Variant concepts should be closed discriminated unions where practical:
-
-```ts
-type Weather =
-  | { kind: "sunny" }
-  | { kind: "cloudy"; rainRisk: Percent }
-  | { kind: "hot-and-dry" }
-  | { kind: "thunderstorm" };
-```
-
-Use exhaustive handling rather than catch-all defaults. When persisted or external data enters the application, validate it at the boundary before converting it into these domain types.
+Variant concepts should be closed discriminated unions where practical. Use exhaustive handling rather than catch-all defaults. Validate persisted or external data at the boundary before converting it into domain types.
 
 ## Accounting
 
-Accounting must be exact at the unit we display.
+Accounting must be exact at the unit displayed. The default representation is integer cents.
 
-Default representation: integer cents.
-
-A daily ledger entry records named components rather than only a final profit number:
+A daily ledger records named components rather than only a final profit number:
 
 ```text
 revenue
 - production
 - advertising
-- operating fees
+- supplier/bank obligations
 - taxes
 + savings interest
 - loan interest
-= net change
+= operating net
 ```
 
-If later mechanics require fractional-cent accrual, keep a documented fixed-precision internal representation and define the point at which rounding occurs. Never introduce binary floating-point dollars into the authoritative ledger.
+Borrowing and principal repayment are balance-sheet movements and do not masquerade as profit or loss. Historical ledger entries are immutable; a future balance patch must not cause old chart history to be recomputed under new rates.
 
-Historical ledger entries are immutable. A future balance patch must not cause old chart history to be recomputed under new rates.
+If future mechanics require fractional-cent accrual, retain a documented fixed-precision internal representation and define the rounding boundary explicitly.
 
 ## Determinism and randomness
 
 Simulation randomness is a dependency.
 
-A seedable generator should support:
+A seedable generator supports:
 
 - deterministic replay tests;
 - shareable challenge seeds;
@@ -159,13 +144,13 @@ A seedable generator should support:
 - simulation/balance analysis;
 - fixed UI/story fixtures.
 
-Do not use the same random stream for presentation variation. 3D ambient motion, customer appearance, and procedural music should receive their own presentation seed(s).
+Do not use the same random stream for presentation variation. 3D ambient motion, customer appearance, and procedural music should receive separate presentation seeds if randomness is introduced there.
 
-The ordering of random draws is part of a simulation version's deterministic contract. Prefer deriving named substreams or precomputing typed environment events so unrelated code changes do not silently perturb all future results.
+The ordering of random draws is part of a simulation version's deterministic contract. Prefer named substreams or precomputed typed environment events when unrelated features might otherwise perturb future results.
 
-## Simulation versioning
+## Simulation versioning and persistence
 
-Game-state persistence should contain at least:
+Persisted data should contain at least:
 
 - save schema version;
 - simulation/ruleset version;
@@ -174,157 +159,99 @@ Game-state persistence should contain at least:
 - immutable daily ledger;
 - decisions or sufficient event log for diagnostics/replay.
 
-Schema migration and ruleset migration are different concerns. An old save can be structurally migrated without pretending that a changed balance model produces the same historical simulation.
+Schema migration and ruleset migration are separate concerns. Persisted data is untrusted input and must be validated before entering the domain model.
+
+Persistence starts at an interface boundary rather than being embedded into UI code. The browser implementation may use IndexedDB; a future Tauri adapter may use an application-data file or database. Both pass through the same validation/migration layer.
 
 ## State machine
 
-Model the primary app flow explicitly:
+Model the primary flow explicitly:
 
 ```text
 forecast/deciding
-  -> resolving
   -> report
   -> forecast/deciding
 ```
 
-Optional secondary surfaces (history, settings, finance) do not alter the day phase unless they explicitly commit a finance action.
+A day is resolved synchronously by the pure simulation when the player commits the form. Optional secondary surfaces such as history, settings, or finance must not create contradictory primary states.
 
-Avoid loose booleans that can create contradictory states such as a report being visible while decisions are still editable.
+## UI and charts
 
-## UI package
-
-The UI package owns accessible presentation primitives, not business rules.
-
-Primary day controls:
+The primary day surface has exactly three player-controlled variables:
 
 - glasses;
 - signs;
 - price;
-- one submit action.
+- one primary submit action.
 
-The UI receives validated ranges and affordability information from projections/domain services. It should not reproduce the core demand or accounting formula.
+The browser receives validated ranges and affordability information from projections/domain services. It must not reproduce demand or accounting formulas.
 
-Sliders should have precise numeric alternatives. Validation should be inline and predictable. A player should understand why a decision cannot be submitted without being interrupted by a modal/toast sequence.
+Charts consume projections of the immutable ledger. Prefer native SVG first because the data set is small and known. Each quantitative chart requires a textual/semantic equivalent; the current history view includes a complete table alongside SVG series.
+
+Avoid adding a general chart dependency until required interaction or scale exceeds what a small SVG renderer can express safely.
 
 ## Scene package
 
-The 3D scene consumes a compact typed render model. Example concepts:
+The 3D scene consumes a compact typed render model. It may interpolate values for animation, but it cannot decide how many glasses were sold.
 
-```text
-weatherAppearance
-trafficIntensity
-customerActivity
-standTier
-visibleSigns
-sellThroughBand
-resolutionPhase
-```
-
-The scene may interpolate between those values for animation, but it cannot decide how many glasses were sold.
+Three.js is intentionally retained here. Scene graphs, cameras, materials, geometry, device-pixel-ratio handling, and WebGL resource disposal are meaningful specialized complexity; replacing them with hand-written WebGL would not make the application more native in any useful architectural sense.
 
 Performance strategy:
 
 - simple low-poly/vector geometry;
-- instancing for repeated objects;
+- instancing for repeated objects where useful;
 - bounded device-pixel ratio;
-- explicit quality tiers;
+- explicit resize and disposal behavior;
 - minimal post-processing;
-- static/vector fallback when WebGL is unavailable;
+- static/textual fallback when WebGL is unavailable;
 - no gameplay-significant information exclusively inside the canvas.
 
 ## Audio package
 
-Core web audio should use a small procedural engine built on Web Audio primitives.
+Core browser audio uses Web Audio primitives and original procedural motifs/effects. It receives semantic events such as weather, submit, profit/loss, and progression unlocks.
 
-It receives semantic events such as:
-
-```text
-forecast:sunny
-forecast:cloudy
-day:submit
-day:profit
-day:loss
-event:thunderstorm
-progression:unlock
-```
-
-and schedules original motifs/effects. The audio package does not receive mutable game objects and cannot make simulation decisions.
-
-MIDI/SoundFont support is an adapter boundary. Browser Web MIDI can target external devices where supported. OS General MIDI/SoundFont access is not assumed in the web baseline.
-
-## Persistence
-
-Start with an interface rather than binding UI code directly to IndexedDB.
-
-```ts
-interface SaveRepository {
-  load(slot: SaveSlot): Promise<UnknownSavePayload | null>;
-  save(slot: SaveSlot, payload: SerializedSave): Promise<void>;
-}
-```
-
-The browser adapter may use IndexedDB. A future Tauri adapter may use a native application-data file or database. Both pass through the same validation/migration layer.
-
-## Charts
-
-Charts consume projections of the immutable ledger.
-
-Prefer lightweight SVG components first. The required data set is small and known, and bespoke charts can be both faster and more accessible than adopting a large general-purpose chart package.
-
-Each chart needs:
-
-- a title/question it answers;
-- accessible values independent of hover;
-- keyboard navigation when interactive;
-- a data table or equivalent representation;
-- deterministic fixture rendering.
+Audio starts only after a user gesture, handles suspend/resume, and cannot affect simulation results. MIDI/SoundFont support remains a platform adapter; browser access to an operating system General MIDI soundbank is not assumed.
 
 ## Optional Tauri shell
 
 Introduce Tauri only for specific capabilities such as:
 
 - desktop packaging/update integration;
-- reliable local-file persistence/export;
+- reliable local-file import/export;
 - native menus/shortcuts;
 - MIDI/native audio or SoundFont access where browser APIs are insufficient;
-- platform notifications or integrations that have a real game-design purpose.
+- platform integrations with a concrete game-design purpose.
 
-Do not duplicate browser capabilities in Rust merely because Tauri is present.
-
-Tauri commands must be narrow, permission-minimized, validated, and versioned at the IPC boundary. Native code should not become a parallel game engine by accident.
+Do not duplicate browser capabilities in Rust merely because Tauri is present. Native commands must be narrow, permission-minimized, validated, and versioned at the IPC boundary.
 
 ## Tooling baseline
 
-As of September 10, 2026, the target stack for the migration tracked by #1 is:
+The workspace baseline as of September 2026 is:
 
 - Node 24 LTS;
-- pnpm workspaces;
-- TypeScript 6 strict mode, with TypeScript 7 migration compatibility treated as a design constraint;
-- React 19.3;
-- Vite 8.1;
+- pnpm 12 workspaces;
+- TypeScript 6 strict mode;
+- native HTML/DOM/CSS application UI;
+- Vite 8 as a thin web build/development layer;
 - Vitest 5;
 - Playwright;
-- ESLint flat configuration;
-- Three.js-compatible renderer;
-- Tauri 2.11.x/Rust only when native capability work begins.
+- ESLint flat configuration with typed rules;
+- Three.js for the 3D renderer;
+- Tauri/Rust only when native capability work begins.
 
-TypeScript 6 is intentionally the current baseline: it is the stable transition release for the upcoming native TypeScript 7 compiler. Resolve its documented deprecations instead of relying on settings TypeScript 7 removes.
-
-Use exact versions from the generated lockfile, not README prose, as the reproducible source of package versions.
+CI uses `pnpm/setup@v1`, which provisions the standalone pnpm executable and Node runtime in one action. Dependency installation is frozen against the generated lockfile.
 
 ## CI contract
 
-The eventual required CI sequence should contain separate, diagnosable checks:
+Required validation is split into diagnosable jobs:
 
 ```text
-format/check
+frozen dependency install
+strict typecheck
 lint
-typecheck
-unit + property tests
+unit/invariant tests
 web build
-browser smoke/accessibility-critical flows
+browser acceptance flows
 ```
 
-Native/Tauri checks can be added when the desktop package exists rather than making every early web PR pay the platform build cost.
-
-PRs should not claim tests were run when the connector environment cannot execute them. CI is the source of truth for GitHub-only changes; local executors are used when a generated transaction or hardware/runtime measurement is required.
+Native/Tauri checks are added only if a desktop package is introduced. Generated dependency state is produced by package tooling and committed as generated output; it is never hand-authored.
