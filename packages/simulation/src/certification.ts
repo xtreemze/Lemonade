@@ -634,7 +634,7 @@ const controlledProbes = (): ControlledProbes => {
 };
 
 export const runBalanceCertification = (
-  horizonDays = CERTIFICATION_HORIZON_DAYS,
+  horizonDays: number = CERTIFICATION_HORIZON_DAYS,
   seedValues: readonly number[] = CERTIFICATION_SEEDS,
 ): BalanceCertificationReport => {
   requireInvariant(
