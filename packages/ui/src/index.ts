@@ -1,4 +1,4 @@
-export { LedgerHistory, type LedgerHistoryProps } from "./LedgerHistory.js";
+export { renderLedgerHistory } from "./LedgerHistory.js";
 export {
   projectLedger,
   sellThroughBasisPoints,
