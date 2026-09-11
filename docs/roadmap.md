@@ -66,11 +66,9 @@ Before submit it presents weather, sentiment, assets, costs, projected spend, an
 
 ## Phase 4 — ledger and charts (#6)
 
-Status: ledger/history visualization implemented; durable persistence remains a future enhancement.
+Status: ledger/history visualization and durable browser persistence implemented.
 
-The current UI uses native DOM + SVG rather than a charting framework. Historical values are exposed in a semantic table so the chart is never the only representation.
-
-Future persistence work should add a versioned storage adapter without changing the simulation API.
+The current UI uses native DOM + SVG rather than a charting framework. Historical values are exposed in a semantic table so the chart is never the only representation. Completed ledger history is persisted immutably and restored without recomputing old days under current balance constants.
 
 ## Phase 5 — vector 3D Lemonsville (#4)
 
@@ -101,20 +99,24 @@ Current finance progression includes named ledger treatment for supplier fees, t
 
 Further balance work should be driven by deterministic simulation fixtures rather than additional mandatory controls.
 
-## Phase 8 — persistence and run portability
+## Phase 8 — persistence and run portability (#21)
 
-Next architectural priority after the consolidated revival is stable run persistence.
+Status: implemented in the browser baseline.
 
-Required properties:
+Delivered:
 
-- explicit save schema version;
-- simulation/ruleset version;
-- validated load boundary;
-- immutable historical ledger preservation;
-- seed/environment identity sufficient for diagnostics and replay;
-- import/export format that does not depend on a UI framework.
+- explicit portable save schema with independent save and simulation/ruleset versions;
+- strict migration and validation boundary for all stored/imported data;
+- immutable completed-day ledger preservation;
+- deterministic seed/environment verification and RNG restoration;
+- explicit `deciding` and `report` phase persistence so reloads do not alter the current day;
+- native IndexedDB storage behind the web application boundary;
+- portable JSON export/import and explicit reset controls outside the daily decision form;
+- safe recovery for corrupt, unsupported, or future-version saves;
+- playable degraded mode when durable browser storage is unavailable;
+- unit fixtures plus Playwright coverage for reload persistence and clean-profile portability.
 
-Start with a browser adapter. Add native file integration only if the desktop shell is justified.
+The simulation package remains storage-agnostic. Native file integration should be added only if a future desktop shell earns that capability surface.
 
 ## Phase 9 — optional Tauri/native capabilities
 
