@@ -395,9 +395,13 @@ export class LemonadeApp {
       if (!enabled) return;
       this.#audio.play("day:submit");
       const resultCue = Number(resolution.entry.net) >= 0 ? "day:profit" : "day:loss";
-      window.setTimeout(() => this.#audio.play(resultCue), 220);
+      window.setTimeout(() => {
+        this.#audio.play(resultCue);
+      }, 220);
       if (resolution.nextState.tier !== previousTier) {
-        window.setTimeout(() => this.#audio.play("progression:unlock"), 520);
+        window.setTimeout(() => {
+          this.#audio.play("progression:unlock");
+        }, 520);
       }
     });
   };
