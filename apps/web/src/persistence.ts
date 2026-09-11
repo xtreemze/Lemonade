@@ -169,7 +169,7 @@ const asLiteral = <const Values extends readonly string[]>(
   if (typeof value !== "string" || !values.includes(value)) {
     return invalidSave(path, `expected one of ${values.join(", ")}`);
   }
-  return value as Values[number];
+  return value;
 };
 
 const asTier = (value: unknown, path: string): ProgressionTier => {
@@ -474,25 +474,43 @@ export const importRunSnapshot = (document: string): RunSnapshot => {
 
 const requestResult = <Result>(request: IDBRequest<Result>): Promise<Result> =>
   new Promise((resolve, reject) => {
-    request.addEventListener("success", () => resolve(request.result), { once: true });
+    request.addEventListener(
+      "success",
+      () => {
+        resolve(request.result);
+      },
+      { once: true },
+    );
     request.addEventListener(
       "error",
-      () => reject(request.error ?? new Error("IndexedDB request failed.")),
+      () => {
+        reject(request.error ?? new Error("IndexedDB request failed."));
+      },
       { once: true },
     );
   });
 
 const transactionComplete = (transaction: IDBTransaction): Promise<void> =>
   new Promise((resolve, reject) => {
-    transaction.addEventListener("complete", () => resolve(), { once: true });
+    transaction.addEventListener(
+      "complete",
+      () => {
+        resolve();
+      },
+      { once: true },
+    );
     transaction.addEventListener(
       "abort",
-      () => reject(transaction.error ?? new Error("IndexedDB transaction was aborted.")),
+      () => {
+        reject(transaction.error ?? new Error("IndexedDB transaction was aborted."));
+      },
       { once: true },
     );
     transaction.addEventListener(
       "error",
-      () => reject(transaction.error ?? new Error("IndexedDB transaction failed.")),
+      () => {
+        reject(transaction.error ?? new Error("IndexedDB transaction failed."));
+      },
       { once: true },
     );
   });
@@ -541,7 +559,7 @@ export const loadCurrentRun = async (): Promise<RunSnapshot | null> => {
   const database = await openDatabase();
   try {
     const transaction = database.transaction(RUN_STORE_NAME, "readonly");
-    const stored = await requestResult(
+    const stored = await requestResult<unknown>(
       transaction.objectStore(RUN_STORE_NAME).get(CURRENT_RUN_KEY),
     );
     await transactionComplete(transaction);
