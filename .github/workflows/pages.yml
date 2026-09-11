@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages
+name: Publish GitHub Pages
 
 on:
   push:
@@ -6,33 +6,44 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy Pages
+  publish:
+    name: Publish gh-pages
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload static site
-        uses: actions/upload-pages-artifact@v4
         with:
-          path: public
+          fetch-depth: 0
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish public to gh-pages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin gh-pages
+          git worktree add --detach "$RUNNER_TEMP/gh-pages" origin/gh-pages
+
+          find "$RUNNER_TEMP/gh-pages" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a public/. "$RUNNER_TEMP/gh-pages/"
+          touch "$RUNNER_TEMP/gh-pages/.nojekyll"
+
+          cd "$RUNNER_TEMP/gh-pages"
+          git add --all
+
+          if git diff --cached --quiet; then
+            echo "gh-pages is already up to date."
+            exit 0
+          fi
+
+          git commit -m "deploy: ${GITHUB_SHA}"
+          git push origin HEAD:gh-pages
