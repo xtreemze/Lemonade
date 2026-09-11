@@ -42,7 +42,7 @@ test("restores both report and next-day phases across reloads", async ({ page })
   const reportHeading = page.getByRole("heading", { name: /sold$/ });
   const reportText = await reportHeading.textContent();
   if (reportText === null) throw new Error("expected a day report heading");
-  await expect(page.getByRole("status")).toContainText("Day report saved locally");
+  await expect(page.locator("#run-status")).toContainText("Day report saved locally");
 
   await page.reload();
   await expect(page.getByRole("heading", { name: reportText })).toBeVisible();
@@ -50,7 +50,7 @@ test("restores both report and next-day phases across reloads", async ({ page })
 
   await page.getByRole("button", { name: "Plan next day" }).click();
   await expect(page.locator("#status-day")).toHaveText("2");
-  await expect(page.getByRole("status")).toContainText("Next day saved locally");
+  await expect(page.locator("#run-status")).toContainText("Next day saved locally");
 
   await page.reload();
   await expect(page.locator("#status-day")).toHaveText("2");
@@ -71,7 +71,6 @@ test("exports and imports a progressed run into a clean browser profile", async 
   await sourcePage.getByRole("button", { name: "Export run" }).click();
   const download = await downloadPromise;
   const downloadPath = await download.path();
-  if (downloadPath === null) throw new Error("expected exported run download path");
   const runDocument = await readFile(downloadPath);
 
   const target = await browser.newContext({ baseURL });
