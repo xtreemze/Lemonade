@@ -1,8 +1,8 @@
 import tseslint from "typescript-eslint";
 
 const typedSources = [
-  "apps/**/*.{ts,tsx}",
-  "packages/**/*.{ts,tsx}",
+  "apps/**/*.ts",
+  "packages/**/*.ts",
   "e2e/**/*.ts",
   "*.config.ts",
 ];
@@ -10,15 +10,7 @@ const scopeTypedConfig = (config) => ({ ...config, files: typedSources });
 
 export default tseslint.config(
   {
-    ignores: [
-      "app/**",
-      "build/**",
-      "dist/**",
-      "node_modules/**",
-      "public/**",
-      "*.js",
-      "legacy/**",
-    ],
+    ignores: ["build/**", "dist/**", "node_modules/**", "playwright-report/**", "test-results/**"],
   },
   ...tseslint.configs.strictTypeChecked.map(scopeTypedConfig),
   ...tseslint.configs.stylisticTypeChecked.map(scopeTypedConfig),
