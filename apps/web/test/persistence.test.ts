@@ -88,8 +88,8 @@ describe("run persistence", () => {
       });
       throw new Error("expected decode to fail");
     } catch (error) {
-      expect(error).toBeInstanceOf(RunPersistenceError);
-      expect((error as RunPersistenceError).code).toBe("unsupported-save-version");
+      if (!(error instanceof RunPersistenceError)) throw error;
+      expect(error.code).toBe("unsupported-save-version");
     }
   });
 
@@ -106,16 +106,21 @@ describe("run persistence", () => {
 
   it("rejects corrupt ledger history instead of recomputing it", () => {
     const document = createRunSaveDocument(createFixture());
-    const corrupt = structuredClone(document) as unknown as {
-      run: { state: { cash: number } };
+    const corrupt = {
+      ...document,
+      run: {
+        ...document.run,
+        state: {
+          ...document.run.state,
+          cash: document.run.state.cash + 1,
+        },
+      },
     };
-    corrupt.run.state.cash += 1;
 
     expect(() => decodeRunSaveDocument(corrupt)).toThrow(/ending cash/);
   });
 
   it("rejects invalid JSON before it reaches domain parsing", () => {
-    expect(() => importRunSnapshot("{not-json}"))
-      .toThrowError(/not valid JSON/);
+    expect(() => importRunSnapshot("{not-json}")).toThrowError(/not valid JSON/);
   });
 });
