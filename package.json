@@ -16,6 +16,7 @@
     "lint": "eslint .",
     "test": "pnpm -r --if-present test",
     "test:e2e": "playwright test",
+    "certify": "pnpm --filter @lemonade/simulation build && node scripts/certify.mjs",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
   },
   "devDependencies": {
