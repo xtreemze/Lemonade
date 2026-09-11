@@ -79,7 +79,7 @@ describe("run persistence", () => {
         ...document,
         saveSchemaVersion: RUN_SAVE_SCHEMA_VERSION + 1,
       }),
-    ).toThrowError(RunPersistenceError);
+    ).toThrow(RunPersistenceError);
 
     try {
       decodeRunSaveDocument({
@@ -121,6 +121,6 @@ describe("run persistence", () => {
   });
 
   it("rejects invalid JSON before it reaches domain parsing", () => {
-    expect(() => importRunSnapshot("{not-json}")).toThrowError(/not valid JSON/);
+    expect(() => importRunSnapshot("{not-json}")).toThrow(/not valid JSON/);
   });
 });
