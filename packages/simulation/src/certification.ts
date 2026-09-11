@@ -1,4 +1,5 @@
-import { availableOperatingFunds, financeRulesForTier, predictableFixedObligations } from "./finance.js";
+import { generateEnvironment, neutralEnvironment } from "./environment.js";
+import { availableOperatingFunds, predictableFixedObligations } from "./finance.js";
 import type {
   DailyLedgerEntry,
   DayDecision,
@@ -17,11 +18,10 @@ import {
   type Seed,
 } from "./primitives.js";
 import { createSeededRandom } from "./rng.js";
-import { generateEnvironment, neutralEnvironment } from "./environment.js";
 import { potentialDemand } from "./rules.js";
 import { simulateDay } from "./simulate.js";
 import { createInitialState } from "./state.js";
-import { SIMULATION_SCHEMA_VERSION } from "./index.js";
+import { SIMULATION_SCHEMA_VERSION } from "./version.js";
 
 export const CERTIFICATION_HORIZON_DAYS = 90 as const;
 
@@ -176,6 +176,12 @@ const failCertification = (message: string): never => {
 
 const requireInvariant = (condition: boolean, message: string): void => {
   if (!condition) failCertification(message);
+};
+
+const valueAt = <Value>(values: readonly Value[], index: number, label: string): Value => {
+  const value = values[index];
+  if (value === undefined) return failCertification(`${label} is incomplete`);
+  return value;
 };
 
 const variableBudgetCents = (state: GameState): number =>
@@ -362,9 +368,7 @@ const demandContribution = (
   entry: DailyLedgerEntry,
 ): Readonly<{ weather: number; sentiment: number; event: number }> => {
   const neutral = neutralEnvironment();
-  const neutralDemand = Number(
-    potentialDemand(entry.decision.price, entry.decision.signs, neutral),
-  );
+  const neutralDemand = Number(potentialDemand(entry.decision.price, entry.decision.signs, neutral));
   const weatherOnly: DayEnvironment = Object.freeze({
     weather: entry.environment.weather,
     sentiment: neutral.sentiment,
@@ -475,15 +479,10 @@ const runStrategy = (
   });
 };
 
-const sorted = (values: readonly number[]): number[] => [...values].sort((a, b) => a - b);
-
 const percentile = (values: readonly number[], ratio: number): number => {
   if (values.length === 0) return failCertification("cannot summarize an empty value set");
-  const ordered = sorted(values);
-  const index = Math.floor((ordered.length - 1) * ratio);
-  const value = ordered[index];
-  if (value === undefined) return failCertification("percentile index escaped value set");
-  return value;
+  const ordered = [...values].sort((a, b) => a - b);
+  return valueAt(ordered, Math.floor((ordered.length - 1) * ratio), "percentile values");
 };
 
 const aggregateFinance = (runs: readonly CertificationRunSummary[]): FinanceBurden =>
@@ -668,9 +667,11 @@ const profile = (
   return result;
 };
 
+type DemandProbePoint = Readonly<{ kind?: string; priceCents?: number; demand: number }>;
+
 const demandAt = (
-  points: readonly Readonly<{ kind?: string; priceCents?: number; demand: number }>[],
-  predicate: (point: Readonly<{ kind?: string; priceCents?: number; demand: number }>) => boolean,
+  points: readonly DemandProbePoint[],
+  predicate: (point: DemandProbePoint) => boolean,
 ): number => {
   const point = points.find(predicate);
   if (point === undefined) return failCertification("missing controlled demand probe");
@@ -747,18 +748,9 @@ export const assertBalanceCertification = (report: BalanceCertificationReport): 
     "strategy outcomes collapsed into an insufficient sell-through spread",
   );
 
-  const demandAtFive = demandAt(
-    report.probes.priceDemand,
-    (point) => point.priceCents === 5,
-  );
-  const demandAtTen = demandAt(
-    report.probes.priceDemand,
-    (point) => point.priceCents === 10,
-  );
-  const demandAtTwenty = demandAt(
-    report.probes.priceDemand,
-    (point) => point.priceCents === 20,
-  );
+  const demandAtFive = demandAt(report.probes.priceDemand, (point) => point.priceCents === 5);
+  const demandAtTen = demandAt(report.probes.priceDemand, (point) => point.priceCents === 10);
+  const demandAtTwenty = demandAt(report.probes.priceDemand, (point) => point.priceCents === 20);
   requireInvariant(
     demandAtFive > demandAtTen && demandAtTen > demandAtTwenty,
     "price/demand probe must remain strictly decreasing across 5c, 10c, and 20c",
@@ -768,15 +760,12 @@ export const assertBalanceCertification = (report: BalanceCertificationReport): 
     .filter((point) => point.signs > 0)
     .map((point) => point.marginalDemand);
   requireInvariant(
-    advertisingMarginals.length > 1 && (advertisingMarginals[0] ?? 0) > 0,
+    advertisingMarginals.length > 1 && valueAt(advertisingMarginals, 0, "advertising marginal probe") > 0,
     "advertising probe must produce positive first-sign demand",
   );
   for (let index = 1; index < advertisingMarginals.length; index += 1) {
-    const previous = advertisingMarginals[index - 1];
-    const current = advertisingMarginals[index];
-    if (previous === undefined || current === undefined) {
-      failCertification("advertising marginal probe is incomplete");
-    }
+    const previous = valueAt(advertisingMarginals, index - 1, "advertising marginal probe");
+    const current = valueAt(advertisingMarginals, index, "advertising marginal probe");
     requireInvariant(current <= previous, "advertising marginal benefit must not increase with more signs");
   }
 
@@ -796,7 +785,7 @@ export const assertBalanceCertification = (report: BalanceCertificationReport): 
     veryCold < neutralSentiment && neutralSentiment < hotSentiment,
     "market sentiment demand ordering changed unexpectedly",
   );
-}
+};
 
 const dollars = (cents: number): string => `$${(cents / 100).toFixed(2)}`;
 const percentFromBps = (bps: number): string => `${(bps / 100).toFixed(1)}%`;
