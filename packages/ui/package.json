@@ -12,10 +12,6 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@lemonade/simulation": "workspace:*",
-    "react": "^19.3.0"
-  },
-  "devDependencies": {
-    "@types/react": "^19.3.0"
+    "@lemonade/simulation": "workspace:*"
   }
 }
