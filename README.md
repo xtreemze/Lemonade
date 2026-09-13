@@ -2,6 +2,8 @@
 
 > A modern revival of the classic Lemonade Stand business simulation: three decisions, one day of sales, immediate consequences.
 
+**MVP:** [Play Lemonade on GitHub Pages](https://xtreemze.github.io/Lemonade/)
+
 Lemonade rebuilds the design strength of the 1979 Apple II game around a deliberately small operating surface. Each day, the player reads the conditions, chooses how many glasses to prepare, how much to advertise, and what price to charge, then commits the day and sees what happened.
 
 The goal is not to turn Lemonade into a spreadsheet. The goal is to make three variables feel consequential.
@@ -104,6 +106,12 @@ pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
+The deterministic gameplay/balance certification report is:
+
+```sh
+pnpm certify
+```
+
 ## Engineering rules
 
 This repository is intended to remain understandable and safely modifiable by both people and AI executors. The codebase therefore optimizes for explicit invariants, deterministic behavior, narrow boundaries, standards-first implementation, and reviewable changes.
@@ -124,9 +132,9 @@ Key rules:
 
 AI-specific contribution guidance is in [`AGENTS.md`](AGENTS.md).
 
-## Implemented revival slices
+## MVP status
 
-The current revival includes:
+The web MVP is deployed on GitHub Pages and includes:
 
 - strict pnpm/TypeScript workspace and CI;
 - deterministic Apple II-inspired simulation engine;
@@ -134,9 +142,14 @@ The current revival includes:
 - low-poly vector 3D Lemonsville and weather states;
 - procedural Web Audio cues;
 - accessible native SVG history charts and ledger tables;
-- progressive supplier fees, taxes, bank fees, interest, debt and credit.
+- progressive supplier fees, taxes, bank fees, interest, debt and credit;
+- versioned IndexedDB persistence with deterministic reload restoration;
+- portable run export/import and explicit reset/recovery behavior;
+- fixed-seed balance/gameplay certification across multiple strategies;
+- Chromium acceptance coverage for the complete daily loop and persistence;
+- automated project-page deployment with a verified `/Lemonade/` asset base.
 
-The project plan and design record remain under [`docs/`](docs/).
+The project plan and design record remain under [`docs/`](docs/). Post-MVP work should improve presentation, performance, balance, accessibility, and platform capability without expanding the daily decision surface unless evidence justifies it.
 
 ## Historical references
 
