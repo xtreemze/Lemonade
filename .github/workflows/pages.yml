@@ -16,13 +16,34 @@ jobs:
   publish:
     name: Publish gh-pages
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Publish public to gh-pages
+      - name: Setup pnpm and Node
+        uses: pnpm/setup@v1
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project-page bundle
+        run: pnpm --filter @lemonade/web exec vite build --base=/Lemonade/
+
+      - name: Verify deployment bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f apps/web/dist/index.html
+          grep -q '/Lemonade/assets/' apps/web/dist/index.html
+
+      - name: Publish build to gh-pages
         shell: bash
         run: |
           set -euo pipefail
@@ -34,7 +55,7 @@ jobs:
           git worktree add --detach "$RUNNER_TEMP/gh-pages" origin/gh-pages
 
           find "$RUNNER_TEMP/gh-pages" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -a public/. "$RUNNER_TEMP/gh-pages/"
+          cp -a apps/web/dist/. "$RUNNER_TEMP/gh-pages/"
           touch "$RUNNER_TEMP/gh-pages/.nojekyll"
 
           cd "$RUNNER_TEMP/gh-pages"
