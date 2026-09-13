@@ -22,6 +22,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm certify
+      - name: Verify GitHub Pages bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @lemonade/web exec vite build --base=/Lemonade/
+          test -f apps/web/dist/index.html
+          grep -q '/Lemonade/assets/' apps/web/dist/index.html
 
   browser:
     runs-on: ubuntu-latest
