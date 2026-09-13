@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 test("plays a complete day with keyboard controls", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("./");
 
   const sliders = page.getByRole("slider");
   await expect(sliders).toHaveCount(3);
@@ -22,7 +22,7 @@ test("plays a complete day with keyboard controls", async ({ page }) => {
 });
 
 test("prevents an unaffordable plan before submission", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("./");
 
   const glasses = page.getByRole("slider", { name: /Glasses/ });
   const signs = page.getByRole("slider", { name: /Signs/ });
@@ -36,7 +36,7 @@ test("prevents an unaffordable plan before submission", async ({ page }) => {
 });
 
 test("restores both report and next-day phases across reloads", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("./");
   await page.getByRole("button", { name: "Sell for the day" }).click();
 
   const reportHeading = page.getByRole("heading", { name: /sold$/ });
@@ -59,10 +59,10 @@ test("restores both report and next-day phases across reloads", async ({ page })
 });
 
 test("exports and imports a progressed run into a clean browser profile", async ({ browser }) => {
-  const baseURL = "http://127.0.0.1:4173";
+  const baseURL = "http://127.0.0.1:4173/Lemonade/";
   const source = await browser.newContext({ baseURL, acceptDownloads: true });
   const sourcePage = await source.newPage();
-  await sourcePage.goto("/");
+  await sourcePage.goto("./");
   await sourcePage.getByRole("button", { name: "Sell for the day" }).click();
   await sourcePage.getByRole("button", { name: "Plan next day" }).click();
   await expect(sourcePage.locator("#status-day")).toHaveText("2");
@@ -75,7 +75,7 @@ test("exports and imports a progressed run into a clean browser profile", async 
 
   const target = await browser.newContext({ baseURL });
   const targetPage = await target.newPage();
-  await targetPage.goto("/");
+  await targetPage.goto("./");
   await expect(targetPage.locator("#status-day")).toHaveText("1");
 
   const chooserPromise = targetPage.waitForEvent("filechooser");
