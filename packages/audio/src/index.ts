@@ -1,6 +1,8 @@
 export type WeatherKind = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 export type WeatherAudioCue = `forecast:${WeatherKind}`;
 
+export const WEATHER_FORECAST_DURATION_MS = 6_000;
+
 export type AudioCue =
   | WeatherAudioCue
   | "day:submit"
@@ -178,6 +180,7 @@ const BEAT_SECONDS = 0.12;
 const GAP_SECONDS = 0.018;
 const APPLE_SPEAKER_GAIN = 0.042;
 const APPLE_SPEAKER_GAP_SECONDS = 0.012;
+const WEATHER_FORECAST_DURATION_SECONDS = WEATHER_FORECAST_DURATION_MS / 1_000;
 
 const isWeatherCue = (cue: AudioCue): cue is WeatherAudioCue => cue.startsWith("forecast:");
 
@@ -188,11 +191,19 @@ const applePitchToMidi = (pitchValue: number): number => {
 
 const compileAppleWeatherCue = (cue: WeatherAudioCue): readonly ScheduledTone[] => {
   const melody = APPLE_WEATHER_MELODIES[cue];
+  const sourceDurationSeconds = melody.steps.reduce(
+    (total, step, index) =>
+      total +
+      step.durationUnits * melody.secondsPerUnit +
+      (index < melody.steps.length - 1 ? APPLE_SPEAKER_GAP_SECONDS : 0),
+    0,
+  );
+  const timeScale = WEATHER_FORECAST_DURATION_SECONDS / sourceDurationSeconds;
   const tones: ScheduledTone[] = [];
   let cursor = 0;
 
-  for (const step of melody.steps) {
-    const durationSeconds = step.durationUnits * melody.secondsPerUnit;
+  for (const [index, step] of melody.steps.entries()) {
+    const durationSeconds = step.durationUnits * melody.secondsPerUnit * timeScale;
     if (step.pitchValue !== "rest") {
       tones.push(
         Object.freeze({
@@ -204,7 +215,9 @@ const compileAppleWeatherCue = (cue: WeatherAudioCue): readonly ScheduledTone[] 
         }),
       );
     }
-    cursor += durationSeconds + APPLE_SPEAKER_GAP_SECONDS;
+    cursor +=
+      durationSeconds +
+      (index < melody.steps.length - 1 ? APPLE_SPEAKER_GAP_SECONDS * timeScale : 0);
   }
 
   return Object.freeze(tones);
