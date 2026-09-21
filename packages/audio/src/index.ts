@@ -1,8 +1,8 @@
+export type WeatherKind = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
+export type WeatherAudioCue = `forecast:${WeatherKind}`;
+
 export type AudioCue =
-  | "forecast:sunny"
-  | "forecast:cloudy"
-  | "forecast:hot-and-dry"
-  | "forecast:thunderstorm"
+  | WeatherAudioCue
   | "day:submit"
   | "day:profit"
   | "day:loss"
@@ -37,26 +37,17 @@ type MotifNote = Readonly<{
   gain?: number;
 }>;
 
-const MOTIFS: Record<AudioCue, readonly MotifNote[]> = {
-  "forecast:sunny": [
-    { note: 72, beats: 1, waveform: "triangle" },
-    { note: 76, beats: 1, waveform: "triangle" },
-    { note: 79, beats: 2, waveform: "triangle" },
-  ],
-  "forecast:cloudy": [
-    { note: 67, beats: 1, waveform: "sine" },
-    { note: 70, beats: 1, waveform: "sine" },
-    { note: 65, beats: 2, waveform: "sine" },
-  ],
-  "forecast:hot-and-dry": [
-    { note: 76, beats: 1, waveform: "square", gain: 0.055 },
-    { note: 79, beats: 1, waveform: "square", gain: 0.055 },
-    { note: 83, beats: 2, waveform: "square", gain: 0.055 },
-  ],
-  "forecast:thunderstorm": [
-    { note: 48, beats: 1, waveform: "sawtooth", gain: 0.045 },
-    { note: 43, beats: 2, waveform: "sawtooth", gain: 0.045 },
-  ],
+type AppleSpeakerStep = Readonly<{
+  pitchValue: number | "rest";
+  durationUnits: number;
+}>;
+
+type AppleWeatherMelody = Readonly<{
+  secondsPerUnit: number;
+  steps: readonly AppleSpeakerStep[];
+}>;
+
+const MOTIFS: Record<Exclude<AudioCue, WeatherAudioCue>, readonly MotifNote[]> = {
   "day:submit": [
     { note: 60, beats: 0.5, waveform: "square", gain: 0.05 },
     { note: 64, beats: 0.5, waveform: "square", gain: 0.05 },
@@ -85,10 +76,116 @@ const MOTIFS: Record<AudioCue, readonly MotifNote[]> = {
   ],
 };
 
+/**
+ * Weather melodies transcribed from the 1979 Applesoft BASIC weather-report
+ * DATA tables. The original uses an Apple II speaker routine where lower
+ * pitch-period values produce higher notes. Value 1 is explicitly a rest;
+ * value 0 wraps like a 256-period delay in the original 8-bit routine.
+ *
+ * Sunny used a repeated short-tone loop rather than the direct duration
+ * routine used by the other three melodies, so it has its own timing scale.
+ */
+const APPLE_WEATHER_MELODIES: Record<WeatherAudioCue, AppleWeatherMelody> = {
+  "forecast:sunny": {
+    secondsPerUnit: 1 / 24,
+    steps: [
+      { pitchValue: 96, durationUnits: 16 },
+      { pitchValue: 85, durationUnits: 4 },
+      { pitchValue: 128, durationUnits: 4 },
+      { pitchValue: 96, durationUnits: 4 },
+      { pitchValue: 76, durationUnits: 4 },
+      { pitchValue: 128, durationUnits: 4 },
+      { pitchValue: 96, durationUnits: 16 },
+    ],
+  },
+  "forecast:hot-and-dry": {
+    secondsPerUnit: 1 / 650,
+    steps: [
+      { pitchValue: 114, durationUnits: 120 },
+      { pitchValue: 144, durationUnits: 60 },
+      { pitchValue: 114, durationUnits: 255 },
+      { pitchValue: "rest", durationUnits: 120 },
+      { pitchValue: 128, durationUnits: 120 },
+      { pitchValue: 144, durationUnits: 60 },
+      { pitchValue: 128, durationUnits: 120 },
+      { pitchValue: 114, durationUnits: 60 },
+      { pitchValue: 144, durationUnits: 120 },
+      { pitchValue: 171, durationUnits: 255 },
+      { pitchValue: 228, durationUnits: 255 },
+    ],
+  },
+  "forecast:cloudy": {
+    secondsPerUnit: 1 / 650,
+    steps: [
+      { pitchValue: 152, durationUnits: 180 },
+      { pitchValue: 152, durationUnits: 120 },
+      { pitchValue: 152, durationUnits: 60 },
+      { pitchValue: 144, durationUnits: 120 },
+      { pitchValue: 152, durationUnits: 60 },
+      { pitchValue: 171, durationUnits: 120 },
+      { pitchValue: 192, durationUnits: 60 },
+      { pitchValue: 152, durationUnits: 255 },
+    ],
+  },
+  "forecast:thunderstorm": {
+    secondsPerUnit: 1 / 650,
+    steps: [
+      { pitchValue: 0, durationUnits: 160 },
+      { pitchValue: 128, durationUnits: 255 },
+      { pitchValue: 152, durationUnits: 40 },
+      { pitchValue: 171, durationUnits: 80 },
+      { pitchValue: 192, durationUnits: 40 },
+      { pitchValue: 228, durationUnits: 255 },
+      { pitchValue: "rest", durationUnits: 40 },
+      { pitchValue: 0, durationUnits: 160 },
+      { pitchValue: 192, durationUnits: 255 },
+      { pitchValue: 192, durationUnits: 40 },
+      { pitchValue: 171, durationUnits: 80 },
+      { pitchValue: 152, durationUnits: 40 },
+      { pitchValue: 128, durationUnits: 255 },
+    ],
+  },
+};
+
 const BEAT_SECONDS = 0.12;
 const GAP_SECONDS = 0.018;
+const APPLE_SPEAKER_GAIN = 0.042;
+const APPLE_SPEAKER_GAP_SECONDS = 0.012;
 
-export const compileCue = (cue: AudioCue): readonly ScheduledTone[] => {
+const isWeatherCue = (cue: AudioCue): cue is WeatherAudioCue => cue.startsWith("forecast:");
+
+const applePitchToMidi = (pitchValue: number): number => {
+  const effectivePitch = pitchValue === 0 ? 256 : pitchValue;
+  return Math.round(60 + 12 * Math.log2(192 / effectivePitch));
+};
+
+const compileAppleWeatherCue = (cue: WeatherAudioCue): readonly ScheduledTone[] => {
+  const melody = APPLE_WEATHER_MELODIES[cue];
+  const tones: ScheduledTone[] = [];
+  let cursor = 0;
+
+  for (const step of melody.steps) {
+    const durationSeconds = step.durationUnits * melody.secondsPerUnit;
+    if (step.pitchValue !== "rest") {
+      tones.push(
+        Object.freeze({
+          midiNote: applePitchToMidi(step.pitchValue),
+          startSeconds: cursor,
+          durationSeconds,
+          gain: APPLE_SPEAKER_GAIN,
+          waveform: "square",
+        }),
+      );
+    }
+    cursor += durationSeconds + APPLE_SPEAKER_GAP_SECONDS;
+  }
+
+  return Object.freeze(tones);
+};
+
+const compileModernCue = (
+  cue: Exclude<AudioCue, WeatherAudioCue>,
+): readonly ScheduledTone[] => {
   let cursor = 0;
   const tones: ScheduledTone[] = [];
 
@@ -108,6 +205,9 @@ export const compileCue = (cue: AudioCue): readonly ScheduledTone[] => {
 
   return Object.freeze(tones);
 };
+
+export const compileCue = (cue: AudioCue): readonly ScheduledTone[] =>
+  isWeatherCue(cue) ? compileAppleWeatherCue(cue) : compileModernCue(cue);
 
 const midiToFrequency = (note: number): number => 440 * 2 ** ((note - 69) / 12);
 
@@ -147,7 +247,10 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
       oscillator.type = tone.waveform;
       oscillator.frequency.setValueAtTime(midiToFrequency(tone.midiNote), start);
       envelope.gain.setValueAtTime(0.0001, start);
-      envelope.gain.exponentialRampToValueAtTime(tone.gain, start + Math.min(0.018, tone.durationSeconds / 3));
+      envelope.gain.exponentialRampToValueAtTime(
+        tone.gain,
+        start + Math.min(0.012, tone.durationSeconds / 4),
+      );
       envelope.gain.exponentialRampToValueAtTime(0.0001, end);
 
       oscillator.connect(envelope);
@@ -182,6 +285,4 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
   return Object.freeze({ enable, play, setMuted, suspend, resume, dispose });
 };
 
-export const weatherCue = (
-  weather: "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm",
-): AudioCue => `forecast:${weather}`;
+export const weatherCue = (weather: WeatherKind): WeatherAudioCue => `forecast:${weather}`;

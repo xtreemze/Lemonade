@@ -12,6 +12,8 @@ The invariant is:
 
 The three decisions are production quantity, advertising quantity, and price. Weather and market sentiment are observed conditions. Finance systems are obligations and consequences. Charts are memory. The 3D scene and audio are feedback. None of those should casually become a fourth operating variable.
 
+The weather interstitial before a new business day also carries the recognizable Apple II melody for that forecast. These melodies are reconstructed procedurally from the 1979 pitch/duration data and synthesized at runtime with Web Audio; no sampled or streamed audio asset is required. They are presentation-only and must not influence simulation state or timing.
+
 ## Historical inspiration and authoritative balance
 
 The 1979 Apple II Lemonade Stand remains presentation and game-design inspiration: a tiny decision surface, visible weather, immediate consequences, short musical cues, and an economic loop that is easy to learn but difficult to optimize. Its exact pricing and advertising equations are **not** the balance contract for this repository.
