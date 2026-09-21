@@ -85,7 +85,10 @@ describe("run persistence", () => {
 
   it("replays report saves created before operating-scale enforcement", () => {
     const random = createSeededRandom(RUN_SEED);
-    const state = createInitialState();
+    const state = Object.freeze({
+      ...createInitialState(),
+      cash: moneyCents(3_000),
+    });
     const environment = generateEnvironment(state.day, random);
     const legacyDecision = Object.freeze({
       glasses: glassCount(20),
@@ -130,7 +133,7 @@ describe("run persistence", () => {
 
     expect(restored.state).toEqual(state);
     expect(restored.environment).toEqual(environment);
-    expect(restored.draft).toEqual({ glasses: 20, signs: 1, price: 10 });
+    expect(restored.draft).toEqual({ glasses: 5, signs: 1, price: 150 });
     expect(restored.phase.kind).toBe("deciding");
   });
 
@@ -210,9 +213,15 @@ describe("run persistence", () => {
     }
   });
 
-  it("rejects saves from an incompatible simulation schema", () => {
+  it("rejects saves from an incompatible simulation schema instead of reinterpreting balance", () => {
     const document = createRunSaveDocument(createDecidingFixture());
 
+    expect(() =>
+      decodeRunSaveDocument({
+        ...document,
+        simulationSchemaVersion: SIMULATION_SCHEMA_VERSION - 1,
+      }),
+    ).toThrow(/requires/);
     expect(() =>
       decodeRunSaveDocument({
         ...document,
