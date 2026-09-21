@@ -8,6 +8,7 @@ import {
   generateEnvironment,
   glassCount,
   moneyCents,
+  replayLegacyDay,
   seed,
   signCount,
   simulateDay,
@@ -26,7 +27,7 @@ import {
 
 const RUN_SEED = seed(0x1e_ad_2026);
 const decision = Object.freeze({
-  glasses: glassCount(20),
+  glasses: glassCount(5),
   signs: signCount(1),
   price: moneyCents(10),
 });
@@ -79,6 +80,30 @@ describe("run persistence", () => {
 
     expect(restored).toEqual(snapshot);
     expect(restored.state.day).toBe(snapshot.state.day);
+    expect(restored.phase.kind).toBe("report");
+  });
+
+  it("replays report saves created before operating-scale enforcement", () => {
+    const random = createSeededRandom(RUN_SEED);
+    const state = createInitialState();
+    const environment = generateEnvironment(state.day, random);
+    const legacyDecision = Object.freeze({
+      glasses: glassCount(20),
+      signs: signCount(1),
+      price: moneyCents(10),
+    });
+    const resolution = replayLegacyDay(state, legacyDecision, environment);
+    const snapshot: RunSnapshot = Object.freeze({
+      seed: RUN_SEED,
+      state,
+      environment,
+      draft: legacyDecision,
+      phase: Object.freeze({ kind: "report", resolution }),
+    });
+
+    const restored = importRunSnapshot(exportRunSnapshot(snapshot));
+
+    expect(restored).toEqual(snapshot);
     expect(restored.phase.kind).toBe("report");
   });
 
