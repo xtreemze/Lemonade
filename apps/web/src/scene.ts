@@ -22,6 +22,7 @@ export type LemonsvilleSceneInput = Readonly<{
   phase: ScenePhase;
   sold: number;
   prepared: number;
+  priceCents: number;
   durationMs: number;
 }>;
 
@@ -58,7 +59,11 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
         ? `${String(input.sold)} sales from ${String(input.prepared)} prepared glasses`
         : "scene paused";
 
-  return `${weather} weather; ${sentiment} market sentiment; ${String(input.visibleSigns)} advertising signs; ${String(input.prepared)} glasses prepared; ${activity}.`;
+  const price =
+    input.priceCents < 100
+      ? `${String(Math.max(0, input.priceCents))}¢`
+      : `${(Math.max(0, input.priceCents) / 100).toFixed(2)}`;
+  return `${weather} weather; ${sentiment} market sentiment; ${String(input.visibleSigns)} advertising signs at ${price} per cup; ${String(input.prepared)} glasses prepared; ${activity}.`;
 };
 
 const createState = (
@@ -71,6 +76,7 @@ const createState = (
     visibleSigns: input.visibleSigns,
     prepared: Math.max(0, input.prepared),
     sold: Math.max(0, input.sold),
+    priceCents: Math.max(0, input.priceCents),
     durationMs: Math.max(0, input.durationMs),
     sellThroughBasisPoints:
       input.prepared > 0
@@ -159,6 +165,7 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
     elements.canvas.dataset["presentationDurationMs"] = String(Math.max(0, input.durationMs));
     elements.canvas.dataset["preparedCups"] = String(Math.max(0, input.prepared));
     elements.canvas.dataset["plannedSales"] = String(Math.max(0, input.sold));
+    elements.canvas.dataset["priceCents"] = String(Math.max(0, input.priceCents));
     elements.equivalent.textContent = description;
     elements.fallbackDescription.textContent = description;
 
