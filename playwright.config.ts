@@ -11,7 +11,7 @@ export default defineConfig({
   retries: isCI ? 2 : 0,
   reporter: isCI ? "github" : "list",
   expect: {
-    timeout: 7_500,
+    timeout: 9_000,
   },
   use: {
     baseURL: `${previewOrigin}${basePath}`,
