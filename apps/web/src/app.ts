@@ -125,7 +125,7 @@ export const createFreshRunSnapshot = (): RunSnapshot => {
     state,
     environment,
     draft: Object.freeze({
-      glasses: glassCount(15),
+      glasses: glassCount(5),
       signs: signCount(1),
       price: moneyCents(10),
     }),
