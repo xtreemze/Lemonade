@@ -122,6 +122,8 @@ for (const [width, height] of [
   [390, 844],
   [430, 932],
   [740, 360],
+  [844, 390],
+  [932, 430],
 ]) {
   const literal = `width: ${String(width)}, height: ${String(height)}`;
   if (!mobileSpec.includes(literal)) {
@@ -137,6 +139,13 @@ requireMatch(
   /scrollable[\s\S]*?overflowY[\s\S]*?overflowX[\s\S]*?expect\(contract\.scrollable\)\.toEqual\(\[\]\)/u,
   "no-nested-scroll",
   "Browser certification must reject nested user-scrollable containers, not only document scrolling.",
+);
+
+requireMatch(
+  styles,
+  /@media\s*\(width\s*>=\s*47\.5625rem\)\s*and\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.game-shell\[data-view="planning"\][\s\S]*?\.game-shell\[data-view="report"\]/u,
+  "desktop-release-requires-fine-pointer",
+  "The mobile fullscreen contract may only be released for a sufficiently wide fine-pointer/hover environment; wide touch devices remain mobile.",
 );
 
 requireMatch(
