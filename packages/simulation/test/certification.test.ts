@@ -22,7 +22,7 @@ describe("balance certification", () => {
     );
   });
 
-  it("passes accounting, progression, and strategic guardrails", () => {
+  it("passes 2017 equation, accounting, and progression guardrails", () => {
     const report = runBalanceCertification();
 
     expect(() => {
@@ -30,21 +30,22 @@ describe("balance certification", () => {
     }).not.toThrow();
 
     const progression = report.profiles.find((profile) => profile.strategy === "progression");
-    expect(progression?.maxTier).toBe(4);
-    expect(progression?.earliestDayByTier.slice(0, 5).every((day) => day !== null)).toBe(true);
-    expect(progression?.maxOperatingScale).toBeGreaterThanOrEqual(3);
-    expect(
-      progression?.earliestDayByOperatingScale.slice(0, 3).every((day) => day !== null),
-    ).toBe(true);
+    expect(progression?.maxOperatingScale).toBeGreaterThanOrEqual(2);
+
+    const prices = report.probes.priceDemand;
+    expect(prices.map((point) => point.demand)).toEqual(
+      [...prices].map((point) => point.demand).sort((left, right) => right - left),
+    );
+    expect(report.probes.weather.map((point) => point.effect)).toEqual([1, 2, 5, 10]);
   });
 
   it("formats a human-reviewable deterministic report", () => {
     const text = formatBalanceCertification(runBalanceCertification());
 
-    expect(text).toContain("# Lemonade balance certification");
+    expect(text).toContain("# Lemonade 2017 balance certification");
     expect(text).toContain("advertising-heavy");
     expect(text).toContain("Finance burden across the corpus");
-    expect(text).toContain("Controlled probes");
+    expect(text).toContain("2017 controlled probes");
     expect(text).toContain("Certification guardrails: PASS");
   });
 });

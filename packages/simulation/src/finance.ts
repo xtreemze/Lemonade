@@ -18,10 +18,10 @@ export type FinanceRules = Readonly<{
 }>;
 
 export const EQUITY_TIER_THRESHOLDS_CENTS = Object.freeze({
-  tier1: 500,
-  tier2: 2_000,
-  tier3: 5_000,
-  tier4: 10_000,
+  tier1: 10_000,
+  tier2: 50_000,
+  tier3: 500_000,
+  tier4: 1_000_000,
 });
 
 const RULES: Readonly<Record<ProgressionTier, FinanceRules>> = Object.freeze({

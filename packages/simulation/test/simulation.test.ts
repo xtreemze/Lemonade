@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   UnaffordableDecisionError,
   basisPoints,
-  classicAdvertisingMultiplier,
-  classicPriceDemand,
+  legacyConfidenceForState,
+  legacyMarketingEffect,
+  potentialDemand,
   createInitialState,
   createSeededRandom,
   dayNumber,
@@ -30,23 +31,40 @@ const decision = (
     price: moneyCents(priceCents),
   });
 
-describe("classic demand rules", () => {
-  it("preserves the Apple II reference-price curve", () => {
-    expect(classicPriceDemand(moneyCents(10))).toBe(30);
-    expect(classicPriceDemand(moneyCents(5))).toBe(42);
-    expect(classicPriceDemand(moneyCents(20))).toBe(7.5);
+describe("2017 demand rules", () => {
+  it("preserves the original signs-squared/log advertising term", () => {
+    expect(legacyMarketingEffect(signCount(0))).toBe(0);
+    expect(legacyMarketingEffect(signCount(1))).toBeCloseTo(1 / Math.log(2));
+    expect(legacyMarketingEffect(signCount(3))).toBeCloseTo(9 / Math.log(4));
   });
 
-  it("makes advertising useful with diminishing returns", () => {
-    const zero = classicAdvertisingMultiplier(signCount(0));
-    const one = classicAdvertisingMultiplier(signCount(1));
-    const two = classicAdvertisingMultiplier(signCount(2));
-    const ten = classicAdvertisingMultiplier(signCount(10));
+  it("uses inverse price continuously without an arbitrary 10-cent breakpoint", () => {
+    const environment = neutralEnvironment();
+    const confidence = 3;
 
-    expect(zero).toBe(1);
-    expect(one).toBeGreaterThan(zero);
-    expect(two - one).toBeLessThan(one - zero);
-    expect(ten).toBeLessThan(2);
+    expect(Number(potentialDemand(moneyCents(150), signCount(1), confidence, environment))).toBe(50);
+    expect(Number(potentialDemand(moneyCents(300), signCount(1), confidence, environment))).toBe(25);
+    expect(Number(potentialDemand(moneyCents(600), signCount(1), confidence, environment))).toBe(12);
+  });
+
+  it("starts with the historical confidence value", () => {
+    expect(legacyConfidenceForState(createInitialState())).toBe(3);
+  });
+
+  it("preserves the original first-day confidence behavior", () => {
+    const profitable = simulateDay(
+      createInitialState(),
+      decision(5, 1, 150),
+      neutralEnvironment(),
+    );
+    expect(legacyConfidenceForState(profitable.nextState)).toBe(1);
+
+    const zeroProfit = simulateDay(
+      createInitialState(),
+      decision(0, 0, 150),
+      neutralEnvironment(),
+    );
+    expect(legacyConfidenceForState(zeroProfit.nextState)).toBe(2);
   });
 });
 
@@ -54,15 +72,15 @@ describe("day resolution", () => {
   it("caps sales by prepared inventory and conserves cents", () => {
     const result = simulateDay(
       createInitialState(),
-      decision(15, 1, 10),
+      decision(5, 1, 150),
       neutralEnvironment(),
     );
 
-    expect(Number(result.entry.sold)).toBe(15);
-    expect(Number(result.entry.revenue)).toBe(150);
-    expect(Number(result.entry.expenses)).toBe(45);
-    expect(Number(result.entry.net)).toBe(105);
-    expect(Number(result.entry.endingCash)).toBe(305);
+    expect(Number(result.entry.sold)).toBe(5);
+    expect(Number(result.entry.revenue)).toBe(750);
+    expect(Number(result.entry.expenses)).toBe(550);
+    expect(Number(result.entry.net)).toBe(200);
+    expect(Number(result.entry.endingCash)).toBe(1_200);
     expect(Number(result.nextState.cash)).toBe(
       Number(result.previousState.cash) + Number(result.entry.net),
     );
@@ -71,14 +89,14 @@ describe("day resolution", () => {
   it("rejects spending that exceeds available cash inside the unlocked envelope", () => {
     const cashPoorState = Object.freeze({
       ...createInitialState(),
-      cash: moneyCents(10),
+      cash: moneyCents(100),
     });
     expect(() =>
-      simulateDay(cashPoorState, decision(15, 0, 10), neutralEnvironment()),
+      simulateDay(cashPoorState, decision(2, 0, 150), neutralEnvironment()),
     ).toThrow(UnaffordableDecisionError);
   });
 
-  it("keeps thunderstorms economically decisive without presentation timing", () => {
+  it("preserves the 2017 storm variant as reduced rather than zero demand", () => {
     const environment: DayEnvironment = Object.freeze({
       weather: Object.freeze({
         kind: "thunderstorm",
@@ -94,11 +112,11 @@ describe("day resolution", () => {
       }),
     });
 
-    const result = simulateDay(createInitialState(), decision(15, 3, 5), environment);
-    expect(Number(result.entry.sold)).toBe(0);
+    const result = simulateDay(createInitialState(), decision(5, 3, 150), environment);
+    expect(Number(result.entry.sold)).toBeGreaterThan(0);
   });
 
-  it("models the worker sell-out event without bypassing affordability", () => {
+  it("does not let later presentation events override 2017 demand", () => {
     const environment: DayEnvironment = Object.freeze({
       weather: Object.freeze({
         kind: "cloudy",
@@ -114,37 +132,41 @@ describe("day resolution", () => {
       }),
     });
 
-    const result = simulateDay(createInitialState(), decision(15, 0, 50), environment);
-    expect(Number(result.entry.sold)).toBe(15);
-    expect(Number(result.entry.potentialDemand)).toBeGreaterThanOrEqual(15);
+    const result = simulateDay(createInitialState(), decision(5, 0, 150), environment);
+    expect(Number(result.entry.sold)).toBe(4);
+    expect(Number(result.entry.potentialDemand)).toBe(4);
   });
 
-  it("applies the classic staged production-cost lesson", () => {
+  it("keeps the 2017 one-dollar cup cost constant", () => {
     const first = simulateDay(
       createInitialState(),
-      decision(5, 0, 10),
+      decision(5, 0, 150),
       neutralEnvironment(),
     );
     const second = simulateDay(
       first.nextState,
-      decision(5, 0, 10),
+      decision(5, 0, 150),
       neutralEnvironment(),
     );
 
-    expect(Number(first.nextState.unitCost)).toBe(2);
-    expect(Number(second.nextState.unitCost)).toBe(4);
+    expect(Number(first.nextState.unitCost)).toBe(100);
+    expect(Number(second.nextState.unitCost)).toBe(100);
   });
 
   it("holds accounting and inventory invariants across a decision grid", () => {
-    const glassesValues = [0, 1, 5, 15] as const;
+    const fundedState = Object.freeze({
+      ...createInitialState(),
+      cash: moneyCents(5_000),
+    });
+    const glassesValues = [0, 1, 5, 10] as const;
     const signValues = [0, 1, 3] as const;
-    const priceValues = [5, 10, 25] as const;
+    const priceValues = [100, 150, 250] as const;
 
     for (const glasses of glassesValues) {
       for (const signs of signValues) {
         for (const price of priceValues) {
           const result = simulateDay(
-            createInitialState(),
+            fundedState,
             decision(glasses, signs, price),
             neutralEnvironment(),
           );
@@ -161,10 +183,12 @@ describe("day resolution", () => {
 });
 
 describe("deterministic environment generation", () => {
-  it("protects the first two days with sunny weather", () => {
+  it("starts day one sunny, then uses the 2017 four-variant weather draw", () => {
     const random = createSeededRandom(seed(123));
     expect(generateEnvironment(dayNumber(1), random).weather.kind).toBe("sunny");
-    expect(generateEnvironment(dayNumber(2), random).weather.kind).toBe("sunny");
+    expect(["thunderstorm", "cloudy", "hot-and-dry", "sunny"]).toContain(
+      generateEnvironment(dayNumber(2), random).weather.kind,
+    );
   });
 
   it("replays the same environment sequence from the same seed", () => {

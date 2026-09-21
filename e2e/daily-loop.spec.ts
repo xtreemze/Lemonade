@@ -10,12 +10,12 @@ test("plays a complete day with keyboard controls", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Sell for the day" })).toHaveCount(1);
 
   const glasses = page.getByRole("slider", { name: /Glasses/ });
-  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.10");
-  await expect(page.locator("#signs-cost")).toHaveText("Cost $0.15");
-  await expect(page.locator("#price-value")).toHaveText("Price $0.10 / glass");
+  await expect(page.locator("#glasses-cost")).toHaveText("Cost $5.00");
+  await expect(page.locator("#signs-cost")).toHaveText("Cost $0.50");
+  await expect(page.locator("#price-value")).toHaveText("Price $1.50 / glass");
   await glasses.focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.12");
+  await expect(page.locator("#glasses-cost")).toHaveText("Cost $6.00");
 
   const sell = page.getByRole("button", { name: "Sell for the day" });
   await sell.focus();
@@ -38,23 +38,23 @@ test("supports precise numeric entry synchronized with sliders", async ({ page }
   await page.keyboard.type("14");
   await expect(glassesExact).toHaveValue("14");
   await expect(glassesSlider).toHaveValue("14");
-  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.28");
+  await expect(page.locator("#glasses-cost")).toHaveText("Cost $14.00");
 
   const signsExact = page.getByRole("spinbutton", { name: "Signs Exact" });
   const signsSlider = page.getByRole("slider", { name: "Signs" });
   await signsSlider.focus();
   await page.keyboard.press("ArrowRight");
   await expect(signsExact).toHaveValue("2");
-  await expect(page.locator("#signs-cost")).toHaveText("Cost $0.30");
+  await expect(page.locator("#signs-cost")).toHaveText("Cost $1.00");
 
   const priceExact = page.getByRole("spinbutton", { name: "Price Exact cents" });
   const priceSlider = page.getByRole("slider", { name: "Price" });
   await priceExact.focus();
   await page.keyboard.press("Control+A");
-  await page.keyboard.type("15");
-  await expect(priceExact).toHaveValue("15");
-  await expect(priceSlider).toHaveValue("15");
-  await expect(page.locator("#price-value")).toHaveText("Price $0.15 / glass");
+  await page.keyboard.type("175");
+  await expect(priceExact).toHaveValue("175");
+  await expect(priceSlider).toHaveValue("175");
+  await expect(page.locator("#price-value")).toHaveText("Price $1.75 / glass");
 
   await glassesExact.fill("9999");
   const maximumGlasses = await glassesSlider.getAttribute("max");

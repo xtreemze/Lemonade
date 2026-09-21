@@ -8,16 +8,17 @@ import type { DayEnvironment } from "@lemonade/simulation";
 
 import type { createLemonsvilleScene } from "./scene-runtime.js";
 
-const activityBySentiment: Record<DayEnvironment["sentiment"]["kind"], CustomerActivity> = {
-  "very-cold": "quiet",
-  cold: "light",
-  neutral: "steady",
-  warm: "lively",
-  hot: "busy",
+const activityForConfidence = (confidence: number): CustomerActivity => {
+  if (confidence <= 0) return "quiet";
+  if (confidence === 1) return "light";
+  if (confidence === 2) return "steady";
+  if (confidence === 3) return "lively";
+  return "busy";
 };
 
 export type LemonsvilleSceneInput = Readonly<{
   environment: DayEnvironment;
+  confidence: number;
   visibleSigns: number;
   phase: ScenePhase;
   sold: number;
@@ -50,7 +51,6 @@ const loadSceneRuntime = (): Promise<SceneRuntime> => {
 
 const describeScene = (input: LemonsvilleSceneInput): string => {
   const weather = input.environment.weather.kind.replaceAll("-", " ");
-  const sentiment = input.environment.sentiment.kind.replaceAll("-", " ");
   const activity =
     input.phase === "forecast"
       ? "forecast preview"
@@ -58,7 +58,7 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
         ? `${String(input.sold)} sales from ${String(input.prepared)} prepared glasses`
         : "scene paused";
 
-  return `${weather} weather; ${sentiment} market sentiment; ${String(input.visibleSigns)} advertising signs; ${String(input.prepared)} glasses prepared; ${activity}.`;
+  return `${weather} weather; confidence ${String(input.confidence)}/5; ${String(input.visibleSigns)} advertising signs; ${String(input.prepared)} glasses prepared; ${activity}.`;
 };
 
 const createState = (
@@ -67,7 +67,7 @@ const createState = (
 ): LemonsvilleSceneState =>
   Object.freeze({
     weather: input.environment.weather.kind,
-    customerActivity: activityBySentiment[input.environment.sentiment.kind],
+    customerActivity: activityForConfidence(input.confidence),
     visibleSigns: input.visibleSigns,
     prepared: Math.max(0, input.prepared),
     sold: Math.max(0, input.sold),

@@ -6,6 +6,7 @@ import {
   financeRulesForTier,
   generateEnvironment,
   glassCount,
+  legacyConfidenceForState,
   moneyCents,
   operatingScaleForState,
   predictableFixedObligations,
@@ -49,16 +50,8 @@ type PresentationPhase = "planning" | "simulation" | "report" | "forecast";
 const weatherLabel: Record<DayEnvironment["weather"]["kind"], string> = {
   sunny: "Sunny",
   cloudy: "Cloudy",
-  "hot-and-dry": "Hot & dry",
+  "hot-and-dry": "Partly cloudy",
   thunderstorm: "Thunderstorm",
-};
-
-const sentimentLabel: Record<DayEnvironment["sentiment"]["kind"], string> = {
-  "very-cold": "Very cautious",
-  cold: "Cautious",
-  neutral: "Neutral",
-  warm: "Interested",
-  hot: "Eager",
 };
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
@@ -69,20 +62,13 @@ const moneyFormatter = new Intl.NumberFormat("en-US", {
 
 const formatMoney = (cents: number): string => moneyFormatter.format(cents / 100);
 
-const decisionBudget = (state: GameState): number =>
-  Math.max(
-    0,
-    Number(availableOperatingFunds(state)) - Number(predictableFixedObligations(state)),
-  );
-
 const decisionLimit = (
   state: GameState,
 ): Readonly<{ glasses: number; signs: number; price: number }> => {
-  const budget = decisionBudget(state);
   const scale = operatingScaleForState(state);
   return Object.freeze({
-    glasses: Math.min(scale.maxGlasses, Math.floor(budget / Number(state.unitCost))),
-    signs: Math.min(scale.maxSigns, Math.floor(budget / Number(state.signCost))),
+    glasses: scale.maxGlasses,
+    signs: scale.maxSigns,
     price: scale.maxPriceCents,
   });
 };
@@ -127,7 +113,7 @@ export const createFreshRunSnapshot = (): RunSnapshot => {
     draft: Object.freeze({
       glasses: glassCount(5),
       signs: signCount(1),
-      price: moneyCents(10),
+      price: moneyCents(150),
     }),
     phase: Object.freeze({ kind: "deciding" }),
   });
@@ -154,7 +140,7 @@ const SHELL_MARKUP = `
         <p class="eyebrow" id="conditions-title">Today’s conditions</p>
         <strong id="condition-weather"></strong>
       </div>
-      <div><span>Market sentiment</span><strong id="condition-sentiment"></strong></div>
+      <div><span>Confidence</span><strong id="condition-sentiment"></strong></div>
       <div><span>Production</span><strong id="condition-production"></strong></div>
       <div><span>Advertising</span><strong id="condition-advertising"></strong></div>
     </section>
@@ -614,7 +600,7 @@ export class LemonadeApp {
         break;
       case "forecast":
         this.#elements.sceneKicker.textContent = `Day ${String(Number(this.#game.day))} forecast`;
-        this.#elements.sceneTitle.textContent = `${weatherLabel[this.#environment.weather.kind]} · ${sentimentLabel[this.#environment.sentiment.kind]}`;
+        this.#elements.sceneTitle.textContent = `${weatherLabel[this.#environment.weather.kind]} · Confidence ${String(legacyConfidenceForState(this.#game))}/5`;
         break;
     }
   }
@@ -628,7 +614,7 @@ export class LemonadeApp {
     );
 
     this.#elements.conditionWeather.textContent = weatherLabel[this.#environment.weather.kind];
-    this.#elements.conditionSentiment.textContent = sentimentLabel[this.#environment.sentiment.kind];
+    this.#elements.conditionSentiment.textContent = `${String(legacyConfidenceForState(this.#game))} / 5`;
     this.#elements.conditionProduction.textContent = `${formatMoney(Number(this.#game.unitCost))} / glass`;
     this.#elements.conditionAdvertising.textContent = `${formatMoney(Number(this.#game.signCost))} / sign`;
     const scale = operatingScaleForState(this.#game);
@@ -675,6 +661,7 @@ export class LemonadeApp {
         : "idle";
     this.#scene.update({
       environment: this.#environment,
+      confidence: legacyConfidenceForState(this.#game),
       visibleSigns: resolvedDay === null ? this.#signs : Number(resolvedDay.decision.signs),
       phase: scenePhase,
       sold: resolvedDay === null ? 0 : Number(resolvedDay.sold),

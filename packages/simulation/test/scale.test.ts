@@ -41,33 +41,33 @@ describe("operating-scale progression", () => {
     });
   });
 
-  it("uses balance-certified milestones for the modern cents economy", () => {
+  it("preserves the original 2017 absolute balance thresholds", () => {
     expect(OPERATING_SCALE_THRESHOLDS_CENTS).toEqual({
-      level2: 500,
-      level3: 2_000,
-      level4: 10_000,
+      level2: 10_000,
+      level3: 50_000,
+      level4: 500_000,
     });
   });
 
   it("downgrades when equity falls below an unlocked boundary", () => {
-    expect(operatingScaleForEquity(10_000).level).toBe(4);
-    expect(operatingScaleForEquity(9_999).level).toBe(3);
-    expect(operatingScaleForEquity(2_000).level).toBe(3);
-    expect(operatingScaleForEquity(1_999).level).toBe(2);
-    expect(operatingScaleForEquity(500).level).toBe(2);
-    expect(operatingScaleForEquity(499).level).toBe(1);
+    expect(operatingScaleForEquity(500_000).level).toBe(4);
+    expect(operatingScaleForEquity(499_999).level).toBe(3);
+    expect(operatingScaleForEquity(50_000).level).toBe(3);
+    expect(operatingScaleForEquity(49_999).level).toBe(2);
+    expect(operatingScaleForEquity(10_000).level).toBe(2);
+    expect(operatingScaleForEquity(9_999).level).toBe(1);
   });
 
-  it("derives scale from equity rather than finance tier or cash alone", () => {
+  it("derives stand scale from the 2017 operating ledger, not later finance cash", () => {
     const initial = createInitialState();
-    const leveraged = Object.freeze({
+    const financeRich = Object.freeze({
       ...initial,
-      cash: moneyCents(12_000),
-      loanBalance: moneyCents(3_000),
+      cash: moneyCents(900_000),
+      loanBalance: moneyCents(0),
       tier: 4 as const,
     });
 
-    expect(operatingScaleForState(leveraged).level).toBe(3);
+    expect(operatingScaleForState(financeRich).level).toBe(1);
   });
   it("rejects otherwise-affordable decisions outside the unlocked envelope", () => {
     const state = createInitialState();
@@ -78,7 +78,7 @@ describe("operating-scale progression", () => {
         Object.freeze({
           glasses: glassCount(16),
           signs: signCount(1),
-          price: moneyCents(10),
+          price: moneyCents(150),
         }),
         neutralEnvironment(),
       ),
