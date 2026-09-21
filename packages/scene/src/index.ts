@@ -63,8 +63,8 @@ const smoothStep = (value: number): number => {
 const lerp = (start: number, end: number, progress: number): number =>
   start + (end - start) * progress;
 
-const makeMaterial = (color: number): THREE.MeshStandardMaterial =>
-  new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92 });
+const makeMaterial = (color: number): THREE.MeshLambertMaterial =>
+  new THREE.MeshLambertMaterial({ color, flatShading: true });
 
 const addBox = (
   parent: THREE.Object3D,
