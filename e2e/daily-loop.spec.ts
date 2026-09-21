@@ -10,8 +10,12 @@ test("plays a complete day with keyboard controls", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Sell for the day" })).toHaveCount(1);
 
   const glasses = page.getByRole("slider", { name: /Glasses/ });
+  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.40");
+  await expect(page.locator("#signs-cost")).toHaveText("Cost $0.15");
+  await expect(page.locator("#price-value")).toHaveText("Price $0.10 / glass");
   await glasses.focus();
   await page.keyboard.press("ArrowRight");
+  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.42");
 
   const sell = page.getByRole("button", { name: "Sell for the day" });
   await sell.focus();
@@ -34,12 +38,14 @@ test("supports precise numeric entry synchronized with sliders", async ({ page }
   await page.keyboard.type("24");
   await expect(glassesExact).toHaveValue("24");
   await expect(glassesSlider).toHaveValue("24");
+  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.48");
 
   const signsExact = page.getByRole("spinbutton", { name: "Signs Exact" });
   const signsSlider = page.getByRole("slider", { name: "Signs" });
   await signsSlider.focus();
   await page.keyboard.press("ArrowRight");
   await expect(signsExact).toHaveValue("2");
+  await expect(page.locator("#signs-cost")).toHaveText("Cost $0.30");
 
   const priceExact = page.getByRole("spinbutton", { name: "Price Exact cents" });
   const priceSlider = page.getByRole("slider", { name: "Price" });
@@ -48,6 +54,7 @@ test("supports precise numeric entry synchronized with sliders", async ({ page }
   await page.keyboard.type("15");
   await expect(priceExact).toHaveValue("15");
   await expect(priceSlider).toHaveValue("15");
+  await expect(page.locator("#price-value")).toHaveText("Price $0.15 / glass");
 
   await glassesExact.fill("9999");
   const maximumGlasses = await glassesSlider.getAttribute("max");
