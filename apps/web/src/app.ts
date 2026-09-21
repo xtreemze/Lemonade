@@ -39,8 +39,8 @@ import {
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
-const SIMULATION_PRESENTATION_MS = 1_800;
-const FORECAST_PRESENTATION_MS = 1_400;
+const SIMULATION_PRESENTATION_MS = 5_000;
+const FORECAST_PRESENTATION_MS = 3_000;
 
 type PresentationPhase = "planning" | "simulation" | "report" | "forecast";
 
@@ -649,15 +649,22 @@ export class LemonadeApp {
   #renderScene(): void {
     const phase = this.#phase;
     const resolvedDay = phase.kind === "report" ? phase.resolution.entry : null;
+    const scenePhase =
+      this.#presentation === "simulation" || this.#presentation === "forecast"
+        ? this.#presentation
+        : "idle";
     this.#scene.update({
       environment: this.#environment,
       visibleSigns: resolvedDay === null ? this.#signs : Number(resolvedDay.decision.signs),
-      phase:
-        this.#presentation === "simulation" || this.#presentation === "forecast"
-          ? this.#presentation
-          : "idle",
+      phase: scenePhase,
       sold: resolvedDay === null ? 0 : Number(resolvedDay.sold),
       prepared: resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses),
+      durationMs:
+        scenePhase === "simulation"
+          ? SIMULATION_PRESENTATION_MS
+          : scenePhase === "forecast"
+            ? FORECAST_PRESENTATION_MS
+            : 0,
     });
   }
 }
