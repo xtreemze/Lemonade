@@ -14,54 +14,38 @@ The command builds the simulation package, executes the fixed certification corp
 
 ## Fixture corpus
 
-The baseline corpus runs seven strategy profiles across sixteen fixed seeds for up to 90 simulated days:
+The baseline corpus runs seven understandable strategy profiles across sixteen fixed seeds for up to 90 simulated days. The profiles explore small conservative stands, aggressive inventory, advertising-heavy play, high unlocked prices, deliberately poor below-cost choices, weather-adaptive play, and growth-oriented progression.
 
-- `conservative` — low price, no advertising, modest inventory;
-- `aggressive-inventory` — commits most available working capital to stock;
-- `advertising-heavy` — sustains five signs and inventory for the induced demand;
-- `high-price` — tests high-margin, low-volume play;
-- `poor-decisions` — deliberately combines excessive signs with a demand-suppressing price;
-- `adaptive` — changes all three decisions from visible weather and sentiment;
-- `progression` — a growth policy intended to exercise every finance tier.
-
-Strategies are affordability-clamped through the same simulation finance constraints. A run is considered bankrupt when even the day's predictable fixed obligations cannot be funded from available cash and credit.
-
-The corpus is intentionally not an optimizer. It represents distinct, understandable player behaviors so changes in relative outcomes remain visible.
+The corpus is not an optimizer. Its purpose is to expose distribution changes while every strategy remains constrained by the same 2017 stand levels and affordability rules as a player.
 
 ## Hard invariants
 
-These are correctness properties. CI must fail immediately if any simulated day violates them:
+These are correctness properties. CI must fail if a simulated day violates them:
 
-- sold glasses never exceed prepared glasses;
+- sold cups never exceed prepared cups;
 - revenue equals sold quantity multiplied by price;
-- named operating ledger lines reconcile to reported expenses;
+- named ledger lines reconcile to reported expenses;
 - revenue plus finance income minus expenses equals net result;
-- cash delta reconciles to opening and ending cash;
-- loan-interest settlement stays within accrued-interest bounds;
-- cash flow reconciles after borrowing, operating cash expenses, interest, and repayment;
-- next-state cash and debt match the ledger entry;
-- day numbers advance exactly once;
-- the ledger appends exactly one immutable entry per resolved day.
+- cash flow and debt reconcile after finance movements;
+- next-state cash and debt match the ledger;
+- completed days append immutable ledger entries.
 
-These invariants are not balance targets and should not be weakened to make a tuning change pass.
+These invariants are independent from tuning.
 
-## Design guardrails
+## 2017 balance guardrails
 
-Guardrails are intentionally broad. They detect clearly implausible regressions while leaving room for deliberate tuning:
+The historical equations themselves are the compatibility contract:
 
-- conservative, advertising-heavy, adaptive, and progression profiles survive the fixed 90-day corpus;
-- conservative and adaptive play retain positive growth floors;
-- the progression profile reaches every current finance tier and has sufficient equity to exercise late finance mechanics;
-- intentionally poor play does not outperform adaptive play at the median;
-- high-price play retains a material sell-through penalty;
-- advertising-heavy and conservative fixtures continue to exercise meaningfully different advertising regimes;
-- median strategy outcomes retain a substantial equity spread;
-- sell-through outcomes retain a substantial spread;
-- controlled price probes remain demand-decreasing;
-- controlled advertising probes retain positive but non-increasing marginal demand benefit;
-- controlled weather and sentiment probes retain their intended demand ordering.
+- price affects demand continuously as an inverse dollar term, with no reference-price discontinuity;
+- controlled price probes remain monotonically demand-decreasing without an extra high-price penalty;
+- the one-sign advertising value and the full advertising curve follow `signs² / log1p(signs)`;
+- weather effects remain exactly 1×, 2×, 5×, and 10×;
+- confidence contribution remains monotonic and follows the historical update state machine;
+- the seeded confidence roll retains the original 40% / 40% / 20% distribution for values 1 / 2 / 3;
+- stand thresholds remain $100 / $500 / $5,000 with the historical slider caps;
+- growth-oriented fixtures exercise operating progression.
 
-Changing a guardrail is a design decision. The PR should explain why the old range is no longer desirable and what player behavior the new range is intended to permit.
+A test must not be changed merely because the restored 2017 behavior differs from the Apple II game. If a guardrail conflicts with the historical source, the source wins unless an explicit new design decision intentionally changes the game.
 
 ## Human-review metrics
 
@@ -92,15 +76,6 @@ Do not update expected behavior merely because a fixture changed. First determin
 4. a simulation-schema change requiring replay/persistence treatment.
 
 The fixed seed corpus should remain stable unless there is a documented reason to change the sampling contract.
-
-
-## Independent progression axes
-
-Operating scale and finance maturity are intentionally separate.
-
-Operating scale recovers the historical browser game's progressively wider three-control envelope. Its exact ceilings are 15/3/$2.99, 50/10/$3.99, 140/25/$6.99, and 400/40/$9.99 for glasses/signs/price. The historical dollar thresholds belonged to a different economy, with dollar-scale prices and production costs. The modern Apple-II-derived cents economy therefore calibrates level transitions at $5, $20, and $100 equity. These milestones preserve progressive expansion while keeping the historical slider ceilings exact and are covered by the deterministic certification corpus.
-
-Operating scale is derived from current equity and may therefore downgrade after losses or debt. Finance tiers remain a separate, monotonic business-maturity mechanism for fees, taxes, banking, and credit. Certification must exercise both axes independently.
 
 
 ## 2017 compatibility probes
