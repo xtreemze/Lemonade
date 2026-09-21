@@ -53,7 +53,7 @@ Lemonade is web-first and native-platform-first: use browser standards directly 
 
 ```text
 apps/
-  web/          native HTML + DOM + CSS, composed with TypeScript and Vite
+  web/          semantic HTML/CSS with selective Lit components, TypeScript and Vite
   desktop/      optional Tauri capability shell, only when justified
 packages/
   simulation/   pure deterministic business rules
@@ -62,7 +62,7 @@ packages/
   audio/        native Web Audio + optional platform adapters
 ```
 
-There is no application UI framework at runtime. The web application uses semantic HTML, native controls, DOM events, `ResizeObserver`, `matchMedia`, SVG, Canvas/WebGL through the scene adapter, and Web Audio directly. Three.js remains because replacing a compact 3D scene graph with hand-written WebGL would increase complexity without improving the game architecture.
+Lit is used selectively for the run tools, daily decision form, and day report, where it removes repetitive DOM synchronization while preserving native semantic controls. The rest of the application continues to use browser APIs directly: DOM events, `ResizeObserver`, `matchMedia`, SVG, Canvas/WebGL through the scene adapter, IndexedDB, and Web Audio. Three.js remains because replacing a compact 3D scene graph with hand-written WebGL would increase complexity without improving the game architecture.
 
 The simulation accepts state, a three-variable decision, environment, and an injected random source, then returns immutable next state and a typed result. Rendering, audio, persistence, browser APIs, and any future Tauri shell are adapters around that core.
 
@@ -75,7 +75,8 @@ The workspace deliberately keeps build tooling small and current:
 - **Node 24 LTS** for automation and development.
 - **pnpm 12 workspaces** for deterministic monorepo dependency management.
 - **TypeScript 6** in strict mode. TypeScript 7 is stable, but adoption is intentionally held until the typed-lint toolchain officially supports it.
-- **Vite 8** as the thin development/build layer for native browser modules and CSS.
+- **Vite 8** as the thin development/build layer for browser modules and CSS.
+- **Lit 3.3** for a small set of high-churn interactive presentation components.
 - **Vitest 5** for deterministic unit and invariant tests.
 - **Playwright** for browser acceptance and accessibility-critical flows.
 - **ESLint flat config** with type-aware strict rules.
@@ -86,7 +87,7 @@ CI uses the current `pnpm/setup` standalone action to provision both pnpm and No
 
 ## Development
 
-Requirements: Node 24 and pnpm 12.4.0, or a compatible environment that honors the repository's `packageManager` metadata.
+Requirements: Node 24 and pnpm 12.5.1, or a compatible environment that honors the repository's `packageManager` metadata.
 
 ```sh
 pnpm install --frozen-lockfile
