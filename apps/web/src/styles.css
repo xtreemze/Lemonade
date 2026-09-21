@@ -354,6 +354,7 @@ h2 {
 
 .game-slider {
   --slider-thumb-image: none;
+  --slider-thumb-kind: none;
 
   width: 100%;
   min-height: 48px;
@@ -367,14 +368,17 @@ h2 {
 
 .decision-control-glasses .game-slider {
   --slider-thumb-image: url("./assets/cup.svg");
+  --slider-thumb-kind: cup;
 }
 
 .decision-control-signs .game-slider {
   --slider-thumb-image: url("./assets/sign.svg");
+  --slider-thumb-kind: sign;
 }
 
 .decision-control-price .game-slider {
   --slider-thumb-image: url("./assets/usd.svg");
+  --slider-thumb-kind: usd;
 }
 
 .game-slider::-webkit-slider-runnable-track {
