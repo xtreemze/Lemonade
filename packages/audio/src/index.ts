@@ -328,7 +328,7 @@ const compileWeatherVariation = (
         midiNote: note.note,
         startSeconds: cursor,
         durationSeconds,
-        gain: note.gain ?? 0.036,
+        gain: note.gain,
         waveform: note.waveform,
         source: "original-weather-variation",
       }),
