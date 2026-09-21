@@ -237,63 +237,33 @@ export const sceneCameraComposition = (
   const aspect = safeWidth / safeHeight;
   const mode = aspect < 0.72 ? "portrait" : aspect > 1.65 ? "wide" : "balanced";
 
-  const table: Record<
-    SceneCameraComposition["mode"],
-    Record<SceneShotKind, Omit<SceneCameraComposition, "mode" | "shot">>
-  > = {
-    portrait: {
-      establishing: {
-        fov: 47,
-        position: [0, 8.6, 17.8],
-        lookAt: [0, 1.8, 1.1],
-      },
-      street: {
-        fov: 43,
-        position: [0, 6.9, 15.4],
-        lookAt: [0, 1.55, 2.7],
-      },
-      purchase: {
-        fov: 37,
-        position: [2.8, 4.8, 9.6],
-        lookAt: [0, 1.55, 1.35],
-      },
-    },
-    balanced: {
-      establishing: {
-        fov: 36,
-        position: [0, 7, 14.2],
-        lookAt: [0, 1.8, 0.8],
-      },
-      street: {
-        fov: 35,
-        position: [0, 5.9, 12.7],
-        lookAt: [0, 1.45, 2.55],
-      },
-      purchase: {
-        fov: 34,
-        position: [3.1, 4.3, 8.5],
-        lookAt: [0, 1.5, 1.25],
-      },
-    },
-    wide: {
-      establishing: {
-        fov: 32,
-        position: [0, 6.5, 12.8],
-        lookAt: [0, 1.75, 0.7],
-      },
-      street: {
-        fov: 31,
-        position: [0, 5.5, 11.5],
-        lookAt: [0, 1.4, 2.45],
-      },
-      purchase: {
-        fov: 30,
-        position: [3.2, 4, 7.8],
-        lookAt: [0, 1.45, 1.15],
-      },
-    },
-  };
+  let fov = mode === "portrait" ? 47 : mode === "wide" ? 32 : 36;
+  let x = 0;
+  let y = mode === "portrait" ? 8.6 : mode === "wide" ? 6.5 : 7;
+  let z = mode === "portrait" ? 17.8 : mode === "wide" ? 12.8 : 14.2;
+  let lookY = mode === "wide" ? 1.75 : 1.8;
+  let lookZ = mode === "portrait" ? 1.1 : mode === "wide" ? 0.7 : 0.8;
 
-  const composition = table[mode][shot];
-  return Object.freeze({ mode, shot, ...composition });
+  if (shot === "street") {
+    fov -= mode === "portrait" ? 4 : 1;
+    y -= mode === "portrait" ? 1.7 : mode === "wide" ? 1 : 1.1;
+    z -= mode === "portrait" ? 2.4 : mode === "wide" ? 1.3 : 1.5;
+    lookY -= mode === "portrait" ? 0.25 : 0.35;
+    lookZ += mode === "portrait" ? 1.6 : 1.75;
+  } else if (shot === "purchase") {
+    fov -= mode === "portrait" ? 10 : 2;
+    x = mode === "portrait" ? 2.8 : mode === "wide" ? 3.2 : 3.1;
+    y -= mode === "portrait" ? 3.8 : mode === "wide" ? 2.5 : 2.7;
+    z -= mode === "portrait" ? 8.2 : mode === "wide" ? 5 : 5.7;
+    lookY -= mode === "portrait" ? 0.25 : 0.3;
+    lookZ += mode === "portrait" ? 0.25 : 0.45;
+  }
+
+  return Object.freeze({
+    mode,
+    shot,
+    fov,
+    position: [x, y, z],
+    lookAt: [0, lookY, lookZ],
+  });
 };
