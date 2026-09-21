@@ -21,6 +21,41 @@ test("plays a complete day with keyboard controls", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
 });
 
+test("supports precise numeric entry synchronized with sliders", async ({ page }) => {
+  await page.goto("./");
+
+  const exactInputs = page.getByRole("spinbutton");
+  await expect(exactInputs).toHaveCount(3);
+
+  const glassesExact = page.getByRole("spinbutton", { name: "Glasses Exact" });
+  const glassesSlider = page.getByRole("slider", { name: "Glasses" });
+  await glassesExact.focus();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.type("24");
+  await expect(glassesExact).toHaveValue("24");
+  await expect(glassesSlider).toHaveValue("24");
+
+  const signsExact = page.getByRole("spinbutton", { name: "Signs Exact" });
+  const signsSlider = page.getByRole("slider", { name: "Signs" });
+  await signsSlider.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(signsExact).toHaveValue("2");
+
+  const priceExact = page.getByRole("spinbutton", { name: "Price Exact cents" });
+  const priceSlider = page.getByRole("slider", { name: "Price" });
+  await priceExact.focus();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.type("15");
+  await expect(priceExact).toHaveValue("15");
+  await expect(priceSlider).toHaveValue("15");
+
+  await glassesExact.fill("9999");
+  const maximumGlasses = await glassesSlider.getAttribute("max");
+  if (maximumGlasses === null) throw new Error("expected glasses maximum");
+  await expect(glassesExact).toHaveValue(maximumGlasses);
+  await expect(glassesSlider).toHaveValue(maximumGlasses);
+});
+
 test("prevents an unaffordable plan before submission", async ({ page }) => {
   await page.goto("./");
 
