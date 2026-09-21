@@ -11,6 +11,10 @@ const cues: readonly AudioCue[] = [
   "day:profit",
   "day:loss",
   "progression:unlock",
+  "purchase:serve",
+  "purchase:payment",
+  "purchase:drink",
+  "storm:thunder",
 ];
 
 const weatherMelodies: Readonly<Record<WeatherAudioCue, readonly number[]>> = {
@@ -35,6 +39,10 @@ describe("procedural cue compiler", () => {
       for (const tone of tones) {
         expect(tone.midiNote).toBeGreaterThanOrEqual(0);
         expect(tone.midiNote).toBeLessThanOrEqual(127);
+        if (tone.endMidiNote !== undefined) {
+          expect(tone.endMidiNote).toBeGreaterThanOrEqual(0);
+          expect(tone.endMidiNote).toBeLessThanOrEqual(127);
+        }
         expect(tone.startSeconds).toBeGreaterThanOrEqual(0);
         expect(tone.durationSeconds).toBeGreaterThan(0);
         expect(tone.gain).toBeGreaterThan(0);
@@ -51,6 +59,11 @@ describe("procedural cue compiler", () => {
         previousStart = tone.startSeconds;
       }
     }
+  });
+
+  it("uses frequency sweeps for drinking and thunder", () => {
+    expect(compileCue("purchase:drink").some((tone) => tone.endMidiNote !== undefined)).toBe(true);
+    expect(compileCue("storm:thunder").every((tone) => tone.endMidiNote !== undefined)).toBe(true);
   });
 
   it("reconstructs the Apple II weather melody contours", () => {
