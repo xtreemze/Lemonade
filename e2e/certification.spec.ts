@@ -52,6 +52,31 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expect(page.getByRole("slider", { name: /Glasses/ })).toBeVisible();
   await expect(page.getByRole("slider", { name: /Signs/ })).toBeVisible();
   await expect(page.getByRole("slider", { name: /Price/ })).toBeVisible();
+  await expect(page.getByRole("spinbutton")).toHaveCount(0);
+
+  for (const [name, icon] of [
+    ["Glasses", "cup"],
+    ["Signs", "sign"],
+    ["Price", "usd"],
+  ] as const) {
+    const slider = page.getByRole("slider", { name: new RegExp(name) });
+    const control = slider.locator("xpath=..");
+    const sliderBox = await slider.boundingBox();
+    const controlBox = await control.boundingBox();
+    if (sliderBox === null || controlBox === null) {
+      throw new Error(`expected ${name} slider bounds`);
+    }
+    expect(sliderBox.width).toBeGreaterThanOrEqual(controlBox.width * 0.95);
+    const thumbStyle = await slider.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        image: style.getPropertyValue("--slider-thumb-image"),
+        kind: style.getPropertyValue("--slider-thumb-kind").trim(),
+      };
+    });
+    expect(thumbStyle.kind).toBe(icon);
+    expect(thumbStyle.image).toContain("data:image/svg+xml");
+  }
 
   const simulationButton = page.getByRole("button", { name: "Sell for the day" });
   await expect(simulationButton).toBeVisible();
