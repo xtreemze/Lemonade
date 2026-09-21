@@ -357,7 +357,7 @@ h2 {
   --slider-thumb-kind: none;
 
   width: 100%;
-  min-height: 48px;
+  min-height: 56px;
   margin: 0;
   border: 0;
   background: transparent;
@@ -382,15 +382,15 @@ h2 {
 }
 
 .game-slider::-webkit-slider-runnable-track {
-  height: 8px;
+  height: 12px;
   border: 2px solid #211d14;
   border-radius: 999px;
   background: #f8d354;
 }
 
 .game-slider::-webkit-slider-thumb {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   margin-top: -20px;
   border: 0;
   border-radius: 0;
@@ -405,22 +405,22 @@ h2 {
 }
 
 .game-slider::-moz-range-track {
-  height: 5px;
+  height: 9px;
   border: 2px solid #211d14;
   border-radius: 999px;
   background: #f8d354;
 }
 
 .game-slider::-moz-range-progress {
-  height: 5px;
+  height: 9px;
   border: 2px solid #211d14;
   border-radius: 999px;
   background: #236f5e;
 }
 
 .game-slider::-moz-range-thumb {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border: 0;
   border-radius: 0;
   background: var(--slider-thumb-image) center / contain no-repeat;
@@ -610,14 +610,34 @@ h2 {
 
 
 /* Daily loop: keep planning compact and reserve 3D for simulation/forecast presentation. */
-.game-shell[data-view="planning"] {
-  width: 100%;
+html:has(.game-shell[data-view="planning"]),
+body:has(.game-shell[data-view="planning"]) {
+  height: 100dvh;
   min-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.game-shell[data-view="planning"] {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  max-height: 100dvh;
   padding:
     max(8px, env(safe-area-inset-top))
     max(10px, env(safe-area-inset-right))
     max(8px, env(safe-area-inset-bottom))
     max(10px, env(safe-area-inset-left));
+  overflow: hidden;
+}
+
+.game-shell[data-view="planning"] > lemonade-decision-panel {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .game-shell[data-view="planning"] > lemonade-run-tools {
@@ -717,6 +737,10 @@ h2 {
 }
 
 .game-shell[data-view="planning"] .decision-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   margin-top: 0;
   padding: 4px 0 6px;
   border: 0;
@@ -753,15 +777,20 @@ h2 {
 }
 
 .game-shell[data-view="planning"] .decision-control {
-  gap: 0;
-  padding: 4px 0 3px;
+  flex: none;
+  gap: 4px;
+  padding: clamp(8px, 1.6dvh, 13px) 0;
   border-top-width: 1px;
+}
+
+.game-shell[data-view="planning"] .decision-control:first-of-type {
+  margin-top: auto;
 }
 
 .game-shell[data-view="planning"] .decision-control-heading {
   align-items: center;
   gap: 8px;
-  min-height: 20px;
+  min-height: 24px;
 }
 
 .game-shell[data-view="planning"] .decision-control-heading > span {
@@ -785,7 +814,7 @@ h2 {
 }
 
 .game-shell[data-view="planning"] .game-slider {
-  min-height: 47px;
+  min-height: 58px;
 }
 
 .game-shell[data-view="planning"] .decision-exact {
@@ -799,10 +828,11 @@ h2 {
 
 .game-shell[data-view="planning"] .simulation-button {
   display: grid;
+  flex: none;
   width: max-content;
   min-height: 0;
   justify-items: center;
-  gap: 1px;
+  gap: 2px;
   margin: 3px auto 0;
   padding: 0;
   border: 0;
@@ -814,9 +844,18 @@ h2 {
 
 .game-shell[data-view="planning"] .simulation-button-art {
   display: block;
-  width: 66px;
-  height: 66px;
+  width: 74px;
+  height: 74px;
   filter: drop-shadow(3px 3px 0 rgb(33 29 20 / 16%));
+}
+
+.game-shell[data-view="planning"] .simulation-button:disabled {
+  color: #9a2e26;
+  opacity: 1;
+}
+
+.game-shell[data-view="planning"] .simulation-button:disabled .simulation-button-art {
+  opacity: 0.72;
 }
 
 .game-shell[data-view="planning"] .simulation-button span {
