@@ -144,3 +144,129 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* Fullscreen history review keeps complete trend series while bounding the tabular snapshot. */
+.game-shell[data-view="history"] .ledger-history {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 10px;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.game-shell[data-view="history"] .history-heading {
+  align-items: center;
+  flex-direction: row;
+  gap: 8px;
+  margin: 0;
+}
+
+.game-shell[data-view="history"] .history-heading .eyebrow {
+  margin-bottom: 3px;
+  font-size: 0.58rem;
+}
+
+.game-shell[data-view="history"] .history-heading h2 {
+  font-size: clamp(1.25rem, 5vw, 1.7rem);
+}
+
+.game-shell[data-view="history"] .history-heading > p {
+  flex: none;
+  font-size: 0.74rem;
+}
+
+.game-shell[data-view="history"] .chart-grid {
+  min-height: 0;
+  gap: 8px;
+}
+
+.game-shell[data-view="history"] .chart-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  padding: 8px 10px;
+}
+
+.game-shell[data-view="history"] .chart-card figcaption {
+  margin-bottom: 2px;
+  font-size: 0.82rem;
+}
+
+.game-shell[data-view="history"] .history-chart {
+  width: 100%;
+  height: min(15dvh, 112px);
+  min-height: 54px;
+}
+
+.game-shell[data-view="history"] .chart-legend {
+  gap: 10px;
+  margin-top: 2px;
+  font-size: 0.68rem;
+}
+
+.game-shell[data-view="history"] .history-table-wrap {
+  margin: 0;
+  overflow: hidden;
+}
+
+.game-shell[data-view="history"] .history-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.game-shell[data-view="history"] .history-table th,
+.game-shell[data-view="history"] .history-table td {
+  display: none;
+  padding: 5px 6px;
+  font-size: 0.72rem;
+}
+
+.game-shell[data-view="history"] .history-table :is(th, td):nth-child(1),
+.game-shell[data-view="history"] .history-table :is(th, td):nth-child(3),
+.game-shell[data-view="history"] .history-table :is(th, td):nth-child(4),
+.game-shell[data-view="history"] .history-table :is(th, td):nth-child(9) {
+  display: table-cell;
+}
+
+.game-shell[data-view="history"] .history-table thead th {
+  font-size: 0.6rem;
+}
+
+@media (orientation: landscape) {
+  .game-shell[data-view="history"] .ledger-history {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .game-shell[data-view="history"] .chart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .game-shell[data-view="history"] .history-chart {
+    height: min(22dvh, 96px);
+  }
+}
+
+@media (width >= 47.5625rem) {
+  .game-shell[data-view="history"] .chart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .game-shell[data-view="history"] .history-table :is(th, td):nth-child(5),
+  .game-shell[data-view="history"] .history-table :is(th, td):nth-child(6),
+  .game-shell[data-view="history"] .history-table :is(th, td):nth-child(12),
+  .game-shell[data-view="history"] .history-table :is(th, td):nth-child(13) {
+    display: table-cell;
+  }
+}
+
+@media (width >= 70rem) {
+  .game-shell[data-view="history"] .history-table th,
+  .game-shell[data-view="history"] .history-table td {
+    display: table-cell;
+  }
+}
