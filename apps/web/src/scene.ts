@@ -1,9 +1,9 @@
-import {
-  createLemonsvilleScene,
-  type CustomerActivity,
-  type LemonsvilleSceneController,
-  type LemonsvilleSceneState,
+import type {
+  CustomerActivity,
+  LemonsvilleSceneController,
+  LemonsvilleSceneState,
 } from "@lemonade/scene";
+import type { createLemonsvilleScene } from "./scene-runtime.js";
 import type { DayEnvironment } from "@lemonade/simulation";
 
 const activityBySentiment: Record<DayEnvironment["sentiment"]["kind"], CustomerActivity> = {
@@ -34,6 +34,17 @@ type SceneElements = Readonly<{
   equivalent: HTMLElement;
 }>;
 
+type SceneRuntime = Readonly<{
+  createLemonsvilleScene: typeof createLemonsvilleScene;
+}>;
+
+let sceneRuntimePromise: Promise<SceneRuntime> | null = null;
+
+const loadSceneRuntime = (): Promise<SceneRuntime> => {
+  sceneRuntimePromise ??= import("./scene-runtime.js");
+  return sceneRuntimePromise;
+};
+
 const describeScene = (input: LemonsvilleSceneInput): string =>
   `${input.environment.weather.kind.replaceAll("-", " ")} weather; ${input.environment.sentiment.kind.replaceAll("-", " ")} market sentiment; ${String(input.visibleSigns)} advertising signs visible.`;
 
@@ -59,6 +70,7 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
   let controller: LemonsvilleSceneController | null = null;
   let observer: ResizeObserver | null = null;
   let lastInput: LemonsvilleSceneInput | null = null;
+  let initialization: Promise<void> | null = null;
   let disposed = false;
 
   const showFallback = (description: string): void => {
@@ -68,21 +80,37 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
     elements.fallbackDescription.textContent = description;
   };
 
-  const ensureController = (state: LemonsvilleSceneState, description: string): void => {
-    if (controller !== null || disposed) return;
+  const initializeController = async (): Promise<void> => {
+    try {
+      const { createLemonsvilleScene } = await loadSceneRuntime();
+      if (disposed || controller !== null || lastInput === null) return;
 
-    controller = createLemonsvilleScene(elements.canvas, state);
-    if (controller === null) {
-      showFallback(description);
-      return;
+      const description = describeScene(lastInput);
+      const state = createState(lastInput, reducedMotion);
+      const nextController = createLemonsvilleScene(elements.canvas, state);
+
+      if (nextController === null) {
+        showFallback(description);
+        return;
+      }
+      controller = nextController;
+      const resize = (): void => {
+        controller?.resize(elements.canvas.clientWidth, elements.canvas.clientHeight);
+      };
+      observer = new ResizeObserver(resize);
+      observer.observe(elements.canvas);
+      resize();
+      controller.update(state);
+    } catch {
+      if (!disposed && lastInput !== null) {
+        showFallback(describeScene(lastInput));
+      }
     }
+  };
 
-    const resize = (): void => {
-      controller?.resize(elements.canvas.clientWidth, elements.canvas.clientHeight);
-    };
-    observer = new ResizeObserver(resize);
-    observer.observe(elements.canvas);
-    resize();
+  const ensureController = (): void => {
+    if (controller !== null || initialization !== null || disposed) return;
+    initialization = initializeController();
   };
 
   const update = (input: LemonsvilleSceneInput): void => {
@@ -95,8 +123,11 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
     elements.equivalent.textContent = description;
     elements.fallbackDescription.textContent = description;
 
-    ensureController(state, description);
-    controller?.update(state);
+    if (controller === null) {
+      ensureController();
+    } else {
+      controller.update(state);
+    }
   };
 
   const onReducedMotionChange = (): void => {

@@ -27,8 +27,7 @@ jobs:
         run: |
           set -euo pipefail
           pnpm --filter @lemonade/web exec vite build --base=/Lemonade/
-          test -f apps/web/dist/index.html
-          grep -q '/Lemonade/assets/' apps/web/dist/index.html
+          pnpm --filter @lemonade/web verify:pages-bundle
 
   browser:
     runs-on: ubuntu-latest
