@@ -178,23 +178,53 @@ export class LemonadeDecisionPanel extends LitElement {
     return this;
   }
 
+  #decisionBounds(kind: DecisionKind): readonly [minimum: number, maximum: number] {
+    switch (kind) {
+      case "glasses":
+        return [0, this.model.maxGlasses];
+      case "signs":
+        return [0, this.model.maxSigns];
+      case "price":
+        return [1, 100];
+    }
+  }
+
+  #decisionValue(kind: DecisionKind): number {
+    switch (kind) {
+      case "glasses":
+        return this.model.glasses;
+      case "signs":
+        return this.model.signs;
+      case "price":
+        return this.model.price;
+    }
+  }
+
   #emitDecision(kind: DecisionKind, event: Event): void {
     const input = event.target;
     if (!(input instanceof HTMLInputElement)) {
-      throw new TypeError("Expected decision range input.");
+      throw new TypeError("Expected decision input.");
     }
     if (!Number.isFinite(input.valueAsNumber)) return;
-    this.dispatchEvent(new DecisionChangeEvent(Object.freeze({ kind, value: input.valueAsNumber })));
+
+    const [minimum, maximum] = this.#decisionBounds(kind);
+    const value = Math.min(maximum, Math.max(minimum, Math.trunc(input.valueAsNumber)));
+    if (input.type === "number" && input.valueAsNumber !== value) {
+      input.value = String(value);
+    }
+    this.dispatchEvent(new DecisionChangeEvent(Object.freeze({ kind, value })));
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener("input", this.#onInput);
+    this.addEventListener("change", this.#onChange);
     this.addEventListener("submit", this.#onSubmit);
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener("input", this.#onInput);
+    this.removeEventListener("change", this.#onChange);
     this.removeEventListener("submit", this.#onSubmit);
     super.disconnectedCallback();
   }
@@ -212,6 +242,25 @@ export class LemonadeDecisionPanel extends LitElement {
         break;
       case "price":
         this.#emitDecision("price", event);
+        break;
+    }
+  };
+
+  readonly #onChange = (event: Event): void => {
+    const input = event.target;
+    if (
+      !(input instanceof HTMLInputElement) ||
+      input.type !== "number" ||
+      Number.isFinite(input.valueAsNumber)
+    ) {
+      return;
+    }
+
+    switch (input.name) {
+      case "glasses":
+      case "signs":
+      case "price":
+        input.value = String(this.#decisionValue(input.name));
         break;
     }
   };
@@ -235,9 +284,26 @@ export class LemonadeDecisionPanel extends LitElement {
           <p class=${model.affordable ? "spend" : "spend spend-warning"}>${model.spendText}</p>
         </header>
 
-        <label class="decision-control" for="glasses">
-          <span><strong>Glasses</strong><small>Inventory prepared before demand is known</small></span>
-          <output id="glasses-output" for="glasses">${String(model.glasses)}</output>
+        <div class="decision-control">
+          <span>
+            <strong id="glasses-label">Glasses</strong>
+            <small id="glasses-help">Inventory prepared before demand is known</small>
+          </span>
+          <label class="decision-exact" for="glasses-exact">
+            <span id="glasses-exact-label">Exact</span>
+            <input
+              id="glasses-exact"
+              name="glasses"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="1"
+              .max=${String(model.maxGlasses)}
+              .value=${String(model.glasses)}
+              aria-labelledby="glasses-label glasses-exact-label"
+              aria-describedby="glasses-help"
+            />
+          </label>
           <input
             id="glasses"
             name="glasses"
@@ -246,13 +312,31 @@ export class LemonadeDecisionPanel extends LitElement {
             step="1"
             .max=${String(model.maxGlasses)}
             .value=${String(model.glasses)}
-           
+            aria-labelledby="glasses-label"
+            aria-describedby="glasses-help"
           />
-        </label>
+        </div>
 
-        <label class="decision-control" for="signs">
-          <span><strong>Signs</strong><small>Advertising helps demand with diminishing returns</small></span>
-          <output id="signs-output" for="signs">${String(model.signs)}</output>
+        <div class="decision-control">
+          <span>
+            <strong id="signs-label">Signs</strong>
+            <small id="signs-help">Advertising helps demand with diminishing returns</small>
+          </span>
+          <label class="decision-exact" for="signs-exact">
+            <span id="signs-exact-label">Exact</span>
+            <input
+              id="signs-exact"
+              name="signs"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="1"
+              .max=${String(model.maxSigns)}
+              .value=${String(model.signs)}
+              aria-labelledby="signs-label signs-exact-label"
+              aria-describedby="signs-help"
+            />
+          </label>
           <input
             id="signs"
             name="signs"
@@ -261,13 +345,34 @@ export class LemonadeDecisionPanel extends LitElement {
             step="1"
             .max=${String(model.maxSigns)}
             .value=${String(model.signs)}
-           
+            aria-labelledby="signs-label"
+            aria-describedby="signs-help"
           />
-        </label>
+        </div>
 
-        <label class="decision-control" for="price">
-          <span><strong>Price</strong><small>Higher margin can sharply reduce demand</small></span>
-          <output id="price-output" for="price">${formatMoney(model.price)}</output>
+        <div class="decision-control">
+          <span>
+            <strong id="price-label">Price</strong>
+            <small id="price-help">Higher margin can sharply reduce demand</small>
+          </span>
+          <label class="decision-exact" for="price-exact">
+            <span id="price-exact-label">Exact cents</span>
+            <span class="decision-exact-value">
+              <input
+                id="price-exact"
+                name="price"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                max="100"
+                step="1"
+                .value=${String(model.price)}
+                aria-labelledby="price-label price-exact-label"
+                aria-describedby="price-help"
+              />
+              <span aria-hidden="true">¢</span>
+            </span>
+          </label>
           <input
             id="price"
             name="price"
@@ -276,9 +381,10 @@ export class LemonadeDecisionPanel extends LitElement {
             max="100"
             step="1"
             .value=${String(model.price)}
-           
+            aria-labelledby="price-label"
+            aria-describedby="price-help"
           />
-        </label>
+        </div>
 
         <p id="decision-error" class="inline-error" role="alert" ?hidden=${model.affordable}>
           This plan exceeds available cash and credit. Reduce glasses or signs.
