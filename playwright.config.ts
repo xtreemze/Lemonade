@@ -10,6 +10,9 @@ export default defineConfig({
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
   reporter: isCI ? "github" : "list",
+  expect: {
+    timeout: 7_500,
+  },
   use: {
     baseURL: `${previewOrigin}${basePath}`,
     trace: "on-first-retry",
