@@ -7,12 +7,14 @@ const stylesPath = resolve(root, "apps/web/src/styles.css");
 const componentsPath = resolve(root, "apps/web/src/components.ts");
 const mobileSpecPath = resolve(root, "e2e/mobile-contract.spec.ts");
 const workflowPath = resolve(root, ".github/workflows/ci.yml");
+const indexPath = resolve(root, "apps/web/index.html");
 
-const [styles, components, mobileSpec, workflow] = await Promise.all([
+const [styles, components, mobileSpec, workflow, indexHtml] = await Promise.all([
   readFile(stylesPath, "utf8"),
   readFile(componentsPath, "utf8"),
   readFile(mobileSpecPath, "utf8"),
   readFile(workflowPath, "utf8"),
+  readFile(indexPath, "utf8"),
 ]);
 
 const failures = [];
@@ -146,6 +148,13 @@ requireMatch(
   /@media\s*\(width\s*>=\s*47\.5625rem\)\s*and\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.game-shell\[data-view="planning"\][\s\S]*?\.game-shell\[data-view="report"\]/u,
   "desktop-release-requires-fine-pointer",
   "The mobile fullscreen contract may only be released for a sufficiently wide fine-pointer/hover environment; wide touch devices remain mobile.",
+);
+
+requireMatch(
+  indexHtml,
+  /<meta\s+name="viewport"\s+content="[^"]*width=device-width[^"]*viewport-fit=cover[^"]*"\s*\/>/u,
+  "viewport-safe-area-contract",
+  "The app viewport meta tag must retain width=device-width and viewport-fit=cover.",
 );
 
 requireMatch(
