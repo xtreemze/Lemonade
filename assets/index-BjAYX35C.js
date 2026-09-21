@@ -39,7 +39,7 @@
           </button>
         </div>
       </section>
-    `}},Jt=class extends CustomEvent{constructor(e){super(`lemonade-decision-change`,{detail:e,bubbles:!0,composed:!0})}},Yt=Object.freeze({visible:!0,glasses:0,signs:0,price:10,maxGlasses:0,maxSigns:0,spendText:``,affordable:!0}),Xt=class extends H{static properties={model:{attribute:!1}};constructor(){super(),this.model=Yt}createRenderRoot(){return this}#e(e){switch(e){case`glasses`:return[0,this.model.maxGlasses];case`signs`:return[0,this.model.maxSigns];case`price`:return[1,100]}}#t(e){switch(e){case`glasses`:return this.model.glasses;case`signs`:return this.model.signs;case`price`:return this.model.price}}#n(e,t){let n=t.target;if(!(n instanceof HTMLInputElement))throw TypeError(`Expected decision input.`);if(!Number.isFinite(n.valueAsNumber))return;let[r,i]=this.#e(e),a=Math.min(i,Math.max(r,Math.trunc(n.valueAsNumber)));n.type===`number`&&n.valueAsNumber!==a&&(n.value=String(a)),this.dispatchEvent(new Jt(Object.freeze({kind:e,value:a})))}connectedCallback(){super.connectedCallback(),this.addEventListener(`input`,this.#r),this.addEventListener(`change`,this.#i),this.addEventListener(`submit`,this.#a)}disconnectedCallback(){this.removeEventListener(`input`,this.#r),this.removeEventListener(`change`,this.#i),this.removeEventListener(`submit`,this.#a),super.disconnectedCallback()}#r=e=>{let t=e.target;if(t instanceof HTMLInputElement)switch(t.name){case`glasses`:this.#n(`glasses`,e);break;case`signs`:this.#n(`signs`,e);break;case`price`:this.#n(`price`,e)}};#i=e=>{let t=e.target;if(t instanceof HTMLInputElement&&t.type===`number`&&!Number.isFinite(t.valueAsNumber))switch(t.name){case`glasses`:case`signs`:case`price`:t.value=String(this.#t(t.name))}};#a=e=>{e.target instanceof HTMLFormElement&&(e.preventDefault(),this.model.affordable&&this.dispatchEvent(new Event(`lemonade-decision-submit`,{bubbles:!0,composed:!0})))};render(){let e=this.model;return L`
+    `}},Jt=class extends CustomEvent{constructor(e){super(`lemonade-decision-change`,{detail:e,bubbles:!0,composed:!0})}},Yt=Object.freeze({visible:!0,glasses:0,signs:0,price:10,maxGlasses:0,maxSigns:0,glassesCostText:`Cost $0.00`,signsCostText:`Cost $0.00`,priceText:`Price $0.10 / glass`,spendText:``,affordable:!0}),Xt=class extends H{static properties={model:{attribute:!1}};constructor(){super(),this.model=Yt}createRenderRoot(){return this}#e(e){switch(e){case`glasses`:return[0,this.model.maxGlasses];case`signs`:return[0,this.model.maxSigns];case`price`:return[1,100]}}#t(e){switch(e){case`glasses`:return this.model.glasses;case`signs`:return this.model.signs;case`price`:return this.model.price}}#n(e,t){let n=t.target;if(!(n instanceof HTMLInputElement))throw TypeError(`Expected decision input.`);if(!Number.isFinite(n.valueAsNumber))return;let[r,i]=this.#e(e),a=Math.min(i,Math.max(r,Math.trunc(n.valueAsNumber)));n.type===`number`&&n.valueAsNumber!==a&&(n.value=String(a)),this.dispatchEvent(new Jt(Object.freeze({kind:e,value:a})))}connectedCallback(){super.connectedCallback(),this.addEventListener(`input`,this.#r),this.addEventListener(`change`,this.#i),this.addEventListener(`submit`,this.#a)}disconnectedCallback(){this.removeEventListener(`input`,this.#r),this.removeEventListener(`change`,this.#i),this.removeEventListener(`submit`,this.#a),super.disconnectedCallback()}#r=e=>{let t=e.target;if(t instanceof HTMLInputElement)switch(t.name){case`glasses`:this.#n(`glasses`,e);break;case`signs`:this.#n(`signs`,e);break;case`price`:this.#n(`price`,e)}};#i=e=>{let t=e.target;if(t instanceof HTMLInputElement&&t.type===`number`&&!Number.isFinite(t.valueAsNumber))switch(t.name){case`glasses`:case`signs`:case`price`:t.value=String(this.#t(t.name))}};#a=e=>{e.target instanceof HTMLFormElement&&(e.preventDefault(),this.model.affordable&&this.dispatchEvent(new Event(`lemonade-decision-submit`,{bubbles:!0,composed:!0})))};render(){let e=this.model;return L`
       <form id="decision-panel" class="decision-panel" ?hidden=${!e.visible}>
         <header class="panel-heading">
           <div>
@@ -66,20 +66,25 @@
               .max=${String(e.maxGlasses)}
               .value=${String(e.glasses)}
               aria-labelledby="glasses-label glasses-exact-label"
-              aria-describedby="glasses-help"
+              aria-describedby="glasses-help glasses-cost"
             />
           </label>
-          <input
-            id="glasses"
-            name="glasses"
-            type="range"
-            min="0"
-            step="1"
-            .max=${String(e.maxGlasses)}
-            .value=${String(e.glasses)}
-            aria-labelledby="glasses-label"
-            aria-describedby="glasses-help"
-          />
+          <div class="decision-slider">
+            <input
+              id="glasses"
+              name="glasses"
+              type="range"
+              min="0"
+              step="1"
+              .max=${String(e.maxGlasses)}
+              .value=${String(e.glasses)}
+              aria-labelledby="glasses-label"
+              aria-describedby="glasses-help glasses-cost"
+            />
+            <output id="glasses-cost" class="decision-cost" for="glasses glasses-exact">
+              ${e.glassesCostText}
+            </output>
+          </div>
         </div>
 
         <div class="decision-control">
@@ -99,20 +104,25 @@
               .max=${String(e.maxSigns)}
               .value=${String(e.signs)}
               aria-labelledby="signs-label signs-exact-label"
-              aria-describedby="signs-help"
+              aria-describedby="signs-help signs-cost"
             />
           </label>
-          <input
-            id="signs"
-            name="signs"
-            type="range"
-            min="0"
-            step="1"
-            .max=${String(e.maxSigns)}
-            .value=${String(e.signs)}
-            aria-labelledby="signs-label"
-            aria-describedby="signs-help"
-          />
+          <div class="decision-slider">
+            <input
+              id="signs"
+              name="signs"
+              type="range"
+              min="0"
+              step="1"
+              .max=${String(e.maxSigns)}
+              .value=${String(e.signs)}
+              aria-labelledby="signs-label"
+              aria-describedby="signs-help signs-cost"
+            />
+            <output id="signs-cost" class="decision-cost" for="signs signs-exact">
+              ${e.signsCostText}
+            </output>
+          </div>
         </div>
 
         <div class="decision-control">
@@ -133,22 +143,27 @@
                 step="1"
                 .value=${String(e.price)}
                 aria-labelledby="price-label price-exact-label"
-                aria-describedby="price-help"
+                aria-describedby="price-help price-value"
               />
               <span aria-hidden="true">¢</span>
             </span>
           </label>
-          <input
-            id="price"
-            name="price"
-            type="range"
-            min="1"
-            max="100"
-            step="1"
-            .value=${String(e.price)}
-            aria-labelledby="price-label"
-            aria-describedby="price-help"
-          />
+          <div class="decision-slider">
+            <input
+              id="price"
+              name="price"
+              type="range"
+              min="1"
+              max="100"
+              step="1"
+              .value=${String(e.price)}
+              aria-labelledby="price-label"
+              aria-describedby="price-help price-value"
+            />
+            <output id="price-value" class="decision-cost" for="price price-exact">
+              ${e.priceText}
+            </output>
+          </div>
         </div>
 
         <p id="decision-error" class="inline-error" role="alert" ?hidden=${e.affordable}>
@@ -259,7 +274,7 @@
 
     <div id="ledger-history-host"></div>
   </main>
-`,Q=(e,t,n)=>{let r=e.querySelector(t);if(!(r instanceof n))throw TypeError(`Expected ${t} to match ${n.name}.`);return r},sr=e=>Object.freeze({statusDay:Q(e,`#status-day`,HTMLElement),statusCash:Q(e,`#status-cash`,HTMLElement),statusDebtGroup:Q(e,`#status-debt-group`,HTMLElement),statusDebt:Q(e,`#status-debt`,HTMLElement),runTools:Q(e,`lemonade-run-tools`,qt),conditionWeather:Q(e,`#condition-weather`,HTMLElement),conditionSentiment:Q(e,`#condition-sentiment`,HTMLElement),conditionProduction:Q(e,`#condition-production`,HTMLElement),conditionAdvertising:Q(e,`#condition-advertising`,HTMLElement),financeTier:Q(e,`#finance-tier`,HTMLElement),financeSummary:Q(e,`#finance-summary`,HTMLElement),decisionPanel:Q(e,`lemonade-decision-panel`,Xt),reportPanel:Q(e,`lemonade-day-report`,en),historyHost:Q(e,`#ledger-history-host`,HTMLElement),sceneCanvas:Q(e,`#scene-canvas`,HTMLCanvasElement),sceneFallback:Q(e,`#scene-fallback`,HTMLElement),sceneFallbackDescription:Q(e,`#scene-fallback-description`,HTMLElement),sceneEquivalent:Q(e,`#scene-equivalent`,HTMLElement)}),cr=Object.freeze({persistenceEnabled:!0,initialPersistenceError:null}),lr=class{#e;#t;#n;#r=a();#i;#a;#o;#s;#c;#l;#u;#d;#f=``;#p=null;#m=Promise.resolve();#h=!1;constructor(e,t=ar(),n=cr){this.#t=t.seed,this.#n=jn(t),this.#o=t.state,this.#s=t.environment,this.#c=t.phase,this.#l=Number(t.draft.glasses),this.#u=Number(t.draft.signs),this.#d=Number(t.draft.price),this.#a=n.persistenceEnabled,e.innerHTML=or,this.#e=sr(e),this.#i=Xn({canvas:this.#e.sceneCanvas,fallback:this.#e.sceneFallback,fallbackDescription:this.#e.sceneFallbackDescription,equivalent:this.#e.sceneEquivalent}),this.#e.decisionPanel.addEventListener(`lemonade-decision-change`,this.#v),this.#e.decisionPanel.addEventListener(`lemonade-decision-submit`,this.#y),this.#e.reportPanel.addEventListener(`lemonade-next-day`,this.#b),this.#e.runTools.addEventListener(`lemonade-run-export`,this.#x),this.#e.runTools.addEventListener(`lemonade-run-import-file`,this.#S),this.#e.runTools.addEventListener(`lemonade-run-reset`,this.#C),document.addEventListener(`visibilitychange`,this.#g),window.addEventListener(`pagehide`,this.#_,{once:!0}),this.#M(),n.initialPersistenceError===null?this.#a?this.#D(`Run saved locally.`):this.#O(`Autosave is unavailable in this browser context.`):this.#k(n.initialPersistenceError)}dispose(){this.#h||(this.#h=!0,this.#e.decisionPanel.removeEventListener(`lemonade-decision-change`,this.#v),this.#e.decisionPanel.removeEventListener(`lemonade-decision-submit`,this.#y),this.#e.reportPanel.removeEventListener(`lemonade-next-day`,this.#b),this.#e.runTools.removeEventListener(`lemonade-run-export`,this.#x),this.#e.runTools.removeEventListener(`lemonade-run-import-file`,this.#S),this.#e.runTools.removeEventListener(`lemonade-run-reset`,this.#C),document.removeEventListener(`visibilitychange`,this.#g),window.removeEventListener(`pagehide`,this.#_),this.#i.dispose(),this.#r.dispose())}#g=()=>{document.visibilityState===`hidden`?this.#r.suspend():this.#r.resume()};#_=()=>{this.dispose()};#v=e=>{if(e instanceof Jt)switch(e.detail.kind){case`glasses`:this.#l=e.detail.value,this.#P(),this.#I();break;case`signs`:this.#u=e.detail.value,this.#P(),this.#I();break;case`price`:this.#d=e.detail.value,this.#P()}};#y=()=>{if(this.#c.kind!==`deciding`||!this.#j().affordable)return;let e=je(this.#o,Object.freeze({glasses:d(this.#l),signs:f(this.#u),price:l(this.#d)}),this.#s),t=this.#o.tier;this.#c=Object.freeze({kind:`report`,resolution:e}),this.#M(),this.#D(`Day report saved locally.`),this.#r.enable().then(n=>{if(!n)return;this.#r.play(`day:submit`);let r=Number(e.entry.net)>=0?`day:profit`:`day:loss`;window.setTimeout(()=>{this.#r.play(r)},220),e.nextState.tier!==t&&window.setTimeout(()=>{this.#r.play(`progression:unlock`)},520)})};#b=()=>{if(this.#c.kind!==`report`)return;let e=this.#c.resolution.nextState,t=b(e.day,this.#n),n=nr(e);this.#o=e,this.#s=t,this.#l=Math.min(this.#l,n.glasses),this.#u=Math.min(this.#u,n.signs),this.#c=Object.freeze({kind:`deciding`}),this.#M(),this.#D(`Next day saved locally.`),this.#r.enable().then(e=>{e&&this.#r.play(o(t.weather.kind))})};#x=()=>{try{let e=Nn(this.#E()),t=new Blob([e],{type:`application/json`}),n=URL.createObjectURL(t),r=document.createElement(`a`);r.href=n,r.download=`lemonade-run-day-${String(Number(this.#o.day))}.json`,r.click(),window.setTimeout(()=>{URL.revokeObjectURL(n)},0),this.#O(`Portable run exported.`)}catch(e){this.#k(ir(e))}};#S=e=>{e instanceof Kt&&this.#w(e.detail)};#C=()=>{this.#a&&window.confirm(`Reset this run? The local run will be deleted. Export it first if you want a portable copy.`)&&this.#T()};async#w(e){try{let t=Pn(await e.text());await this.#m,await Rn(t),window.location.reload()}catch(e){this.#k(ir(e))}}async#T(){try{await this.#m,await Bn(),window.location.reload()}catch(e){this.#k(ir(e))}}#E(){return Object.freeze({seed:this.#t,state:this.#o,environment:this.#s,draft:Object.freeze({glasses:d(this.#l),signs:f(this.#u),price:l(this.#d)}),phase:this.#c})}#D(e){if(!this.#a)return;let t=this.#E();this.#m=this.#m.then(async()=>{await Rn(t),this.#h||this.#O(e)}).catch(e=>{this.#h||this.#k(ir(e))})}#O(e){this.#f=e,this.#p=null,this.#A()}#k(e){this.#f=`Run storage needs attention.`,this.#p=e,this.#A()}#A(){this.#e.runTools.model=Object.freeze({statusMessage:this.#f,errorMessage:this.#p,persistenceEnabled:this.#a})}#j(){let e=Number(C(this.#o)),t=Number(he(this.#o)),n=this.#l*Number(this.#o.unitCost)+this.#u*Number(this.#o.signCost)+e;return Object.freeze({affordable:n<=t,operatingFunds:t,spend:n})}#M(){this.#A(),this.#N(),this.#P(),this.#F(),this.#I();let e=this.#c.kind===`report`?this.#c.resolution.nextState.ledger:this.#o.ledger;qe(this.#e.historyHost,e)}#N(){this.#e.statusDay.textContent=String(Number(this.#o.day)),this.#e.statusCash.textContent=Z(Number(this.#o.cash)),this.#e.statusDebt.textContent=Z(Number(this.#o.loanBalance)),this.#e.statusDebtGroup.hidden=!(this.#o.tier>=3||Number(this.#o.loanBalance)>0),this.#e.conditionWeather.textContent=Qn[this.#s.weather.kind],this.#e.conditionSentiment.textContent=$n[this.#s.sentiment.kind],this.#e.conditionProduction.textContent=`${Z(Number(this.#o.unitCost))} / glass`,this.#e.conditionAdvertising.textContent=`${Z(Number(this.#o.signCost))} / sign`,this.#e.financeTier.textContent=`Business tier ${String(this.#o.tier)}`,this.#e.financeSummary.textContent=rr(this.#o)}#P(){let e=nr(this.#o),t=this.#j();this.#e.decisionPanel.model=Object.freeze({visible:this.#c.kind===`deciding`,glasses:this.#l,signs:this.#u,price:this.#d,maxGlasses:e.glasses,maxSigns:e.signs,spendText:`Spend ${Z(t.spend)} of ${Z(t.operatingFunds)} operating funds`,affordable:t.affordable})}#F(){this.#e.reportPanel.model=Object.freeze({report:this.#c.kind===`report`?this.#c.resolution:null,currentTier:this.#o.tier})}#I(){let e=this.#c;this.#i.update({environment:this.#s,visibleSigns:e.kind===`report`?Number(e.resolution.entry.decision.signs):this.#u,phase:e.kind,sold:e.kind===`report`?Number(e.resolution.entry.sold):0,prepared:e.kind===`report`?Number(e.resolution.entry.decision.glasses):this.#l})}},$=document.querySelector(`#root`);if(!($ instanceof HTMLElement))throw TypeError(`Expected #root application mount point.`);var ur=e=>{$.innerHTML=`
+`,Q=(e,t,n)=>{let r=e.querySelector(t);if(!(r instanceof n))throw TypeError(`Expected ${t} to match ${n.name}.`);return r},sr=e=>Object.freeze({statusDay:Q(e,`#status-day`,HTMLElement),statusCash:Q(e,`#status-cash`,HTMLElement),statusDebtGroup:Q(e,`#status-debt-group`,HTMLElement),statusDebt:Q(e,`#status-debt`,HTMLElement),runTools:Q(e,`lemonade-run-tools`,qt),conditionWeather:Q(e,`#condition-weather`,HTMLElement),conditionSentiment:Q(e,`#condition-sentiment`,HTMLElement),conditionProduction:Q(e,`#condition-production`,HTMLElement),conditionAdvertising:Q(e,`#condition-advertising`,HTMLElement),financeTier:Q(e,`#finance-tier`,HTMLElement),financeSummary:Q(e,`#finance-summary`,HTMLElement),decisionPanel:Q(e,`lemonade-decision-panel`,Xt),reportPanel:Q(e,`lemonade-day-report`,en),historyHost:Q(e,`#ledger-history-host`,HTMLElement),sceneCanvas:Q(e,`#scene-canvas`,HTMLCanvasElement),sceneFallback:Q(e,`#scene-fallback`,HTMLElement),sceneFallbackDescription:Q(e,`#scene-fallback-description`,HTMLElement),sceneEquivalent:Q(e,`#scene-equivalent`,HTMLElement)}),cr=Object.freeze({persistenceEnabled:!0,initialPersistenceError:null}),lr=class{#e;#t;#n;#r=a();#i;#a;#o;#s;#c;#l;#u;#d;#f=``;#p=null;#m=Promise.resolve();#h=!1;constructor(e,t=ar(),n=cr){this.#t=t.seed,this.#n=jn(t),this.#o=t.state,this.#s=t.environment,this.#c=t.phase,this.#l=Number(t.draft.glasses),this.#u=Number(t.draft.signs),this.#d=Number(t.draft.price),this.#a=n.persistenceEnabled,e.innerHTML=or,this.#e=sr(e),this.#i=Xn({canvas:this.#e.sceneCanvas,fallback:this.#e.sceneFallback,fallbackDescription:this.#e.sceneFallbackDescription,equivalent:this.#e.sceneEquivalent}),this.#e.decisionPanel.addEventListener(`lemonade-decision-change`,this.#v),this.#e.decisionPanel.addEventListener(`lemonade-decision-submit`,this.#y),this.#e.reportPanel.addEventListener(`lemonade-next-day`,this.#b),this.#e.runTools.addEventListener(`lemonade-run-export`,this.#x),this.#e.runTools.addEventListener(`lemonade-run-import-file`,this.#S),this.#e.runTools.addEventListener(`lemonade-run-reset`,this.#C),document.addEventListener(`visibilitychange`,this.#g),window.addEventListener(`pagehide`,this.#_,{once:!0}),this.#M(),n.initialPersistenceError===null?this.#a?this.#D(`Run saved locally.`):this.#O(`Autosave is unavailable in this browser context.`):this.#k(n.initialPersistenceError)}dispose(){this.#h||(this.#h=!0,this.#e.decisionPanel.removeEventListener(`lemonade-decision-change`,this.#v),this.#e.decisionPanel.removeEventListener(`lemonade-decision-submit`,this.#y),this.#e.reportPanel.removeEventListener(`lemonade-next-day`,this.#b),this.#e.runTools.removeEventListener(`lemonade-run-export`,this.#x),this.#e.runTools.removeEventListener(`lemonade-run-import-file`,this.#S),this.#e.runTools.removeEventListener(`lemonade-run-reset`,this.#C),document.removeEventListener(`visibilitychange`,this.#g),window.removeEventListener(`pagehide`,this.#_),this.#i.dispose(),this.#r.dispose())}#g=()=>{document.visibilityState===`hidden`?this.#r.suspend():this.#r.resume()};#_=()=>{this.dispose()};#v=e=>{if(e instanceof Jt)switch(e.detail.kind){case`glasses`:this.#l=e.detail.value,this.#P(),this.#I();break;case`signs`:this.#u=e.detail.value,this.#P(),this.#I();break;case`price`:this.#d=e.detail.value,this.#P()}};#y=()=>{if(this.#c.kind!==`deciding`||!this.#j().affordable)return;let e=je(this.#o,Object.freeze({glasses:d(this.#l),signs:f(this.#u),price:l(this.#d)}),this.#s),t=this.#o.tier;this.#c=Object.freeze({kind:`report`,resolution:e}),this.#M(),this.#D(`Day report saved locally.`),this.#r.enable().then(n=>{if(!n)return;this.#r.play(`day:submit`);let r=Number(e.entry.net)>=0?`day:profit`:`day:loss`;window.setTimeout(()=>{this.#r.play(r)},220),e.nextState.tier!==t&&window.setTimeout(()=>{this.#r.play(`progression:unlock`)},520)})};#b=()=>{if(this.#c.kind!==`report`)return;let e=this.#c.resolution.nextState,t=b(e.day,this.#n),n=nr(e);this.#o=e,this.#s=t,this.#l=Math.min(this.#l,n.glasses),this.#u=Math.min(this.#u,n.signs),this.#c=Object.freeze({kind:`deciding`}),this.#M(),this.#D(`Next day saved locally.`),this.#r.enable().then(e=>{e&&this.#r.play(o(t.weather.kind))})};#x=()=>{try{let e=Nn(this.#E()),t=new Blob([e],{type:`application/json`}),n=URL.createObjectURL(t),r=document.createElement(`a`);r.href=n,r.download=`lemonade-run-day-${String(Number(this.#o.day))}.json`,r.click(),window.setTimeout(()=>{URL.revokeObjectURL(n)},0),this.#O(`Portable run exported.`)}catch(e){this.#k(ir(e))}};#S=e=>{e instanceof Kt&&this.#w(e.detail)};#C=()=>{this.#a&&window.confirm(`Reset this run? The local run will be deleted. Export it first if you want a portable copy.`)&&this.#T()};async#w(e){try{let t=Pn(await e.text());await this.#m,await Rn(t),window.location.reload()}catch(e){this.#k(ir(e))}}async#T(){try{await this.#m,await Bn(),window.location.reload()}catch(e){this.#k(ir(e))}}#E(){return Object.freeze({seed:this.#t,state:this.#o,environment:this.#s,draft:Object.freeze({glasses:d(this.#l),signs:f(this.#u),price:l(this.#d)}),phase:this.#c})}#D(e){if(!this.#a)return;let t=this.#E();this.#m=this.#m.then(async()=>{await Rn(t),this.#h||this.#O(e)}).catch(e=>{this.#h||this.#k(ir(e))})}#O(e){this.#f=e,this.#p=null,this.#A()}#k(e){this.#f=`Run storage needs attention.`,this.#p=e,this.#A()}#A(){this.#e.runTools.model=Object.freeze({statusMessage:this.#f,errorMessage:this.#p,persistenceEnabled:this.#a})}#j(){let e=Number(C(this.#o)),t=Number(he(this.#o)),n=this.#l*Number(this.#o.unitCost)+this.#u*Number(this.#o.signCost)+e;return Object.freeze({affordable:n<=t,operatingFunds:t,spend:n})}#M(){this.#A(),this.#N(),this.#P(),this.#F(),this.#I();let e=this.#c.kind===`report`?this.#c.resolution.nextState.ledger:this.#o.ledger;qe(this.#e.historyHost,e)}#N(){this.#e.statusDay.textContent=String(Number(this.#o.day)),this.#e.statusCash.textContent=Z(Number(this.#o.cash)),this.#e.statusDebt.textContent=Z(Number(this.#o.loanBalance)),this.#e.statusDebtGroup.hidden=!(this.#o.tier>=3||Number(this.#o.loanBalance)>0),this.#e.conditionWeather.textContent=Qn[this.#s.weather.kind],this.#e.conditionSentiment.textContent=$n[this.#s.sentiment.kind],this.#e.conditionProduction.textContent=`${Z(Number(this.#o.unitCost))} / glass`,this.#e.conditionAdvertising.textContent=`${Z(Number(this.#o.signCost))} / sign`,this.#e.financeTier.textContent=`Business tier ${String(this.#o.tier)}`,this.#e.financeSummary.textContent=rr(this.#o)}#P(){let e=nr(this.#o),t=this.#j();this.#e.decisionPanel.model=Object.freeze({visible:this.#c.kind===`deciding`,glasses:this.#l,signs:this.#u,price:this.#d,maxGlasses:e.glasses,maxSigns:e.signs,glassesCostText:`Cost ${Z(this.#l*Number(this.#o.unitCost))}`,signsCostText:`Cost ${Z(this.#u*Number(this.#o.signCost))}`,priceText:`Price ${Z(this.#d)} / glass`,spendText:`Spend ${Z(t.spend)} of ${Z(t.operatingFunds)} operating funds`,affordable:t.affordable})}#F(){this.#e.reportPanel.model=Object.freeze({report:this.#c.kind===`report`?this.#c.resolution:null,currentTier:this.#o.tier})}#I(){let e=this.#c;this.#i.update({environment:this.#s,visibleSigns:e.kind===`report`?Number(e.resolution.entry.decision.signs):this.#u,phase:e.kind,sold:e.kind===`report`?Number(e.resolution.entry.sold):0,prepared:e.kind===`report`?Number(e.resolution.entry.decision.glasses):this.#l})}},$=document.querySelector(`#root`);if(!($ instanceof HTMLElement))throw TypeError(`Expected #root application mount point.`);var ur=e=>{$.innerHTML=`
     <main class="game-shell bootstrap-shell">
       <section class="decision-panel bootstrap-recovery" aria-labelledby="recovery-title">
         <p class="eyebrow">Saved run recovery</p>
