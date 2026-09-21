@@ -103,3 +103,22 @@ test("storage failure degrades to a playable in-memory run", async ({ page }) =>
   await page.getByRole("button", { name: "Sell for the day" }).click();
   await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
 });
+
+test("scene runtime failure falls back without blocking gameplay", async ({ page }) => {
+  const sceneRequests: string[] = [];
+  await page.route(/\/assets\/scene-runtime-[^/]+\.js$/, async (route) => {
+    sceneRequests.push(route.request().url());
+    await route.abort();
+  });
+
+  await page.goto("./");
+
+  await expect(page.getByRole("slider")).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Sell for the day" })).toBeEnabled();
+  await expect(page.locator("#scene-fallback")).toBeVisible();
+  await expect(page.locator("#scene-fallback-description")).not.toBeEmpty();
+  expect(sceneRequests).toHaveLength(1);
+
+  await page.getByRole("button", { name: "Sell for the day" }).click();
+  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
+});
