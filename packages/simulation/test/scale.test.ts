@@ -41,19 +41,21 @@ describe("operating-scale progression", () => {
     });
   });
 
-  it("normalizes the original 10x, 50x, and 500x asset thresholds to current starting equity", () => {
+  it("uses balance-certified milestones for the modern cents economy", () => {
     expect(OPERATING_SCALE_THRESHOLDS_CENTS).toEqual({
-      level2: 2_000,
-      level3: 10_000,
-      level4: 100_000,
+      level2: 500,
+      level3: 2_000,
+      level4: 10_000,
     });
   });
 
   it("downgrades when equity falls below an unlocked boundary", () => {
-    expect(operatingScaleForEquity(10_000).level).toBe(3);
-    expect(operatingScaleForEquity(9_999).level).toBe(2);
-    expect(operatingScaleForEquity(2_000).level).toBe(2);
-    expect(operatingScaleForEquity(1_999).level).toBe(1);
+    expect(operatingScaleForEquity(10_000).level).toBe(4);
+    expect(operatingScaleForEquity(9_999).level).toBe(3);
+    expect(operatingScaleForEquity(2_000).level).toBe(3);
+    expect(operatingScaleForEquity(1_999).level).toBe(2);
+    expect(operatingScaleForEquity(500).level).toBe(2);
+    expect(operatingScaleForEquity(499).level).toBe(1);
   });
 
   it("derives scale from equity rather than finance tier or cash alone", () => {
@@ -65,7 +67,7 @@ describe("operating-scale progression", () => {
       tier: 4 as const,
     });
 
-    expect(operatingScaleForState(leveraged).level).toBe(2);
+    expect(operatingScaleForState(leveraged).level).toBe(3);
   });
   it("rejects otherwise-affordable decisions outside the unlocked envelope", () => {
     const state = createInitialState();
