@@ -161,6 +161,29 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expectNoVerticalOverflow(page);
 });
 
+test("mobile landscape uses the full viewport without scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 740, height: 360 });
+  await page.goto("./");
+
+  const main = page.getByRole("main");
+  await expect(main).toHaveAttribute("data-view", "planning");
+  await expectNoHorizontalOverflow(page);
+  await expectNoVerticalOverflow(page);
+
+  const sliders = page.getByRole("slider");
+  await expect(sliders).toHaveCount(3);
+  for (let index = 0; index < 3; index += 1) {
+    await expect(sliders.nth(index)).toBeVisible();
+  }
+
+  const action = page.getByRole("button", { name: "Sell for the day" });
+  await expect(action).toBeVisible();
+  expect((await action.textContent())?.trim()).toBe("");
+  const actionBox = await action.boundingBox();
+  if (actionBox === null) throw new Error("expected landscape action bounds");
+  expect(360 - (actionBox.y + actionBox.height)).toBeLessThanOrEqual(18);
+});
+
 test("reset requires explicit in-page confirmation", async ({ page }) => {
   await page.goto("./");
 
