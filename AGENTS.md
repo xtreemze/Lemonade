@@ -30,6 +30,16 @@ Do not add a UI framework, state library, chart library, CSS processor, componen
 
 A dependency is justified when it materially removes specialized complexity, improves correctness, or supplies a capability the platform does not reasonably provide. Three.js is intentionally justified for the 3D scene. Tauri/Rust remains conditional on concrete native capability needs.
 
+### UI escalation path
+
+The application currently uses no external UI framework or component library. Keep that as the default while semantic HTML, CSS, DOM APIs, and focused modules remain clear.
+
+If imperative view synchronization becomes a recurring source of complexity, **Lit is the preferred first framework candidate** because it adds declarative rendering and component lifecycle on top of standard Web Components without requiring a framework-specific application architecture. Adoption must be incremental and justified by reduced lifecycle/rendering complexity.
+
+For complex accessible widgets that the platform does not provide well, **Web Awesome is the preferred component-library candidate** because it is framework-agnostic and built on Web Components. Do not introduce it for native buttons, ranges, file inputs, tables, or other controls already expressed cleanly by the platform.
+
+React, Vue, Svelte, Solid, Tailwind-based kits, and other UI stacks are not banned, but adding them requires a concrete capability or maintainability case that is stronger than the native/Lit path and includes migration/runtime cost.
+
 When proposing a new dependency, record:
 
 - the problem native/browser code cannot solve cleanly;
