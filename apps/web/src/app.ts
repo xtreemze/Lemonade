@@ -16,7 +16,7 @@ import {
   type RandomSource,
   type Seed,
 } from "@lemonade/simulation";
-import { renderLedgerHistory } from "@lemonade/ui";
+import { renderLedgerHistory, summarizeCompletedWeek } from "@lemonade/ui";
 
 import {
   DecisionChangeEvent,
@@ -566,8 +566,10 @@ export class LemonadeApp {
   }
 
   #renderReportState(): void {
+    const report = this.#phase.kind === "report" ? this.#phase.resolution : null;
     this.#elements.reportPanel.model = Object.freeze({
-      report: this.#phase.kind === "report" ? this.#phase.resolution : null,
+      report,
+      weeklyReport: report === null ? null : summarizeCompletedWeek(report.nextState.ledger),
       currentTier: this.#game.tier,
     });
   }
