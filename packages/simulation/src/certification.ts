@@ -3,7 +3,6 @@ import { availableOperatingFunds, predictableFixedObligations } from "./finance.
 import {
   LEGACY_STARTING_BALANCE_CENTS,
   legacyConfidenceForState,
-  legacyMarketingEffect,
   legacyOperatingBalanceCents,
   legacyWeatherEffect,
 } from "./legacy.js";
@@ -26,7 +25,7 @@ import {
   type Seed,
 } from "./primitives.js";
 import { createSeededRandom } from "./rng.js";
-import { potentialDemand } from "./rules.js";
+import { legacyMarketingEffect, potentialDemand } from "./rules.js";
 import { operatingScaleForState, type OperatingScaleLevel } from "./scale.js";
 import { simulateDay } from "./simulate.js";
 import { createInitialState } from "./state.js";
@@ -669,8 +668,9 @@ export const assertBalanceCertification = (report: BalanceCertificationReport): 
     );
   }
 
-  const progression = report.profiles.find((item) => item.strategy === "progression");
-  if (progression === undefined) failCertification("missing progression profile");
+  const progression =
+    report.profiles.find((item) => item.strategy === "progression") ??
+    failCertification("missing progression profile");
   requireInvariant(
     progression.maxOperatingScale >= 2,
     "growth fixture must exercise historical operating progression",
