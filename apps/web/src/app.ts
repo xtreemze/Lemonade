@@ -7,6 +7,7 @@ import {
   generateEnvironment,
   glassCount,
   moneyCents,
+  operatingScaleForState,
   predictableFixedObligations,
   seed,
   signCount,
@@ -14,6 +15,7 @@ import {
   type DayEnvironment,
   type DayResolution,
   type GameState,
+  type OperatingScaleLevel,
   type RandomSource,
   type Seed,
 } from "@lemonade/simulation";
@@ -73,11 +75,15 @@ const decisionBudget = (state: GameState): number =>
     Number(availableOperatingFunds(state)) - Number(predictableFixedObligations(state)),
   );
 
-const decisionLimit = (state: GameState): Readonly<{ glasses: number; signs: number }> => {
+const decisionLimit = (
+  state: GameState,
+): Readonly<{ glasses: number; signs: number; price: number }> => {
   const budget = decisionBudget(state);
+  const scale = operatingScaleForState(state);
   return Object.freeze({
-    glasses: Math.min(250, Math.floor(budget / Number(state.unitCost))),
-    signs: Math.min(25, Math.floor(budget / Number(state.signCost))),
+    glasses: Math.min(scale.maxGlasses, Math.floor(budget / Number(state.unitCost))),
+    signs: Math.min(scale.maxSigns, Math.floor(budget / Number(state.signCost))),
+    price: scale.maxPriceCents,
   });
 };
 
@@ -119,7 +125,7 @@ export const createFreshRunSnapshot = (): RunSnapshot => {
     state,
     environment,
     draft: Object.freeze({
-      glasses: glassCount(20),
+      glasses: glassCount(15),
       signs: signCount(1),
       price: moneyCents(10),
     }),
@@ -284,9 +290,10 @@ export class LemonadeApp {
     this.#environment = initialRun.environment;
     this.#phase = initialRun.phase;
     this.#presentation = initialRun.phase.kind === "report" ? "report" : "planning";
-    this.#glasses = Number(initialRun.draft.glasses);
-    this.#signs = Number(initialRun.draft.signs);
-    this.#price = Number(initialRun.draft.price);
+    const initialLimits = decisionLimit(this.#game);
+    this.#glasses = Math.min(Number(initialRun.draft.glasses), initialLimits.glasses);
+    this.#signs = Math.min(Number(initialRun.draft.signs), initialLimits.signs);
+    this.#price = Math.min(Number(initialRun.draft.price), initialLimits.price);
     this.#persistenceEnabled = options.persistenceEnabled;
 
     root.innerHTML = SHELL_MARKUP;
@@ -389,6 +396,7 @@ export class LemonadeApp {
       this.#environment,
     );
     const previousTier = this.#game.tier;
+    const previousScaleLevel = operatingScaleForState(this.#game).level;
     this.#phase = Object.freeze({ kind: "report", resolution });
     this.#presentation = "simulation";
     this.#render();
@@ -399,7 +407,7 @@ export class LemonadeApp {
     });
 
     this.#schedulePresentation("report", SIMULATION_PRESENTATION_MS, () => {
-      this.#playResolutionCues(resolution, previousTier);
+      this.#playResolutionCues(resolution, previousTier, previousScaleLevel);
     });
   };
 
@@ -414,6 +422,7 @@ export class LemonadeApp {
     this.#environment = nextEnvironment;
     this.#glasses = Math.min(this.#glasses, limits.glasses);
     this.#signs = Math.min(this.#signs, limits.signs);
+    this.#price = Math.min(this.#price, limits.price);
     this.#phase = Object.freeze({ kind: "deciding" });
     this.#presentation = "forecast";
     this.#render();
@@ -554,11 +563,19 @@ export class LemonadeApp {
     }, reducedMotion ? 0 : delayMs);
   }
 
-  #playResolutionCues(resolution: DayResolution, previousTier: GameState["tier"]): void {
+  #playResolutionCues(
+    resolution: DayResolution,
+    previousTier: GameState["tier"],
+    previousScaleLevel: OperatingScaleLevel,
+  ): void {
     void this.#audio.enable().then((enabled) => {
       if (!enabled) return;
       this.#audio.play(Number(resolution.entry.net) >= 0 ? "day:profit" : "day:loss");
-      if (resolution.nextState.tier !== previousTier) {
+      const nextScaleLevel = operatingScaleForState(resolution.nextState).level;
+      if (
+        resolution.nextState.tier !== previousTier ||
+        nextScaleLevel > previousScaleLevel
+      ) {
         window.setTimeout(() => {
           if (!this.#disposed) this.#audio.play("progression:unlock");
         }, 320);
@@ -614,7 +631,9 @@ export class LemonadeApp {
     this.#elements.conditionSentiment.textContent = sentimentLabel[this.#environment.sentiment.kind];
     this.#elements.conditionProduction.textContent = `${formatMoney(Number(this.#game.unitCost))} / glass`;
     this.#elements.conditionAdvertising.textContent = `${formatMoney(Number(this.#game.signCost))} / sign`;
-    this.#elements.financeTier.textContent = `Business tier ${String(this.#game.tier)}`;
+    const scale = operatingScaleForState(this.#game);
+    this.#elements.financeTier.textContent =
+      `Stand level ${String(scale.level)} · Business tier ${String(this.#game.tier)}`;
     this.#elements.financeSummary.textContent = financeSummary(this.#game);
   }
 
@@ -629,6 +648,7 @@ export class LemonadeApp {
       price: this.#price,
       maxGlasses: limits.glasses,
       maxSigns: limits.signs,
+      maxPriceCents: limits.price,
       glassesCostText: `Cost ${formatMoney(this.#glasses * Number(this.#game.unitCost))}`,
       signsCostText: `Cost ${formatMoney(this.#signs * Number(this.#game.signCost))}`,
       priceText: `Price ${formatMoney(this.#price)} / glass`,
