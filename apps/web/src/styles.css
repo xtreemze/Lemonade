@@ -1143,6 +1143,84 @@ body:has(.game-shell[data-view="planning"]) {
   box-shadow: none;
 }
 
+@media (width < 47.5625rem) and (orientation: landscape) {
+  .game-shell[data-view="planning"] {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    column-gap: 12px;
+  }
+
+  .game-shell[data-view="planning"] .topline,
+  .game-shell[data-view="planning"] .conditions,
+  .game-shell[data-view="planning"] .obligation-strip {
+    grid-column: 1;
+  }
+
+  .game-shell[data-view="planning"] > lemonade-decision-panel {
+    grid-column: 2;
+    grid-row: 1 / -1;
+  }
+
+  .game-shell[data-view="planning"] .topline {
+    padding-right: 0;
+  }
+
+  .game-shell[data-view="planning"] .conditions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-block: 4px;
+  }
+
+  .game-shell[data-view="planning"] .obligation-strip {
+    align-self: start;
+    margin-bottom: 0;
+  }
+
+  .game-shell[data-view="planning"] .decision-panel {
+    padding-top: 0;
+  }
+
+  .game-shell[data-view="planning"] .panel-heading {
+    margin-bottom: 0;
+  }
+
+  .game-shell[data-view="planning"] .decision-control {
+    gap: 0;
+    padding: 2px 0;
+  }
+
+  .game-shell[data-view="planning"] .decision-control-heading {
+    min-height: 17px;
+  }
+
+  .game-shell[data-view="planning"] .game-slider {
+    min-height: 42px;
+  }
+
+  .game-shell[data-view="planning"] .simulation-button-art {
+    width: 54px;
+    height: 54px;
+  }
+
+  .game-shell[data-view="report"] .results-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .game-shell[data-view="report"] .weekly-results-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .game-shell[data-view="report"] .next-day-button {
+    width: 58px;
+    height: 58px;
+    min-height: 58px;
+  }
+
+  .game-shell[data-view="report"] .next-day-icon {
+    width: 52px;
+    height: 52px;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .game-shell[data-view="planning"] .simulation-button:hover:not(:disabled) {
     transform: scale(1.035);
