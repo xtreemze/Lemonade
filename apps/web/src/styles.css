@@ -373,6 +373,30 @@ h2 {
   width: 76px;
 }
 
+.decision-slider {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.decision-slider input[type="range"] {
+  min-width: 0;
+}
+
+.decision-cost {
+  min-width: 9.5rem;
+  padding: 7px 9px;
+  border: 2px solid #211d14;
+  background: #f5edd1;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.86rem;
+  font-weight: 900;
+  text-align: right;
+  white-space: nowrap;
+}
+
 input[type="range"] {
   width: 100%;
   accent-color: #236f5e;
@@ -488,8 +512,17 @@ input[type="range"] {
     grid-template-columns: 1fr auto;
   }
 
-  .decision-control > input[type="range"] {
+  .decision-control > .decision-slider {
     grid-column: 1 / -1;
+  }
+
+  .decision-slider {
+    gap: 10px;
+  }
+
+  .decision-cost {
+    min-width: 8.8rem;
+    font-size: 0.8rem;
   }
 
   .results-grid {
