@@ -241,7 +241,17 @@ Transitions are explicit.
 
 Avoid boolean combinations such as `isSelling`, `showReport`, `hasForecast`, `isAnimating` that can represent contradictory states.
 
-## Progression: complexity without interface sprawl
+## Progression: scale and complexity without interface sprawl
+
+Progression has two independent axes.
+
+**Operating scale** controls how far the existing three daily decisions can be pushed. It recovers the historical browser progression: level 1 allows 15 glasses, 3 signs, and $2.99; level 2 allows 50/10/$3.99; level 3 allows 140/25/$6.99; level 4 allows 400/40/$9.99. Scale is derived from current equity, so a player can expand and later contract after losses. Because the historical browser thresholds belonged to a dollar-scale economy, the current cents-based ruleset uses balance-certified milestones of $5, $20, and $100 equity. This keeps the historical decision ceilings intact while preserving a usable progression cadence under the classic demand model.
+
+**Finance maturity** remains the tier 0–4 system that introduces fees, tax, banking, credit, and interest. It does not determine slider ranges.
+
+This separation creates progressive emergence without adding controls: greater scale exposes larger inventory risk, more room for advertising saturation, wider pricing experiments, and larger consequences from weather and market conditions, while finance adds obligations around those same decisions.
+
+
 
 Progression should increase the sophistication of consequences while keeping the primary interaction stable.
 

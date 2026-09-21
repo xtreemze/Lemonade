@@ -4,6 +4,7 @@ export * from "./finance.js";
 export type * from "./model.js";
 export * from "./primitives.js";
 export * from "./rng.js";
+export * from "./scale.js";
 export * from "./rules.js";
 export * from "./simulate.js";
 export * from "./state.js";

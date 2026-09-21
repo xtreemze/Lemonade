@@ -54,23 +54,27 @@ describe("day resolution", () => {
   it("caps sales by prepared inventory and conserves cents", () => {
     const result = simulateDay(
       createInitialState(),
-      decision(20, 1, 10),
+      decision(15, 1, 10),
       neutralEnvironment(),
     );
 
-    expect(Number(result.entry.sold)).toBe(20);
-    expect(Number(result.entry.revenue)).toBe(200);
-    expect(Number(result.entry.expenses)).toBe(55);
-    expect(Number(result.entry.net)).toBe(145);
-    expect(Number(result.entry.endingCash)).toBe(345);
+    expect(Number(result.entry.sold)).toBe(15);
+    expect(Number(result.entry.revenue)).toBe(150);
+    expect(Number(result.entry.expenses)).toBe(45);
+    expect(Number(result.entry.net)).toBe(105);
+    expect(Number(result.entry.endingCash)).toBe(305);
     expect(Number(result.nextState.cash)).toBe(
       Number(result.previousState.cash) + Number(result.entry.net),
     );
   });
 
-  it("rejects spending that exceeds available cash", () => {
+  it("rejects spending that exceeds available cash inside the unlocked envelope", () => {
+    const cashPoorState = Object.freeze({
+      ...createInitialState(),
+      cash: moneyCents(10),
+    });
     expect(() =>
-      simulateDay(createInitialState(), decision(100, 1, 10), neutralEnvironment()),
+      simulateDay(cashPoorState, decision(15, 0, 10), neutralEnvironment()),
     ).toThrow(UnaffordableDecisionError);
   });
 
@@ -90,7 +94,7 @@ describe("day resolution", () => {
       }),
     });
 
-    const result = simulateDay(createInitialState(), decision(20, 3, 5), environment);
+    const result = simulateDay(createInitialState(), decision(15, 3, 5), environment);
     expect(Number(result.entry.sold)).toBe(0);
   });
 
@@ -110,9 +114,9 @@ describe("day resolution", () => {
       }),
     });
 
-    const result = simulateDay(createInitialState(), decision(25, 0, 50), environment);
-    expect(Number(result.entry.sold)).toBe(25);
-    expect(Number(result.entry.potentialDemand)).toBeGreaterThanOrEqual(25);
+    const result = simulateDay(createInitialState(), decision(15, 0, 50), environment);
+    expect(Number(result.entry.sold)).toBe(15);
+    expect(Number(result.entry.potentialDemand)).toBeGreaterThanOrEqual(15);
   });
 
   it("applies the classic staged production-cost lesson", () => {
@@ -132,7 +136,7 @@ describe("day resolution", () => {
   });
 
   it("holds accounting and inventory invariants across a decision grid", () => {
-    const glassesValues = [0, 1, 5, 20, 50] as const;
+    const glassesValues = [0, 1, 5, 15] as const;
     const signValues = [0, 1, 3] as const;
     const priceValues = [5, 10, 25] as const;
 

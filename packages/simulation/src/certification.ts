@@ -19,6 +19,7 @@ import {
 } from "./primitives.js";
 import { createSeededRandom } from "./rng.js";
 import { potentialDemand } from "./rules.js";
+import { operatingScaleForState, type OperatingScaleLevel } from "./scale.js";
 import { simulateDay } from "./simulate.js";
 import { createInitialState } from "./state.js";
 import { SIMULATION_SCHEMA_VERSION } from "./version.js";
@@ -98,6 +99,8 @@ export type CertificationRunSummary = Readonly<{
   eventImpactHundredths: number;
   maxTier: ProgressionTier;
   firstDayByTier: readonly (number | null)[];
+  maxOperatingScale: OperatingScaleLevel;
+  firstDayByOperatingScale: readonly (number | null)[];
   finance: FinanceBurden;
 }>;
 
@@ -124,6 +127,8 @@ export type ProfileCertificationSummary = Readonly<{
   eventImpactHundredths: number;
   maxTier: ProgressionTier;
   earliestDayByTier: readonly (number | null)[];
+  maxOperatingScale: OperatingScaleLevel;
+  earliestDayByOperatingScale: readonly (number | null)[];
   finance: FinanceBurden;
 }>;
 
@@ -192,9 +197,10 @@ const variableBudgetCents = (state: GameState): number =>
 
 const affordableDecision = (state: GameState, proposed: ProposedDecision): DayDecision => {
   const budget = variableBudgetCents(state);
-  const requestedSigns = Math.max(0, Math.floor(proposed.signs));
-  const requestedGlasses = Math.max(0, Math.floor(proposed.glasses));
-  const price = Math.max(1, Math.floor(proposed.price));
+  const scale = operatingScaleForState(state);
+  const requestedSigns = Math.min(scale.maxSigns, Math.max(0, Math.floor(proposed.signs)));
+  const requestedGlasses = Math.min(scale.maxGlasses, Math.max(0, Math.floor(proposed.glasses)));
+  const price = Math.min(scale.maxPriceCents, Math.max(1, Math.floor(proposed.price)));
   const signs = Math.min(requestedSigns, Math.floor(budget / Number(state.signCost)));
   const remaining = budget - signs * Number(state.signCost);
   const glasses = Math.min(requestedGlasses, Math.floor(remaining / Number(state.unitCost)));
@@ -421,6 +427,8 @@ const runStrategy = (
   let finance = financeZero();
   let maxTier: ProgressionTier = state.tier;
   const firstDayByTier: (number | null)[] = [1, null, null, null, null];
+  let maxOperatingScale = operatingScaleForState(state).level;
+  const firstDayByOperatingScale: (number | null)[] = [1, null, null, null];
 
   for (let index = 0; index < horizonDays; index += 1) {
     if (Number(availableOperatingFunds(state)) < Number(predictableFixedObligations(state))) {
@@ -450,6 +458,12 @@ const runStrategy = (
     if (firstDayByTier[state.tier] === null) {
       firstDayByTier[state.tier] = Number(state.day);
     }
+    const operatingScale = operatingScaleForState(state).level;
+    maxOperatingScale =
+      operatingScale > maxOperatingScale ? operatingScale : maxOperatingScale;
+    if (firstDayByOperatingScale[operatingScale - 1] === null) {
+      firstDayByOperatingScale[operatingScale - 1] = Number(state.day);
+    }
   }
 
   const completedDays = state.ledger.length;
@@ -475,6 +489,8 @@ const runStrategy = (
     eventImpactHundredths: roundRatio(eventImpact, completedDays, 100),
     maxTier,
     firstDayByTier: Object.freeze(firstDayByTier),
+    maxOperatingScale,
+    firstDayByOperatingScale: Object.freeze(firstDayByOperatingScale),
     finance,
   });
 };
@@ -498,6 +514,18 @@ const earliestTierDays = (runs: readonly CertificationRunSummary[]): readonly (n
     }),
   );
 
+const earliestOperatingScaleDays = (
+  runs: readonly CertificationRunSummary[],
+): readonly (number | null)[] =>
+  Object.freeze(
+    [1, 2, 3, 4].map((level) => {
+      const days = runs
+        .map((run) => run.firstDayByOperatingScale[level - 1] ?? null)
+        .filter((day): day is number => day !== null);
+      return days.length === 0 ? null : Math.min(...days);
+    }),
+  );
+
 const aggregateProfile = (
   strategy: StrategyDefinition,
   runs: readonly CertificationRunSummary[],
@@ -513,6 +541,10 @@ const aggregateProfile = (
   const maxTier = runs.reduce<ProgressionTier>(
     (maximum, run) => (run.maxTier > maximum ? run.maxTier : maximum),
     0,
+  );
+  const maxOperatingScale = runs.reduce<OperatingScaleLevel>(
+    (maximum, run) => (run.maxOperatingScale > maximum ? run.maxOperatingScale : maximum),
+    1,
   );
 
   return Object.freeze({
@@ -558,6 +590,8 @@ const aggregateProfile = (
     ),
     maxTier,
     earliestDayByTier: earliestTierDays(runs),
+    maxOperatingScale,
+    earliestDayByOperatingScale: earliestOperatingScaleDays(runs),
     finance: aggregateFinance(runs),
   });
 };
@@ -733,6 +767,10 @@ export const assertBalanceCertification = (report: BalanceCertificationReport): 
   );
   requireInvariant(progression.maxTier === 4, "progression fixture must reach tier 4");
   requireInvariant(
+    progression.maxOperatingScale >= 3,
+    "progression fixture must reach operating scale 3",
+  );
+  requireInvariant(
     progression.earliestDayByTier.slice(0, 5).every((day) => day !== null),
     "progression fixture must visit every current finance tier",
   );
@@ -798,13 +836,13 @@ export const formatBalanceCertification = (report: BalanceCertificationReport): 
     `Simulation schema: ${String(report.simulationSchemaVersion)}`,
     `Corpus: ${String(report.profiles.length)} strategies × ${String(report.seeds.length)} seeds × up to ${String(report.horizonDays)} days`,
     "",
-    "| Strategy | Survival | Equity p50 | Equity p90 | Sell-through | Avg price | Avg signs | Max tier |",
-    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    "| Strategy | Survival | Equity p50 | Equity p90 | Sell-through | Avg price | Avg signs | Max tier | Max stand |",
+    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
   ];
 
   for (const item of report.profiles) {
     lines.push(
-      `| ${item.strategy} | ${percentFromBps(item.survivalRateBps)} | ${dollars(item.finalEquityCents.p50)} | ${dollars(item.finalEquityCents.p90)} | ${percentFromBps(item.sellThroughBps)} | ${(item.averagePriceHundredthsOfCent / 100).toFixed(2)}¢ | ${decimalHundredths(item.averageSignsHundredths)} | ${String(item.maxTier)} |`,
+      `| ${item.strategy} | ${percentFromBps(item.survivalRateBps)} | ${dollars(item.finalEquityCents.p50)} | ${dollars(item.finalEquityCents.p90)} | ${percentFromBps(item.sellThroughBps)} | ${(item.averagePriceHundredthsOfCent / 100).toFixed(2)}¢ | ${decimalHundredths(item.averageSignsHundredths)} | ${String(item.maxTier)} | ${String(item.maxOperatingScale)} |`,
     );
   }
 
