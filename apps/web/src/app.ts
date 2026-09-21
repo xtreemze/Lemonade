@@ -19,6 +19,13 @@ import {
 import { renderLedgerHistory } from "@lemonade/ui";
 
 import {
+  DecisionChangeEvent,
+  LemonadeDayReport,
+  LemonadeDecisionPanel,
+  LemonadeRunTools,
+  RunImportFileEvent,
+} from "./components.js";
+import {
   RunPersistenceError,
   clearCurrentRun,
   exportRunSnapshot,
@@ -45,12 +52,6 @@ const sentimentLabel: Record<DayEnvironment["sentiment"]["kind"], string> = {
   neutral: "Neutral",
   warm: "Interested",
   hot: "Eager",
-};
-
-const eventLabel: Record<DayEnvironment["event"]["kind"], string> = {
-  none: "No unusual event",
-  "street-work": "Street work slowed neighborhood traffic",
-  "workers-buy-out": "Road workers bought out the stand",
 };
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
@@ -135,19 +136,7 @@ const SHELL_MARKUP = `
       </dl>
     </header>
 
-    <section class="run-tools" aria-label="Run data">
-      <div class="run-tools-copy">
-        <p class="eyebrow">Run data</p>
-        <p id="run-status" class="run-status" role="status" aria-live="polite"></p>
-        <p id="run-error" class="inline-error" role="alert" hidden></p>
-      </div>
-      <div class="run-actions">
-        <button id="export-run" class="utility-button" type="button">Export run</button>
-        <button id="import-run" class="utility-button" type="button">Import run</button>
-        <input id="import-file" type="file" accept="application/json,.json" hidden />
-        <button id="reset-run" class="utility-button utility-button-danger" type="button">Reset run</button>
-      </div>
-    </section>
+    <lemonade-run-tools></lemonade-run-tools>
 
     <section class="conditions" aria-labelledby="conditions-title">
       <div>
@@ -173,67 +162,9 @@ const SHELL_MARKUP = `
       <p id="scene-equivalent" class="scene-equivalent"></p>
     </section>
 
-    <form id="decision-panel" class="decision-panel">
-      <header class="panel-heading">
-        <div>
-          <p class="eyebrow">Set today’s plan</p>
-          <h2>Three decisions. Then sell.</h2>
-        </div>
-        <p id="decision-spend" class="spend"></p>
-      </header>
+    <lemonade-decision-panel></lemonade-decision-panel>
 
-      <label class="decision-control" for="glasses">
-        <span><strong>Glasses</strong><small>Inventory prepared before demand is known</small></span>
-        <output id="glasses-output" for="glasses"></output>
-        <input id="glasses" name="glasses" type="range" min="0" step="1" />
-      </label>
-
-      <label class="decision-control" for="signs">
-        <span><strong>Signs</strong><small>Advertising helps demand with diminishing returns</small></span>
-        <output id="signs-output" for="signs"></output>
-        <input id="signs" name="signs" type="range" min="0" step="1" />
-      </label>
-
-      <label class="decision-control" for="price">
-        <span><strong>Price</strong><small>Higher margin can sharply reduce demand</small></span>
-        <output id="price-output" for="price"></output>
-        <input id="price" name="price" type="range" min="1" max="100" step="1" />
-      </label>
-
-      <p id="decision-error" class="inline-error" role="alert" hidden>
-        This plan exceeds available cash and credit. Reduce glasses or signs.
-      </p>
-      <button id="sell-button" class="sell-button" type="submit">Sell for the day</button>
-    </form>
-
-    <section id="report-panel" class="report-panel" aria-live="polite" aria-labelledby="report-title" hidden>
-      <header class="panel-heading">
-        <div>
-          <p id="report-eyebrow" class="eyebrow"></p>
-          <h2 id="report-title"></h2>
-        </div>
-        <strong id="report-net"></strong>
-      </header>
-
-      <dl class="results-grid">
-        <div><dt>Sales</dt><dd id="report-sales"></dd></div>
-        <div><dt>Expenses</dt><dd id="report-expenses"></dd></div>
-        <div><dt>Ending cash</dt><dd id="report-cash"></dd></div>
-        <div><dt>Ending debt</dt><dd id="report-debt"></dd></div>
-      </dl>
-
-      <div class="ledger-breakdown">
-        <h3>Day ledger</h3>
-        <table>
-          <caption>Credits, operating expenses and financing movements for this day</caption>
-          <tbody id="report-ledger-lines"></tbody>
-        </table>
-      </div>
-
-      <p id="report-event" class="event-note"></p>
-      <p id="report-progression" class="progression-note" hidden></p>
-      <button id="next-button" class="next-button" type="button">Plan next day</button>
-    </section>
+    <lemonade-day-report></lemonade-day-report>
 
     <div id="ledger-history-host"></div>
   </main>
@@ -258,40 +189,15 @@ type AppElements = Readonly<{
   statusCash: HTMLElement;
   statusDebtGroup: HTMLElement;
   statusDebt: HTMLElement;
-  runStatus: HTMLElement;
-  runError: HTMLElement;
-  exportRun: HTMLButtonElement;
-  importRun: HTMLButtonElement;
-  importFile: HTMLInputElement;
-  resetRun: HTMLButtonElement;
+  runTools: LemonadeRunTools;
   conditionWeather: HTMLElement;
   conditionSentiment: HTMLElement;
   conditionProduction: HTMLElement;
   conditionAdvertising: HTMLElement;
   financeTier: HTMLElement;
   financeSummary: HTMLElement;
-  decisionPanel: HTMLFormElement;
-  decisionSpend: HTMLElement;
-  glasses: HTMLInputElement;
-  glassesOutput: HTMLOutputElement;
-  signs: HTMLInputElement;
-  signsOutput: HTMLOutputElement;
-  price: HTMLInputElement;
-  priceOutput: HTMLOutputElement;
-  decisionError: HTMLElement;
-  sellButton: HTMLButtonElement;
-  reportPanel: HTMLElement;
-  reportEyebrow: HTMLElement;
-  reportTitle: HTMLElement;
-  reportNet: HTMLElement;
-  reportSales: HTMLElement;
-  reportExpenses: HTMLElement;
-  reportCash: HTMLElement;
-  reportDebt: HTMLElement;
-  reportLedgerLines: HTMLTableSectionElement;
-  reportEvent: HTMLElement;
-  reportProgression: HTMLElement;
-  nextButton: HTMLButtonElement;
+  decisionPanel: LemonadeDecisionPanel;
+  reportPanel: LemonadeDayReport;
   historyHost: HTMLElement;
   sceneCanvas: HTMLCanvasElement;
   sceneFallback: HTMLElement;
@@ -305,49 +211,21 @@ const collectElements = (root: HTMLElement): AppElements =>
     statusCash: requireElement(root, "#status-cash", HTMLElement),
     statusDebtGroup: requireElement(root, "#status-debt-group", HTMLElement),
     statusDebt: requireElement(root, "#status-debt", HTMLElement),
-    runStatus: requireElement(root, "#run-status", HTMLElement),
-    runError: requireElement(root, "#run-error", HTMLElement),
-    exportRun: requireElement(root, "#export-run", HTMLButtonElement),
-    importRun: requireElement(root, "#import-run", HTMLButtonElement),
-    importFile: requireElement(root, "#import-file", HTMLInputElement),
-    resetRun: requireElement(root, "#reset-run", HTMLButtonElement),
+    runTools: requireElement(root, "lemonade-run-tools", LemonadeRunTools),
     conditionWeather: requireElement(root, "#condition-weather", HTMLElement),
     conditionSentiment: requireElement(root, "#condition-sentiment", HTMLElement),
     conditionProduction: requireElement(root, "#condition-production", HTMLElement),
     conditionAdvertising: requireElement(root, "#condition-advertising", HTMLElement),
     financeTier: requireElement(root, "#finance-tier", HTMLElement),
     financeSummary: requireElement(root, "#finance-summary", HTMLElement),
-    decisionPanel: requireElement(root, "#decision-panel", HTMLFormElement),
-    decisionSpend: requireElement(root, "#decision-spend", HTMLElement),
-    glasses: requireElement(root, "#glasses", HTMLInputElement),
-    glassesOutput: requireElement(root, "#glasses-output", HTMLOutputElement),
-    signs: requireElement(root, "#signs", HTMLInputElement),
-    signsOutput: requireElement(root, "#signs-output", HTMLOutputElement),
-    price: requireElement(root, "#price", HTMLInputElement),
-    priceOutput: requireElement(root, "#price-output", HTMLOutputElement),
-    decisionError: requireElement(root, "#decision-error", HTMLElement),
-    sellButton: requireElement(root, "#sell-button", HTMLButtonElement),
-    reportPanel: requireElement(root, "#report-panel", HTMLElement),
-    reportEyebrow: requireElement(root, "#report-eyebrow", HTMLElement),
-    reportTitle: requireElement(root, "#report-title", HTMLElement),
-    reportNet: requireElement(root, "#report-net", HTMLElement),
-    reportSales: requireElement(root, "#report-sales", HTMLElement),
-    reportExpenses: requireElement(root, "#report-expenses", HTMLElement),
-    reportCash: requireElement(root, "#report-cash", HTMLElement),
-    reportDebt: requireElement(root, "#report-debt", HTMLElement),
-    reportLedgerLines: requireElement(root, "#report-ledger-lines", HTMLTableSectionElement),
-    reportEvent: requireElement(root, "#report-event", HTMLElement),
-    reportProgression: requireElement(root, "#report-progression", HTMLElement),
-    nextButton: requireElement(root, "#next-button", HTMLButtonElement),
+    decisionPanel: requireElement(root, "lemonade-decision-panel", LemonadeDecisionPanel),
+    reportPanel: requireElement(root, "lemonade-day-report", LemonadeDayReport),
     historyHost: requireElement(root, "#ledger-history-host", HTMLElement),
     sceneCanvas: requireElement(root, "#scene-canvas", HTMLCanvasElement),
     sceneFallback: requireElement(root, "#scene-fallback", HTMLElement),
     sceneFallbackDescription: requireElement(root, "#scene-fallback-description", HTMLElement),
     sceneEquivalent: requireElement(root, "#scene-equivalent", HTMLElement),
   });
-
-const numericInputValue = (input: HTMLInputElement, fallback: number): number =>
-  Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : fallback;
 
 export type LemonadeAppOptions = Readonly<{
   persistenceEnabled: boolean;
@@ -373,6 +251,8 @@ export class LemonadeApp {
   #glasses: number;
   #signs: number;
   #price: number;
+  #runStatusMessage = "";
+  #runErrorMessage: string | null = null;
   #saveChain: Promise<void> = Promise.resolve();
   #disposed = false;
 
@@ -400,20 +280,18 @@ export class LemonadeApp {
       equivalent: this.#elements.sceneEquivalent,
     });
 
-    this.#elements.decisionPanel.addEventListener("submit", this.#onSell);
-    this.#elements.nextButton.addEventListener("click", this.#onNextDay);
-    this.#elements.glasses.addEventListener("input", this.#onGlassesInput);
-    this.#elements.signs.addEventListener("input", this.#onSignsInput);
-    this.#elements.price.addEventListener("input", this.#onPriceInput);
-    this.#elements.exportRun.addEventListener("click", this.#onExportRun);
-    this.#elements.importRun.addEventListener("click", this.#onImportRun);
-    this.#elements.importFile.addEventListener("change", this.#onImportFileChange);
-    this.#elements.resetRun.addEventListener("click", this.#onResetRun);
+    this.#elements.decisionPanel.addEventListener(
+      "lemonade-decision-change",
+      this.#onDecisionChange,
+    );
+    this.#elements.decisionPanel.addEventListener("lemonade-decision-submit", this.#onSell);
+    this.#elements.reportPanel.addEventListener("lemonade-next-day", this.#onNextDay);
+    this.#elements.runTools.addEventListener("lemonade-run-export", this.#onExportRun);
+    this.#elements.runTools.addEventListener("lemonade-run-import-file", this.#onImportFile);
+    this.#elements.runTools.addEventListener("lemonade-run-reset", this.#onResetRun);
     document.addEventListener("visibilitychange", this.#onVisibilityChange);
     window.addEventListener("pagehide", this.#onPageHide, { once: true });
 
-    this.#elements.importRun.disabled = !this.#persistenceEnabled;
-    this.#elements.resetRun.disabled = !this.#persistenceEnabled;
     this.#render();
 
     if (options.initialPersistenceError !== null) {
@@ -421,22 +299,22 @@ export class LemonadeApp {
     } else if (this.#persistenceEnabled) {
       this.#queueSave("Run saved locally.");
     } else {
-      this.#elements.runStatus.textContent = "Autosave is unavailable in this browser context.";
+      this.#showPersistenceStatus("Autosave is unavailable in this browser context.");
     }
   }
 
   dispose(): void {
     if (this.#disposed) return;
     this.#disposed = true;
-    this.#elements.decisionPanel.removeEventListener("submit", this.#onSell);
-    this.#elements.nextButton.removeEventListener("click", this.#onNextDay);
-    this.#elements.glasses.removeEventListener("input", this.#onGlassesInput);
-    this.#elements.signs.removeEventListener("input", this.#onSignsInput);
-    this.#elements.price.removeEventListener("input", this.#onPriceInput);
-    this.#elements.exportRun.removeEventListener("click", this.#onExportRun);
-    this.#elements.importRun.removeEventListener("click", this.#onImportRun);
-    this.#elements.importFile.removeEventListener("change", this.#onImportFileChange);
-    this.#elements.resetRun.removeEventListener("click", this.#onResetRun);
+    this.#elements.decisionPanel.removeEventListener(
+      "lemonade-decision-change",
+      this.#onDecisionChange,
+    );
+    this.#elements.decisionPanel.removeEventListener("lemonade-decision-submit", this.#onSell);
+    this.#elements.reportPanel.removeEventListener("lemonade-next-day", this.#onNextDay);
+    this.#elements.runTools.removeEventListener("lemonade-run-export", this.#onExportRun);
+    this.#elements.runTools.removeEventListener("lemonade-run-import-file", this.#onImportFile);
+    this.#elements.runTools.removeEventListener("lemonade-run-reset", this.#onResetRun);
     document.removeEventListener("visibilitychange", this.#onVisibilityChange);
     window.removeEventListener("pagehide", this.#onPageHide);
     this.#scene.dispose();
@@ -455,25 +333,28 @@ export class LemonadeApp {
     this.dispose();
   };
 
-  readonly #onGlassesInput = (): void => {
-    this.#glasses = numericInputValue(this.#elements.glasses, this.#glasses);
-    this.#renderDecisionState();
-    this.#renderScene();
+  readonly #onDecisionChange = (event: Event): void => {
+    if (!(event instanceof DecisionChangeEvent)) return;
+
+    switch (event.detail.kind) {
+      case "glasses":
+        this.#glasses = event.detail.value;
+        this.#renderDecisionState();
+        this.#renderScene();
+        break;
+      case "signs":
+        this.#signs = event.detail.value;
+        this.#renderDecisionState();
+        this.#renderScene();
+        break;
+      case "price":
+        this.#price = event.detail.value;
+        this.#renderDecisionState();
+        break;
+    }
   };
 
-  readonly #onSignsInput = (): void => {
-    this.#signs = numericInputValue(this.#elements.signs, this.#signs);
-    this.#renderDecisionState();
-    this.#renderScene();
-  };
-
-  readonly #onPriceInput = (): void => {
-    this.#price = numericInputValue(this.#elements.price, this.#price);
-    this.#renderDecisionState();
-  };
-
-  readonly #onSell = (event: SubmitEvent): void => {
-    event.preventDefault();
+  readonly #onSell = (): void => {
     if (this.#phase.kind !== "deciding") return;
 
     const affordability = this.#affordability();
@@ -546,16 +427,9 @@ export class LemonadeApp {
     }
   };
 
-  readonly #onImportRun = (): void => {
-    if (!this.#persistenceEnabled) return;
-    this.#elements.importFile.click();
-  };
-
-  readonly #onImportFileChange = (): void => {
-    const file = this.#elements.importFile.files?.item(0);
-    this.#elements.importFile.value = "";
-    if (file === null || file === undefined) return;
-    void this.#importFile(file);
+  readonly #onImportFile = (event: Event): void => {
+    if (!(event instanceof RunImportFileEvent)) return;
+    void this.#importFile(event.detail);
   };
 
   readonly #onResetRun = (): void => {
@@ -615,15 +489,23 @@ export class LemonadeApp {
   }
 
   #showPersistenceStatus(message: string): void {
-    this.#elements.runStatus.textContent = message;
-    this.#elements.runError.hidden = true;
-    this.#elements.runError.textContent = "";
+    this.#runStatusMessage = message;
+    this.#runErrorMessage = null;
+    this.#renderPersistenceState();
   }
 
   #showPersistenceError(message: string): void {
-    this.#elements.runStatus.textContent = "Run storage needs attention.";
-    this.#elements.runError.textContent = message;
-    this.#elements.runError.hidden = false;
+    this.#runStatusMessage = "Run storage needs attention.";
+    this.#runErrorMessage = message;
+    this.#renderPersistenceState();
+  }
+
+  #renderPersistenceState(): void {
+    this.#elements.runTools.model = Object.freeze({
+      statusMessage: this.#runStatusMessage,
+      errorMessage: this.#runErrorMessage,
+      persistenceEnabled: this.#persistenceEnabled,
+    });
   }
 
   #affordability(): Readonly<{ affordable: boolean; operatingFunds: number; spend: number }> {
@@ -637,6 +519,7 @@ export class LemonadeApp {
   }
 
   #render(): void {
+    this.#renderPersistenceState();
     this.#renderStatus();
     this.#renderDecisionState();
     this.#renderReportState();
@@ -667,58 +550,23 @@ export class LemonadeApp {
     const limits = decisionLimit(this.#game);
     const affordability = this.#affordability();
 
-    this.#elements.decisionPanel.hidden = this.#phase.kind !== "deciding";
-    this.#elements.glasses.max = String(limits.glasses);
-    this.#elements.glasses.value = String(this.#glasses);
-    this.#elements.glassesOutput.textContent = String(this.#glasses);
-    this.#elements.signs.max = String(limits.signs);
-    this.#elements.signs.value = String(this.#signs);
-    this.#elements.signsOutput.textContent = String(this.#signs);
-    this.#elements.price.value = String(this.#price);
-    this.#elements.priceOutput.textContent = formatMoney(this.#price);
-    this.#elements.decisionSpend.textContent = `Spend ${formatMoney(affordability.spend)} of ${formatMoney(affordability.operatingFunds)} operating funds`;
-    this.#elements.decisionSpend.className = affordability.affordable
-      ? "spend"
-      : "spend spend-warning";
-    this.#elements.decisionError.hidden = affordability.affordable;
-    this.#elements.sellButton.disabled = !affordability.affordable;
+    this.#elements.decisionPanel.model = Object.freeze({
+      visible: this.#phase.kind === "deciding",
+      glasses: this.#glasses,
+      signs: this.#signs,
+      price: this.#price,
+      maxGlasses: limits.glasses,
+      maxSigns: limits.signs,
+      spendText: `Spend ${formatMoney(affordability.spend)} of ${formatMoney(affordability.operatingFunds)} operating funds`,
+      affordable: affordability.affordable,
+    });
   }
 
   #renderReportState(): void {
-    const report = this.#phase.kind === "report" ? this.#phase.resolution : null;
-    this.#elements.reportPanel.hidden = report === null;
-    if (report === null) return;
-
-    const entry = report.entry;
-    const net = Number(entry.net);
-    this.#elements.reportEyebrow.textContent = `Day ${String(Number(entry.day))} report`;
-    this.#elements.reportTitle.textContent = `${String(Number(entry.sold))} of ${String(Number(entry.decision.glasses))} sold`;
-    this.#elements.reportNet.className = net >= 0 ? "profit" : "loss";
-    this.#elements.reportNet.textContent = `${net >= 0 ? "+" : "−"}${formatMoney(Math.abs(net))}`;
-    this.#elements.reportSales.textContent = formatMoney(Number(entry.revenue));
-    this.#elements.reportExpenses.textContent = formatMoney(Number(entry.expenses));
-    this.#elements.reportCash.textContent = formatMoney(Number(entry.endingCash));
-    this.#elements.reportDebt.textContent = formatMoney(Number(entry.endingLoanBalance));
-    this.#elements.reportEvent.textContent = eventLabel[entry.environment.event.kind];
-
-    const rows = entry.lines.map((line) => {
-      const row = document.createElement("tr");
-      const label = document.createElement("th");
-      const amount = document.createElement("td");
-      label.scope = "row";
-      label.textContent = line.label;
-      amount.className = line.direction === "credit" ? "ledger-credit" : "ledger-debit";
-      amount.textContent = `${line.direction === "credit" ? "+" : "−"}${formatMoney(Number(line.amount))}`;
-      row.append(label, amount);
-      return row;
+    this.#elements.reportPanel.model = Object.freeze({
+      report: this.#phase.kind === "report" ? this.#phase.resolution : null,
+      currentTier: this.#game.tier,
     });
-    this.#elements.reportLedgerLines.replaceChildren(...rows);
-
-    const progressed = report.nextState.tier !== this.#game.tier;
-    this.#elements.reportProgression.hidden = !progressed;
-    this.#elements.reportProgression.textContent = progressed
-      ? `Tier ${String(report.nextState.tier)} unlocks tomorrow. New finance rules will be shown before you sell.`
-      : "";
   }
 
   #renderScene(): void {
