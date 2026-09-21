@@ -50,6 +50,22 @@ describe("2017 demand rules", () => {
   it("starts with the historical confidence value", () => {
     expect(legacyConfidenceForState(createInitialState())).toBe(3);
   });
+
+  it("preserves the original first-day confidence behavior", () => {
+    const profitable = simulateDay(
+      createInitialState(),
+      decision(5, 1, 150),
+      neutralEnvironment(),
+    );
+    expect(legacyConfidenceForState(profitable.nextState)).toBe(1);
+
+    const zeroProfit = simulateDay(
+      createInitialState(),
+      decision(0, 0, 150),
+      neutralEnvironment(),
+    );
+    expect(legacyConfidenceForState(zeroProfit.nextState)).toBe(2);
+  });
 });
 
 describe("day resolution", () => {
