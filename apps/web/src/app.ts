@@ -41,7 +41,7 @@ import {
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
-const SIMULATION_PRESENTATION_MS = 5_000;
+const SIMULATION_PRESENTATION_MS = 6_000;
 const FORECAST_PRESENTATION_MS = 3_000;
 
 type PresentationPhase = "planning" | "simulation" | "report" | "forecast";
@@ -376,6 +376,7 @@ export class LemonadeApp {
       case "price":
         this.#price = event.detail.value;
         this.#renderDecisionState();
+        this.#renderScene();
         break;
     }
   };
@@ -679,6 +680,7 @@ export class LemonadeApp {
       phase: scenePhase,
       sold: resolvedDay === null ? 0 : Number(resolvedDay.sold),
       prepared: resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses),
+      priceCents: resolvedDay === null ? this.#price : Number(resolvedDay.decision.price),
       durationMs:
         scenePhase === "simulation"
           ? SIMULATION_PRESENTATION_MS
