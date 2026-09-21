@@ -71,11 +71,10 @@ const decisionBudget = (state: GameState): number =>
 const decisionLimit = (
   state: GameState,
 ): Readonly<{ glasses: number; signs: number; price: number }> => {
-  const budget = decisionBudget(state);
   const scale = operatingScaleForState(state);
   return Object.freeze({
-    glasses: Math.min(scale.maxGlasses, Math.floor(budget / Number(state.unitCost))),
-    signs: Math.min(scale.maxSigns, Math.floor(budget / Number(state.signCost))),
+    glasses: scale.maxGlasses,
+    signs: scale.maxSigns,
     price: scale.maxPriceCents,
   });
 };
@@ -668,6 +667,7 @@ export class LemonadeApp {
         : "idle";
     this.#scene.update({
       environment: this.#environment,
+      confidence: legacyConfidenceForState(this.#game),
       visibleSigns: resolvedDay === null ? this.#signs : Number(resolvedDay.decision.signs),
       phase: scenePhase,
       sold: resolvedDay === null ? 0 : Number(resolvedDay.sold),
