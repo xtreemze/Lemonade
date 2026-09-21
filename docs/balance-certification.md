@@ -98,6 +98,6 @@ The fixed seed corpus should remain stable unless there is a documented reason t
 
 Operating scale and finance maturity are intentionally separate.
 
-Operating scale recovers the historical browser game's progressively wider three-control envelope. Its exact ceilings are 15/3/$2.99, 50/10/$3.99, 140/25/$6.99, and 400/40/$9.99 for glasses/signs/price. The modern economy begins with $2 rather than the historical browser build's $10, so the original 10x/50x/500x asset progression ratios map to $20, $100, and $1,000 equity.
+Operating scale recovers the historical browser game's progressively wider three-control envelope. Its exact ceilings are 15/3/$2.99, 50/10/$3.99, 140/25/$6.99, and 400/40/$9.99 for glasses/signs/price. The historical dollar thresholds belonged to a different economy, with dollar-scale prices and production costs. The modern Apple-II-derived cents economy therefore calibrates level transitions at $5, $20, and $100 equity. These milestones preserve progressive expansion while keeping the historical slider ceilings exact and are covered by the deterministic certification corpus.
 
 Operating scale is derived from current equity and may therefore downgrade after losses or debt. Finance tiers remain a separate, monotonic business-maturity mechanism for fees, taxes, banking, and credit. Certification must exercise both axes independently.
