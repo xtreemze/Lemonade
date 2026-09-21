@@ -24,7 +24,12 @@ export class LemonadeRunTools extends LitElement {
     model: { attribute: false },
   };
 
-  model: RunToolsModel = DEFAULT_RUN_TOOLS_MODEL;
+  declare model: RunToolsModel;
+
+  constructor() {
+    super();
+    this.model = DEFAULT_RUN_TOOLS_MODEL;
+  }
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
@@ -162,7 +167,12 @@ export class LemonadeDecisionPanel extends LitElement {
     model: { attribute: false },
   };
 
-  model: DecisionPanelModel = DEFAULT_DECISION_MODEL;
+  declare model: DecisionPanelModel;
+
+  constructor() {
+    super();
+    this.model = DEFAULT_DECISION_MODEL;
+  }
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
@@ -310,7 +320,12 @@ export class LemonadeDayReport extends LitElement {
     model: { attribute: false },
   };
 
-  model: DayReportModel = DEFAULT_REPORT_MODEL;
+  declare model: DayReportModel;
+
+  constructor() {
+    super();
+    this.model = DEFAULT_REPORT_MODEL;
+  }
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
