@@ -263,7 +263,7 @@ export const sceneCameraComposition = (
     mode,
     shot,
     fov,
-    position: [x, y, z],
-    lookAt: [0, lookY, lookZ],
+    position: [x, y, z] as const,
+    lookAt: [0, lookY, lookZ] as const,
   });
 };
