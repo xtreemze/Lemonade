@@ -3,7 +3,8 @@ import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const styleRoots = [resolve(root, "apps/web/src")];
+const styleRoots = [resolve(root, "apps"), resolve(root, "packages")];
+const ignoredDirectories = new Set(["build", "dist", "node_modules"]);
 
 const rules = Object.freeze([
   {
@@ -55,6 +56,8 @@ const collectCss = async (directory) => {
   const files = [];
 
   for (const entry of entries) {
+    if (entry.isDirectory() && ignoredDirectories.has(entry.name)) continue;
+
     const path = resolve(directory, entry.name);
     if (entry.isDirectory()) {
       files.push(...(await collectCss(path)));
@@ -68,24 +71,65 @@ const collectCss = async (directory) => {
 
 const diagnostics = [];
 
+const addDiagnostic = (file, line, rule, message) => {
+  diagnostics.push({ file, line, rule, message });
+};
+
+const lintHoverCapability = (file, source) => {
+  const lines = source.split(/\r?\n/u);
+  const mediaStack = [];
+  let depth = 0;
+
+  for (const [index, line] of lines.entries()) {
+    const hasFineHoverContext = mediaStack.some(
+      ({ condition }) =>
+        condition.includes("hover: hover") && condition.includes("pointer: fine"),
+    );
+
+    if (line.includes(":hover") && !hasFineHoverContext) {
+      addDiagnostic(
+        file,
+        index + 1,
+        "capability-gated-hover",
+        "Hover-only decoration must be gated by @media (hover: hover) and (pointer: fine) so touch remains first-class.",
+      );
+    }
+
+    const mediaMatch = line.match(/@media\s*([^{}]+)\{/iu);
+    const opens = (line.match(/\{/gu) ?? []).length;
+    const closes = (line.match(/\}/gu) ?? []).length;
+
+    if (mediaMatch?.[1] !== undefined) {
+      mediaStack.push({
+        condition: mediaMatch[1],
+        depth: depth + 1,
+      });
+    }
+
+    depth += opens - closes;
+
+    while (mediaStack.length > 0 && mediaStack.at(-1).depth > depth) {
+      mediaStack.pop();
+    }
+  }
+};
+
 for (const styleRoot of styleRoots) {
   for (const path of await collectCss(styleRoot)) {
     const source = await readFile(path, "utf8");
+    const file = relative(root, path);
     const lines = source.split(/\r?\n/u);
 
     for (const [index, line] of lines.entries()) {
       for (const rule of rules) {
         if (rule.pattern.test(line)) {
-          diagnostics.push({
-            file: relative(root, path),
-            line: index + 1,
-            rule: rule.id,
-            message: rule.message,
-          });
+          addDiagnostic(file, index + 1, rule.id, rule.message);
         }
         rule.pattern.lastIndex = 0;
       }
     }
+
+    lintHoverCapability(file, source);
   }
 }
 
@@ -98,5 +142,5 @@ if (diagnostics.length > 0) {
 
   process.exitCode = 1;
 } else {
-  console.log(`Anti-pattern lint passed (${String(rules.length)} enforced rules).`);
+  console.log(`Anti-pattern lint passed (${String(rules.length + 1)} enforced rules).`);
 }
