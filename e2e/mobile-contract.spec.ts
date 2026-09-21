@@ -27,9 +27,11 @@ const expectViewportContract = async (
       .filter((element) => {
         const style = getComputedStyle(element);
         const visuallyHidden =
-          style.clip !== "auto" ||
           (style.clipPath !== "none" && style.clipPath !== "") ||
-          (element.clientWidth <= 1 && element.clientHeight <= 1);
+          (style.position === "absolute" &&
+            style.overflow === "hidden" &&
+            element.clientWidth <= 1 &&
+            element.clientHeight <= 1);
         if (
           element === shell ||
           style.display === "none" ||
