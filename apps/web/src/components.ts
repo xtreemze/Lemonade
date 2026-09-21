@@ -444,18 +444,17 @@ export class LemonadeDecisionPanel extends LitElement {
         </p>
         <button
           id="sell-button"
-          class="sell-button simulation-button"
+          class="sell-button simulation-button flow-action-button"
           type="submit"
           aria-label="Sell for the day"
           ?disabled=${!model.affordable}
         >
           <img
-            class="simulation-button-art"
+            class="simulation-button-art flow-action-icon"
             src="./lemonade-simulate.svg"
             alt=""
             aria-hidden="true"
           />
-          <span>Simulate day</span>
         </button>
       </form>
     `;
@@ -651,8 +650,24 @@ export class LemonadeDayReport extends LitElement {
             ? `Tier ${String(report.nextState.tier)} unlocks tomorrow. New finance rules will be shown before you sell.`
             : ""}
         </p>
-        <button id="next-button" class="next-button" type="button">
-          Plan next day
+        <button
+          id="next-button"
+          class="next-button flow-action-button next-day-button"
+          type="button"
+          aria-label="Plan next day"
+        >
+          <svg
+            class="flow-action-icon next-day-icon"
+            viewBox="0 0 96 96"
+            role="img"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path class="next-day-horizon" d="M18 62h42" />
+            <path class="next-day-ray" d="M39 19v9M17 39l7 4M61 39l-7 4" />
+            <path class="next-day-sun" d="M24 62a15 15 0 0 1 30 0" />
+            <path class="next-day-arrow" d="M58 49l18 13-18 13M75 62H49" />
+          </svg>
         </button>
       </section>
     `;
