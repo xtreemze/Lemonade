@@ -50,3 +50,34 @@ test("diagnoses Lit decision event boundary", async ({ page }) => {
     reportAfterSubmit: "present",
   });
 });
+
+test("diagnoses Playwright click submission", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.goto("./");
+
+  await page.evaluate(() => {
+    const decision = document.querySelector("lemonade-decision-panel");
+    if (!(decision instanceof HTMLElement)) throw new Error("missing decision host");
+    const diagnostics = { submits: 0 };
+    decision.addEventListener("lemonade-decision-submit", () => { diagnostics.submits += 1; });
+    Object.assign(window, { __lemonadeDiagnostics: diagnostics });
+  });
+
+  await page.getByRole("button", { name: "Sell for the day" }).click();
+  const result = await page.evaluate(() => {
+    const report = document.querySelector("lemonade-day-report") as HTMLElement & {
+      model?: { report?: unknown };
+    };
+    const diagnostics = (window as typeof window & { __lemonadeDiagnostics?: { submits: number } })
+      .__lemonadeDiagnostics;
+    return {
+      submits: diagnostics?.submits ?? -1,
+      report: report?.model?.report == null ? "null" : "present",
+      planButton: document.querySelector("#next-button") !== null,
+    };
+  });
+
+  console.log("LIT_PLAYWRIGHT_DIAGNOSTIC", JSON.stringify({ result, pageErrors }));
+  expect(result).toEqual({ submits: 1, report: "present", planButton: true });
+});
