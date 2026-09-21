@@ -75,7 +75,7 @@ const saleDirection = (index: number): StreetDirection => (index % 2 === 0 ? -1 
 export const formatPriceLabel = (priceCents: number): string => {
   const cents = clampInteger(priceCents, 0, MAX_PRICE_CENTS);
   if (cents === 0) return "FREE";
-  return cents < 100 ? `${String(cents)}¢` : `$${(cents / 100).toFixed(2)}`;
+  return cents < 100 ? String(cents) + "¢" : "$" + (cents / 100).toFixed(2);
 };
 
 const createShots = (durationMs: number): readonly SceneShot[] => {
