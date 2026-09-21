@@ -6,10 +6,15 @@ export type AudioCue =
   | "day:submit"
   | "day:profit"
   | "day:loss"
-  | "progression:unlock";
+  | "progression:unlock"
+  | "purchase:serve"
+  | "purchase:payment"
+  | "purchase:drink"
+  | "storm:thunder";
 
 export type ScheduledTone = Readonly<{
   midiNote: number;
+  endMidiNote?: number;
   startSeconds: number;
   durationSeconds: number;
   gain: number;
@@ -35,6 +40,7 @@ type MotifNote = Readonly<{
   beats: number;
   waveform: OscillatorType;
   gain?: number;
+  endNote?: number;
 }>;
 
 type AppleSpeakerStep = Readonly<{
@@ -73,6 +79,27 @@ const MOTIFS: Record<Exclude<AudioCue, WeatherAudioCue>, readonly MotifNote[]> =
     { note: 64, beats: 0.5, waveform: "square", gain: 0.045 },
     { note: 67, beats: 0.5, waveform: "square", gain: 0.045 },
     { note: 72, beats: 1.5, waveform: "square", gain: 0.045 },
+  ],
+  "purchase:serve": [
+    { note: 76, endNote: 69, beats: 0.45, waveform: "sine", gain: 0.038 },
+    { note: 91, beats: 0.18, waveform: "triangle", gain: 0.052 },
+    { note: 84, beats: 0.16, waveform: "sine", gain: 0.045 },
+    { note: 96, beats: 0.22, waveform: "sine", gain: 0.036 },
+  ],
+  "purchase:payment": [
+    { note: 84, beats: 0.16, waveform: "triangle", gain: 0.048 },
+    { note: 96, beats: 0.28, waveform: "sine", gain: 0.055 },
+    { note: 91, beats: 0.8, waveform: "sine", gain: 0.038 },
+  ],
+  "purchase:drink": [
+    { note: 64, endNote: 76, beats: 0.7, waveform: "sine", gain: 0.032 },
+    { note: 69, endNote: 81, beats: 0.5, waveform: "triangle", gain: 0.026 },
+    { note: 74, beats: 0.18, waveform: "sine", gain: 0.022 },
+  ],
+  "storm:thunder": [
+    { note: 33, endNote: 25, beats: 5.5, waveform: "sawtooth", gain: 0.048 },
+    { note: 28, endNote: 20, beats: 4.5, waveform: "sawtooth", gain: 0.04 },
+    { note: 24, endNote: 16, beats: 5.5, waveform: "triangle", gain: 0.034 },
   ],
 };
 
@@ -194,6 +221,7 @@ const compileModernCue = (
     tones.push(
       Object.freeze({
         midiNote: motifNote.note,
+        ...(motifNote.endNote === undefined ? {} : { endMidiNote: motifNote.endNote }),
         startSeconds: cursor,
         durationSeconds,
         gain: motifNote.gain ?? 0.07,
@@ -246,6 +274,12 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
 
       oscillator.type = tone.waveform;
       oscillator.frequency.setValueAtTime(midiToFrequency(tone.midiNote), start);
+      if (tone.endMidiNote !== undefined && tone.endMidiNote !== tone.midiNote) {
+        oscillator.frequency.exponentialRampToValueAtTime(
+          midiToFrequency(tone.endMidiNote),
+          end,
+        );
+      }
       envelope.gain.setValueAtTime(0.0001, start);
       envelope.gain.exponentialRampToValueAtTime(
         tone.gain,
