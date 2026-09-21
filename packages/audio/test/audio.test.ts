@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   WEATHER_FORECAST_DURATION_MS,
   compileCue,
+  weatherMelodyMetadata,
   type AudioCue,
   type WeatherAudioCue,
 } from "../src/index.js";
@@ -76,27 +77,69 @@ describe("procedural cue compiler", () => {
       WeatherAudioCue,
       readonly number[],
     ][]) {
-      const tones = compileCue(cue);
-      expect(tones.map((tone) => tone.midiNote)).toEqual(notes);
-      expect(tones.every((tone) => tone.waveform === "square")).toBe(true);
+      const historicalTones = compileCue(cue).filter(
+        (tone) => tone.source === "historical-weather-excerpt",
+      );
+      expect(historicalTones.map((tone) => tone.midiNote)).toEqual(notes);
+      expect(historicalTones.every((tone) => tone.waveform === "square")).toBe(true);
     }
   });
 
-  it("stretches each weather melody across the six-second forecast scene", () => {
+  it("fills the six-second forecast with a resolved original continuation", () => {
+    expect(WEATHER_FORECAST_DURATION_MS).toBe(6_000);
+
     for (const cue of Object.keys(weatherMelodies) as WeatherAudioCue[]) {
       const tones = compileCue(cue);
-      const lastTone = tones.at(-1);
-      expect(lastTone).toBeDefined();
-      if (lastTone === undefined) throw new Error("expected weather melody tone");
-      expect(lastTone.startSeconds + lastTone.durationSeconds).toBeCloseTo(
-        WEATHER_FORECAST_DURATION_MS / 1_000,
-        5,
+      const historical = tones.filter(
+        (tone) => tone.source === "historical-weather-excerpt",
       );
+      const variation = tones.filter(
+        (tone) => tone.source === "original-weather-variation",
+      );
+      const lastTone = tones.at(-1);
+      const lastHistoricalTone = historical.at(-1);
+      const firstVariationTone = variation[0];
+
+      expect(lastTone).toBeDefined();
+      expect(lastHistoricalTone).toBeDefined();
+      expect(firstVariationTone).toBeDefined();
+      if (
+        lastTone === undefined ||
+        lastHistoricalTone === undefined ||
+        firstVariationTone === undefined
+      ) {
+        throw new Error("expected complete weather phrase");
+      }
+
+      const phraseEnd = lastTone.startSeconds + lastTone.durationSeconds;
+      expect(phraseEnd).toBeGreaterThanOrEqual(5.5);
+      expect(phraseEnd).toBeLessThanOrEqual(WEATHER_FORECAST_DURATION_MS / 1_000);
+      expect(firstVariationTone.startSeconds).toBeGreaterThan(
+        lastHistoricalTone.startSeconds + lastHistoricalTone.durationSeconds,
+      );
+      expect(variation.length).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  it("documents the real tune behind every Apple II weather motif", () => {
+    expect(weatherMelodyMetadata("forecast:sunny").title).toContain("Ranz des Vaches");
+    expect(weatherMelodyMetadata("forecast:cloudy").title).toBe(
+      "Raindrops Keep Fallin’ on My Head",
+    );
+    expect(weatherMelodyMetadata("forecast:hot-and-dry").title).toBe("Summertime");
+    expect(weatherMelodyMetadata("forecast:thunderstorm").title).toBe("Singin’ in the Rain");
+
+    for (const cue of Object.keys(weatherMelodies) as WeatherAudioCue[]) {
+      const metadata = weatherMelodyMetadata(cue);
+      expect(metadata.historicalSource).toContain("1979 Apple II Lemonade Stand");
+      expect(metadata.continuation).toBe("original-variation");
     }
   });
 
   it("preserves the original rests as audible phrase gaps", () => {
-    const hotAndDry = compileCue("forecast:hot-and-dry");
+    const hotAndDry = compileCue("forecast:hot-and-dry").filter(
+      (tone) => tone.source === "historical-weather-excerpt",
+    );
     const firstTone = hotAndDry[0];
     const secondTone = hotAndDry[1];
     const beforeRest = hotAndDry[2];
