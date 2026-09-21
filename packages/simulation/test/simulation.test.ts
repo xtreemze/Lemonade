@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   UnaffordableDecisionError,
+  basisPoints,
   legacyConfidenceForState,
   legacyMarketingEffect,
   potentialDemand,
@@ -116,8 +117,8 @@ describe("day resolution", () => {
     });
 
     const result = simulateDay(createInitialState(), decision(5, 0, 150), environment);
-    expect(Number(result.entry.sold)).toBe(5);
-    expect(Number(result.entry.potentialDemand)).toBeGreaterThanOrEqual(5);
+    expect(Number(result.entry.sold)).toBe(4);
+    expect(Number(result.entry.potentialDemand)).toBe(4);
   });
 
   it("keeps the 2017 one-dollar cup cost constant", () => {
@@ -128,7 +129,7 @@ describe("day resolution", () => {
     );
     const second = simulateDay(
       first.nextState,
-      decision(5, 0, 10),
+      decision(5, 0, 150),
       neutralEnvironment(),
     );
 
@@ -162,10 +163,12 @@ describe("day resolution", () => {
 });
 
 describe("deterministic environment generation", () => {
-  it("protects the first two days with sunny weather", () => {
+  it("starts day one sunny, then uses the 2017 four-variant weather draw", () => {
     const random = createSeededRandom(seed(123));
     expect(generateEnvironment(dayNumber(1), random).weather.kind).toBe("sunny");
-    expect(generateEnvironment(dayNumber(2), random).weather.kind).toBe("sunny");
+    expect(["thunderstorm", "cloudy", "hot-and-dry", "sunny"]).toContain(
+      generateEnvironment(dayNumber(2), random).weather.kind,
+    );
   });
 
   it("replays the same environment sequence from the same seed", () => {
