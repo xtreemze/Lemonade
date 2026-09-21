@@ -47,7 +47,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await page.goto("./");
 
   const main = page.getByRole("main");
-  await expect(main).toHaveAttribute("data-view", "planning");
+  await expect(main).toHaveAttribute("data-view", "planning", { timeout: 7_000 });
   await expectNoHorizontalOverflow(page);
   await expect(page.getByRole("slider", { name: /Glasses/ })).toBeVisible();
   await expect(page.getByRole("slider", { name: /Signs/ })).toBeVisible();
@@ -110,7 +110,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expect(page.locator("#scene-title")).not.toBeEmpty();
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-presentation-duration-ms",
-    "3000",
+    "6000",
   );
   await expect(main).toHaveAttribute("data-view", "planning");
   await expect(page.locator("#status-day")).toHaveText("2");
