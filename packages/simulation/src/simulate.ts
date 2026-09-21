@@ -18,6 +18,7 @@ import {
   moneyCents,
   signedMoneyCents,
 } from "./primitives.js";
+import { legacyConfidenceForState } from "./legacy.js";
 import { potentialDemand } from "./rules.js";
 import { operatingScaleForState } from "./scale.js";
 import { productionCostForDay } from "./state.js";
@@ -53,20 +54,8 @@ const decisionVariableExpenses = (state: GameState, decision: DayDecision) =>
       Number(decision.signs) * Number(state.signCost),
   );
 
-const resolveSold = (
-  decision: DayDecision,
-  environment: DayEnvironment,
-  demand: number,
-) => {
-  if (
-    environment.event.kind === "workers-buy-out" &&
-    environment.weather.kind !== "thunderstorm"
-  ) {
-    return decision.glasses;
-  }
-
-  return glassCount(Math.min(Number(decision.glasses), demand));
-};
+const resolveSold = (decision: DayDecision, demand: number) =>
+  glassCount(Math.min(Number(decision.glasses), demand));
 
 const ledgerLine = (
   kind: LedgerLine["kind"],
@@ -118,13 +107,14 @@ const resolveDay = (
   let loanBalanceCents = Number(state.loanBalance) + initialBorrowCents;
   let cashCents = openingCashCents + initialBorrowCents - Number(predictableExpenses);
 
-  const calculatedDemand = potentialDemand(decision.price, decision.signs, environment);
-  const sold = resolveSold(decision, environment, Number(calculatedDemand));
-  const reportedDemand =
-    environment.event.kind === "workers-buy-out" &&
-    environment.weather.kind !== "thunderstorm"
-      ? glassCount(Math.max(Number(calculatedDemand), Number(decision.glasses)))
-      : calculatedDemand;
+  const calculatedDemand = potentialDemand(
+    decision.price,
+    decision.signs,
+    legacyConfidenceForState(state),
+    environment,
+  );
+  const sold = resolveSold(decision, Number(calculatedDemand));
+  const reportedDemand = calculatedDemand;
 
   const revenue = moneyCents(Number(sold) * Number(decision.price));
   cashCents += Number(revenue);
