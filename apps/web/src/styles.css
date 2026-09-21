@@ -24,6 +24,12 @@ input {
   font: inherit;
 }
 
+lemonade-run-tools,
+lemonade-decision-panel,
+lemonade-day-report {
+  display: block;
+}
+
 button:focus-visible,
 input:focus-visible {
   outline: 3px solid #1d6d5d;

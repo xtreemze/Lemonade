@@ -32,9 +32,9 @@ A dependency is justified when it materially removes specialized complexity, imp
 
 ### UI escalation path
 
-The application currently uses no external UI framework or component library. Keep that as the default while semantic HTML, CSS, DOM APIs, and focused modules remain clear.
+The application uses **Lit selectively at the presentation boundary** for interactive surfaces where imperative DOM synchronization had become repetitive. Lit components must render semantic native controls and communicate with the application controller through typed DOM events. Do not move simulation, persistence codecs, audio, scene logic, or authoritative game state into Lit.
 
-If imperative view synchronization becomes a recurring source of complexity, **Lit is the preferred first framework candidate** because it adds declarative rendering and component lifecycle on top of standard Web Components without requiring a framework-specific application architecture. Adoption must be incremental and justified by reduced lifecycle/rendering complexity.
+Keep Lit adoption incremental. New components are justified when they reduce repeated selector bindings, synchronized DOM mutations, or lifecycle/disposal code; straightforward static or one-off DOM remains native.
 
 For complex accessible widgets that the platform does not provide well, **Web Awesome is the preferred component-library candidate** because it is framework-agnostic and built on Web Components. Do not introduce it for native buttons, ranges, file inputs, tables, or other controls already expressed cleanly by the platform.
 

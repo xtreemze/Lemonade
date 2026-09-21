@@ -6,7 +6,7 @@ Lemonade is a **web-first deterministic simulation** with optional platform capa
 
 The browser application owns composition and user experience. A pure TypeScript simulation package owns business rules. Rendering, audio, persistence, charts, and any future Tauri shell are consumers/adapters around that package.
 
-The default implementation rule is **standards first**: use semantic HTML, CSS, the DOM, native form controls, SVG, Web Audio, and browser lifecycle APIs directly when they solve the problem cleanly. A library is justified when it removes substantial domain-specific complexity, as Three.js does for the low-poly 3D scene. A UI framework is not currently justified.
+The default implementation rule is **standards first**: use semantic HTML, CSS, native form controls, SVG, Web Audio, and browser lifecycle APIs directly when they solve the problem cleanly. Lit is used selectively for interactive presentation components where declarative rendering materially reduces repetitive DOM synchronization; Three.js remains isolated to the low-poly 3D scene.
 
 Tauri is deliberately not the foundation. It may package the web app and expose native capabilities when those capabilities have a clear benefit, but the game remains fully playable in a browser.
 
@@ -16,9 +16,10 @@ Tauri is deliberately not the foundation. It may package the web app and expose 
 apps/
   web/
     src/
-      app.ts       application controller and DOM composition
-      scene.ts     browser-to-scene adapter
-      main.ts      bootstrap
+      app.ts         application controller and orchestration
+      components.ts  light-DOM Lit presentation components
+      scene.ts       browser-to-scene adapter
+      main.ts        bootstrap
 packages/
   simulation/      deterministic business model
   ui/              ledger projections + native DOM/SVG reporting
@@ -52,7 +53,7 @@ Forbidden dependency directions:
 
 ## Native web application
 
-The application is deliberately imperative and small. `LemonadeApp` owns browser-side mutable presentation state, binds event listeners once, calls the pure simulation, and projects results back into semantic DOM nodes.
+`LemonadeApp` owns browser-side mutable presentation state, calls the pure simulation, coordinates persistence/audio/scene adapters, and projects immutable view models into a narrow Lit component layer. The current Lit components own run portability controls, the three-decision form, and the day report; they emit typed DOM events back to the controller.
 
 Use browser primitives before adding abstractions:
 
@@ -65,9 +66,9 @@ Use browser primitives before adding abstractions:
 - Web Audio for procedural cues;
 - Canvas/WebGL through the scene adapter.
 
-Do not add a component framework simply to obtain templating, state setters, or lifecycle callbacks that are already straightforward at this scale. Revisit this only when measured application complexity demonstrates a concrete benefit.
+Do not expand Lit across the codebase merely for uniformity. Use it where reactive rendering replaces meaningful imperative synchronization. Static composition, the history SVG/table renderer, persistence, audio, and scene adapters stay outside Lit unless a concrete maintenance problem justifies movement.
 
-Web Components are permitted when a reusable element genuinely benefits from encapsulated lifecycle or custom-element semantics. They are not a default requirement.
+Lit components use standard Custom Elements and native events. Current components intentionally render to light DOM so established CSS, semantic structure, and accessibility tests remain stable.
 
 ## Domain API
 
@@ -231,7 +232,7 @@ The workspace baseline as of September 2026 is:
 - Node 24 LTS;
 - pnpm 12 workspaces;
 - TypeScript 6 strict mode;
-- native HTML/DOM/CSS application UI;
+- native HTML/CSS application UI with selective Lit 3 components;
 - Vite 8 as a thin web build/development layer;
 - Vitest 5;
 - Playwright;
