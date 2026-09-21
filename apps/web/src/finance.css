@@ -100,3 +100,104 @@
     text-align: left;
   }
 }
+
+.weekly-report {
+  margin: 24px 0 18px;
+  padding: 18px;
+  border: 3px double #211d14;
+  background: #f5edd1;
+}
+
+.weekly-report-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.weekly-report-heading h3 {
+  margin: 0;
+  font-size: clamp(1.35rem, 3vw, 2rem);
+}
+
+.weekly-profit,
+.weekly-loss {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: clamp(1.4rem, 4vw, 2.3rem);
+}
+
+.weekly-profit {
+  color: #236f5e;
+}
+
+.weekly-loss {
+  color: #9a2e26;
+}
+
+.weekly-results-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-top: 2px solid #211d14;
+  border-left: 2px solid #211d14;
+}
+
+.weekly-results-grid > div {
+  min-width: 0;
+  padding: 12px;
+  border-right: 2px solid #211d14;
+  border-bottom: 2px solid #211d14;
+  background: #fff9e4;
+}
+
+.weekly-results-grid dt,
+.weekly-highlights span {
+  color: #655f50;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.weekly-results-grid dd {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-weight: 900;
+}
+
+.weekly-highlights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.weekly-highlights p {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 12px;
+  border: 2px solid #211d14;
+  background: #f7cf52;
+}
+
+@media (max-width: 760px) {
+  .weekly-report-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .weekly-results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 430px) {
+  .weekly-results-grid,
+  .weekly-highlights {
+    grid-template-columns: 1fr;
+  }
+}
+
