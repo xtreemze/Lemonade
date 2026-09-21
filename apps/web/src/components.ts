@@ -174,6 +174,7 @@ export type DecisionPanelModel = Readonly<{
   price: number;
   maxGlasses: number;
   maxSigns: number;
+  maxPriceCents: number;
   glassesCostText: string;
   signsCostText: string;
   priceText: string;
@@ -188,6 +189,7 @@ const DEFAULT_DECISION_MODEL: DecisionPanelModel = Object.freeze({
   price: 10,
   maxGlasses: 0,
   maxSigns: 0,
+  maxPriceCents: 299,
   glassesCostText: "Cost $0.00",
   signsCostText: "Cost $0.00",
   priceText: "Price $0.10 / glass",
@@ -218,7 +220,7 @@ export class LemonadeDecisionPanel extends LitElement {
       case "signs":
         return [0, this.model.maxSigns];
       case "price":
-        return [1, 100];
+        return [1, this.model.maxPriceCents];
     }
   }
 
@@ -407,7 +409,7 @@ export class LemonadeDecisionPanel extends LitElement {
                 type="number"
                 inputmode="numeric"
                 min="1"
-                max="100"
+                .max=${String(model.maxPriceCents)}
                 step="1"
                 .value=${String(model.price)}
                 aria-labelledby="price-label price-exact-label"
@@ -422,7 +424,7 @@ export class LemonadeDecisionPanel extends LitElement {
               name="price"
               type="range"
               min="1"
-              max="100"
+              .max=${String(model.maxPriceCents)}
               step="1"
               .value=${String(model.price)}
               aria-labelledby="price-label"
