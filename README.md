@@ -123,7 +123,10 @@ Key rules:
 - Do not add a framework or dependency to avoid writing a small amount of straightforward platform code.
 - No `Math.random()` in simulation code; inject a seedable RNG.
 - No floating-point dollars in accounting; use integer cents/fixed precision.
-- No DOM, UI runtime, Three.js, Web Audio, storage, or Tauri imports in the simulation package.
+- No DOM, UI runtime, Three.js, Web Audio, storage, network I/O, ambient clocks, or Tauri imports in the simulation package.
+- Responsive CSS is mobile-first: narrow layouts are the default; larger layouts use ascending relative-unit `width >= …` capability queries.
+- Do not mask responsive defects with desktop-first `max-width` queries, `overflow-x: hidden`, legacy `100vh/100vw`, `transition: all`, or `!important`.
+- Gate hover-only decoration behind fine-pointer/hover capability queries so touch remains first-class.
 - Prefer discriminated unions, branded/domain types, exhaustive checks, and runtime validation at untrusted boundaries.
 - Do not weaken types with `any`, broad casts, or optional fields merely to make a change compile.
 - Keep side effects at adapters and make domain transformations pure.
