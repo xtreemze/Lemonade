@@ -7,7 +7,7 @@ This review rechecks the Lemonade web stack after the MVP, with two goals: use c
 | Area | Decision | Rationale |
 | --- | --- | --- |
 | Browser UI | Keep semantic HTML/CSS/DOM as the application baseline | The product still has a deliberately small interaction surface and benefits from native form semantics, low runtime overhead, and direct accessibility behavior. |
-| UI framework | Do not migrate the application wholesale; designate Lit 3.x as the first escalation path | The main pressure is imperative rendering/lifecycle boilerplate, not routing, SSR, server state, or a large component ecosystem. Lit addresses that pressure while staying on Web Components and requiring no Vite-specific compiler plugin. |
+| UI framework | Use Lit 3.3.x selectively for interactive presentation components; do not migrate the whole application | The main pressure is imperative rendering/lifecycle boilerplate, not routing, SSR, server state, or a large component ecosystem. Lit addresses that pressure while staying on Web Components and requiring no Vite-specific compiler plugin. |
 | Component library | Keep no external library by default; use Web Awesome 3.x only for genuinely complex widgets | The current controls are buttons, ranges, file input, tables, and report surfaces that native HTML already expresses well. |
 | Build | Vite 8.3.x | Current stable Vite 8 line; Rolldown-based production build remains a good fit for a static GitHub Pages application. |
 | Runtime | Node 24 LTS | Prefer the active LTS line over Node 26 Current for CI and contributor reproducibility. |
@@ -24,9 +24,9 @@ This review rechecks the Lemonade web stack after the MVP, with two goals: use c
 
 Native platform remains the selected baseline. The current app controller is roughly 737 lines and contains about 43 explicit element bindings, 11 listener registrations, 29 direct text mutations, and multiple synchronized render paths. That is real complexity pressure, but it is better addressed first by module boundaries than by rewriting the entire application.
 
-Lit 3.3.x is the preferred escalation path if new work would otherwise add another substantial group of selector bindings, synchronized DOM mutations, or disposal/lifecycle code. Lit is built on Custom Elements and standard events, can be introduced one component at a time, and requires no special Vite compiler plugin.
+Lit 3.3.x is now used for the first three high-churn surfaces: run import/export/reset tools, the daily decision panel, and the day report. They render into light DOM so the existing semantic structure, global CSS, accessibility behavior, and browser tests remain stable. The controller passes immutable view models into components and receives typed DOM events back.
 
-First Lit candidates, if the threshold is reached: run import/export/reset tools, daily decision panel, day report, and the history shell. Simulation, persistence codecs, audio, and Three.js adapters must remain framework-independent.
+The history renderer remains native DOM/SVG because it is already deterministic and self-contained. Simulation, persistence codecs, audio, and Three.js adapters remain framework-independent.
 
 Svelte 5.x is a strong compiler-first framework, but would add a compiler plugin, a new component file model, and broader rewrite cost. React 19.3 has an enormous ecosystem and stable View Transition integration, but Lemonade does not need React Server Components or a React-specific state layer. Vue 3.5 is similarly capable but adds a framework convention without a current capability gap. Solid remains attractive for fine-grained reactivity, but the app does not currently need a JSX/reactive-graph abstraction.
 
