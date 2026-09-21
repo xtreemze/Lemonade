@@ -136,7 +136,7 @@ const createHistoryTable = (points: readonly LedgerPoint[]): HTMLDivElement => {
   const caption = appendText(
     table,
     "caption",
-    "Complete values represented by the sales-history charts and finance ledger",
+    "Recent values from the sales-history charts and finance ledger",
   );
   caption.className = "visually-hidden-table-caption";
 
@@ -164,7 +164,8 @@ const createHistoryTable = (points: readonly LedgerPoint[]): HTMLDivElement => {
   head.append(headRow);
 
   const body = createElement("tbody");
-  for (const point of points) {
+  const recentPoints = points.slice(-3);
+  for (const point of recentPoints) {
     const row = createElement("tr");
     const day = appendText(row, "th", String(point.day));
     day.scope = "row";
