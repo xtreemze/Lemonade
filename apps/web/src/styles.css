@@ -353,7 +353,7 @@ h2 {
 
 .decision-exact input {
   width: 92px;
-  min-height: 42px;
+  min-height: 44px;
   padding: 8px 10px;
   border: 2px solid #211d14;
   background: #f8d354;
@@ -426,10 +426,12 @@ input[type="range"] {
   cursor: pointer;
 }
 
-.sell-button:hover:not(:disabled),
-.next-button:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0 #211d14;
+@media (hover: hover) and (pointer: fine) {
+  .sell-button:hover:not(:disabled),
+  .next-button:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 #211d14;
+  }
 }
 
 .sell-button:active:not(:disabled),
