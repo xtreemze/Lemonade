@@ -328,3 +328,17 @@ Released Applesoft BASIC source:
 https://gist.github.com/badvision/16b74ade3a8b2fa2e87d
 
 Key source sections used for this analysis include the initialization constants, weather selection, daily input validation, demand formula, random events, financial report, instructions, and weather/music routines.
+
+## 2017 economic compatibility contract
+
+The repository's 2017 browser implementation is the authoritative base game balance. The modern architecture may make randomness reproducible and layer later systems around the stand, but it must not replace the underlying economics with the Apple II reference curve.
+
+The core demand equation is preserved as:
+
+`((signs² / log1p(signs) + confidenceRoll × confidence) / priceDollars) × (weatherVariant² + 1)`
+
+with the original guard that the sign term becomes zero when it is NaN or below one. Demand is rounded and then capped by prepared cups. The confidence roll preserves the original `randomNumber(1, 3.5)` outcomes and 40%/40%/20% distribution, now generated from the seeded RNG.
+
+The original operating economy is also authoritative: $10 starting operating balance, $1.00 per cup, $0.50 per sign, and stand thresholds at $100, $500, and $5,000. Price is a continuous inverse input to demand; there is no special penalty or discontinuity above 10 cents.
+
+Later finance features are deliberately outside this compatibility core. Operating balance, confidence, and stand level are reconstructed from production, advertising, and lemonade revenue so taxes, fees, credit, and interest cannot silently redefine the 2017 demand loop.
