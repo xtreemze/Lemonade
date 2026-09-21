@@ -101,3 +101,12 @@ Operating scale and finance maturity are intentionally separate.
 Operating scale recovers the historical browser game's progressively wider three-control envelope. Its exact ceilings are 15/3/$2.99, 50/10/$3.99, 140/25/$6.99, and 400/40/$9.99 for glasses/signs/price. The historical dollar thresholds belonged to a different economy, with dollar-scale prices and production costs. The modern Apple-II-derived cents economy therefore calibrates level transitions at $5, $20, and $100 equity. These milestones preserve progressive expansion while keeping the historical slider ceilings exact and are covered by the deterministic certification corpus.
 
 Operating scale is derived from current equity and may therefore downgrade after losses or debt. Finance tiers remain a separate, monotonic business-maturity mechanism for fees, taxes, banking, and credit. Certification must exercise both axes independently.
+
+
+## 2017 compatibility probes
+
+Certification treats the 2017 implementation as the balance contract. It explicitly checks continuous inverse-price demand across dollar-scale prices, the exact `signs² / log1p(signs)` marketing term, weather effects `1× / 2× / 5× / 10×`, monotonic confidence contribution, historical stand thresholds, deterministic seeded replay, and accounting identities.
+
+There is intentionally no guardrail asserting that prices above ten cents receive an extra penalty. Likewise, advertising is not required to have diminishing returns: the historical equation is the invariant.
+
+Simulation schema version 3 marks this economic correction. Earlier modern saves used materially different costs and demand rules and are rejected explicitly rather than silently reinterpreted under the 2017 model.
