@@ -100,8 +100,7 @@ const WEATHER_MELODY_METADATA: Readonly<Record<WeatherAudioCue, WeatherMelodyMet
     }),
   });
 
-const WEATHER_VARIATIONS: Readonly<Record<WeatherAudioCue, readonly WeatherVariationNote[]>> =
-  Object.freeze({
+const WEATHER_VARIATIONS = Object.freeze({
     "forecast:sunny": Object.freeze([
       { note: 67, beats: 0.7, waveform: "triangle", gain: 0.038 },
       { note: 72, beats: 0.7, waveform: "triangle", gain: 0.04 },
@@ -142,7 +141,7 @@ const WEATHER_VARIATIONS: Readonly<Record<WeatherAudioCue, readonly WeatherVaria
       { note: 58, beats: 0.6, waveform: "triangle", gain: 0.034 },
       { note: 55, beats: 1.35, waveform: "sine", gain: 0.04 },
     ]),
-  });
+  } satisfies Record<WeatherAudioCue, readonly WeatherVariationNote[]>);
 
 const MOTIFS: Record<Exclude<AudioCue, WeatherAudioCue>, readonly MotifNote[]> = {
   "day:submit": [
