@@ -73,7 +73,8 @@ The report deliberately includes metrics that should be reviewed rather than aut
 - average price and advertising level;
 - isolated weather and sentiment demand contribution;
 - exceptional-event frequency and realized impact;
-- maximum tier and earliest tier-entry days;
+- maximum finance tier and earliest finance-tier entry days;
+- maximum operating stand level and earliest operating-level entry days;
 - aggregate taxes, supplier fees, bank fees, debt interest, borrowing, repayment, and savings interest;
 - controlled price, advertising, weather, and sentiment demand probes.
 
@@ -91,3 +92,12 @@ Do not update expected behavior merely because a fixture changed. First determin
 4. a simulation-schema change requiring replay/persistence treatment.
 
 The fixed seed corpus should remain stable unless there is a documented reason to change the sampling contract.
+
+
+## Independent progression axes
+
+Operating scale and finance maturity are intentionally separate.
+
+Operating scale recovers the historical browser game's progressively wider three-control envelope. Its exact ceilings are 15/3/$2.99, 50/10/$3.99, 140/25/$6.99, and 400/40/$9.99 for glasses/signs/price. The modern economy begins with $2 rather than the historical browser build's $10, so the original 10x/50x/500x asset progression ratios map to $20, $100, and $1,000 equity.
+
+Operating scale is derived from current equity and may therefore downgrade after losses or debt. Finance tiers remain a separate, monotonic business-maturity mechanism for fees, taxes, banking, and credit. Certification must exercise both axes independently.
