@@ -39,7 +39,7 @@
           </button>
         </div>
       </section>
-    `}},Jt=class extends CustomEvent{constructor(e){super(`lemonade-decision-change`,{detail:e,bubbles:!0,composed:!0})}},Yt=Object.freeze({visible:!0,glasses:0,signs:0,price:10,maxGlasses:0,maxSigns:0,spendText:``,affordable:!0}),Xt=class extends H{static properties={model:{attribute:!1}};constructor(){super(),this.model=Yt}createRenderRoot(){return this}#e(e,t){let n=t.target;if(!(n instanceof HTMLInputElement))throw TypeError(`Expected decision range input.`);Number.isFinite(n.valueAsNumber)&&this.dispatchEvent(new Jt(Object.freeze({kind:e,value:n.valueAsNumber})))}connectedCallback(){super.connectedCallback(),this.addEventListener(`input`,this.#t),this.addEventListener(`submit`,this.#n)}disconnectedCallback(){this.removeEventListener(`input`,this.#t),this.removeEventListener(`submit`,this.#n),super.disconnectedCallback()}#t=e=>{let t=e.target;if(t instanceof HTMLInputElement)switch(t.name){case`glasses`:this.#e(`glasses`,e);break;case`signs`:this.#e(`signs`,e);break;case`price`:this.#e(`price`,e)}};#n=e=>{e.target instanceof HTMLFormElement&&(e.preventDefault(),this.model.affordable&&this.dispatchEvent(new Event(`lemonade-decision-submit`,{bubbles:!0,composed:!0})))};render(){let e=this.model;return L`
+    `}},Jt=class extends CustomEvent{constructor(e){super(`lemonade-decision-change`,{detail:e,bubbles:!0,composed:!0})}},Yt=Object.freeze({visible:!0,glasses:0,signs:0,price:10,maxGlasses:0,maxSigns:0,spendText:``,affordable:!0}),Xt=class extends H{static properties={model:{attribute:!1}};constructor(){super(),this.model=Yt}createRenderRoot(){return this}#e(e){switch(e){case`glasses`:return[0,this.model.maxGlasses];case`signs`:return[0,this.model.maxSigns];case`price`:return[1,100]}}#t(e){switch(e){case`glasses`:return this.model.glasses;case`signs`:return this.model.signs;case`price`:return this.model.price}}#n(e,t){let n=t.target;if(!(n instanceof HTMLInputElement))throw TypeError(`Expected decision input.`);if(!Number.isFinite(n.valueAsNumber))return;let[r,i]=this.#e(e),a=Math.min(i,Math.max(r,Math.trunc(n.valueAsNumber)));n.type===`number`&&n.valueAsNumber!==a&&(n.value=String(a)),this.dispatchEvent(new Jt(Object.freeze({kind:e,value:a})))}connectedCallback(){super.connectedCallback(),this.addEventListener(`input`,this.#r),this.addEventListener(`change`,this.#i),this.addEventListener(`submit`,this.#a)}disconnectedCallback(){this.removeEventListener(`input`,this.#r),this.removeEventListener(`change`,this.#i),this.removeEventListener(`submit`,this.#a),super.disconnectedCallback()}#r=e=>{let t=e.target;if(t instanceof HTMLInputElement)switch(t.name){case`glasses`:this.#n(`glasses`,e);break;case`signs`:this.#n(`signs`,e);break;case`price`:this.#n(`price`,e)}};#i=e=>{let t=e.target;if(t instanceof HTMLInputElement&&t.type===`number`&&!Number.isFinite(t.valueAsNumber))switch(t.name){case`glasses`:case`signs`:case`price`:t.value=String(this.#t(t.name))}};#a=e=>{e.target instanceof HTMLFormElement&&(e.preventDefault(),this.model.affordable&&this.dispatchEvent(new Event(`lemonade-decision-submit`,{bubbles:!0,composed:!0})))};render(){let e=this.model;return L`
       <form id="decision-panel" class="decision-panel" ?hidden=${!e.visible}>
         <header class="panel-heading">
           <div>
@@ -49,9 +49,26 @@
           <p class=${e.affordable?`spend`:`spend spend-warning`}>${e.spendText}</p>
         </header>
 
-        <label class="decision-control" for="glasses">
-          <span><strong>Glasses</strong><small>Inventory prepared before demand is known</small></span>
-          <output id="glasses-output" for="glasses">${String(e.glasses)}</output>
+        <div class="decision-control">
+          <span>
+            <strong id="glasses-label">Glasses</strong>
+            <small id="glasses-help">Inventory prepared before demand is known</small>
+          </span>
+          <label class="decision-exact" for="glasses-exact">
+            <span id="glasses-exact-label">Exact</span>
+            <input
+              id="glasses-exact"
+              name="glasses"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="1"
+              .max=${String(e.maxGlasses)}
+              .value=${String(e.glasses)}
+              aria-labelledby="glasses-label glasses-exact-label"
+              aria-describedby="glasses-help"
+            />
+          </label>
           <input
             id="glasses"
             name="glasses"
@@ -60,13 +77,31 @@
             step="1"
             .max=${String(e.maxGlasses)}
             .value=${String(e.glasses)}
-           
+            aria-labelledby="glasses-label"
+            aria-describedby="glasses-help"
           />
-        </label>
+        </div>
 
-        <label class="decision-control" for="signs">
-          <span><strong>Signs</strong><small>Advertising helps demand with diminishing returns</small></span>
-          <output id="signs-output" for="signs">${String(e.signs)}</output>
+        <div class="decision-control">
+          <span>
+            <strong id="signs-label">Signs</strong>
+            <small id="signs-help">Advertising helps demand with diminishing returns</small>
+          </span>
+          <label class="decision-exact" for="signs-exact">
+            <span id="signs-exact-label">Exact</span>
+            <input
+              id="signs-exact"
+              name="signs"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="1"
+              .max=${String(e.maxSigns)}
+              .value=${String(e.signs)}
+              aria-labelledby="signs-label signs-exact-label"
+              aria-describedby="signs-help"
+            />
+          </label>
           <input
             id="signs"
             name="signs"
@@ -75,13 +110,34 @@
             step="1"
             .max=${String(e.maxSigns)}
             .value=${String(e.signs)}
-           
+            aria-labelledby="signs-label"
+            aria-describedby="signs-help"
           />
-        </label>
+        </div>
 
-        <label class="decision-control" for="price">
-          <span><strong>Price</strong><small>Higher margin can sharply reduce demand</small></span>
-          <output id="price-output" for="price">${U(e.price)}</output>
+        <div class="decision-control">
+          <span>
+            <strong id="price-label">Price</strong>
+            <small id="price-help">Higher margin can sharply reduce demand</small>
+          </span>
+          <label class="decision-exact" for="price-exact">
+            <span id="price-exact-label">Exact cents</span>
+            <span class="decision-exact-value">
+              <input
+                id="price-exact"
+                name="price"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                max="100"
+                step="1"
+                .value=${String(e.price)}
+                aria-labelledby="price-label price-exact-label"
+                aria-describedby="price-help"
+              />
+              <span aria-hidden="true">¢</span>
+            </span>
+          </label>
           <input
             id="price"
             name="price"
@@ -90,9 +146,10 @@
             max="100"
             step="1"
             .value=${String(e.price)}
-           
+            aria-labelledby="price-label"
+            aria-describedby="price-help"
           />
-        </label>
+        </div>
 
         <p id="decision-error" class="inline-error" role="alert" ?hidden=${e.affordable}>
           This plan exceeds available cash and credit. Reduce glasses or signs.
