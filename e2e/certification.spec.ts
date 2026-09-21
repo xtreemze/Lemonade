@@ -8,6 +8,19 @@ const expectNoHorizontalOverflow = async (page: Page): Promise<void> => {
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 };
 
+const expectNoVerticalOverflow = async (page: Page): Promise<void> => {
+  const dimensions = await page.evaluate(() => ({
+    clientHeight: document.documentElement.clientHeight,
+    scrollHeight: document.documentElement.scrollHeight,
+  }));
+  expect(dimensions.scrollHeight).toBeLessThanOrEqual(dimensions.clientHeight + 1);
+};
+
+const expectNoViewportOverflow = async (page: Page): Promise<void> => {
+  await expectNoHorizontalOverflow(page);
+  await expectNoVerticalOverflow(page);
+};
+
 test("release artifact completes a day without uncaught runtime failures", async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -34,6 +47,8 @@ test("release artifact completes a day without uncaught runtime failures", async
   await expect(page.locator("#scene-equivalent")).not.toBeEmpty();
 
   await page.getByRole("button", { name: "Sell for the day" }).click();
+  await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
+  await page.getByRole("button", { name: "Review sales history" }).click();
   await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
   await page.getByRole("button", { name: "Plan next day" }).click();
   await expect(page.locator("#status-day")).toHaveText("2");
@@ -48,7 +63,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
 
   const main = page.getByRole("main");
   await expect(main).toHaveAttribute("data-view", "planning");
-  await expectNoHorizontalOverflow(page);
+  await expectNoViewportOverflow(page);
   await expect(page.getByRole("slider", { name: /Glasses/ })).toBeVisible();
   await expect(page.getByRole("slider", { name: /Signs/ })).toBeVisible();
   await expect(page.getByRole("slider", { name: /Price/ })).toBeVisible();
@@ -80,12 +95,6 @@ test("narrow viewport keeps the complete planning surface above the fold", async
 
   const simulationButton = page.getByRole("button", { name: "Sell for the day" });
   await expect(simulationButton).toBeVisible();
-  const planningBounds = await page.evaluate(() => ({
-    clientHeight: document.documentElement.clientHeight,
-    scrollHeight: document.documentElement.scrollHeight,
-  }));
-  expect(planningBounds.scrollHeight).toBeLessThanOrEqual(planningBounds.clientHeight + 1);
-
   const buttonBox = await simulationButton.boundingBox();
   if (buttonBox === null) throw new Error("expected simulation button bounds");
   expect(buttonBox.y + buttonBox.height).toBeLessThanOrEqual(740);
@@ -98,12 +107,23 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "data-presentation-duration-ms",
     "5000",
   );
+  await expectNoViewportOverflow(page);
   const simulationStage = await page.locator(".stand-stage").boundingBox();
   if (simulationStage === null) throw new Error("expected simulation stage bounds");
   expect(simulationStage.width).toBeGreaterThanOrEqual(359);
   expect(simulationStage.height).toBeGreaterThanOrEqual(739);
+
   await expect(main).toHaveAttribute("data-view", "report");
+  await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Sales history" })).not.toBeVisible();
+  await expectNoViewportOverflow(page);
+
+  await page.getByRole("button", { name: "Review sales history" }).click();
+  await expect(main).toHaveAttribute("data-view", "history");
   await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+  await expect(page.locator(".history-table tbody tr")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
+  await expectNoViewportOverflow(page);
 
   await page.getByRole("button", { name: "Plan next day" }).click();
   await expect(main).toHaveAttribute("data-view", "forecast");
@@ -112,6 +132,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "data-presentation-duration-ms",
     "3000",
   );
+  await expectNoViewportOverflow(page);
   await expect(main).toHaveAttribute("data-view", "planning");
   await expect(page.locator("#status-day")).toHaveText("2");
   await expectNoHorizontalOverflow(page);
@@ -155,7 +176,7 @@ test("reduced-motion preference collapses decorative transition and animation du
   expect(durations.animationSeconds).toBeLessThanOrEqual(0.001);
   expect(durations.transitionSeconds).toBeLessThanOrEqual(0.001);
   await page.getByRole("button", { name: "Sell for the day" }).click();
-  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
 });
 
 test("storage failure degrades to a playable in-memory run", async ({ page }) => {
@@ -172,7 +193,7 @@ test("storage failure degrades to a playable in-memory run", async ({ page }) =>
   await expect(page.locator("#run-error")).toContainText("Unable to open browser run storage");
   await expect(page.getByRole("button", { name: "Sell for the day" })).toBeEnabled();
   await page.getByRole("button", { name: "Sell for the day" }).click();
-  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
 });
 
 test("scene runtime failure falls back without blocking gameplay", async ({ page }) => {
@@ -195,5 +216,5 @@ test("scene runtime failure falls back without blocking gameplay", async ({ page
   await expect(page.locator("#scene-fallback-description")).not.toBeEmpty();
   expect(sceneRequests).toHaveLength(1);
 
-  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
 });
