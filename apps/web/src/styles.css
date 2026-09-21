@@ -336,14 +336,41 @@ h2 {
   color: #655f50;
 }
 
-.decision-control output {
-  min-width: 72px;
+.decision-exact {
+  display: grid;
+  gap: 4px;
+  min-width: 92px;
+}
+
+.decision-exact > span:first-child {
+  color: #655f50;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.decision-exact input {
+  width: 92px;
+  min-height: 42px;
   padding: 8px 10px;
   border: 2px solid #211d14;
   background: #f8d354;
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
   font-weight: 900;
-  text-align: center;
+  text-align: right;
+}
+
+.decision-exact-value {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-weight: 900;
+}
+
+.decision-exact-value input {
+  width: 76px;
 }
 
 input[type="range"] {
@@ -461,7 +488,7 @@ input[type="range"] {
     grid-template-columns: 1fr auto;
   }
 
-  .decision-control input {
+  .decision-control > input[type="range"] {
     grid-column: 1 / -1;
   }
 
