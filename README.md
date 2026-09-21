@@ -66,7 +66,7 @@ There is no application UI framework at runtime. The web application uses semant
 
 The simulation accepts state, a three-variable decision, environment, and an injected random source, then returns immutable next state and a typed result. Rendering, audio, persistence, browser APIs, and any future Tauri shell are adapters around that core.
 
-See [`docs/architecture.md`](docs/architecture.md).
+See [`docs/architecture.md`](docs/architecture.md) and the current [`docs/tooling-2026-09.md`](docs/tooling-2026-09.md) decision record.
 
 ## Tooling
 
@@ -74,7 +74,7 @@ The workspace deliberately keeps build tooling small and current:
 
 - **Node 24 LTS** for automation and development.
 - **pnpm 12 workspaces** for deterministic monorepo dependency management.
-- **TypeScript 6** in strict mode, with migration compatibility for the upcoming native TypeScript compiler treated as a design constraint.
+- **TypeScript 6** in strict mode. TypeScript 7 is stable, but adoption is intentionally held until the typed-lint toolchain officially supports it.
 - **Vite 8** as the thin development/build layer for native browser modules and CSS.
 - **Vitest 5** for deterministic unit and invariant tests.
 - **Playwright** for browser acceptance and accessibility-critical flows.
