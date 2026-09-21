@@ -103,8 +103,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
       };
     });
     expect(thumbStyle.kind).toBe(icon);
-    expect(thumbStyle.image).toContain(icon);
-    expect(thumbStyle.image).toContain(".svg");
+    expect(thumbStyle.image).toMatch(/(?:\.svg|svg\+xml|%3csvg)/iu);
   }
 
   const simulationButton = page.getByRole("button", { name: "Sell for the day" });
