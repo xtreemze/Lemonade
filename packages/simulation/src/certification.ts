@@ -2,9 +2,9 @@ import { generateEnvironment, neutralEnvironment } from "./environment.js";
 import { availableOperatingFunds, predictableFixedObligations } from "./finance.js";
 import {
   LEGACY_STARTING_BALANCE_CENTS,
-  legacyConfidenceForState,
   legacyOperatingBalanceCents,
   legacyWeatherEffect,
+  type LegacyConfidence,
 } from "./legacy.js";
 import type {
   DailyLedgerEntry,
@@ -570,15 +570,16 @@ const controlledProbes = (): ControlledProbes => {
     }),
   );
 
+  const confidenceValues: readonly LegacyConfidence[] = [0, 1, 2, 3, 4, 5];
   const confidence = Object.freeze(
-    [0, 1, 2, 3, 4, 5].map((value) =>
+    confidenceValues.map((value) =>
       Object.freeze({
         confidence: value,
         demand: Number(
           potentialDemand(
             moneyCents(150),
             signCount(1),
-            value as ReturnType<typeof legacyConfidenceForState>,
+            value,
             neutral,
           ),
         ),
