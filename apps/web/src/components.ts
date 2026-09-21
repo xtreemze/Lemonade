@@ -515,7 +515,9 @@ export class LemonadeDayReport extends LitElement {
 
   readonly #onClick = (event: Event): void => {
     const target = event.target;
-    if (!(target instanceof HTMLButtonElement) || target.id !== "next-button") return;
+    if (!(target instanceof Element)) return;
+    const button = target.closest<HTMLButtonElement>("button#next-button");
+    if (button === null || !this.contains(button)) return;
     this.dispatchEvent(new Event("lemonade-next-day", { bubbles: true, composed: true }));
   };
 
