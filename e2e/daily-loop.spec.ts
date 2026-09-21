@@ -53,7 +53,7 @@ test("supports precise numeric entry synchronized with sliders", async ({ page }
   await page.keyboard.press("Control+A");
   await page.keyboard.type("175");
   await expect(priceExact).toHaveValue("175");
-  await expect(priceSlider).toHaveValue("15");
+  await expect(priceSlider).toHaveValue("175");
   await expect(page.locator("#price-value")).toHaveText("Price $1.75 / glass");
 
   await glassesExact.fill("9999");
