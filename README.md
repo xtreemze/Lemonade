@@ -42,7 +42,7 @@ See [`docs/game-design.md`](docs/game-design.md) for the reverse-engineered mode
 The presentation should feel like a remembered Apple II game rather than a literal pixel-art clone.
 
 - **Vector 3D Lemonsville:** a lightweight low-poly neighborhood and lemonade stand communicate weather, customer traffic, signs, inventory, and sales activity.
-- **Procedural audio:** original short motifs and effects are generated with the browser's Web Audio API. Optional MIDI/SoundFont capability stays behind platform adapters.
+- **Procedural audio:** weather reports preserve the Apple II game's recognizable historical motifs and extend them with original six-second variations; purchase/weather effects are synthesized with Web Audio. See [`docs/weather-audio.md`](docs/weather-audio.md). Optional MIDI/SoundFont capability stays behind platform adapters.
 - **Data visualization:** accessible SVG charts show cash, debt, sell-through, and inventory history without crowding the main play surface.
 - **Progressive finance:** later tiers introduce operating costs, taxes, banking charges, savings/loan interest, and working-capital credit gradually.
 - **Accessibility by design:** keyboard play, native form controls, reduced motion, non-color state cues, and textual equivalents for scene/chart information are core requirements.
