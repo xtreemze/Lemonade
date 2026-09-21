@@ -21,6 +21,7 @@ export type HapticEngineOptions = Readonly<{
 
 export type HapticEngine = Readonly<{
   play(cue: HapticCue): boolean;
+  cancel(): void;
   dispose(): void;
 }>;
 
@@ -56,6 +57,14 @@ export const createHapticEngine = (
         return accepted;
       } catch {
         return false;
+      }
+    },
+    cancel(): void {
+      if (!used) return;
+      try {
+        vibrate([0]);
+      } catch {
+        // Native vibration is progressive enhancement; cancellation remains best-effort.
       }
     },
     dispose(): void {
