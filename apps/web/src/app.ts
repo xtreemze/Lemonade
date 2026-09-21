@@ -1,4 +1,4 @@
-import { createProceduralAudioEngine, weatherCue } from "@lemonade/audio";
+import { createProceduralAudioEngine, weatherCue, type AudioCue } from "@lemonade/audio";
 import {
   availableOperatingFunds,
   createInitialState,
@@ -39,6 +39,8 @@ import {
   type RunPhase,
   type RunSnapshot,
 } from "./persistence.js";
+import { createHapticEngine, type HapticCue } from "./haptics.js";
+import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
@@ -249,6 +251,7 @@ export class LemonadeApp {
   readonly #runSeed: Seed;
   readonly #random: RandomSource;
   readonly #audio = createProceduralAudioEngine();
+  readonly #haptics = createHapticEngine();
   readonly #scene: LemonsvilleSceneView;
   readonly #persistenceEnabled: boolean;
 
@@ -257,6 +260,7 @@ export class LemonadeApp {
   #phase: RunPhase;
   #presentation: PresentationPhase;
   #presentationTimer: number | null = null;
+  #feedbackTimers: number[] = [];
   #glasses: number;
   #signs: number;
   #price: number;
@@ -329,12 +333,16 @@ export class LemonadeApp {
     document.removeEventListener("visibilitychange", this.#onVisibilityChange);
     window.removeEventListener("pagehide", this.#onPageHide);
     this.#clearPresentationTimer();
+    this.#clearFeedbackTimers();
+    this.#haptics.dispose();
     this.#scene.dispose();
     void this.#audio.dispose();
   }
 
   readonly #onVisibilityChange = (): void => {
     if (document.visibilityState === "hidden") {
+      this.#clearFeedbackTimers();
+      this.#haptics.cancel();
       void this.#audio.suspend();
     } else {
       void this.#audio.resume();
@@ -391,6 +399,10 @@ export class LemonadeApp {
     void this.#audio.enable().then((enabled) => {
       if (enabled) this.#audio.play("day:submit");
     });
+    this.#schedulePurchaseFeedback(resolution);
+    if (this.#environment.weather.kind === "thunderstorm") {
+      this.#scheduleFeedback(180, "storm:thunder", "storm:thunder");
+    }
 
     this.#schedulePresentation("report", SIMULATION_PRESENTATION_MS, () => {
       this.#playResolutionCues(resolution, previousTier, previousScaleLevel);
@@ -415,8 +427,12 @@ export class LemonadeApp {
     this.#queueSave("Next day saved locally.");
 
     void this.#audio.enable().then((enabled) => {
-      if (enabled) this.#audio.play(weatherCue(nextEnvironment.weather.kind));
+      if (!enabled) return;
+      this.#audio.play(weatherCue(nextEnvironment.weather.kind));
     });
+    if (nextEnvironment.weather.kind === "thunderstorm") {
+      this.#scheduleFeedback(160, "storm:thunder", "storm:thunder");
+    }
 
     this.#schedulePresentation("planning", FORECAST_PRESENTATION_MS);
   };
@@ -525,6 +541,40 @@ export class LemonadeApp {
       this.#signs * Number(this.#game.signCost) +
       fixedObligations;
     return Object.freeze({ affordable: spend <= operatingFunds, operatingFunds, spend });
+  }
+
+  #clearFeedbackTimers(): void {
+    for (const timer of this.#feedbackTimers) window.clearTimeout(timer);
+    this.#feedbackTimers = [];
+  }
+
+  #emitFeedback(audioCue: AudioCue, hapticCue: HapticCue): void {
+    if (this.#disposed) return;
+    this.#haptics.play(hapticCue);
+    void this.#audio.enable().then((enabled) => {
+      if (enabled && !this.#disposed) this.#audio.play(audioCue);
+    });
+  }
+
+  #scheduleFeedback(delayMs: number, audioCue: AudioCue, hapticCue: HapticCue): void {
+    const timer = window.setTimeout(() => {
+      this.#feedbackTimers = this.#feedbackTimers.filter((candidate) => candidate !== timer);
+      this.#emitFeedback(audioCue, hapticCue);
+    }, Math.max(0, delayMs));
+    this.#feedbackTimers.push(timer);
+  }
+
+  #schedulePurchaseFeedback(resolution: DayResolution): void {
+    this.#clearFeedbackTimers();
+    const schedule = createPurchaseFeedbackSchedule(
+      Number(resolution.entry.sold),
+      SIMULATION_PRESENTATION_MS,
+    );
+    for (const beat of schedule) {
+      this.#scheduleFeedback(beat.serveAtMs, "purchase:serve", "purchase:serve");
+      this.#scheduleFeedback(beat.paymentAtMs, "purchase:payment", "purchase:payment");
+      this.#scheduleFeedback(beat.drinkAtMs, "purchase:drink", "purchase:drink");
+    }
   }
 
   #clearPresentationTimer(): void {
