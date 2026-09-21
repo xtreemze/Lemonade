@@ -1,9 +1,14 @@
 import * as THREE from "three";
 
 import {
+  buyerPhaseAt,
   createStreetStoryboard,
+  formatPriceLabel,
   remainingCupsAt,
   sceneCameraComposition,
+  sceneShotAt,
+  type BuyerPhase,
+  type SceneShotKind,
 } from "./storyboard.js";
 
 export type SceneWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
@@ -16,6 +21,7 @@ export type LemonsvilleSceneState = Readonly<{
   visibleSigns: number;
   prepared: number;
   sold: number;
+  priceCents: number;
   durationMs: number;
   sellThroughBasisPoints: number;
   phase: ScenePhase;
@@ -44,7 +50,7 @@ const customerCount: Record<CustomerActivity, number> = {
 };
 
 const PASSERBY_POOL_SIZE = 32;
-const BUYER_POOL_SIZE = 24;
+const BUYER_POOL_SIZE = 128;
 const MAX_PREPARED_CUPS = 250;
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
@@ -121,41 +127,258 @@ const createTree = (x: number, z: number): THREE.Group => {
   return tree;
 };
 
-const createSign = (index: number): THREE.Group => {
-  const sign = new THREE.Group();
-  addBox(sign, [0.1, 0.85, 0.1], [0, 0.43, 0], 0x644c34);
-  addBox(sign, [0.95, 0.62, 0.12], [0, 1.05, 0], 0xf5d34c);
+type SignModel = Readonly<{
+  root: THREE.Group;
+  labelMaterial: THREE.MeshBasicMaterial;
+}>;
+
+const createSign = (index: number): SignModel => {
+  const root = new THREE.Group();
+  addBox(root, [0.1, 0.85, 0.1], [0, 0.43, 0], 0x644c34);
+  addBox(root, [0.95, 0.62, 0.12], [0, 1.05, 0], 0xf5d34c);
+
+  const labelMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    side: THREE.DoubleSide,
+  });
+  const label = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.52), labelMaterial);
+  label.position.set(0, 1.05, 0.066);
+  root.add(label);
+
   const side = index % 2 === 0 ? -1 : 1;
   const row = Math.floor(index / 2);
-  sign.position.set(
+  root.position.set(
     side * (3.6 + (row % 4) * 1.15),
     0,
     1.9 + Math.floor(row / 4) * 1.2,
   );
-  sign.rotation.y = side * 0.18;
-  return sign;
+  root.rotation.y = side * 0.18;
+  return Object.freeze({ root, labelMaterial });
 };
 
-const createPerson = (index: number): THREE.Group => {
-  const person = new THREE.Group();
-  const bodyColors = [0xd75c51, 0x507d83, 0xe0a43c, 0x7766a6, 0x3f7d68, 0x9c5b72] as const;
-  const color = bodyColors[index % bodyColors.length];
-  if (color === undefined) throw new Error("pedestrian palette invariant failed");
+const createSignTexture = (priceLabel: string): THREE.CanvasTexture => {
+  const surface = document.createElement("canvas");
+  surface.width = 512;
+  surface.height = 320;
+  const context = surface.getContext("2d");
 
-  const body = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.24, 0.34, 1.0, 7),
+  if (context !== null) {
+    context.fillStyle = "#f5d34c";
+    context.fillRect(0, 0, surface.width, surface.height);
+    context.strokeStyle = "#211d14";
+    context.lineWidth = 18;
+    context.strokeRect(9, 9, surface.width - 18, surface.height - 18);
+    context.fillStyle = "#211d14";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.font = "900 64px system-ui, sans-serif";
+    context.fillText("LEMONADE", surface.width / 2, 80);
+    context.font = "900 104px ui-monospace, monospace";
+    context.fillText(priceLabel, surface.width / 2, 185);
+    context.font = "800 42px system-ui, sans-serif";
+    context.fillText("PER CUP", surface.width / 2, 270);
+  }
+
+  const texture = new THREE.CanvasTexture(surface);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+};
+
+type PersonRig = Readonly<{
+  root: THREE.Group;
+  torso: THREE.Mesh;
+  head: THREE.Mesh;
+  leftArm: THREE.Group;
+  rightArm: THREE.Group;
+  leftLeg: THREE.Group;
+  rightLeg: THREE.Group;
+  cup: THREE.Group;
+  strideOffset: number;
+}>;
+
+const createLimb = (
+  length: number,
+  radius: number,
+  color: number,
+): THREE.Group => {
+  const pivot = new THREE.Group();
+  const limb = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius * 1.08, length, 6),
     makeMaterial(color),
   );
-  body.position.y = 0.55;
-  person.add(body);
+  limb.position.y = -length / 2;
+  pivot.add(limb);
+  return pivot;
+};
+
+const createDrinkingCup = (): THREE.Group => {
+  const cup = new THREE.Group();
+  const shell = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.075, 0.09, 0.2, 7),
+    makeMaterial(0xf7f3df),
+  );
+  const liquid = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.061, 0.068, 0.1, 7),
+    makeMaterial(0xf5cf38),
+  );
+  liquid.position.y = 0.035;
+  cup.add(shell, liquid);
+  cup.visible = false;
+  return cup;
+};
+
+const createPerson = (index: number): PersonRig => {
+  const root = new THREE.Group();
+  const bodyColors = [
+    0xd75c51,
+    0x507d83,
+    0xe0a43c,
+    0x7766a6,
+    0x3f7d68,
+    0x9c5b72,
+    0x315d8a,
+    0xbd6f42,
+  ] as const;
+  const skinColors = [0xf0c7a5, 0xe1ad83, 0xc98c65, 0x9b6448, 0x704936] as const;
+  const hairColors = [0x36281f, 0x5b3b24, 0x1f1a17, 0x8a633e] as const;
+  const bodyColor = bodyColors[index % bodyColors.length];
+  const skinColor = skinColors[index % skinColors.length];
+  const hairColor = hairColors[index % hairColors.length];
+  if (bodyColor === undefined || skinColor === undefined || hairColor === undefined) {
+    throw new Error("pedestrian palette invariant failed");
+  }
+
+  const torso = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25, 0.34, 0.9, 7),
+    makeMaterial(bodyColor),
+  );
+  torso.position.y = 1.05;
+  root.add(torso);
 
   const head = new THREE.Mesh(
     new THREE.SphereGeometry(0.25, 8, 6),
-    makeMaterial(0xe1ad83),
+    makeMaterial(skinColor),
   );
-  head.position.y = 1.27;
-  person.add(head);
-  return person;
+  head.position.y = 1.73;
+  root.add(head);
+
+  const leftArm = createLimb(0.7, 0.085, bodyColor);
+  const rightArm = createLimb(0.7, 0.085, bodyColor);
+  leftArm.position.set(-0.34, 1.38, 0);
+  rightArm.position.set(0.34, 1.38, 0);
+  root.add(leftArm, rightArm);
+
+  const trouserColor = index % 2 === 0 ? 0x3f4650 : 0x6c5948;
+  const leftLeg = createLimb(0.8, 0.105, trouserColor);
+  const rightLeg = createLimb(0.8, 0.105, trouserColor);
+  leftLeg.position.set(-0.14, 0.72, 0);
+  rightLeg.position.set(0.14, 0.72, 0);
+  root.add(leftLeg, rightLeg);
+
+  if (index % 3 === 0) {
+    const hair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.265, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2),
+      makeMaterial(hairColor),
+    );
+    hair.position.set(0, 1.79, 0);
+    root.add(hair);
+  } else if (index % 4 === 0) {
+    const brim = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.31, 0.31, 0.055, 8),
+      makeMaterial(bodyColor),
+    );
+    brim.position.set(0, 1.95, 0);
+    const crown = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.21, 0.23, 0.18, 8),
+      makeMaterial(bodyColor),
+    );
+    crown.position.set(0, 2.04, 0);
+    root.add(brim, crown);
+  }
+
+  if (index % 5 === 0) {
+    addBox(root, [0.2, 0.34, 0.13], [0.37, 1.0, -0.15], 0x644c34);
+  }
+
+  const cup = createDrinkingCup();
+  cup.position.set(0, -0.66, 0.08);
+  rightArm.add(cup);
+
+  const heightScale = 0.9 + (index % 5) * 0.045;
+  const widthScale = 0.92 + (index % 4) * 0.035;
+  root.scale.set(widthScale, heightScale, widthScale);
+
+  return Object.freeze({
+    root,
+    torso,
+    head,
+    leftArm,
+    rightArm,
+    leftLeg,
+    rightLeg,
+    cup,
+    strideOffset: index * 0.73,
+  });
+};
+
+const resetPersonPose = (person: PersonRig): void => {
+  person.torso.rotation.set(0, 0, 0);
+  person.head.rotation.set(0, 0, 0);
+  person.leftArm.rotation.set(0, 0, 0);
+  person.rightArm.rotation.set(0, 0, 0);
+  person.leftLeg.rotation.set(0, 0, 0);
+  person.rightLeg.rotation.set(0, 0, 0);
+  person.cup.visible = false;
+};
+
+const applyWalkingPose = (
+  person: PersonRig,
+  seconds: number,
+  pace: number,
+  carryingCup: boolean,
+): void => {
+  const stride = Math.sin(seconds * 7.2 * pace + person.strideOffset);
+  const sway = Math.sin(seconds * 3.6 * pace + person.strideOffset) * 0.04;
+  person.leftLeg.rotation.x = stride * 0.58;
+  person.rightLeg.rotation.x = -stride * 0.58;
+  person.leftArm.rotation.x = -stride * 0.5;
+  person.rightArm.rotation.x = carryingCup ? -0.3 : stride * 0.5;
+  person.torso.rotation.z = sway;
+  person.head.rotation.z = -sway * 0.45;
+  person.cup.visible = carryingCup;
+};
+
+const applyBuyerPose = (
+  person: PersonRig,
+  phase: BuyerPhase,
+  seconds: number,
+  index: number,
+): void => {
+  resetPersonPose(person);
+  switch (phase) {
+    case "approaching":
+      applyWalkingPose(person, seconds, 1.05, false);
+      break;
+    case "purchasing":
+      person.rightArm.rotation.x = -1.25;
+      person.leftArm.rotation.x = -0.2;
+      person.torso.rotation.x = 0.08;
+      break;
+    case "drinking":
+      person.cup.visible = true;
+      person.rightArm.rotation.x = -2.35;
+      person.rightArm.rotation.z = index % 2 === 0 ? -0.12 : 0.12;
+      person.head.rotation.x = 0.13;
+      person.head.rotation.z = index % 2 === 0 ? -0.06 : 0.06;
+      break;
+    case "departing":
+      applyWalkingPose(person, seconds, 1.1, true);
+      break;
+    case "inactive":
+      break;
+  }
 };
 
 type CupInventory = Readonly<{
@@ -367,20 +590,26 @@ export const createLemonsvilleScene = (
   scene.add(createStand());
 
   const signs = Array.from({ length: 25 }, (_, index) => createSign(index));
-  for (const sign of signs) scene.add(sign);
-  const signOrigins = signs.map((sign) => sign.rotation.z);
+  let signTexture = createSignTexture(formatPriceLabel(initialState.priceCents));
+  let signPriceLabel = formatPriceLabel(initialState.priceCents);
+  for (const sign of signs) {
+    sign.labelMaterial.map = signTexture;
+    sign.labelMaterial.needsUpdate = true;
+    scene.add(sign.root);
+  }
+  const signOrigins = signs.map((sign) => sign.root.rotation.z);
 
   const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) =>
     createPerson(index),
   );
-  for (const customer of customers) scene.add(customer);
+  for (const customer of customers) scene.add(customer.root);
 
   const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) =>
     createPerson(index + PASSERBY_POOL_SIZE),
   );
   for (const buyer of buyers) {
-    buyer.visible = false;
-    scene.add(buyer);
+    buyer.root.visible = false;
+    scene.add(buyer.root);
   }
 
   const cupInventory = createCupInventory();
@@ -408,8 +637,37 @@ export const createLemonsvilleScene = (
     prepared: state.prepared,
     sold: state.phase === "simulation" ? state.sold : 0,
     visibleSigns: state.visibleSigns,
+    priceCents: state.priceCents,
     ambientPedestrianCount: customerCount[state.customerActivity],
   });
+
+  let viewportWidth = 1;
+  let viewportHeight = 1;
+  let currentShot: SceneShotKind = "establishing";
+
+  const applyCameraShot = (shot: SceneShotKind): void => {
+    currentShot = shot;
+    const composition = sceneCameraComposition(viewportWidth, viewportHeight, shot);
+    camera.aspect = viewportWidth / viewportHeight;
+    camera.fov = composition.fov;
+    camera.position.set(...composition.position);
+    camera.lookAt(...composition.lookAt);
+    camera.updateProjectionMatrix();
+    canvas.dataset["sceneShot"] = shot;
+  };
+
+  const updateSignPrice = (priceLabel: string): void => {
+    if (priceLabel === signPriceLabel) return;
+    const previousTexture = signTexture;
+    signTexture = createSignTexture(priceLabel);
+    signPriceLabel = priceLabel;
+    for (const sign of signs) {
+      sign.labelMaterial.map = signTexture;
+      sign.labelMaterial.needsUpdate = true;
+    }
+    previousTexture.dispose();
+    canvas.dataset["signPriceLabel"] = priceLabel;
+  };
 
   const render = (): void => {
     renderer.render(scene, camera);
@@ -421,20 +679,24 @@ export const createLemonsvilleScene = (
       Math.max(6, customerCount[state.customerActivity] + 2),
     );
     customers.forEach((customer, index) => {
-      customer.visible = index < visibleCount;
-      if (!customer.visible) return;
+      customer.root.visible = index < visibleCount;
+      resetPersonPose(customer);
+      if (!customer.root.visible) return;
       const row = index % 2;
       const progress = visibleCount <= 1 ? 0.5 : index / (visibleCount - 1);
-      customer.position.set(-7.2 + progress * 14.4, 0, 3.65 + row * 0.7);
-      customer.rotation.y = index % 2 === 0 ? Math.PI / 2 : -Math.PI / 2;
+      customer.root.position.set(-7.2 + progress * 14.4, 0, 3.65 + row * 0.7);
+      customer.root.rotation.y = index % 2 === 0 ? Math.PI / 2 : -Math.PI / 2;
     });
-    for (const buyer of buyers) buyer.visible = false;
+    for (const buyer of buyers) {
+      resetPersonPose(buyer);
+      buyer.root.visible = false;
+    }
   };
 
   const resetAnimatedObjects = (): void => {
     positionStaticPedestrians();
     signs.forEach((sign, index) => {
-      sign.rotation.z = signOrigins[index] ?? 0;
+      sign.root.rotation.z = signOrigins[index] ?? 0;
     });
     cupInventory.setCount(storyboard.prepared);
     lemons.forEach((lemon, index) => {
@@ -444,41 +706,61 @@ export const createLemonsvilleScene = (
     for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
       weatherObjects[weather].position.x = weatherOrigins[weather];
     }
+    applyCameraShot("establishing");
   };
 
   const animateBuyers = (elapsedMs: number, seconds: number): number => {
-    for (const buyer of buyers) buyer.visible = false;
+    for (const buyer of buyers) {
+      buyer.root.visible = false;
+      resetPersonPose(buyer);
+    }
     if (state.phase !== "simulation") return 0;
 
     let activeBuyerCount = 0;
     for (const sale of storyboard.sales) {
-      if (elapsedMs < sale.approachAtMs || elapsedMs > sale.departAtMs) continue;
+      const phase = buyerPhaseAt(sale, elapsedMs);
+      if (phase === "inactive") continue;
       const buyer = buyers[activeBuyerCount];
       if (buyer === undefined) break;
 
       const streetX = sale.direction === -1 ? -8.4 : 8.4;
       const exitX = -streetX;
       const streetZ = 4.0 + sale.lane * 0.34;
-      const counterX = sale.direction === -1 ? -0.7 : 0.7;
-      const counterZ = 1.65;
-      let x: number;
-      let z: number;
+      const counterX = sale.direction === -1 ? -0.72 : 0.72;
+      const counterZ = 1.62;
+      const drinkX = sale.direction === -1 ? -1.35 : 1.35;
+      const drinkZ = 2.12;
+      let x = counterX;
+      let z = counterZ;
 
-      if (elapsedMs <= sale.purchaseAtMs) {
+      if (phase === "approaching") {
         const duration = Math.max(1, sale.purchaseAtMs - sale.approachAtMs);
         const progress = smoothStep((elapsedMs - sale.approachAtMs) / duration);
         x = lerp(streetX, counterX, progress);
         z = lerp(streetZ, counterZ, progress);
-      } else {
-        const duration = Math.max(1, sale.departAtMs - sale.purchaseAtMs);
-        const progress = smoothStep((elapsedMs - sale.purchaseAtMs) / duration);
-        x = lerp(counterX, exitX, progress);
-        z = lerp(counterZ, streetZ, progress);
+      } else if (phase === "drinking") {
+        const duration = Math.max(1, sale.drinkEndAtMs - sale.purchaseEndAtMs);
+        const progress = smoothStep((elapsedMs - sale.purchaseEndAtMs) / duration);
+        x = lerp(counterX, drinkX, Math.min(1, progress * 1.8));
+        z = lerp(counterZ, drinkZ, Math.min(1, progress * 1.8));
+      } else if (phase === "departing") {
+        const duration = Math.max(1, sale.departAtMs - sale.drinkEndAtMs);
+        const progress = smoothStep((elapsedMs - sale.drinkEndAtMs) / duration);
+        x = lerp(drinkX, exitX, progress);
+        z = lerp(drinkZ, streetZ, progress);
       }
 
-      buyer.visible = true;
-      buyer.position.set(x, Math.abs(Math.sin(seconds * 7 + sale.saleNumber)) * 0.05, z);
-      buyer.rotation.y = sale.direction === -1 ? Math.PI / 2 : -Math.PI / 2;
+      buyer.root.visible = true;
+      buyer.root.position.set(x, 0, z);
+      buyer.root.rotation.y =
+        phase === "purchasing" || phase === "drinking"
+          ? sale.direction === -1
+            ? -0.22
+            : 0.22
+          : sale.direction === -1
+            ? Math.PI / 2
+            : -Math.PI / 2;
+      applyBuyerPose(buyer, phase, seconds, sale.saleNumber);
       activeBuyerCount += 1;
     }
     return activeBuyerCount;
@@ -501,12 +783,13 @@ export const createLemonsvilleScene = (
     const globalProgress = clamp01(elapsedMs / durationMs);
 
     customers.forEach((customer, index) => {
-      customer.visible = index < targetCount;
-      if (!customer.visible) return;
+      customer.root.visible = index < targetCount;
+      resetPersonPose(customer);
+      if (!customer.root.visible) return;
 
       const beat = storyboard.passersBy[index % storyboard.passersBy.length];
       if (beat === undefined) {
-        customer.visible = false;
+        customer.root.visible = false;
         return;
       }
 
@@ -521,15 +804,16 @@ export const createLemonsvilleScene = (
       const baseX = lerp(startX, endX, progress);
       const x = lerp(baseX, signSide * 4.1, attention * 0.22);
       const z = 4.0 + beat.lane * 0.28 - attention * 0.7;
-      const bob = Math.abs(Math.sin(seconds * 5.2 + index * 0.7)) * 0.055;
+      const pace = 0.92 + (index % 5) * 0.055;
 
-      customer.position.set(x, bob, z);
-      customer.rotation.y =
+      customer.root.position.set(x, 0, z);
+      customer.root.rotation.y =
         attention > 0.55
           ? signSide * 0.72
           : beat.direction === -1
             ? Math.PI / 2
             : -Math.PI / 2;
+      applyWalkingPose(customer, seconds, pace, false);
     });
   };
 
@@ -546,6 +830,10 @@ export const createLemonsvilleScene = (
       Math.max(0, timestamp - animationEpoch),
     );
     const seconds = elapsedMs / 1000;
+    const nextShot =
+      state.phase === "simulation" ? sceneShotAt(storyboard, elapsedMs) : "establishing";
+    if (nextShot !== currentShot) applyCameraShot(nextShot);
+
     const activeBuyerCount = animateBuyers(elapsedMs, seconds);
     animatePassersBy(elapsedMs, seconds, activeBuyerCount);
 
@@ -556,7 +844,9 @@ export const createLemonsvilleScene = (
     );
 
     signs.forEach((sign, index) => {
-      if (sign.visible) sign.rotation.z = Math.sin(seconds * 1.7 + index * 0.55) * 0.035;
+      if (sign.root.visible) {
+        sign.root.rotation.z = Math.sin(seconds * 1.7 + index * 0.55) * 0.035;
+      }
     });
     lemons.forEach((lemon, index) => {
       if (!lemon.visible) return;
@@ -592,7 +882,8 @@ export const createLemonsvilleScene = (
       state.durationMs !== nextState.durationMs ||
       state.prepared !== nextState.prepared ||
       state.sold !== nextState.sold ||
-      state.visibleSigns !== nextState.visibleSigns;
+      state.visibleSigns !== nextState.visibleSigns ||
+      state.priceCents !== nextState.priceCents;
 
     state = nextState;
     storyboard = createStreetStoryboard({
@@ -600,9 +891,15 @@ export const createLemonsvilleScene = (
       prepared: state.prepared,
       sold: state.phase === "simulation" ? state.sold : 0,
       visibleSigns: state.visibleSigns,
+      priceCents: state.priceCents,
       ambientPedestrianCount: customerCount[state.customerActivity],
     });
-    if (presentationChanged) animationEpoch = performance.now();
+    updateSignPrice(storyboard.priceLabel);
+    canvas.dataset["signPriceLabel"] = storyboard.priceLabel;
+    if (presentationChanged) {
+      animationEpoch = performance.now();
+      applyCameraShot("establishing");
+    }
 
     renderer.setClearColor(skyColor[state.weather], 1);
 
@@ -615,7 +912,7 @@ export const createLemonsvilleScene = (
 
     const signLimit = Math.max(0, Math.min(signs.length, Math.trunc(state.visibleSigns)));
     signs.forEach((sign, index) => {
-      sign.visible = index < signLimit;
+      sign.root.visible = index < signLimit;
     });
 
     const lemonLimit = visibleInventoryCount(state.prepared, lemons.length, 12);
@@ -631,22 +928,17 @@ export const createLemonsvilleScene = (
   };
 
   const resize = (width: number, height: number): void => {
-    const safeWidth = Math.max(1, Math.floor(width));
-    const safeHeight = Math.max(1, Math.floor(height));
-    const composition = sceneCameraComposition(safeWidth, safeHeight);
-
-    camera.aspect = safeWidth / safeHeight;
-    camera.fov = composition.fov;
-    camera.position.set(...composition.position);
-    camera.lookAt(...composition.lookAt);
-    camera.updateProjectionMatrix();
-    renderer.setSize(safeWidth, safeHeight, false);
+    viewportWidth = Math.max(1, Math.floor(width));
+    viewportHeight = Math.max(1, Math.floor(height));
+    renderer.setSize(viewportWidth, viewportHeight, false);
+    applyCameraShot(currentShot);
     render();
   };
 
   const dispose = (): void => {
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
     animationFrame = null;
+    signTexture.dispose();
     scene.traverse(disposeObject);
     renderer.dispose();
   };
