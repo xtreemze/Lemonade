@@ -154,6 +154,10 @@ describe("day resolution", () => {
   });
 
   it("holds accounting and inventory invariants across a decision grid", () => {
+    const fundedState = Object.freeze({
+      ...createInitialState(),
+      cash: moneyCents(5_000),
+    });
     const glassesValues = [0, 1, 5, 10] as const;
     const signValues = [0, 1, 3] as const;
     const priceValues = [100, 150, 250] as const;
@@ -162,7 +166,7 @@ describe("day resolution", () => {
       for (const signs of signValues) {
         for (const price of priceValues) {
           const result = simulateDay(
-            createInitialState(),
+            fundedState,
             decision(glasses, signs, price),
             neutralEnvironment(),
           );
