@@ -4,6 +4,7 @@ import {
   completedSalesAt,
   createStreetStoryboard,
   remainingCupsAt,
+  sceneCameraComposition,
 } from "../src/storyboard.js";
 
 describe("street simulation storyboard", () => {
@@ -66,6 +67,15 @@ describe("street simulation storyboard", () => {
     expect(unadvertised.passersBy.length).toBeGreaterThan(unadvertised.sales.length);
     expect(unadvertised.adViewerCount).toBe(0);
     expect(unadvertised.passersBy.some((pedestrian) => pedestrian.seesAdvertisement)).toBe(false);
+  });
+
+  it("chooses an intentional camera composition for portrait, balanced, and wide scenes", () => {
+    expect(sceneCameraComposition(360, 740).mode).toBe("portrait");
+    expect(sceneCameraComposition(768, 740).mode).toBe("balanced");
+    expect(sceneCameraComposition(844, 390).mode).toBe("wide");
+    expect(sceneCameraComposition(360, 740).position[2]).toBeGreaterThan(
+      sceneCameraComposition(844, 390).position[2],
+    );
   });
 
   it("is deterministic and never schedules more sales than prepared cups", () => {
