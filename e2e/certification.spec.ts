@@ -21,6 +21,15 @@ test("release artifact completes a day without uncaught runtime failures", async
   await page.goto("./");
   await expect(page.getByRole("main")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Lemonade", level: 1 })).toBeVisible();
+  const litComponents = page.locator(
+    "lemonade-run-tools, lemonade-decision-panel, lemonade-day-report",
+  );
+  await expect(litComponents).toHaveCount(3);
+  expect(
+    await litComponents.evaluateAll((elements) =>
+      elements.every((element) => element.shadowRoot === null),
+    ),
+  ).toBe(true);
   await expect(page.getByRole("slider")).toHaveCount(3);
   await expect(page.locator("#scene-equivalent")).not.toBeEmpty();
 
