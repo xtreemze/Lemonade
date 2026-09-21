@@ -78,14 +78,20 @@
     <path class="lemonade-light liquid-surface" d="M27 59c12-5 25 5 37 0s25 5 38 0v12H27z"/>
 
     <g aria-hidden="true">
-      <g class="ice-float" transform="translate(42 69) rotate(-9)">
-        <rect class="ice" width="22" height="18" rx="4"/>
+      <g transform="translate(42 69) rotate(-9)">
+        <g class="ice-float">
+          <rect class="ice" width="22" height="18" rx="4"/>
+        </g>
       </g>
-      <g class="ice-float" transform="translate(66 76) rotate(12)">
-        <rect class="ice" width="20" height="17" rx="4"/>
+      <g transform="translate(66 76) rotate(12)">
+        <g class="ice-float">
+          <rect class="ice" width="20" height="17" rx="4"/>
+        </g>
       </g>
-      <g class="ice-float" transform="translate(49 92) rotate(7)">
-        <rect class="ice" width="21" height="17" rx="4"/>
+      <g transform="translate(49 92) rotate(7)">
+        <g class="ice-float">
+          <rect class="ice" width="21" height="17" rx="4"/>
+        </g>
       </g>
     </g>
   </g>
