@@ -75,24 +75,27 @@ const ledgerLine = (
   direction: LedgerLine["direction"],
 ): LedgerLine => Object.freeze({ kind, label, amount, direction });
 
-export const simulateDay = (
+const resolveDay = (
   state: GameState,
   decision: DayDecision,
   environment: DayEnvironment,
+  enforceOperatingScale: boolean,
 ): DayResolution => {
   if (Number(decision.price) <= 0) {
     throw new RangeError("price must be greater than zero");
   }
 
-  const scale = operatingScaleForState(state);
-  const boundedDecisions = [
-    ["glasses", Number(decision.glasses), scale.maxGlasses],
-    ["signs", Number(decision.signs), scale.maxSigns],
-    ["price", Number(decision.price), scale.maxPriceCents],
-  ] as const;
-  for (const [field, requested, maximum] of boundedDecisions) {
-    if (requested > maximum) {
-      throw new DecisionOutsideOperatingScaleError(field, requested, maximum);
+  if (enforceOperatingScale) {
+    const scale = operatingScaleForState(state);
+    const boundedDecisions = [
+      ["glasses", Number(decision.glasses), scale.maxGlasses],
+      ["signs", Number(decision.signs), scale.maxSigns],
+      ["price", Number(decision.price), scale.maxPriceCents],
+    ] as const;
+    for (const [field, requested, maximum] of boundedDecisions) {
+      if (requested > maximum) {
+        throw new DecisionOutsideOperatingScaleError(field, requested, maximum);
+      }
     }
   }
 
@@ -243,3 +246,20 @@ export const simulateDay = (
 
   return Object.freeze({ previousState: state, nextState, entry });
 };
+
+export const simulateDay = (
+  state: GameState,
+  decision: DayDecision,
+  environment: DayEnvironment,
+): DayResolution => resolveDay(state, decision, environment, true);
+
+/**
+ * Deterministic compatibility replay for save documents produced before
+ * operating-scale limits became an engine invariant. New gameplay must use
+ * simulateDay().
+ */
+export const replayLegacyDay = (
+  state: GameState,
+  decision: DayDecision,
+  environment: DayEnvironment,
+): DayResolution => resolveDay(state, decision, environment, false);
