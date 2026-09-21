@@ -652,7 +652,10 @@ export class LemonadeApp {
     this.#scene.update({
       environment: this.#environment,
       visibleSigns: resolvedDay === null ? this.#signs : Number(resolvedDay.decision.signs),
-      phase: this.#presentation === "forecast" ? "forecast" : "simulation",
+      phase:
+        this.#presentation === "simulation" || this.#presentation === "forecast"
+          ? this.#presentation
+          : "idle",
       sold: resolvedDay === null ? 0 : Number(resolvedDay.sold),
       prepared: resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses),
     });
