@@ -1,6 +1,6 @@
 # Tooling re-evaluation — September 2026
 
-This review rechecks the Lemonade web stack after the MVP, with two goals: use current supported tooling and avoid adding abstraction that does not pay for itself.
+This review rechecks the Lemonade web stack after the MVP, with two goals: use current supported tooling and avoid adding abstraction that does not pay for itself. Reviewed against stable releases available on 2026-09-21.
 
 ## Decision summary
 
