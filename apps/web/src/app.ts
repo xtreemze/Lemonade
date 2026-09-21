@@ -557,6 +557,9 @@ export class LemonadeApp {
       price: this.#price,
       maxGlasses: limits.glasses,
       maxSigns: limits.signs,
+      glassesCostText: `Cost ${formatMoney(this.#glasses * Number(this.#game.unitCost))}`,
+      signsCostText: `Cost ${formatMoney(this.#signs * Number(this.#game.signCost))}`,
+      priceText: `Price ${formatMoney(this.#price)} / glass`,
       spendText: `Spend ${formatMoney(affordability.spend)} of ${formatMoney(affordability.operatingFunds)} operating funds`,
       affordable: affordability.affordable,
     });

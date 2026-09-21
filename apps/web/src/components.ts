@@ -147,6 +147,9 @@ export type DecisionPanelModel = Readonly<{
   price: number;
   maxGlasses: number;
   maxSigns: number;
+  glassesCostText: string;
+  signsCostText: string;
+  priceText: string;
   spendText: string;
   affordable: boolean;
 }>;
@@ -158,6 +161,9 @@ const DEFAULT_DECISION_MODEL: DecisionPanelModel = Object.freeze({
   price: 10,
   maxGlasses: 0,
   maxSigns: 0,
+  glassesCostText: "Cost $0.00",
+  signsCostText: "Cost $0.00",
+  priceText: "Price $0.10 / glass",
   spendText: "",
   affordable: true,
 });
@@ -301,20 +307,25 @@ export class LemonadeDecisionPanel extends LitElement {
               .max=${String(model.maxGlasses)}
               .value=${String(model.glasses)}
               aria-labelledby="glasses-label glasses-exact-label"
-              aria-describedby="glasses-help"
+              aria-describedby="glasses-help glasses-cost"
             />
           </label>
-          <input
-            id="glasses"
-            name="glasses"
-            type="range"
-            min="0"
-            step="1"
-            .max=${String(model.maxGlasses)}
-            .value=${String(model.glasses)}
-            aria-labelledby="glasses-label"
-            aria-describedby="glasses-help"
-          />
+          <div class="decision-slider">
+            <input
+              id="glasses"
+              name="glasses"
+              type="range"
+              min="0"
+              step="1"
+              .max=${String(model.maxGlasses)}
+              .value=${String(model.glasses)}
+              aria-labelledby="glasses-label"
+              aria-describedby="glasses-help glasses-cost"
+            />
+            <output id="glasses-cost" class="decision-cost" for="glasses glasses-exact">
+              ${model.glassesCostText}
+            </output>
+          </div>
         </div>
 
         <div class="decision-control">
@@ -334,20 +345,25 @@ export class LemonadeDecisionPanel extends LitElement {
               .max=${String(model.maxSigns)}
               .value=${String(model.signs)}
               aria-labelledby="signs-label signs-exact-label"
-              aria-describedby="signs-help"
+              aria-describedby="signs-help signs-cost"
             />
           </label>
-          <input
-            id="signs"
-            name="signs"
-            type="range"
-            min="0"
-            step="1"
-            .max=${String(model.maxSigns)}
-            .value=${String(model.signs)}
-            aria-labelledby="signs-label"
-            aria-describedby="signs-help"
-          />
+          <div class="decision-slider">
+            <input
+              id="signs"
+              name="signs"
+              type="range"
+              min="0"
+              step="1"
+              .max=${String(model.maxSigns)}
+              .value=${String(model.signs)}
+              aria-labelledby="signs-label"
+              aria-describedby="signs-help signs-cost"
+            />
+            <output id="signs-cost" class="decision-cost" for="signs signs-exact">
+              ${model.signsCostText}
+            </output>
+          </div>
         </div>
 
         <div class="decision-control">
@@ -368,22 +384,27 @@ export class LemonadeDecisionPanel extends LitElement {
                 step="1"
                 .value=${String(model.price)}
                 aria-labelledby="price-label price-exact-label"
-                aria-describedby="price-help"
+                aria-describedby="price-help price-value"
               />
               <span aria-hidden="true">¢</span>
             </span>
           </label>
-          <input
-            id="price"
-            name="price"
-            type="range"
-            min="1"
-            max="100"
-            step="1"
-            .value=${String(model.price)}
-            aria-labelledby="price-label"
-            aria-describedby="price-help"
-          />
+          <div class="decision-slider">
+            <input
+              id="price"
+              name="price"
+              type="range"
+              min="1"
+              max="100"
+              step="1"
+              .value=${String(model.price)}
+              aria-labelledby="price-label"
+              aria-describedby="price-help price-value"
+            />
+            <output id="price-value" class="decision-cost" for="price price-exact">
+              ${model.priceText}
+            </output>
+          </div>
         </div>
 
         <p id="decision-error" class="inline-error" role="alert" ?hidden=${model.affordable}>
