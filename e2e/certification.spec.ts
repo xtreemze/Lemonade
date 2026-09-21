@@ -282,7 +282,6 @@ test("scene runtime failure falls back without blocking gameplay", async ({ page
   expect(sceneRequests).toHaveLength(1);
   await expectPlanningReady(page);
 
-  await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.getByRole("slider")).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Sell for the day" })).toBeEnabled();
 
@@ -292,5 +291,7 @@ test("scene runtime failure falls back without blocking gameplay", async ({ page
   await expect(page.locator("#scene-fallback-description")).not.toBeEmpty();
   expect(sceneRequests).toHaveLength(1);
 
-  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible({
+    timeout: SIMULATION_PRESENTATION_MS + PHASE_SETTLE_MARGIN_MS,
+  });
 });
