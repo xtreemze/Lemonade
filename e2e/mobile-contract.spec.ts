@@ -100,9 +100,18 @@ test.describe.configure({ mode: "parallel" });
 
 for (const viewport of viewports) {
   test(`mobile contract: ${viewport.name} owns the complete daily flow`, async ({ page }) => {
+    test.slow();
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto("./");
 
+    await expectViewportContract(page, "forecast");
+    await expect(page.locator("#scene-canvas")).toHaveAttribute(
+      "data-presentation-duration-ms",
+      "6000",
+    );
+    await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning", {
+      timeout: 10_000,
+    });
     await expectViewportContract(page, "planning");
     await expect(page.getByRole("slider")).toHaveCount(3);
     await expectCenteredBottomAction(
