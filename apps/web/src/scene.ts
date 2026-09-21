@@ -3,6 +3,7 @@ import type {
   LemonsvilleSceneController,
   LemonsvilleSceneState,
 } from "@lemonade/scene";
+import type { createLemonsvilleScene } from "./scene-runtime.js";
 import type { DayEnvironment } from "@lemonade/simulation";
 
 const activityBySentiment: Record<DayEnvironment["sentiment"]["kind"], CustomerActivity> = {
@@ -33,7 +34,9 @@ type SceneElements = Readonly<{
   equivalent: HTMLElement;
 }>;
 
-type SceneRuntime = typeof import("./scene-runtime.js");
+type SceneRuntime = Readonly<{
+  createLemonsvilleScene: typeof createLemonsvilleScene;
+}>;
 
 let sceneRuntimePromise: Promise<SceneRuntime> | null = null;
 
@@ -90,11 +93,6 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
         showFallback(description);
         return;
       }
-      if (disposed) {
-        nextController.dispose();
-        return;
-      }
-
       controller = nextController;
       const resize = (): void => {
         controller?.resize(elements.canvas.clientWidth, elements.canvas.clientHeight);
