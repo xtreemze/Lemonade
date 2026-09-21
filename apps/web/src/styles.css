@@ -609,23 +609,41 @@ h2 {
 }
 
 
-/* Daily loop: keep planning compact and reserve 3D for simulation/forecast presentation. */
+/* Mobile-first daily-loop invariant: every primary state owns the full dynamic viewport. */
 html:has(.game-shell[data-view="planning"]),
-body:has(.game-shell[data-view="planning"]) {
+html:has(.game-shell[data-view="report"]),
+html:has(.game-shell[data-view="simulation"]),
+html:has(.game-shell[data-view="forecast"]),
+body:has(.game-shell[data-view="planning"]),
+body:has(.game-shell[data-view="report"]),
+body:has(.game-shell[data-view="simulation"]),
+body:has(.game-shell[data-view="forecast"]) {
+  width: 100%;
   height: 100dvh;
   min-height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
 }
 
-.game-shell[data-view="planning"] {
-  position: relative;
-  display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+.game-shell[data-view="planning"],
+.game-shell[data-view="report"],
+.game-shell[data-view="simulation"],
+.game-shell[data-view="forecast"] {
+  position: fixed;
+  inset: 0;
   width: 100%;
   height: 100dvh;
+  min-width: 0;
   min-height: 0;
+  max-width: none;
   max-height: 100dvh;
+  margin: 0;
+  overflow: hidden;
+}
+
+.game-shell[data-view="planning"] {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   padding:
     max(8px, env(safe-area-inset-top))
     max(10px, env(safe-area-inset-right))
@@ -901,50 +919,34 @@ body:has(.game-shell[data-view="planning"]) {
   stroke-width: 5;
 }
 
-html:has(.game-shell[data-view="report"]),
-  body:has(.game-shell[data-view="report"]) {
-    width: 100%;
-    height: 100dvh;
-    min-height: 100dvh;
-    overflow: hidden;
-    overscroll-behavior: none;
-  }
-
-  .game-shell[data-view="report"] {
-    position: fixed;
-    inset: 0;
-    display: block;
-    width: 100%;
-    height: 100dvh;
-    min-height: 0;
-    max-height: 100dvh;
-    margin: 0;
-    padding:
+.game-shell[data-view="report"] {
+  display: block;
+  padding:
       max(8px, env(safe-area-inset-top))
       max(10px, env(safe-area-inset-right))
       max(8px, env(safe-area-inset-bottom))
       max(10px, env(safe-area-inset-left));
-    overflow: hidden;
+  overflow: hidden;
+}
+
+.game-shell[data-view="report"] > .topline,
+.game-shell[data-view="report"] > lemonade-run-tools,
+.game-shell[data-view="report"] > #ledger-history-host {
+  display: none;
   }
 
-  .game-shell[data-view="report"] > .topline,
-  .game-shell[data-view="report"] > lemonade-run-tools,
-  .game-shell[data-view="report"] > #ledger-history-host {
-    display: none;
+.game-shell[data-view="report"] > lemonade-day-report {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   }
 
-  .game-shell[data-view="report"] > lemonade-day-report {
-    display: block;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-  }
-
-  .game-shell[data-view="report"] .report-panel {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
+.game-shell[data-view="report"] .report-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
     min-height: 0;
     margin: 0;
     padding: 10px 8px 6px;
@@ -954,158 +956,158 @@ html:has(.game-shell[data-view="report"]),
     overflow: hidden;
   }
 
-  .game-shell[data-view="report"] .panel-heading {
-    display: flex;
-    align-items: end;
-    flex: none;
-    flex-direction: row;
+.game-shell[data-view="report"] .panel-heading {
+  display: flex;
+  align-items: end;
+  flex: none;
+  flex-direction: row;
     gap: 8px;
     margin-bottom: 6px;
   }
 
-  .game-shell[data-view="report"] .panel-heading > div {
-    min-width: 0;
+.game-shell[data-view="report"] .panel-heading > div {
+  min-width: 0;
   }
 
-  .game-shell[data-view="report"] .panel-heading .eyebrow {
-    margin-bottom: 2px;
-    font-size: 0.58rem;
+.game-shell[data-view="report"] .panel-heading .eyebrow {
+  margin-bottom: 2px;
+  font-size: 0.58rem;
   }
 
-  .game-shell[data-view="report"] .panel-heading h2 {
-    font-size: clamp(1.05rem, 5vw, 1.35rem);
+.game-shell[data-view="report"] .panel-heading h2 {
+  font-size: clamp(1.05rem, 5vw, 1.35rem);
   }
 
-  .game-shell[data-view="report"] .profit,
-  .game-shell[data-view="report"] .loss {
-    margin-left: auto;
-    font-size: clamp(1.35rem, 7vw, 2rem);
-    white-space: nowrap;
+.game-shell[data-view="report"] .profit,
+.game-shell[data-view="report"] .loss {
+  margin-left: auto;
+  font-size: clamp(1.35rem, 7vw, 2rem);
+  white-space: nowrap;
   }
 
-  .game-shell[data-view="report"] .results-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    flex: none;
-    gap: 6px;
+.game-shell[data-view="report"] .results-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: none;
+  gap: 6px;
     margin: 4px 0 6px;
   }
 
-  .game-shell[data-view="report"] .results-grid > div {
-    min-height: 0;
-    padding: 7px 8px;
-    border-width: 1px;
+.game-shell[data-view="report"] .results-grid > div {
+  min-height: 0;
+  padding: 7px 8px;
+  border-width: 1px;
   }
 
-  .game-shell[data-view="report"] .results-grid dt {
-    font-size: 0.58rem;
+.game-shell[data-view="report"] .results-grid dt {
+  font-size: 0.58rem;
   }
 
-  .game-shell[data-view="report"] .results-grid dd {
-    margin-top: 2px;
-    font-size: 0.86rem;
+.game-shell[data-view="report"] .results-grid dd {
+  margin-top: 2px;
+  font-size: 0.86rem;
   }
 
-  .game-shell[data-view="report"] .ledger-breakdown {
-    flex: none;
-    margin: 4px 0 6px;
-    border-width: 1px;
+.game-shell[data-view="report"] .ledger-breakdown {
+  flex: none;
+  margin: 4px 0 6px;
+  border-width: 1px;
   }
 
-  .game-shell[data-view="report"] .ledger-breakdown h3 {
-    padding: 5px 7px;
-    border-bottom-width: 1px;
-    font-size: 0.62rem;
+.game-shell[data-view="report"] .ledger-breakdown h3 {
+  padding: 5px 7px;
+  border-bottom-width: 1px;
+  font-size: 0.62rem;
   }
 
-  .game-shell[data-view="report"] .ledger-breakdown th,
-  .game-shell[data-view="report"] .ledger-breakdown td {
-    padding: 4px 7px;
-    font-size: 0.68rem;
+.game-shell[data-view="report"] .ledger-breakdown th,
+.game-shell[data-view="report"] .ledger-breakdown td {
+  padding: 4px 7px;
+  font-size: 0.68rem;
   }
 
-  .game-shell[data-view="report"] .weekly-report {
-    flex: 1 1 auto;
-    min-height: 0;
-    margin: 4px 0 6px;
-    padding: 7px;
+.game-shell[data-view="report"] .weekly-report {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 4px 0 6px;
+  padding: 7px;
     border-width: 2px;
     overflow: hidden;
   }
 
-  .game-shell[data-view="report"] .report-panel:has(.weekly-report) .results-grid,
-  .game-shell[data-view="report"] .report-panel:has(.weekly-report) .ledger-breakdown {
-    display: none;
+.game-shell[data-view="report"] .report-panel:has(.weekly-report) .results-grid,
+.game-shell[data-view="report"] .report-panel:has(.weekly-report) .ledger-breakdown {
+  display: none;
   }
 
-  .game-shell[data-view="report"] .weekly-report-heading {
-    align-items: end;
-    flex-direction: row;
-    gap: 8px;
-    margin-bottom: 6px;
+.game-shell[data-view="report"] .weekly-report-heading {
+  align-items: end;
+  flex-direction: row;
+  gap: 8px;
+  margin-bottom: 6px;
   }
 
-  .game-shell[data-view="report"] .weekly-report-heading .eyebrow {
-    margin-bottom: 2px;
-    font-size: 0.54rem;
+.game-shell[data-view="report"] .weekly-report-heading .eyebrow {
+  margin-bottom: 2px;
+  font-size: 0.54rem;
   }
 
-  .game-shell[data-view="report"] .weekly-report-heading h3 {
-    font-size: 0.95rem;
+.game-shell[data-view="report"] .weekly-report-heading h3 {
+  font-size: 0.95rem;
   }
 
-  .game-shell[data-view="report"] .weekly-profit,
-  .game-shell[data-view="report"] .weekly-loss {
-    font-size: 1.1rem;
-    white-space: nowrap;
+.game-shell[data-view="report"] .weekly-profit,
+.game-shell[data-view="report"] .weekly-loss {
+  font-size: 1.1rem;
+  white-space: nowrap;
   }
 
-  .game-shell[data-view="report"] .weekly-results-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.game-shell[data-view="report"] .weekly-results-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .game-shell[data-view="report"] .weekly-results-grid > div {
-    padding: 5px 6px;
-    border-width: 1px;
+.game-shell[data-view="report"] .weekly-results-grid > div {
+  padding: 5px 6px;
+  border-width: 1px;
   }
 
-  .game-shell[data-view="report"] .weekly-results-grid dt,
-  .game-shell[data-view="report"] .weekly-highlights span {
-    font-size: 0.54rem;
+.game-shell[data-view="report"] .weekly-results-grid dt,
+.game-shell[data-view="report"] .weekly-highlights span {
+  font-size: 0.54rem;
   }
 
-  .game-shell[data-view="report"] .weekly-results-grid dd {
-    margin-top: 1px;
-    font-size: 0.72rem;
+.game-shell[data-view="report"] .weekly-results-grid dd {
+  margin-top: 1px;
+  font-size: 0.72rem;
   }
 
-  .game-shell[data-view="report"] .weekly-highlights {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 5px;
-    margin-top: 5px;
+.game-shell[data-view="report"] .weekly-highlights {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 5px;
   }
 
-  .game-shell[data-view="report"] .weekly-highlights p {
-    gap: 1px;
-    padding: 5px 6px;
-    border-width: 1px;
-    font-size: 0.68rem;
+.game-shell[data-view="report"] .weekly-highlights p {
+  gap: 1px;
+  padding: 5px 6px;
+  border-width: 1px;
+  font-size: 0.68rem;
   }
 
-  .game-shell[data-view="report"] .event-note,
-  .game-shell[data-view="report"] .progression-note {
-    flex: none;
-    margin: 2px 0 4px;
-    padding: 5px 7px;
-    border-width: 1px;
+.game-shell[data-view="report"] .event-note,
+.game-shell[data-view="report"] .progression-note {
+  flex: none;
+  margin: 2px 0 4px;
+  padding: 5px 7px;
+  border-width: 1px;
     font-size: 0.65rem;
     line-height: 1.1;
   }
 
-  .game-shell[data-view="report"] .next-day-button {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 76px;
+.game-shell[data-view="report"] .next-day-button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 76px;
     height: 76px;
     min-height: 76px;
     margin: auto auto 0;
@@ -1116,15 +1118,13 @@ html:has(.game-shell[data-view="report"]),
     box-shadow: none;
   }
 
-  .game-shell[data-view="report"] .next-day-button:active {
-    transform: none;
-    box-shadow: none;
+.game-shell[data-view="report"] .next-day-button:active {
+  transform: none;
+  box-shadow: none;
   }
 
 .game-shell[data-view="simulation"],
 .game-shell[data-view="forecast"] {
-  width: 100%;
-  min-height: 100dvh;
   padding: 0;
 }
 
@@ -1140,7 +1140,7 @@ html:has(.game-shell[data-view="report"]),
   box-shadow: none;
 }
 
-@media (orientation: landscape) {
+@media (orientation: landscape) and (height <= 32rem) {
   .game-shell[data-view="planning"] {
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
     grid-template-rows: auto auto minmax(0, 1fr);
@@ -1198,23 +1198,23 @@ html:has(.game-shell[data-view="report"]),
     height: 54px;
   }
 
-  .game-shell[data-view="report"] .results-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+.game-shell[data-view="report"] .results-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .game-shell[data-view="report"] .weekly-results-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+.game-shell[data-view="report"] .weekly-results-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .game-shell[data-view="report"] .next-day-button {
-    width: 58px;
-    height: 58px;
-    min-height: 58px;
+.game-shell[data-view="report"] .next-day-button {
+  width: 58px;
+  height: 58px;
+  min-height: 58px;
   }
 
-  .game-shell[data-view="report"] .next-day-icon {
-    width: 52px;
-    height: 52px;
+.game-shell[data-view="report"] .next-day-icon {
+  width: 52px;
+  height: 52px;
   }
 }
 
@@ -1226,8 +1226,28 @@ html:has(.game-shell[data-view="report"]),
 }
 
 @media (width >= 47.5625rem) {
-  .game-shell[data-view="planning"] {
+  html:has(.game-shell[data-view="planning"]),
+  html:has(.game-shell[data-view="report"]),
+  body:has(.game-shell[data-view="planning"]),
+  body:has(.game-shell[data-view="report"]) {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+
+  .game-shell[data-view="planning"],
+  .game-shell[data-view="report"] {
+    position: static;
     width: min(880px, calc(100% - 32px));
+    height: auto;
+    min-height: 100dvh;
+    max-height: none;
+    margin-inline: auto;
+    overflow: visible;
+  }
+
+  .game-shell[data-view="planning"] {
     padding-top: 18px;
   }
 
@@ -1260,5 +1280,77 @@ html:has(.game-shell[data-view="report"]),
   .game-shell[data-view="planning"] .simulation-button-art {
     width: 76px;
     height: 76px;
+  }
+
+  .game-shell[data-view="report"] > .topline,
+  .game-shell[data-view="report"] > lemonade-run-tools,
+  .game-shell[data-view="report"] > #ledger-history-host {
+    display: block;
+  }
+
+  .game-shell[data-view="report"] > .topline {
+    display: flex;
+  }
+
+  .game-shell[data-view="report"] > lemonade-day-report {
+    width: auto;
+    height: auto;
+  }
+
+  .game-shell[data-view="report"] .report-panel {
+    display: block;
+    width: auto;
+    height: auto;
+    margin-top: 22px;
+    padding: clamp(18px, 4vw, 34px);
+    border: 2px solid #211d14;
+    background: #fff9e4;
+    box-shadow: 8px 8px 0 #211d14;
+    overflow: visible;
+  }
+
+  .game-shell[data-view="report"] .results-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin: 22px 0;
+  }
+
+  .game-shell[data-view="report"] .results-grid > div {
+    padding: 15px;
+    border-width: 2px;
+  }
+
+  .game-shell[data-view="report"] .ledger-breakdown {
+    margin: 18px 0;
+    border-width: 2px;
+  }
+
+  .game-shell[data-view="report"] .weekly-report {
+    margin: 24px 0 18px;
+    padding: 18px;
+    overflow: visible;
+  }
+
+  .game-shell[data-view="report"] .report-panel:has(.weekly-report) .results-grid,
+  .game-shell[data-view="report"] .report-panel:has(.weekly-report) .ledger-breakdown {
+    display: grid;
+  }
+
+  .game-shell[data-view="report"] .report-panel:has(.weekly-report) .ledger-breakdown {
+    display: block;
+  }
+
+  .game-shell[data-view="report"] .next-day-button {
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    min-height: 76px;
+    margin: 18px auto 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #236f5e;
+    box-shadow: none;
   }
 }
