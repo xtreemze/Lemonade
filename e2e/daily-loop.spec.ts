@@ -96,8 +96,9 @@ test("restores both report and next-day phases across reloads", async ({ page })
 
   await page.reload();
   await expect(page.locator("#status-day")).toHaveText("2");
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
   await expect(page.getByRole("button", { name: "Sell for the day" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sales history" })).toBeVisible();
+  await expect(page.locator("#ledger-history-host")).not.toBeVisible();
 });
 
 test("exports and imports a progressed run into a clean browser profile", async ({ browser }) => {
@@ -109,6 +110,8 @@ test("exports and imports a progressed run into a clean browser profile", async 
   await sourcePage.getByRole("button", { name: "Plan next day" }).click();
   await expect(sourcePage.locator("#status-day")).toHaveText("2");
 
+  await expect(sourcePage.getByRole("main")).toHaveAttribute("data-view", "planning");
+  await sourcePage.locator(".run-tools-summary").click();
   const downloadPromise = sourcePage.waitForEvent("download");
   await sourcePage.getByRole("button", { name: "Export run" }).click();
   const download = await downloadPromise;
@@ -120,6 +123,7 @@ test("exports and imports a progressed run into a clean browser profile", async 
   await targetPage.goto("./");
   await expect(targetPage.locator("#status-day")).toHaveText("1");
 
+  await targetPage.locator(".run-tools-summary").click();
   const chooserPromise = targetPage.waitForEvent("filechooser");
   await targetPage.getByRole("button", { name: "Import run" }).click();
   const chooser = await chooserPromise;
@@ -132,7 +136,8 @@ test("exports and imports a progressed run into a clean browser profile", async 
   await reloadPromise;
 
   await expect(targetPage.locator("#status-day")).toHaveText("2");
-  await expect(targetPage.getByRole("heading", { name: "Sales history" })).toBeVisible();
+  await expect(targetPage.getByRole("main")).toHaveAttribute("data-view", "planning");
+  await expect(targetPage.locator("#ledger-history-host")).not.toBeVisible();
   await expect(targetPage.getByRole("button", { name: "Sell for the day" })).toBeVisible();
 
   await target.close();

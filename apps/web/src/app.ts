@@ -12,6 +12,7 @@ import {
   signCount,
   simulateDay,
   type DayEnvironment,
+  type DayResolution,
   type GameState,
   type RandomSource,
   type Seed,
@@ -38,6 +39,10 @@ import {
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
+const SIMULATION_PRESENTATION_MS = 1_800;
+const FORECAST_PRESENTATION_MS = 1_400;
+
+type PresentationPhase = "planning" | "simulation" | "report" | "forecast";
 
 const weatherLabel: Record<DayEnvironment["weather"]["kind"], string> = {
   sunny: "Sunny",
@@ -123,7 +128,7 @@ export const createFreshRunSnapshot = (): RunSnapshot => {
 };
 
 const SHELL_MARKUP = `
-  <main class="game-shell">
+  <main class="game-shell" data-view="planning">
     <header class="topline">
       <div>
         <p class="eyebrow">Lemonsville neighborhood market</p>
@@ -154,6 +159,10 @@ const SHELL_MARKUP = `
     </aside>
 
     <section class="stand-stage" aria-label="Lemonsville lemonade stand">
+      <div class="scene-overlay" aria-live="polite">
+        <p id="scene-kicker" class="eyebrow"></p>
+        <strong id="scene-title"></strong>
+      </div>
       <canvas id="scene-canvas" class="scene-canvas" role="img"></canvas>
       <div id="scene-fallback" class="scene-fallback" role="img" hidden>
         <strong>Lemonsville</strong>
@@ -185,6 +194,7 @@ const requireElement = <T extends Element>(
 };
 
 type AppElements = Readonly<{
+  gameShell: HTMLElement;
   statusDay: HTMLElement;
   statusCash: HTMLElement;
   statusDebtGroup: HTMLElement;
@@ -199,6 +209,8 @@ type AppElements = Readonly<{
   decisionPanel: LemonadeDecisionPanel;
   reportPanel: LemonadeDayReport;
   historyHost: HTMLElement;
+  sceneKicker: HTMLElement;
+  sceneTitle: HTMLElement;
   sceneCanvas: HTMLCanvasElement;
   sceneFallback: HTMLElement;
   sceneFallbackDescription: HTMLElement;
@@ -207,6 +219,7 @@ type AppElements = Readonly<{
 
 const collectElements = (root: HTMLElement): AppElements =>
   Object.freeze({
+    gameShell: requireElement(root, ".game-shell", HTMLElement),
     statusDay: requireElement(root, "#status-day", HTMLElement),
     statusCash: requireElement(root, "#status-cash", HTMLElement),
     statusDebtGroup: requireElement(root, "#status-debt-group", HTMLElement),
@@ -221,6 +234,8 @@ const collectElements = (root: HTMLElement): AppElements =>
     decisionPanel: requireElement(root, "lemonade-decision-panel", LemonadeDecisionPanel),
     reportPanel: requireElement(root, "lemonade-day-report", LemonadeDayReport),
     historyHost: requireElement(root, "#ledger-history-host", HTMLElement),
+    sceneKicker: requireElement(root, "#scene-kicker", HTMLElement),
+    sceneTitle: requireElement(root, "#scene-title", HTMLElement),
     sceneCanvas: requireElement(root, "#scene-canvas", HTMLCanvasElement),
     sceneFallback: requireElement(root, "#scene-fallback", HTMLElement),
     sceneFallbackDescription: requireElement(root, "#scene-fallback-description", HTMLElement),
@@ -248,6 +263,8 @@ export class LemonadeApp {
   #game: GameState;
   #environment: DayEnvironment;
   #phase: RunPhase;
+  #presentation: PresentationPhase;
+  #presentationTimer: number | null = null;
   #glasses: number;
   #signs: number;
   #price: number;
@@ -266,6 +283,7 @@ export class LemonadeApp {
     this.#game = initialRun.state;
     this.#environment = initialRun.environment;
     this.#phase = initialRun.phase;
+    this.#presentation = initialRun.phase.kind === "report" ? "report" : "planning";
     this.#glasses = Number(initialRun.draft.glasses);
     this.#signs = Number(initialRun.draft.signs);
     this.#price = Number(initialRun.draft.price);
@@ -317,6 +335,7 @@ export class LemonadeApp {
     this.#elements.runTools.removeEventListener("lemonade-run-reset", this.#onResetRun);
     document.removeEventListener("visibilitychange", this.#onVisibilityChange);
     window.removeEventListener("pagehide", this.#onPageHide);
+    this.#clearPresentationTimer();
     this.#scene.dispose();
     void this.#audio.dispose();
   }
@@ -371,26 +390,21 @@ export class LemonadeApp {
     );
     const previousTier = this.#game.tier;
     this.#phase = Object.freeze({ kind: "report", resolution });
+    this.#presentation = "simulation";
     this.#render();
     this.#queueSave("Day report saved locally.");
 
     void this.#audio.enable().then((enabled) => {
-      if (!enabled) return;
-      this.#audio.play("day:submit");
-      const resultCue = Number(resolution.entry.net) >= 0 ? "day:profit" : "day:loss";
-      window.setTimeout(() => {
-        this.#audio.play(resultCue);
-      }, 220);
-      if (resolution.nextState.tier !== previousTier) {
-        window.setTimeout(() => {
-          this.#audio.play("progression:unlock");
-        }, 520);
-      }
+      if (enabled) this.#audio.play("day:submit");
+    });
+
+    this.#schedulePresentation("report", SIMULATION_PRESENTATION_MS, () => {
+      this.#playResolutionCues(resolution, previousTier);
     });
   };
 
   readonly #onNextDay = (): void => {
-    if (this.#phase.kind !== "report") return;
+    if (this.#phase.kind !== "report" || this.#presentation !== "report") return;
 
     const nextState = this.#phase.resolution.nextState;
     const nextEnvironment = generateEnvironment(nextState.day, this.#random);
@@ -401,12 +415,15 @@ export class LemonadeApp {
     this.#glasses = Math.min(this.#glasses, limits.glasses);
     this.#signs = Math.min(this.#signs, limits.signs);
     this.#phase = Object.freeze({ kind: "deciding" });
+    this.#presentation = "forecast";
     this.#render();
     this.#queueSave("Next day saved locally.");
 
     void this.#audio.enable().then((enabled) => {
       if (enabled) this.#audio.play(weatherCue(nextEnvironment.weather.kind));
     });
+
+    this.#schedulePresentation("planning", FORECAST_PRESENTATION_MS);
   };
 
   readonly #onExportRun = (): void => {
@@ -515,7 +532,42 @@ export class LemonadeApp {
     return Object.freeze({ affordable: spend <= operatingFunds, operatingFunds, spend });
   }
 
+  #clearPresentationTimer(): void {
+    if (this.#presentationTimer === null) return;
+    window.clearTimeout(this.#presentationTimer);
+    this.#presentationTimer = null;
+  }
+
+  #schedulePresentation(
+    next: PresentationPhase,
+    delayMs: number,
+    afterTransition?: () => void,
+  ): void {
+    this.#clearPresentationTimer();
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this.#presentationTimer = window.setTimeout(() => {
+      this.#presentationTimer = null;
+      if (this.#disposed) return;
+      this.#presentation = next;
+      this.#render();
+      afterTransition?.();
+    }, reducedMotion ? 0 : delayMs);
+  }
+
+  #playResolutionCues(resolution: DayResolution, previousTier: GameState["tier"]): void {
+    void this.#audio.enable().then((enabled) => {
+      if (!enabled) return;
+      this.#audio.play(Number(resolution.entry.net) >= 0 ? "day:profit" : "day:loss");
+      if (resolution.nextState.tier !== previousTier) {
+        window.setTimeout(() => {
+          if (!this.#disposed) this.#audio.play("progression:unlock");
+        }, 320);
+      }
+    });
+  }
+
   #render(): void {
+    this.#renderPresentationState();
     this.#renderPersistenceState();
     this.#renderStatus();
     this.#renderDecisionState();
@@ -525,6 +577,29 @@ export class LemonadeApp {
     const entries =
       this.#phase.kind === "report" ? this.#phase.resolution.nextState.ledger : this.#game.ledger;
     renderLedgerHistory(this.#elements.historyHost, entries);
+  }
+
+  #renderPresentationState(): void {
+    this.#elements.gameShell.dataset["view"] = this.#presentation;
+
+    switch (this.#presentation) {
+      case "planning":
+        this.#elements.sceneKicker.textContent = "";
+        this.#elements.sceneTitle.textContent = "";
+        break;
+      case "simulation":
+        this.#elements.sceneKicker.textContent = `Day ${String(Number(this.#game.day))} · simulation`;
+        this.#elements.sceneTitle.textContent = "Lemonsville is open";
+        break;
+      case "report":
+        this.#elements.sceneKicker.textContent = "";
+        this.#elements.sceneTitle.textContent = "";
+        break;
+      case "forecast":
+        this.#elements.sceneKicker.textContent = `Day ${String(Number(this.#game.day))} forecast`;
+        this.#elements.sceneTitle.textContent = `${weatherLabel[this.#environment.weather.kind]} · ${sentimentLabel[this.#environment.sentiment.kind]}`;
+        break;
+    }
   }
 
   #renderStatus(): void {
@@ -573,14 +648,16 @@ export class LemonadeApp {
 
   #renderScene(): void {
     const phase = this.#phase;
+    const resolvedDay = phase.kind === "report" ? phase.resolution.entry : null;
     this.#scene.update({
       environment: this.#environment,
-      visibleSigns:
-        phase.kind === "report" ? Number(phase.resolution.entry.decision.signs) : this.#signs,
-      phase: phase.kind,
-      sold: phase.kind === "report" ? Number(phase.resolution.entry.sold) : 0,
-      prepared:
-        phase.kind === "report" ? Number(phase.resolution.entry.decision.glasses) : this.#glasses,
+      visibleSigns: resolvedDay === null ? this.#signs : Number(resolvedDay.decision.signs),
+      phase:
+        this.#presentation === "simulation" || this.#presentation === "forecast"
+          ? this.#presentation
+          : "idle",
+      sold: resolvedDay === null ? 0 : Number(resolvedDay.sold),
+      prepared: resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses),
     });
   }
 }

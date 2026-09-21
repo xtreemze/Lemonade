@@ -59,7 +59,12 @@ const MOTIFS: Record<AudioCue, readonly MotifNote[]> = {
   ],
   "day:submit": [
     { note: 60, beats: 0.5, waveform: "square", gain: 0.05 },
-    { note: 67, beats: 0.75, waveform: "square", gain: 0.05 },
+    { note: 64, beats: 0.5, waveform: "square", gain: 0.05 },
+    { note: 67, beats: 0.5, waveform: "square", gain: 0.05 },
+    { note: 72, beats: 1, waveform: "square", gain: 0.05 },
+    { note: 69, beats: 0.5, waveform: "triangle", gain: 0.055 },
+    { note: 74, beats: 0.5, waveform: "triangle", gain: 0.055 },
+    { note: 72, beats: 1.5, waveform: "triangle", gain: 0.055 },
   ],
   "day:profit": [
     { note: 64, beats: 0.75, waveform: "triangle" },

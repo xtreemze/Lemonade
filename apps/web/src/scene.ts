@@ -2,9 +2,11 @@ import type {
   CustomerActivity,
   LemonsvilleSceneController,
   LemonsvilleSceneState,
+  ScenePhase,
 } from "@lemonade/scene";
-import type { createLemonsvilleScene } from "./scene-runtime.js";
 import type { DayEnvironment } from "@lemonade/simulation";
+
+import type { createLemonsvilleScene } from "./scene-runtime.js";
 
 const activityBySentiment: Record<DayEnvironment["sentiment"]["kind"], CustomerActivity> = {
   "very-cold": "quiet",
@@ -17,7 +19,7 @@ const activityBySentiment: Record<DayEnvironment["sentiment"]["kind"], CustomerA
 export type LemonsvilleSceneInput = Readonly<{
   environment: DayEnvironment;
   visibleSigns: number;
-  phase: "deciding" | "report";
+  phase: ScenePhase;
   sold: number;
   prepared: number;
 }>;
@@ -45,8 +47,18 @@ const loadSceneRuntime = (): Promise<SceneRuntime> => {
   return sceneRuntimePromise;
 };
 
-const describeScene = (input: LemonsvilleSceneInput): string =>
-  `${input.environment.weather.kind.replaceAll("-", " ")} weather; ${input.environment.sentiment.kind.replaceAll("-", " ")} market sentiment; ${String(input.visibleSigns)} advertising signs visible.`;
+const describeScene = (input: LemonsvilleSceneInput): string => {
+  const weather = input.environment.weather.kind.replaceAll("-", " ");
+  const sentiment = input.environment.sentiment.kind.replaceAll("-", " ");
+  const activity =
+    input.phase === "forecast"
+      ? "forecast preview"
+      : input.phase === "simulation"
+        ? `${String(input.sold)} sales from ${String(input.prepared)} prepared glasses`
+        : "scene paused";
+
+  return `${weather} weather; ${sentiment} market sentiment; ${String(input.visibleSigns)} advertising signs; ${String(input.prepared)} glasses prepared; ${activity}.`;
+};
 
 const createState = (
   input: LemonsvilleSceneInput,
@@ -56,6 +68,8 @@ const createState = (
     weather: input.environment.weather.kind,
     customerActivity: activityBySentiment[input.environment.sentiment.kind],
     visibleSigns: input.visibleSigns,
+    prepared: Math.max(0, input.prepared),
+    sold: Math.max(0, input.sold),
     sellThroughBasisPoints:
       input.prepared > 0
         ? Math.round((Math.max(0, input.sold) / input.prepared) * 10_000)
@@ -83,7 +97,14 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
   const initializeController = async (): Promise<void> => {
     try {
       const { createLemonsvilleScene } = await loadSceneRuntime();
-      if (disposed || controller !== null || lastInput === null) return;
+      if (
+        disposed ||
+        controller !== null ||
+        lastInput === null ||
+        lastInput.phase === "idle"
+      ) {
+        return;
+      }
 
       const description = describeScene(lastInput);
       const state = createState(lastInput, reducedMotion);
@@ -93,7 +114,11 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
         showFallback(description);
         return;
       }
+
       controller = nextController;
+      elements.canvas.classList.remove("scene-canvas-hidden");
+      elements.fallback.hidden = true;
+
       const resize = (): void => {
         controller?.resize(elements.canvas.clientWidth, elements.canvas.clientHeight);
       };
@@ -102,14 +127,23 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
       resize();
       controller.update(state);
     } catch {
-      if (!disposed && lastInput !== null) {
+      if (!disposed && lastInput !== null && lastInput.phase !== "idle") {
         showFallback(describeScene(lastInput));
       }
+    } finally {
+      initialization = null;
     }
   };
 
   const ensureController = (): void => {
-    if (controller !== null || initialization !== null || disposed) return;
+    if (
+      controller !== null ||
+      initialization !== null ||
+      disposed ||
+      lastInput?.phase === "idle"
+    ) {
+      return;
+    }
     initialization = initializeController();
   };
 

@@ -554,3 +554,306 @@ input[type="range"] {
     animation-iteration-count: 1;
   }
 }
+
+
+/* Daily loop: keep planning compact and reserve 3D for simulation/forecast presentation. */
+.game-shell[data-view="planning"] {
+  min-height: 100dvh;
+  padding: 8px 0;
+}
+
+.game-shell[data-view="planning"] > lemonade-run-tools {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  z-index: 30;
+}
+
+.game-shell[data-view="planning"] .topline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding-right: 3.75rem;
+}
+
+.game-shell[data-view="planning"] .topline .eyebrow {
+  display: none;
+}
+
+.game-shell[data-view="planning"] h1 {
+  font-size: clamp(1.85rem, 10vw, 3rem);
+  line-height: 0.88;
+}
+
+.game-shell[data-view="planning"] .cash-readout {
+  gap: 4px;
+}
+
+.game-shell[data-view="planning"] .cash-readout > div {
+  min-width: 0;
+  padding: 5px 7px;
+  border-width: 1px;
+  box-shadow: 2px 2px 0 #211d14;
+}
+
+.game-shell[data-view="planning"] .cash-readout dt {
+  font-size: 0.58rem;
+}
+
+.game-shell[data-view="planning"] .cash-readout dd {
+  margin-top: 1px;
+  font-size: 0.82rem;
+}
+
+.game-shell[data-view="planning"] .conditions {
+  gap: 4px 10px;
+  margin: 7px 0 6px;
+  padding: 7px 9px;
+  border-width: 1px;
+  box-shadow: 2px 2px 0 #211d14;
+}
+
+.game-shell[data-view="planning"] .conditions > div {
+  gap: 1px;
+}
+
+.game-shell[data-view="planning"] .conditions span,
+.game-shell[data-view="planning"] .conditions .eyebrow {
+  margin: 0;
+  font-size: 0.58rem;
+}
+
+.game-shell[data-view="planning"] .conditions strong {
+  font-size: 0.78rem;
+}
+
+.game-shell[data-view="planning"] .obligation-strip {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 6px;
+  padding: 5px 7px;
+  border-width: 1px;
+  box-shadow: 2px 2px 0 #211d14;
+}
+
+.game-shell[data-view="planning"] .obligation-strip strong {
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.game-shell[data-view="planning"] .obligation-strip span {
+  overflow: hidden;
+  font-size: 0.65rem;
+  line-height: 1.1;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-shell[data-view="planning"] .stand-stage,
+.game-shell[data-view="planning"] > lemonade-day-report,
+.game-shell[data-view="planning"] > #ledger-history-host {
+  display: none;
+}
+
+.game-shell[data-view="planning"] .decision-panel {
+  margin-top: 0;
+  padding: 8px 10px 10px;
+  border-width: 1px;
+  box-shadow: 3px 3px 0 #211d14;
+}
+
+.game-shell[data-view="planning"] .panel-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.game-shell[data-view="planning"] .panel-heading .eyebrow {
+  margin-bottom: 1px;
+  font-size: 0.58rem;
+}
+
+.game-shell[data-view="planning"] .panel-heading h2 {
+  font-size: 0.94rem;
+  letter-spacing: -0.02em;
+}
+
+.game-shell[data-view="planning"] .spend {
+  max-width: 15ch;
+  font-size: 0.62rem;
+  line-height: 1.1;
+  text-align: right;
+}
+
+.game-shell[data-view="planning"] .decision-control {
+  grid-template-columns: 4.6rem 3.8rem minmax(0, 1fr);
+  gap: 6px;
+  padding: 6px 0;
+  border-top-width: 1px;
+}
+
+.game-shell[data-view="planning"] .decision-control > span {
+  gap: 0;
+}
+
+.game-shell[data-view="planning"] .decision-control strong {
+  font-size: 0.82rem;
+}
+
+.game-shell[data-view="planning"] .decision-control small,
+.game-shell[data-view="planning"] .decision-exact > span:first-child {
+  display: none;
+}
+
+.game-shell[data-view="planning"] .decision-exact {
+  min-width: 0;
+}
+
+.game-shell[data-view="planning"] .decision-exact input {
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 5px;
+  border-width: 1px;
+  font-size: 0.78rem;
+}
+
+.game-shell[data-view="planning"] .decision-exact-value {
+  gap: 2px;
+  font-size: 0.72rem;
+}
+
+.game-shell[data-view="planning"] .decision-exact-value input {
+  width: 100%;
+}
+
+.game-shell[data-view="planning"] .decision-control > .decision-slider {
+  grid-column: auto;
+}
+
+.game-shell[data-view="planning"] .decision-slider {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.game-shell[data-view="planning"] .decision-slider input[type="range"] {
+  min-height: 25px;
+}
+
+.game-shell[data-view="planning"] .decision-cost {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.61rem;
+  line-height: 1.05;
+  text-align: left;
+}
+
+.game-shell[data-view="planning"] .inline-error {
+  margin: 2px 0 4px;
+  font-size: 0.68rem;
+}
+
+.game-shell[data-view="planning"] .simulation-button {
+  display: grid;
+  width: max-content;
+  min-height: 0;
+  justify-items: center;
+  gap: 1px;
+  margin: 3px auto 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #211d14;
+  box-shadow: none;
+  letter-spacing: 0.03em;
+}
+
+.game-shell[data-view="planning"] .simulation-button-art {
+  display: block;
+  width: 66px;
+  height: 66px;
+  filter: drop-shadow(3px 3px 0 rgb(33 29 20 / 16%));
+}
+
+.game-shell[data-view="planning"] .simulation-button span {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+
+.game-shell[data-view="planning"] .simulation-button:active:not(:disabled) {
+  transform: scale(0.96);
+  box-shadow: none;
+}
+
+.game-shell[data-view="report"] .stand-stage,
+.game-shell[data-view="report"] > lemonade-decision-panel,
+.game-shell[data-view="report"] .conditions,
+.game-shell[data-view="report"] .obligation-strip {
+  display: none;
+}
+
+.game-shell[data-view="simulation"],
+.game-shell[data-view="forecast"] {
+  width: 100%;
+  min-height: 100dvh;
+  padding: 0;
+}
+
+.game-shell[data-view="simulation"] > :not(.stand-stage),
+.game-shell[data-view="forecast"] > :not(.stand-stage) {
+  display: none;
+}
+
+.game-shell[data-view="simulation"] .stand-stage,
+.game-shell[data-view="forecast"] .stand-stage {
+  min-height: 100dvh;
+  border: 0;
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .game-shell[data-view="planning"] .simulation-button:hover:not(:disabled) {
+    transform: scale(1.035);
+    box-shadow: none;
+  }
+}
+
+@media (width >= 47.5625rem) {
+  .game-shell[data-view="planning"] {
+    width: min(880px, calc(100% - 32px));
+    padding-top: 18px;
+  }
+
+  .game-shell[data-view="planning"] > lemonade-run-tools {
+    top: 18px;
+  }
+
+  .game-shell[data-view="planning"] .topline {
+    padding-right: 4.5rem;
+  }
+
+  .game-shell[data-view="planning"] .conditions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .game-shell[data-view="planning"] .decision-panel {
+    padding: 12px 16px 14px;
+  }
+
+  .game-shell[data-view="planning"] .decision-control {
+    grid-template-columns: minmax(7rem, 0.8fr) 4.5rem minmax(14rem, 2fr);
+    padding: 8px 0;
+  }
+
+  .game-shell[data-view="planning"] .simulation-button-art {
+    width: 76px;
+    height: 76px;
+  }
+}

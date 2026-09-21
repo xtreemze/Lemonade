@@ -1,40 +1,65 @@
 .run-tools {
-  display: flex;
-  align-items: stretch;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 18px;
-  margin: 24px 0 18px;
-  padding: 14px 16px;
+  position: relative;
+  width: max-content;
+  max-width: 100%;
+}
+
+.run-tools-summary {
+  display: grid;
+  min-width: 44px;
+  min-height: 34px;
+  place-items: center;
+  padding: 5px 8px;
+  border: 1px solid #211d14;
+  background: rgb(255 249 228 / 92%);
+  box-shadow: 2px 2px 0 #211d14;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+}
+
+.run-tools-summary::-webkit-details-marker {
+  display: none;
+}
+
+.run-tools-popover {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  z-index: 40;
+  width: min(19rem, calc(100dvw - 20px));
+  padding: 12px;
   border: 2px solid #211d14;
-  background: rgb(255 249 228 / 88%);
+  background: #fff9e4;
   box-shadow: 5px 5px 0 #211d14;
 }
 
 .run-tools-copy {
   min-width: 0;
+  margin-bottom: 9px;
 }
 
 .run-tools .eyebrow {
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .run-status {
   color: #4f493d;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
 }
 
 .run-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: stretch;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
 }
 
 .utility-button {
-  flex: 1 1 9rem;
-  min-height: 44px;
-  padding: 8px 12px;
+  min-height: 40px;
+  padding: 7px 10px;
   border: 2px solid #211d14;
   background: #f6df8f;
   color: #211d14;
@@ -44,12 +69,14 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .run-tools-summary:hover,
   .utility-button:hover:not(:disabled) {
     transform: translate(-1px, -1px);
     box-shadow: 4px 4px 0 #211d14;
   }
 }
 
+.run-tools-summary:active,
 .utility-button:active:not(:disabled) {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 #211d14;
@@ -113,8 +140,8 @@
 }
 
 .bootstrap-recovery > p:not(.eyebrow) {
-  margin-bottom: 18px;
   max-width: 62ch;
+  margin-bottom: 18px;
 }
 
 @media (width >= 47.5625rem) {
@@ -123,16 +150,11 @@
     justify-content: flex-end;
   }
 
-  .run-tools {
-    align-items: center;
-    flex-direction: row;
+  .run-tools-popover {
+    width: 20rem;
   }
 
   .run-actions {
-    justify-content: flex-end;
-  }
-
-  .utility-button {
-    flex: 0 1 auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
