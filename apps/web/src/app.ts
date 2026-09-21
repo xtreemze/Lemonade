@@ -62,12 +62,6 @@ const moneyFormatter = new Intl.NumberFormat("en-US", {
 
 const formatMoney = (cents: number): string => moneyFormatter.format(cents / 100);
 
-const decisionBudget = (state: GameState): number =>
-  Math.max(
-    0,
-    Number(availableOperatingFunds(state)) - Number(predictableFixedObligations(state)),
-  );
-
 const decisionLimit = (
   state: GameState,
 ): Readonly<{ glasses: number; signs: number; price: number }> => {
