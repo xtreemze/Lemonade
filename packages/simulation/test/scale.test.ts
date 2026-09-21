@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DecisionOutsideOperatingScaleError,
   OPERATING_SCALE_THRESHOLDS_CENTS,
   createInitialState,
+  glassCount,
   moneyCents,
+  neutralEnvironment,
   operatingScaleForEquity,
   operatingScaleForState,
+  signCount,
+  simulateDay,
 } from "../src/index.js";
 
 describe("operating-scale progression", () => {
@@ -61,5 +66,32 @@ describe("operating-scale progression", () => {
     });
 
     expect(operatingScaleForState(leveraged).level).toBe(2);
+  });
+  it("rejects otherwise-affordable decisions outside the unlocked envelope", () => {
+    const state = createInitialState();
+
+    expect(() =>
+      simulateDay(
+        state,
+        Object.freeze({
+          glasses: glassCount(16),
+          signs: signCount(1),
+          price: moneyCents(10),
+        }),
+        neutralEnvironment(),
+      ),
+    ).toThrow(DecisionOutsideOperatingScaleError);
+
+    expect(() =>
+      simulateDay(
+        state,
+        Object.freeze({
+          glasses: glassCount(15),
+          signs: signCount(1),
+          price: moneyCents(300),
+        }),
+        neutralEnvironment(),
+      ),
+    ).toThrow(DecisionOutsideOperatingScaleError);
   });
 });
