@@ -32,6 +32,10 @@ describe("balance certification", () => {
     const progression = report.profiles.find((profile) => profile.strategy === "progression");
     expect(progression?.maxTier).toBe(4);
     expect(progression?.earliestDayByTier.slice(0, 5).every((day) => day !== null)).toBe(true);
+    expect(progression?.maxOperatingScale).toBeGreaterThanOrEqual(3);
+    expect(
+      progression?.earliestDayByOperatingScale.slice(0, 3).every((day) => day !== null),
+    ).toBe(true);
   });
 
   it("formats a human-reviewable deterministic report", () => {
