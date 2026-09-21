@@ -1,4 +1,9 @@
-import { createProceduralAudioEngine, weatherCue, type AudioCue } from "@lemonade/audio";
+import {
+  WEATHER_FORECAST_DURATION_MS,
+  createProceduralAudioEngine,
+  weatherCue,
+  type AudioCue,
+} from "@lemonade/audio";
 import {
   availableOperatingFunds,
   createInitialState,
@@ -45,7 +50,7 @@ import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.j
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
 const SIMULATION_PRESENTATION_MS = 5_000;
-const FORECAST_PRESENTATION_MS = 3_000;
+const FORECAST_PRESENTATION_MS = WEATHER_FORECAST_DURATION_MS;
 
 type PresentationPhase = "planning" | "simulation" | "report" | "forecast";
 
