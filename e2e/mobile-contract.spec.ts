@@ -8,7 +8,11 @@ const viewports: readonly MobileViewport[] = Object.freeze([
   { name: "tall portrait", width: 390, height: 844 },
   { name: "large portrait", width: 430, height: 932 },
   { name: "landscape", width: 740, height: 360 },
+  { name: "wide phone landscape", width: 844, height: 390 },
+  { name: "large phone landscape", width: 932, height: 430 },
 ]);
+
+test.use({ hasTouch: true, isMobile: true });
 
 const expectViewportContract = async (
   page: Page,
