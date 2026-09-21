@@ -319,11 +319,28 @@ export class LemonadeDecisionPanel extends LitElement {
           <p class=${model.affordable ? "spend" : "spend spend-warning"}>${model.spendText}</p>
         </header>
 
-        <div class="decision-control">
-          <span>
-            <strong id="glasses-label">Glasses</strong>
-            <small id="glasses-help">Inventory prepared before demand is known</small>
-          </span>
+        <div class="decision-control decision-control-glasses">
+          <div class="decision-control-heading">
+            <span>
+              <strong id="glasses-label">Glasses</strong>
+              <small id="glasses-help">Inventory prepared before demand is known</small>
+            </span>
+            <output id="glasses-cost" class="decision-cost" for="glasses glasses-exact">
+              ${model.glassesCostText}
+            </output>
+          </div>
+          <input
+            id="glasses"
+            class="game-slider"
+            name="glasses"
+            type="range"
+            min="0"
+            step="1"
+            .max=${String(model.maxGlasses)}
+            .value=${String(model.glasses)}
+            aria-labelledby="glasses-label"
+            aria-describedby="glasses-help glasses-cost"
+          />
           <label class="decision-exact" for="glasses-exact">
             <span id="glasses-exact-label">Exact</span>
             <input
@@ -339,29 +356,30 @@ export class LemonadeDecisionPanel extends LitElement {
               aria-describedby="glasses-help glasses-cost"
             />
           </label>
-          <div class="decision-slider">
-            <input
-              id="glasses"
-              name="glasses"
-              type="range"
-              min="0"
-              step="1"
-              .max=${String(model.maxGlasses)}
-              .value=${String(model.glasses)}
-              aria-labelledby="glasses-label"
-              aria-describedby="glasses-help glasses-cost"
-            />
-            <output id="glasses-cost" class="decision-cost" for="glasses glasses-exact">
-              ${model.glassesCostText}
-            </output>
-          </div>
         </div>
 
-        <div class="decision-control">
-          <span>
-            <strong id="signs-label">Signs</strong>
-            <small id="signs-help">Advertising helps demand with diminishing returns</small>
-          </span>
+        <div class="decision-control decision-control-signs">
+          <div class="decision-control-heading">
+            <span>
+              <strong id="signs-label">Signs</strong>
+              <small id="signs-help">Advertising helps demand with diminishing returns</small>
+            </span>
+            <output id="signs-cost" class="decision-cost" for="signs signs-exact">
+              ${model.signsCostText}
+            </output>
+          </div>
+          <input
+            id="signs"
+            class="game-slider"
+            name="signs"
+            type="range"
+            min="0"
+            step="1"
+            .max=${String(model.maxSigns)}
+            .value=${String(model.signs)}
+            aria-labelledby="signs-label"
+            aria-describedby="signs-help signs-cost"
+          />
           <label class="decision-exact" for="signs-exact">
             <span id="signs-exact-label">Exact</span>
             <input
@@ -377,29 +395,30 @@ export class LemonadeDecisionPanel extends LitElement {
               aria-describedby="signs-help signs-cost"
             />
           </label>
-          <div class="decision-slider">
-            <input
-              id="signs"
-              name="signs"
-              type="range"
-              min="0"
-              step="1"
-              .max=${String(model.maxSigns)}
-              .value=${String(model.signs)}
-              aria-labelledby="signs-label"
-              aria-describedby="signs-help signs-cost"
-            />
-            <output id="signs-cost" class="decision-cost" for="signs signs-exact">
-              ${model.signsCostText}
-            </output>
-          </div>
         </div>
 
-        <div class="decision-control">
-          <span>
-            <strong id="price-label">Price</strong>
-            <small id="price-help">Higher margin can sharply reduce demand</small>
-          </span>
+        <div class="decision-control decision-control-price">
+          <div class="decision-control-heading">
+            <span>
+              <strong id="price-label">Price</strong>
+              <small id="price-help">Higher margin can sharply reduce demand</small>
+            </span>
+            <output id="price-value" class="decision-cost" for="price price-exact">
+              ${model.priceText}
+            </output>
+          </div>
+          <input
+            id="price"
+            class="game-slider"
+            name="price"
+            type="range"
+            min="1"
+            .max=${String(model.maxPriceCents)}
+            step="1"
+            .value=${String(model.price)}
+            aria-labelledby="price-label"
+            aria-describedby="price-help price-value"
+          />
           <label class="decision-exact" for="price-exact">
             <span id="price-exact-label">Exact cents</span>
             <span class="decision-exact-value">
@@ -418,22 +437,6 @@ export class LemonadeDecisionPanel extends LitElement {
               <span aria-hidden="true">¢</span>
             </span>
           </label>
-          <div class="decision-slider">
-            <input
-              id="price"
-              name="price"
-              type="range"
-              min="1"
-              .max=${String(model.maxPriceCents)}
-              step="1"
-              .value=${String(model.price)}
-              aria-labelledby="price-label"
-              aria-describedby="price-help price-value"
-            />
-            <output id="price-value" class="decision-cost" for="price price-exact">
-              ${model.priceText}
-            </output>
-          </div>
         </div>
 
         <p id="decision-error" class="inline-error" role="alert" ?hidden=${model.affordable}>
