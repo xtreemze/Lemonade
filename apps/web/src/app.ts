@@ -6,6 +6,7 @@ import {
   financeRulesForTier,
   generateEnvironment,
   glassCount,
+  legacyConfidenceForState,
   moneyCents,
   operatingScaleForState,
   predictableFixedObligations,
@@ -49,16 +50,8 @@ type PresentationPhase = "planning" | "simulation" | "report" | "forecast";
 const weatherLabel: Record<DayEnvironment["weather"]["kind"], string> = {
   sunny: "Sunny",
   cloudy: "Cloudy",
-  "hot-and-dry": "Hot & dry",
+  "hot-and-dry": "Partly cloudy",
   thunderstorm: "Thunderstorm",
-};
-
-const sentimentLabel: Record<DayEnvironment["sentiment"]["kind"], string> = {
-  "very-cold": "Very cautious",
-  cold: "Cautious",
-  neutral: "Neutral",
-  warm: "Interested",
-  hot: "Eager",
 };
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
@@ -154,7 +147,7 @@ const SHELL_MARKUP = `
         <p class="eyebrow" id="conditions-title">Today’s conditions</p>
         <strong id="condition-weather"></strong>
       </div>
-      <div><span>Market sentiment</span><strong id="condition-sentiment"></strong></div>
+      <div><span>Confidence</span><strong id="condition-sentiment"></strong></div>
       <div><span>Production</span><strong id="condition-production"></strong></div>
       <div><span>Advertising</span><strong id="condition-advertising"></strong></div>
     </section>
@@ -614,7 +607,7 @@ export class LemonadeApp {
         break;
       case "forecast":
         this.#elements.sceneKicker.textContent = `Day ${String(Number(this.#game.day))} forecast`;
-        this.#elements.sceneTitle.textContent = `${weatherLabel[this.#environment.weather.kind]} · ${sentimentLabel[this.#environment.sentiment.kind]}`;
+        this.#elements.sceneTitle.textContent = `${weatherLabel[this.#environment.weather.kind]} · Confidence ${String(legacyConfidenceForState(this.#game))}/5`;
         break;
     }
   }
@@ -628,7 +621,7 @@ export class LemonadeApp {
     );
 
     this.#elements.conditionWeather.textContent = weatherLabel[this.#environment.weather.kind];
-    this.#elements.conditionSentiment.textContent = sentimentLabel[this.#environment.sentiment.kind];
+    this.#elements.conditionSentiment.textContent = `${String(legacyConfidenceForState(this.#game))} / 5`;
     this.#elements.conditionProduction.textContent = `${formatMoney(Number(this.#game.unitCost))} / glass`;
     this.#elements.conditionAdvertising.textContent = `${formatMoney(Number(this.#game.signCost))} / sign`;
     const scale = operatingScaleForState(this.#game);
