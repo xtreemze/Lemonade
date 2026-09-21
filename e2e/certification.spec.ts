@@ -8,6 +8,14 @@ const expectNoHorizontalOverflow = async (page: Page): Promise<void> => {
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 };
 
+const expectNoVerticalOverflow = async (page: Page): Promise<void> => {
+  const dimensions = await page.evaluate(() => ({
+    clientHeight: document.documentElement.clientHeight,
+    scrollHeight: document.documentElement.scrollHeight,
+  }));
+  expect(dimensions.scrollHeight).toBeLessThanOrEqual(dimensions.clientHeight + 1);
+};
+
 test("release artifact completes a day without uncaught runtime failures", async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -71,8 +79,12 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expect(page.locator("#scene-equivalent")).toContainText("glasses prepared");
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-presentation-duration-ms",
-    "5000",
+    "6000",
   );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-price-cents", "10");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-sign-price-label", "10¢");
+  await expect(page.locator("#scene-equivalent")).toContainText("10¢ per cup");
+  await expectNoVerticalOverflow(page);
   const simulationStage = await page.locator(".stand-stage").boundingBox();
   if (simulationStage === null) throw new Error("expected simulation stage bounds");
   expect(simulationStage.width).toBeGreaterThanOrEqual(359);
@@ -87,6 +99,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "data-presentation-duration-ms",
     "3000",
   );
+  await expectNoVerticalOverflow(page);
   await expect(main).toHaveAttribute("data-view", "planning");
   await expect(page.locator("#status-day")).toHaveText("2");
   await expectNoHorizontalOverflow(page);
