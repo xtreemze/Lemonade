@@ -93,45 +93,45 @@ export class LemonadeRunTools extends LitElement {
   protected override render(): ReturnType<typeof html> {
     const { statusMessage, errorMessage, persistenceEnabled } = this.model;
     return html`
-      <section class="run-tools" aria-label="Run data">
-        <div class="run-tools-copy">
-          <p class="eyebrow">Run data</p>
-          <p id="run-status" class="run-status" role="status" aria-live="polite">${statusMessage}</p>
-          <p id="run-error" class="inline-error" role="alert" ?hidden=${errorMessage === null}>
-            ${errorMessage ?? ""}
-          </p>
-        </div>
-        <div class="run-actions">
-          <button id="export-run" class="utility-button" type="button">
-            Export run
-          </button>
-          <button
-            id="import-run"
-            class="utility-button"
-            type="button"
-            ?disabled=${!persistenceEnabled}
-           
-          >
-            Import run
-          </button>
-          <input
-            id="import-file"
-            type="file"
-            accept="application/json,.json"
-            hidden
-           
-          />
-          <button
-            id="reset-run"
-            class="utility-button utility-button-danger"
-            type="button"
-            ?disabled=${!persistenceEnabled}
-           
-          >
-            Reset run
-          </button>
-        </div>
-      </section>
+      <details class="run-tools">
+        <summary class="run-tools-summary">Run</summary>
+        <section class="run-tools-popover" aria-label="Run data">
+          <div class="run-tools-copy">
+            <p class="eyebrow">Run data</p>
+            <p id="run-status" class="run-status" role="status" aria-live="polite">${statusMessage}</p>
+            <p id="run-error" class="inline-error" role="alert" ?hidden=${errorMessage === null}>
+              ${errorMessage ?? ""}
+            </p>
+          </div>
+          <div class="run-actions">
+            <button id="export-run" class="utility-button" type="button">
+              Export run
+            </button>
+            <button
+              id="import-run"
+              class="utility-button"
+              type="button"
+              ?disabled=${!persistenceEnabled}
+            >
+              Import run
+            </button>
+            <input
+              id="import-file"
+              type="file"
+              accept="application/json,.json"
+              hidden
+            />
+            <button
+              id="reset-run"
+              class="utility-button utility-button-danger"
+              type="button"
+              ?disabled=${!persistenceEnabled}
+            >
+              Reset run
+            </button>
+          </div>
+        </section>
+      </details>
       <dialog id="reset-dialog" class="reset-dialog" aria-labelledby="reset-dialog-title">
         <form class="reset-dialog-card" method="dialog">
           <p class="eyebrow">Destructive action</p>
@@ -437,8 +437,20 @@ export class LemonadeDecisionPanel extends LitElement {
         <p id="decision-error" class="inline-error" role="alert" ?hidden=${model.affordable}>
           This plan exceeds available cash and credit. Reduce glasses or signs.
         </p>
-        <button id="sell-button" class="sell-button" type="submit" ?disabled=${!model.affordable}>
-          Sell for the day
+        <button
+          id="sell-button"
+          class="sell-button simulation-button"
+          type="submit"
+          aria-label="Sell for the day"
+          ?disabled=${!model.affordable}
+        >
+          <img
+            class="simulation-button-art"
+            src="./lemonade-simulate.svg"
+            alt=""
+            aria-hidden="true"
+          />
+          <span>Simulate day</span>
         </button>
       </form>
     `;
