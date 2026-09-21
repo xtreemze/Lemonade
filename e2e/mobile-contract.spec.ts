@@ -23,7 +23,7 @@ const expectViewportContract = async (
     if (!(shell instanceof HTMLElement)) throw new TypeError("Expected .game-shell.");
 
     const rect = shell.getBoundingClientRect();
-    const scrollable = [...document.querySelectorAll<HTMLElement>("body *")]
+    const overflowViolations = [...document.querySelectorAll<HTMLElement>("body *")]
       .filter((element) => {
         const style = getComputedStyle(element);
         if (
@@ -33,13 +33,16 @@ const expectViewportContract = async (
         ) {
           return false;
         }
-        const vertical =
-          /^(?:auto|scroll)$/u.test(style.overflowY) &&
-          element.scrollHeight > element.clientHeight + 1;
-        const horizontal =
-          /^(?:auto|scroll)$/u.test(style.overflowX) &&
-          element.scrollWidth > element.clientWidth + 1;
-        return vertical || horizontal;
+
+        const verticalOverflow = element.scrollHeight > element.clientHeight + 1;
+        const horizontalOverflow = element.scrollWidth > element.clientWidth + 1;
+        const userScrollable =
+          (verticalOverflow && /^(?:auto|scroll)$/u.test(style.overflowY)) ||
+          (horizontalOverflow && /^(?:auto|scroll)$/u.test(style.overflowX));
+        const verticallyClipped =
+          verticalOverflow && /^(?:hidden|clip)$/u.test(style.overflowY);
+
+        return userScrollable || verticallyClipped;
       })
       .map((element) => {
         const id = element.id.length > 0 ? `#${element.id}` : "";
@@ -67,7 +70,7 @@ const expectViewportContract = async (
       windowScroll: { x: window.scrollX, y: window.scrollY },
       bodyOverflow: getComputedStyle(document.body).overflow,
       shellOverflow: getComputedStyle(shell).overflow,
-      scrollable,
+      overflowViolations,
     };
   });
 
@@ -81,7 +84,7 @@ const expectViewportContract = async (
   expect(contract.windowScroll).toEqual({ x: 0, y: 0 });
   expect(contract.bodyOverflow).toBe("hidden");
   expect(contract.shellOverflow).toBe("hidden");
-  expect(contract.scrollable).toEqual([]);
+  expect(contract.overflowViolations).toEqual([]);
 };
 
 const expectCenteredBottomAction = async (
