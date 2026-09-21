@@ -1,7 +1,7 @@
 export * from "./certification.js";
 export * from "./environment.js";
 export * from "./finance.js";
-export * from "./model.js";
+export type * from "./model.js";
 export * from "./primitives.js";
 export * from "./rng.js";
 export * from "./rules.js";
