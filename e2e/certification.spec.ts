@@ -69,12 +69,24 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expect(main).toHaveAttribute("data-view", "simulation");
   await expect(page.locator(".stand-stage")).toBeVisible();
   await expect(page.locator("#scene-equivalent")).toContainText("glasses prepared");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-presentation-duration-ms",
+    "5000",
+  );
+  const simulationStage = await page.locator(".stand-stage").boundingBox();
+  if (simulationStage === null) throw new Error("expected simulation stage bounds");
+  expect(simulationStage.width).toBeGreaterThanOrEqual(359);
+  expect(simulationStage.height).toBeGreaterThanOrEqual(739);
   await expect(main).toHaveAttribute("data-view", "report");
   await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
 
   await page.getByRole("button", { name: "Plan next day" }).click();
   await expect(main).toHaveAttribute("data-view", "forecast");
   await expect(page.locator("#scene-title")).not.toBeEmpty();
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-presentation-duration-ms",
+    "3000",
+  );
   await expect(main).toHaveAttribute("data-view", "planning");
   await expect(page.locator("#status-day")).toHaveText("2");
   await expectNoHorizontalOverflow(page);
