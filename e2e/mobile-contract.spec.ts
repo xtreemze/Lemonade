@@ -26,7 +26,13 @@ const expectViewportContract = async (
     const scrollable = [...document.querySelectorAll<HTMLElement>("body *")]
       .filter((element) => {
         const style = getComputedStyle(element);
-        if (style.display === "none" || style.visibility === "hidden") return false;
+        if (
+          style.display === "none" ||
+          style.visibility === "hidden" ||
+          element.getClientRects().length === 0
+        ) {
+          return false;
+        }
         const vertical =
           /^(?:auto|scroll)$/u.test(style.overflowY) &&
           element.scrollHeight > element.clientHeight + 1;
