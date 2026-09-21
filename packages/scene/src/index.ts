@@ -31,7 +31,7 @@ export interface LemonsvilleSceneController {
 const skyColor: Record<SceneWeather, number> = {
   sunny: 0x79cbe0,
   cloudy: 0xaabcc3,
-  "hot-and-dry": 0xe6b05f,
+  "hot-and-dry": 0x9fc9d3,
   thunderstorm: 0x536471,
 };
 
@@ -260,19 +260,17 @@ const createWeatherObjects = (): Record<SceneWeather, THREE.Group> => {
   sunny.add(sun);
   sunny.position.set(5.1, 6.7, -1.8);
 
-  const hot = new THREE.Group();
-  const hotSun = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.08, 1),
-    makeMaterial(0xff9f32),
+  const partlyCloudy = new THREE.Group();
+  const partlySun = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(0.72, 1),
+    makeMaterial(0xffd447),
   );
-  hot.add(hotSun);
-  const halo = new THREE.Mesh(
-    new THREE.TorusGeometry(1.45, 0.08, 6, 18),
-    makeMaterial(0xffd05d),
-  );
-  halo.rotation.x = Math.PI / 2;
-  hot.add(halo);
-  hot.position.set(5.0, 6.4, -1.9);
+  partlySun.position.set(0.85, 0.55, -0.25);
+  partlyCloudy.add(partlySun);
+  const partlyCloud = createCloud(0xd7e0df);
+  partlyCloud.position.set(-0.35, 0, 0.15);
+  partlyCloudy.add(partlyCloud);
+  partlyCloudy.position.set(3.9, 6.25, -1.8);
 
   const cloudy = createCloud(0xd7e0df);
   cloudy.position.set(-4.1, 6.4, -1.8);
@@ -297,7 +295,7 @@ const createWeatherObjects = (): Record<SceneWeather, THREE.Group> => {
     thunderstorm.add(drop);
   }
 
-  return { sunny, cloudy, "hot-and-dry": hot, thunderstorm };
+  return { sunny, cloudy, "hot-and-dry": partlyCloudy, thunderstorm };
 };
 
 type DisposableMesh = THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>;
