@@ -899,3 +899,159 @@ h2 {
     height: 76px;
   }
 }
+
+
+/* Viewport contract: transient presentation stages are discrete screens, never documents to scroll. */
+.history-next-button {
+  display: none;
+}
+
+html:has(.game-shell[data-view="simulation"]),
+html:has(.game-shell[data-view="report"]),
+html:has(.game-shell[data-view="history"]),
+html:has(.game-shell[data-view="forecast"]),
+body:has(.game-shell[data-view="simulation"]),
+body:has(.game-shell[data-view="report"]),
+body:has(.game-shell[data-view="history"]),
+body:has(.game-shell[data-view="forecast"]) {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.game-shell[data-view="simulation"],
+.game-shell[data-view="report"],
+.game-shell[data-view="history"],
+.game-shell[data-view="forecast"] {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  max-height: 100dvh;
+  margin: 0;
+  overflow: hidden;
+}
+
+.game-shell[data-view="simulation"],
+.game-shell[data-view="forecast"] {
+  padding: 0;
+}
+
+.game-shell[data-view="simulation"] .stand-stage,
+.game-shell[data-view="forecast"] .stand-stage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100dvh;
+}
+
+.game-shell[data-view="report"] {
+  padding:
+    max(8px, env(safe-area-inset-top))
+    max(10px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom))
+    max(10px, env(safe-area-inset-left));
+}
+
+.game-shell[data-view="report"] > :not(lemonade-day-report) {
+  display: none;
+}
+
+.game-shell[data-view="report"] > lemonade-day-report {
+  min-height: 0;
+  height: 100%;
+}
+
+.game-shell[data-view="report"] .report-panel {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: clamp(10px, 3vw, 18px);
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.game-shell[data-view="report"] .panel-heading {
+  align-items: center;
+  flex-direction: row;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.game-shell[data-view="report"] .panel-heading h2 {
+  font-size: clamp(1.35rem, 6vw, 2rem);
+}
+
+.game-shell[data-view="report"] .profit,
+.game-shell[data-view="report"] .loss {
+  flex: none;
+  font-size: clamp(1.35rem, 6vw, 2rem);
+}
+
+.game-shell[data-view="report"] .results-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.game-shell[data-view="report"] .results-grid > div {
+  min-height: 0;
+  padding: 8px 10px;
+}
+
+.game-shell[data-view="report"] .results-grid dd {
+  margin-top: 3px;
+  font-size: 0.95rem;
+}
+
+.game-shell[data-view="report"] .event-note,
+.game-shell[data-view="report"] .progression-note {
+  margin: 0;
+  padding: 7px 9px;
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.game-shell[data-view="report"] .next-button {
+  min-height: 50px;
+  margin-top: auto;
+}
+
+.game-shell[data-view="history"] {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding:
+    max(8px, env(safe-area-inset-top))
+    max(10px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom))
+    max(10px, env(safe-area-inset-left));
+}
+
+.game-shell[data-view="history"] > :not(#ledger-history-host):not(#history-next-button) {
+  display: none;
+}
+
+.game-shell[data-view="history"] > #ledger-history-host {
+  min-height: 0;
+}
+
+.game-shell[data-view="history"] > .history-next-button {
+  display: block;
+  min-height: 50px;
+}
+
+@media (orientation: landscape) {
+  .game-shell[data-view="report"] .report-panel {
+    padding: 8px 12px;
+  }
+
+  .game-shell[data-view="report"] .results-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
