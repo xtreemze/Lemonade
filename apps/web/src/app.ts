@@ -1,4 +1,9 @@
-import { createProceduralAudioEngine, weatherCue, type AudioCue } from "@lemonade/audio";
+import {
+  WEATHER_FORECAST_DURATION_MS,
+  createProceduralAudioEngine,
+  weatherCue,
+  type AudioCue,
+} from "@lemonade/audio";
 import {
   availableOperatingFunds,
   createInitialState,
@@ -44,8 +49,7 @@ import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
-const SIMULATION_PRESENTATION_MS = 5_000;
-const FORECAST_PRESENTATION_MS = 3_000;
+const SIMULATION_PRESENTATION_MS = 10_000;
 
 type PresentationPhase = "planning" | "simulation" | "report" | "forecast";
 
@@ -279,7 +283,7 @@ export class LemonadeApp {
     this.#game = initialRun.state;
     this.#environment = initialRun.environment;
     this.#phase = initialRun.phase;
-    this.#presentation = initialRun.phase.kind === "report" ? "report" : "planning";
+    this.#presentation = initialRun.phase.kind === "report" ? "report" : "forecast";
     const initialLimits = decisionLimit(this.#game);
     this.#glasses = Math.min(Number(initialRun.draft.glasses), initialLimits.glasses);
     this.#signs = Math.min(Number(initialRun.draft.signs), initialLimits.signs);
@@ -315,6 +319,11 @@ export class LemonadeApp {
       this.#queueSave("Run saved locally.");
     } else {
       this.#showPersistenceStatus("Autosave is unavailable in this browser context.");
+    }
+
+    if (this.#phase.kind === "deciding") {
+      this.#playWeatherForecastCue(this.#environment.weather.kind);
+      this.#schedulePresentation("planning", WEATHER_FORECAST_DURATION_MS);
     }
   }
 
@@ -426,15 +435,12 @@ export class LemonadeApp {
     this.#render();
     this.#queueSave("Next day saved locally.");
 
-    void this.#audio.enable().then((enabled) => {
-      if (!enabled) return;
-      this.#audio.play(weatherCue(nextEnvironment.weather.kind));
-    });
+    this.#playWeatherForecastCue(nextEnvironment.weather.kind);
     if (nextEnvironment.weather.kind === "thunderstorm") {
       this.#scheduleFeedback(160, "storm:thunder", "storm:thunder");
     }
 
-    this.#schedulePresentation("planning", FORECAST_PRESENTATION_MS);
+    this.#schedulePresentation("planning", WEATHER_FORECAST_DURATION_MS);
   };
 
   readonly #onExportRun = (): void => {
@@ -562,6 +568,15 @@ export class LemonadeApp {
       this.#emitFeedback(audioCue, hapticCue);
     }, Math.max(0, delayMs));
     this.#feedbackTimers.push(timer);
+  }
+
+  #playWeatherForecastCue(weather: DayEnvironment["weather"]["kind"]): void {
+    void this.#audio
+      .enable()
+      .then((enabled) => {
+        if (enabled && !this.#disposed) this.#audio.play(weatherCue(weather));
+      })
+      .catch(() => undefined);
   }
 
   #schedulePurchaseFeedback(resolution: DayResolution): void {
@@ -720,7 +735,7 @@ export class LemonadeApp {
         scenePhase === "simulation"
           ? SIMULATION_PRESENTATION_MS
           : scenePhase === "forecast"
-            ? FORECAST_PRESENTATION_MS
+            ? WEATHER_FORECAST_DURATION_MS
             : 0,
     });
   }
