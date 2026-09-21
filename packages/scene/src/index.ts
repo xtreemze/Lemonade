@@ -156,36 +156,6 @@ const createSign = (index: number): SignModel => {
   return Object.freeze({ root, labelMaterial });
 };
 
-const createSignTexture = (priceLabel: string): THREE.CanvasTexture => {
-  const surface = document.createElement("canvas");
-  surface.width = 512;
-  surface.height = 320;
-  const context = surface.getContext("2d");
-
-  if (context !== null) {
-    context.fillStyle = "#f5d34c";
-    context.fillRect(0, 0, surface.width, surface.height);
-    context.strokeStyle = "#211d14";
-    context.lineWidth = 18;
-    context.strokeRect(9, 9, surface.width - 18, surface.height - 18);
-    context.fillStyle = "#211d14";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.font = "900 64px system-ui, sans-serif";
-    context.fillText("LEMONADE", surface.width / 2, 80);
-    context.font = "900 104px ui-monospace, monospace";
-    context.fillText(priceLabel, surface.width / 2, 185);
-    context.font = "800 42px system-ui, sans-serif";
-    context.fillText("PER CUP", surface.width / 2, 270);
-  }
-
-  const texture = new THREE.CanvasTexture(surface);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  return texture;
-};
-
 type PersonRig = Readonly<{
   root: THREE.Group;
   torso: THREE.Mesh;
@@ -285,21 +255,12 @@ const createPerson = (index: number): PersonRig => {
     hair.position.set(0, 1.79, 0);
     root.add(hair);
   } else if (index % 4 === 0) {
-    const brim = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.31, 0.31, 0.055, 8),
+    const hat = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.3, 0.3, 0.08, 8),
       makeMaterial(bodyColor),
     );
-    brim.position.set(0, 1.95, 0);
-    const crown = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.21, 0.23, 0.18, 8),
-      makeMaterial(bodyColor),
-    );
-    crown.position.set(0, 2.04, 0);
-    root.add(brim, crown);
-  }
-
-  if (index % 5 === 0) {
-    addBox(root, [0.2, 0.34, 0.13], [0.37, 1.0, -0.15], 0x644c34);
+    hat.position.set(0, 1.96, 0);
+    root.add(hat);
   }
 
   const cup = createDrinkingCup();
@@ -590,13 +551,10 @@ export const createLemonsvilleScene = (
   scene.add(createStand());
 
   const signs = Array.from({ length: 25 }, (_, index) => createSign(index));
-  let signTexture = createSignTexture(formatPriceLabel(initialState.priceCents));
-  let signPriceLabel = formatPriceLabel(initialState.priceCents);
-  for (const sign of signs) {
-    sign.labelMaterial.map = signTexture;
-    sign.labelMaterial.needsUpdate = true;
-    scene.add(sign.root);
-  }
+  let signTexture: THREE.CanvasTexture | null = null;
+  let signPriceLabel = "";
+  let signLabelModule: Promise<typeof import("./sign-label.js")> | null = null;
+  for (const sign of signs) scene.add(sign.root);
   const signOrigins = signs.map((sign) => sign.root.rotation.z);
 
   const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) =>
@@ -658,15 +616,24 @@ export const createLemonsvilleScene = (
 
   const updateSignPrice = (priceLabel: string): void => {
     if (priceLabel === signPriceLabel) return;
-    const previousTexture = signTexture;
-    signTexture = createSignTexture(priceLabel);
     signPriceLabel = priceLabel;
-    for (const sign of signs) {
-      sign.labelMaterial.map = signTexture;
-      sign.labelMaterial.needsUpdate = true;
-    }
-    previousTexture.dispose();
     canvas.dataset["signPriceLabel"] = priceLabel;
+    signLabelModule ??= import("./sign-label.js");
+    void signLabelModule.then(({ createPriceSignSurface }) => {
+      if (priceLabel !== signPriceLabel) return;
+      const previousTexture = signTexture;
+      const nextTexture = new THREE.CanvasTexture(createPriceSignSurface(priceLabel));
+      nextTexture.colorSpace = THREE.SRGBColorSpace;
+      nextTexture.minFilter = THREE.LinearFilter;
+      nextTexture.magFilter = THREE.LinearFilter;
+      signTexture = nextTexture;
+      for (const sign of signs) {
+        sign.labelMaterial.map = nextTexture;
+        sign.labelMaterial.needsUpdate = true;
+      }
+      previousTexture?.dispose();
+      render();
+    });
   };
 
   const render = (): void => {
@@ -938,7 +905,7 @@ export const createLemonsvilleScene = (
   const dispose = (): void => {
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
     animationFrame = null;
-    signTexture.dispose();
+    signTexture?.dispose();
     scene.traverse(disposeObject);
     renderer.dispose();
   };
