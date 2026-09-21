@@ -47,7 +47,7 @@ const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
 const SIMULATION_PRESENTATION_MS = 5_000;
 const FORECAST_PRESENTATION_MS = 3_000;
 
-type PresentationPhase = "planning" | "simulation" | "report" | "forecast";
+type PresentationPhase = "planning" | "simulation" | "report" | "history" | "forecast";
 
 const weatherLabel: Record<DayEnvironment["weather"]["kind"], string> = {
   sunny: "Sunny",
@@ -170,6 +170,10 @@ const SHELL_MARKUP = `
     <lemonade-day-report></lemonade-day-report>
 
     <div id="ledger-history-host"></div>
+
+    <button id="history-next-button" class="next-button history-next-button" type="button">
+      Plan next day
+    </button>
   </main>
 `;
 
@@ -203,6 +207,7 @@ type AppElements = Readonly<{
   decisionPanel: LemonadeDecisionPanel;
   reportPanel: LemonadeDayReport;
   historyHost: HTMLElement;
+  historyNextButton: HTMLButtonElement;
   sceneKicker: HTMLElement;
   sceneTitle: HTMLElement;
   sceneCanvas: HTMLCanvasElement;
@@ -228,6 +233,7 @@ const collectElements = (root: HTMLElement): AppElements =>
     decisionPanel: requireElement(root, "lemonade-decision-panel", LemonadeDecisionPanel),
     reportPanel: requireElement(root, "lemonade-day-report", LemonadeDayReport),
     historyHost: requireElement(root, "#ledger-history-host", HTMLElement),
+    historyNextButton: requireElement(root, "#history-next-button", HTMLButtonElement),
     sceneKicker: requireElement(root, "#scene-kicker", HTMLElement),
     sceneTitle: requireElement(root, "#scene-title", HTMLElement),
     sceneCanvas: requireElement(root, "#scene-canvas", HTMLCanvasElement),
@@ -300,7 +306,11 @@ export class LemonadeApp {
       this.#onDecisionChange,
     );
     this.#elements.decisionPanel.addEventListener("lemonade-decision-submit", this.#onSell);
-    this.#elements.reportPanel.addEventListener("lemonade-next-day", this.#onNextDay);
+    this.#elements.reportPanel.addEventListener(
+      "lemonade-review-history",
+      this.#onReviewHistory,
+    );
+    this.#elements.historyNextButton.addEventListener("click", this.#onNextDay);
     this.#elements.runTools.addEventListener("lemonade-run-export", this.#onExportRun);
     this.#elements.runTools.addEventListener("lemonade-run-import-file", this.#onImportFile);
     this.#elements.runTools.addEventListener("lemonade-run-reset", this.#onResetRun);
@@ -326,7 +336,11 @@ export class LemonadeApp {
       this.#onDecisionChange,
     );
     this.#elements.decisionPanel.removeEventListener("lemonade-decision-submit", this.#onSell);
-    this.#elements.reportPanel.removeEventListener("lemonade-next-day", this.#onNextDay);
+    this.#elements.reportPanel.removeEventListener(
+      "lemonade-review-history",
+      this.#onReviewHistory,
+    );
+    this.#elements.historyNextButton.removeEventListener("click", this.#onNextDay);
     this.#elements.runTools.removeEventListener("lemonade-run-export", this.#onExportRun);
     this.#elements.runTools.removeEventListener("lemonade-run-import-file", this.#onImportFile);
     this.#elements.runTools.removeEventListener("lemonade-run-reset", this.#onResetRun);
@@ -409,8 +423,14 @@ export class LemonadeApp {
     });
   };
 
-  readonly #onNextDay = (): void => {
+  readonly #onReviewHistory = (): void => {
     if (this.#phase.kind !== "report" || this.#presentation !== "report") return;
+    this.#presentation = "history";
+    this.#render();
+  };
+
+  readonly #onNextDay = (): void => {
+    if (this.#phase.kind !== "report" || this.#presentation !== "history") return;
 
     const nextState = this.#phase.resolution.nextState;
     const nextEnvironment = generateEnvironment(nextState.day, this.#random);
@@ -645,6 +665,7 @@ export class LemonadeApp {
         this.#elements.sceneTitle.textContent = "Lemonsville is open";
         break;
       case "report":
+      case "history":
         this.#elements.sceneKicker.textContent = "";
         this.#elements.sceneTitle.textContent = "";
         break;
