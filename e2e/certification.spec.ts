@@ -67,6 +67,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
       throw new Error(`expected ${name} slider bounds`);
     }
     expect(sliderBox.width).toBeGreaterThanOrEqual(controlBox.width * 0.95);
+    expect(sliderBox.height).toBeGreaterThanOrEqual(56);
     const thumbStyle = await slider.evaluate((element) => {
       const style = getComputedStyle(element);
       return {
@@ -89,6 +90,30 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   const buttonBox = await simulationButton.boundingBox();
   if (buttonBox === null) throw new Error("expected simulation button bounds");
   expect(buttonBox.y + buttonBox.height).toBeLessThanOrEqual(740);
+  expect(740 - (buttonBox.y + buttonBox.height)).toBeLessThanOrEqual(24);
+
+  const simulationArt = page.locator(".simulation-button-art");
+  await expect(simulationArt).toBeVisible();
+  const artContract = await simulationArt.evaluate(async (image) => {
+    if (!(image instanceof HTMLImageElement)) throw new TypeError("expected simulation art image");
+    await image.decode();
+    const response = await fetch(image.src);
+    const markup = await response.text();
+    return {
+      naturalWidth: image.naturalWidth,
+      naturalHeight: image.naturalHeight,
+      clipsIce: markup.includes('clip-path="url(#glass-clip)"'),
+      floatsIce: markup.includes("ice-float"),
+      floatsStraw: markup.includes("straw-float"),
+      pours: markup.includes("pour-stream") && markup.includes("@keyframes pour"),
+    };
+  });
+  expect(artContract.naturalWidth).toBeGreaterThan(0);
+  expect(artContract.naturalHeight).toBeGreaterThan(0);
+  expect(artContract.clipsIce).toBe(true);
+  expect(artContract.floatsIce).toBe(true);
+  expect(artContract.floatsStraw).toBe(true);
+  expect(artContract.pours).toBe(true);
 
   await simulationButton.click();
   await expect(main).toHaveAttribute("data-view", "simulation");
