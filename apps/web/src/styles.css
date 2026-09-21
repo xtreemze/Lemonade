@@ -1232,7 +1232,7 @@ body:has(.game-shell[data-view="forecast"]) {
   }
 }
 
-@media (width >= 47.5625rem) {
+@media (width >= 47.5625rem) and (hover: hover) and (pointer: fine) {
   html:has(.game-shell[data-view="planning"]),
   html:has(.game-shell[data-view="report"]),
   body:has(.game-shell[data-view="planning"]),
