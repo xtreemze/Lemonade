@@ -1,23 +1,27 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buyerPhaseAt,
   completedSalesAt,
   createStreetStoryboard,
+  formatPriceLabel,
   remainingCupsAt,
   sceneCameraComposition,
+  sceneShotAt,
 } from "../src/storyboard.js";
 
 describe("street simulation storyboard", () => {
-  it("maps every sale to a buyer and one inventory decrement", () => {
+  it("maps every sale to a buyer, purchase, drink, departure and one inventory decrement", () => {
     const storyboard = createStreetStoryboard({
-      durationMs: 5_000,
+      durationMs: 6_000,
       prepared: 20,
       sold: 7,
       visibleSigns: 3,
+      priceCents: 10,
       ambientPedestrianCount: 10,
     });
 
-    expect(storyboard.durationMs).toBe(5_000);
+    expect(storyboard.durationMs).toBe(6_000);
     expect(storyboard.sales).toHaveLength(7);
     expect(storyboard.sales.map((sale) => sale.saleNumber)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(storyboard.sales.map((sale) => sale.remainingCups)).toEqual([
@@ -30,6 +34,12 @@ describe("street simulation storyboard", () => {
       throw new Error("expected sale beats");
     }
 
+    expect(buyerPhaseAt(firstSale, firstSale.approachAtMs)).toBe("approaching");
+    expect(buyerPhaseAt(firstSale, firstSale.purchaseAtMs)).toBe("purchasing");
+    expect(buyerPhaseAt(firstSale, firstSale.purchaseEndAtMs)).toBe("drinking");
+    expect(buyerPhaseAt(firstSale, firstSale.drinkEndAtMs)).toBe("departing");
+    expect(buyerPhaseAt(firstSale, firstSale.departAtMs + 1)).toBe("inactive");
+
     expect(completedSalesAt(storyboard, firstSale.purchaseAtMs - 1)).toBe(0);
     expect(completedSalesAt(storyboard, firstSale.purchaseAtMs)).toBe(1);
     expect(completedSalesAt(storyboard, lastSale.purchaseAtMs)).toBe(7);
@@ -38,10 +48,11 @@ describe("street simulation storyboard", () => {
 
   it("keeps non-buyers more numerous and assigns ad viewers only when signs exist", () => {
     const advertised = createStreetStoryboard({
-      durationMs: 5_000,
+      durationMs: 6_000,
       prepared: 60,
       sold: 18,
       visibleSigns: 5,
+      priceCents: 25,
       ambientPedestrianCount: 12,
     });
 
@@ -57,10 +68,11 @@ describe("street simulation storyboard", () => {
     ).toBe(true);
 
     const unadvertised = createStreetStoryboard({
-      durationMs: 5_000,
+      durationMs: 6_000,
       prepared: 60,
       sold: 18,
       visibleSigns: 0,
+      priceCents: 25,
       ambientPedestrianCount: 12,
     });
 
@@ -69,21 +81,66 @@ describe("street simulation storyboard", () => {
     expect(unadvertised.passersBy.some((pedestrian) => pedestrian.seesAdvertisement)).toBe(false);
   });
 
-  it("chooses an intentional camera composition for portrait, balanced, and wide scenes", () => {
-    expect(sceneCameraComposition(360, 740).mode).toBe("portrait");
-    expect(sceneCameraComposition(768, 740).mode).toBe("balanced");
-    expect(sceneCameraComposition(844, 390).mode).toBe("wide");
-    expect(sceneCameraComposition(360, 740).position[2]).toBeGreaterThan(
-      sceneCameraComposition(844, 390).position[2],
-    );
+  it("formats the actual selected price for use on every advertising sign", () => {
+    expect(formatPriceLabel(0)).toBe("FREE");
+    expect(formatPriceLabel(10)).toBe("10¢");
+    expect(formatPriceLabel(99)).toBe("99¢");
+    expect(formatPriceLabel(125)).toBe("$1.25");
+
+    const storyboard = createStreetStoryboard({
+      durationMs: 6_000,
+      prepared: 10,
+      sold: 4,
+      visibleSigns: 2,
+      priceCents: 35,
+      ambientPedestrianCount: 8,
+    });
+    expect(storyboard.priceLabel).toBe("35¢");
+    expect(storyboard.priceCents).toBe(35);
+  });
+
+  it("splits the full-height presentation into deterministic sequential shots", () => {
+    const storyboard = createStreetStoryboard({
+      durationMs: 6_000,
+      prepared: 10,
+      sold: 4,
+      visibleSigns: 2,
+      priceCents: 10,
+      ambientPedestrianCount: 8,
+    });
+
+    expect(storyboard.shots.map((shot) => shot.kind)).toEqual([
+      "establishing",
+      "street",
+      "purchase",
+      "street",
+    ]);
+    expect(storyboard.shots[0]?.startAtMs).toBe(0);
+    expect(storyboard.shots.at(-1)?.endAtMs).toBe(6_000);
+    expect(sceneShotAt(storyboard, 0)).toBe("establishing");
+    expect(sceneShotAt(storyboard, 1_500)).toBe("street");
+    expect(sceneShotAt(storyboard, 3_200)).toBe("purchase");
+    expect(sceneShotAt(storyboard, 5_000)).toBe("street");
+  });
+
+  it("chooses viewport-aware camera framing for each sequential shot", () => {
+    expect(sceneCameraComposition(360, 740, "establishing").mode).toBe("portrait");
+    expect(sceneCameraComposition(768, 740, "street").mode).toBe("balanced");
+    expect(sceneCameraComposition(844, 390, "purchase").mode).toBe("wide");
+
+    const portraitEstablishing = sceneCameraComposition(360, 740, "establishing");
+    const portraitPurchase = sceneCameraComposition(360, 740, "purchase");
+    expect(portraitEstablishing.position[2]).toBeGreaterThan(portraitPurchase.position[2]);
+    expect(portraitPurchase.fov).toBeLessThan(portraitEstablishing.fov);
   });
 
   it("is deterministic and never schedules more sales than prepared cups", () => {
     const input = {
-      durationMs: 5_000,
+      durationMs: 6_000,
       prepared: 8,
       sold: 12,
       visibleSigns: 2,
+      priceCents: 10,
       ambientPedestrianCount: 6,
     } as const;
 
