@@ -109,6 +109,8 @@ test("exports and imports a progressed run into a clean browser profile", async 
   await sourcePage.getByRole("button", { name: "Plan next day" }).click();
   await expect(sourcePage.locator("#status-day")).toHaveText("2");
 
+  await expect(sourcePage.getByRole("main")).toHaveAttribute("data-view", "planning");
+  await sourcePage.locator(".run-tools-summary").click();
   const downloadPromise = sourcePage.waitForEvent("download");
   await sourcePage.getByRole("button", { name: "Export run" }).click();
   const download = await downloadPromise;
@@ -120,6 +122,7 @@ test("exports and imports a progressed run into a clean browser profile", async 
   await targetPage.goto("./");
   await expect(targetPage.locator("#status-day")).toHaveText("1");
 
+  await targetPage.locator(".run-tools-summary").click();
   const chooserPromise = targetPage.waitForEvent("filechooser");
   await targetPage.getByRole("button", { name: "Import run" }).click();
   const chooser = await chooserPromise;
