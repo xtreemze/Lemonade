@@ -8,21 +8,22 @@ export type LegacyConfidence = 0 | 1 | 2 | 3 | 4 | 5;
 export type LegacyWeatherVariant = 0 | 1 | 2 | 3;
 export type LegacyConfidenceRoll = 1 | 2 | 3;
 
-const coreOperatingNetCents = (entry: DailyLedgerEntry): number =>
-  Number(entry.revenue) -
-  Number(
-    entry.lines
-      .filter((line) => line.kind === "production" || line.kind === "advertising")
-      .reduce((total, line) => total + Number(line.amount), 0),
-  );
+const coreOperatingNetCents = (entry: DailyLedgerEntry): number => {
+  const operatingExpenses = entry.lines
+    .filter((line) => line.kind === "production" || line.kind === "advertising")
+    .reduce((total, line) => total + Number(line.amount), 0);
+  return Number(entry.revenue) - operatingExpenses;
+};
 
 export const legacyOperatingBalanceCents = (
   state: Pick<GameState, "ledger">,
-): number =>
-  state.ledger.reduce<number>(
+): number => {
+  const startingBalanceCents: number = LEGACY_STARTING_BALANCE_CENTS;
+  return state.ledger.reduce<number>(
     (balance, entry) => balance + coreOperatingNetCents(entry),
-    Number(LEGACY_STARTING_BALANCE_CENTS),
+    startingBalanceCents,
   );
+};
 
 const confidenceAfterEntry = (
   balanceCents: number,
