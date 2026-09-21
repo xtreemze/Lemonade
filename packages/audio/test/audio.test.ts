@@ -76,14 +76,21 @@ describe("procedural cue compiler", () => {
 
   it("preserves the original rests as audible phrase gaps", () => {
     const hotAndDry = compileCue("forecast:hot-and-dry");
+    const firstTone = hotAndDry[0];
+    const secondTone = hotAndDry[1];
     const beforeRest = hotAndDry[2];
     const afterRest = hotAndDry[3];
-    if (beforeRest === undefined || afterRest === undefined) {
+    if (
+      firstTone === undefined ||
+      secondTone === undefined ||
+      beforeRest === undefined ||
+      afterRest === undefined
+    ) {
       throw new Error("expected hot-and-dry melody phrase");
     }
 
-    const normalGap = hotAndDry[1].startSeconds - (
-      hotAndDry[0].startSeconds + hotAndDry[0].durationSeconds
+    const normalGap = secondTone.startSeconds - (
+      firstTone.startSeconds + firstTone.durationSeconds
     );
     const restGap = afterRest.startSeconds - (
       beforeRest.startSeconds + beforeRest.durationSeconds
