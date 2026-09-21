@@ -159,125 +159,72 @@ type PersonRig = Readonly<{
   root: THREE.Group;
   torso: THREE.Mesh;
   head: THREE.Mesh;
-  leftArm: THREE.Group;
-  rightArm: THREE.Group;
-  leftLeg: THREE.Group;
-  rightLeg: THREE.Group;
-  cup: THREE.Group;
+  arms: readonly [THREE.Group, THREE.Group];
+  legs: readonly [THREE.Group, THREE.Group];
+  cup: THREE.Mesh;
   strideOffset: number;
 }>;
 
-const createLimb = (
-  length: number,
-  radius: number,
-  color: number,
-): THREE.Group => {
+const createLimb = (length: number, radius: number, color: number): THREE.Group => {
   const pivot = new THREE.Group();
-  const limb = new THREE.Mesh(
-    new THREE.CylinderGeometry(radius, radius * 1.08, length, 6),
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius, length, 5),
     makeMaterial(color),
   );
-  limb.position.y = -length / 2;
-  pivot.add(limb);
+  mesh.position.y = -length / 2;
+  pivot.add(mesh);
   return pivot;
-};
-
-const createDrinkingCup = (): THREE.Group => {
-  const cup = new THREE.Group();
-  const shell = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.075, 0.09, 0.2, 7),
-    makeMaterial(0xf7f3df),
-  );
-  const liquid = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.061, 0.068, 0.1, 7),
-    makeMaterial(0xf5cf38),
-  );
-  liquid.position.y = 0.035;
-  cup.add(shell, liquid);
-  cup.visible = false;
-  return cup;
 };
 
 const createPerson = (index: number): PersonRig => {
   const root = new THREE.Group();
-  const bodyColors = [
-    0xd75c51,
-    0x507d83,
-    0xe0a43c,
-    0x7766a6,
-    0x3f7d68,
-    0x9c5b72,
-    0x315d8a,
-    0xbd6f42,
-  ] as const;
-  const skinColors = [0xf0c7a5, 0xe1ad83, 0xc98c65, 0x9b6448, 0x704936] as const;
-  const hairColors = [0x36281f, 0x5b3b24, 0x1f1a17, 0x8a633e] as const;
-  const bodyColor = bodyColors[index % bodyColors.length];
-  const skinColor = skinColors[index % skinColors.length];
-  const hairColor = hairColors[index % hairColors.length];
-  if (bodyColor === undefined || skinColor === undefined || hairColor === undefined) {
-    throw new Error("pedestrian palette invariant failed");
-  }
+  const clothes = [0xd75c51, 0x507d83, 0xe0a43c, 0x7766a6, 0x3f7d68, 0x9c5b72] as const;
+  const skins = [0xf0c7a5, 0xe1ad83, 0xc98c65, 0x9b6448, 0x704936] as const;
+  const color = clothes[index % clothes.length];
+  const skin = skins[index % skins.length];
+  if (color === undefined || skin === undefined) throw new Error("pedestrian palette invariant failed");
 
   const torso = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.25, 0.34, 0.9, 7),
-    makeMaterial(bodyColor),
+    new THREE.CylinderGeometry(0.25, 0.34, 0.9, 6),
+    makeMaterial(color),
   );
   torso.position.y = 1.05;
-  root.add(torso);
-
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.25, 8, 6),
-    makeMaterial(skinColor),
-  );
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 7, 5), makeMaterial(skin));
   head.position.y = 1.73;
-  root.add(head);
+  root.add(torso, head);
 
-  const leftArm = createLimb(0.7, 0.085, bodyColor);
-  const rightArm = createLimb(0.7, 0.085, bodyColor);
+  const leftArm = createLimb(0.7, 0.085, color);
+  const rightArm = createLimb(0.7, 0.085, color);
   leftArm.position.set(-0.34, 1.38, 0);
   rightArm.position.set(0.34, 1.38, 0);
-  root.add(leftArm, rightArm);
-
-  const trouserColor = index % 2 === 0 ? 0x3f4650 : 0x6c5948;
-  const leftLeg = createLimb(0.8, 0.105, trouserColor);
-  const rightLeg = createLimb(0.8, 0.105, trouserColor);
+  const legColor = index % 2 === 0 ? 0x3f4650 : 0x6c5948;
+  const leftLeg = createLimb(0.8, 0.105, legColor);
+  const rightLeg = createLimb(0.8, 0.105, legColor);
   leftLeg.position.set(-0.14, 0.72, 0);
   rightLeg.position.set(0.14, 0.72, 0);
-  root.add(leftLeg, rightLeg);
+  root.add(leftArm, rightArm, leftLeg, rightLeg);
 
-  if (index % 3 === 0) {
-    const hair = new THREE.Mesh(
-      new THREE.SphereGeometry(0.265, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2),
-      makeMaterial(hairColor),
-    );
-    hair.position.set(0, 1.79, 0);
-    root.add(hair);
-  } else if (index % 4 === 0) {
-    const hat = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.3, 0.3, 0.08, 8),
-      makeMaterial(bodyColor),
-    );
-    hat.position.set(0, 1.96, 0);
-    root.add(hat);
+  if (index % 2 === 0) {
+    addBox(root, [0.4, 0.11, 0.34], [0, 1.9, 0], index % 4 === 0 ? 0x36281f : 0x6b482d);
   }
 
-  const cup = createDrinkingCup();
+  const cup = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.07, 0.085, 0.18, 6),
+    makeMaterial(0xf5cf38),
+  );
   cup.position.set(0, -0.66, 0.08);
+  cup.visible = false;
   rightArm.add(cup);
 
-  const heightScale = 0.9 + (index % 5) * 0.045;
-  const widthScale = 0.92 + (index % 4) * 0.035;
-  root.scale.set(widthScale, heightScale, widthScale);
+  const width = 0.92 + (index % 4) * 0.035;
+  root.scale.set(width, 0.9 + (index % 5) * 0.045, width);
 
   return Object.freeze({
     root,
     torso,
     head,
-    leftArm,
-    rightArm,
-    leftLeg,
-    rightLeg,
+    arms: [leftArm, rightArm] as const,
+    legs: [leftLeg, rightLeg] as const,
     cup,
     strideOffset: index * 0.73,
   });
@@ -286,10 +233,7 @@ const createPerson = (index: number): PersonRig => {
 const resetPersonPose = (person: PersonRig): void => {
   person.torso.rotation.set(0, 0, 0);
   person.head.rotation.set(0, 0, 0);
-  person.leftArm.rotation.set(0, 0, 0);
-  person.rightArm.rotation.set(0, 0, 0);
-  person.leftLeg.rotation.set(0, 0, 0);
-  person.rightLeg.rotation.set(0, 0, 0);
+  for (const limb of [...person.arms, ...person.legs]) limb.rotation.set(0, 0, 0);
   person.cup.visible = false;
 };
 
@@ -300,13 +244,11 @@ const applyWalkingPose = (
   carryingCup: boolean,
 ): void => {
   const stride = Math.sin(seconds * 7.2 * pace + person.strideOffset);
-  const sway = Math.sin(seconds * 3.6 * pace + person.strideOffset) * 0.04;
-  person.leftLeg.rotation.x = stride * 0.58;
-  person.rightLeg.rotation.x = -stride * 0.58;
-  person.leftArm.rotation.x = -stride * 0.5;
-  person.rightArm.rotation.x = carryingCup ? -0.3 : stride * 0.5;
-  person.torso.rotation.z = sway;
-  person.head.rotation.z = -sway * 0.45;
+  person.legs[0].rotation.x = stride * 0.58;
+  person.legs[1].rotation.x = -stride * 0.58;
+  person.arms[0].rotation.x = -stride * 0.5;
+  person.arms[1].rotation.x = carryingCup ? -0.3 : stride * 0.5;
+  person.torso.rotation.z = Math.sin(seconds * 3.6 * pace + person.strideOffset) * 0.04;
   person.cup.visible = carryingCup;
 };
 
@@ -317,27 +259,18 @@ const applyBuyerPose = (
   index: number,
 ): void => {
   resetPersonPose(person);
-  switch (phase) {
-    case "approaching":
-      applyWalkingPose(person, seconds, 1.05, false);
-      break;
-    case "purchasing":
-      person.rightArm.rotation.x = -1.25;
-      person.leftArm.rotation.x = -0.2;
-      person.torso.rotation.x = 0.08;
-      break;
-    case "drinking":
-      person.cup.visible = true;
-      person.rightArm.rotation.x = -2.35;
-      person.rightArm.rotation.z = index % 2 === 0 ? -0.12 : 0.12;
-      person.head.rotation.x = 0.13;
-      person.head.rotation.z = index % 2 === 0 ? -0.06 : 0.06;
-      break;
-    case "departing":
-      applyWalkingPose(person, seconds, 1.1, true);
-      break;
-    case "inactive":
-      break;
+  if (phase === "approaching") {
+    applyWalkingPose(person, seconds, 1.05, false);
+  } else if (phase === "purchasing") {
+    person.arms[1].rotation.x = -1.25;
+    person.torso.rotation.x = 0.08;
+  } else if (phase === "drinking") {
+    person.cup.visible = true;
+    person.arms[1].rotation.x = -2.35;
+    person.head.rotation.x = 0.13;
+    person.head.rotation.z = index % 2 === 0 ? -0.06 : 0.06;
+  } else if (phase === "departing") {
+    applyWalkingPose(person, seconds, 1.1, true);
   }
 };
 
