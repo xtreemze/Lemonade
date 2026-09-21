@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { compileCue, type AudioCue } from "../src/index.js";
+import { compileCue, type AudioCue, type WeatherAudioCue } from "../src/index.js";
 
 const cues: readonly AudioCue[] = [
   "forecast:sunny",
@@ -12,6 +12,13 @@ const cues: readonly AudioCue[] = [
   "day:loss",
   "progression:unlock",
 ];
+
+const weatherMelodies: Readonly<Record<WeatherAudioCue, readonly number[]>> = {
+  "forecast:sunny": [72, 74, 67, 72, 76, 67, 72],
+  "forecast:hot-and-dry": [69, 65, 69, 67, 65, 67, 69, 65, 62, 57],
+  "forecast:cloudy": [64, 64, 64, 65, 64, 62, 60, 64],
+  "forecast:thunderstorm": [55, 67, 64, 62, 60, 57, 55, 60, 60, 62, 64, 67],
+};
 
 describe("procedural cue compiler", () => {
   it("is deterministic without an audio device", () => {
@@ -44,5 +51,43 @@ describe("procedural cue compiler", () => {
         previousStart = tone.startSeconds;
       }
     }
+  });
+
+  it("reconstructs the Apple II weather melody contours", () => {
+    for (const [cue, notes] of Object.entries(weatherMelodies) as readonly [
+      WeatherAudioCue,
+      readonly number[],
+    ][]) {
+      const tones = compileCue(cue);
+      expect(tones.map((tone) => tone.midiNote)).toEqual(notes);
+      expect(tones.every((tone) => tone.waveform === "square")).toBe(true);
+    }
+  });
+
+  it("keeps each weather melody inside the three-second forecast scene", () => {
+    for (const cue of Object.keys(weatherMelodies) as WeatherAudioCue[]) {
+      const tones = compileCue(cue);
+      const lastTone = tones.at(-1);
+      expect(lastTone).toBeDefined();
+      if (lastTone === undefined) throw new Error("expected weather melody tone");
+      expect(lastTone.startSeconds + lastTone.durationSeconds).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it("preserves the original rests as audible phrase gaps", () => {
+    const hotAndDry = compileCue("forecast:hot-and-dry");
+    const beforeRest = hotAndDry[2];
+    const afterRest = hotAndDry[3];
+    if (beforeRest === undefined || afterRest === undefined) {
+      throw new Error("expected hot-and-dry melody phrase");
+    }
+
+    const normalGap = hotAndDry[1].startSeconds - (
+      hotAndDry[0].startSeconds + hotAndDry[0].durationSeconds
+    );
+    const restGap = afterRest.startSeconds - (
+      beforeRest.startSeconds + beforeRest.durationSeconds
+    );
+    expect(restGap).toBeGreaterThan(normalGap + 0.15);
   });
 });
