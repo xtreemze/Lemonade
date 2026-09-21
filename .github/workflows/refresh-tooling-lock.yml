@@ -1,0 +1,36 @@
+name: refresh tooling lock
+
+on:
+  push:
+    branches: [chore/tooling-reevaluation-2026-09]
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: chore/tooling-reevaluation-2026-09
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm check
+      - name: Commit generated lockfile
+        run: |
+          if git diff --quiet -- pnpm-lock.yaml; then
+            echo "Lockfile already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "chore: regenerate pnpm lockfile"
+          git push
