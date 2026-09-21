@@ -64,6 +64,37 @@
   opacity: 0.45;
 }
 
+.reset-dialog {
+  width: min(32rem, calc(100% - 2rem));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.reset-dialog::backdrop {
+  background: rgb(33 29 20 / 55%);
+}
+
+.reset-dialog-card {
+  margin: 0;
+  padding: 20px;
+  border: 2px solid #211d14;
+  background: #fff9e4;
+  box-shadow: 8px 8px 0 #211d14;
+}
+
+.reset-dialog-card h2 {
+  margin-bottom: 12px;
+}
+
+.reset-dialog-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
 .bootstrap-shell {
   display: grid;
   min-height: 100dvh;
@@ -87,6 +118,11 @@
 }
 
 @media (width >= 47.5625rem) {
+  .reset-dialog-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
   .run-tools {
     align-items: center;
     flex-direction: row;
