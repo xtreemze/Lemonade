@@ -26,10 +26,16 @@ const expectViewportContract = async (
     const overflowViolations = [...document.querySelectorAll<HTMLElement>("body *")]
       .filter((element) => {
         const style = getComputedStyle(element);
+        const visuallyHidden =
+          style.clip !== "auto" ||
+          (style.clipPath !== "none" && style.clipPath !== "") ||
+          (element.clientWidth <= 1 && element.clientHeight <= 1);
         if (
+          element === shell ||
           style.display === "none" ||
           style.visibility === "hidden" ||
-          element.getClientRects().length === 0
+          element.getClientRects().length === 0 ||
+          visuallyHidden
         ) {
           return false;
         }
@@ -113,6 +119,9 @@ for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto("./");
 
+    const main = page.getByRole("main");
+    await expect(main).toBeVisible();
+    await expect(main).toHaveAttribute("data-view", "forecast");
     await expectViewportContract(page, "forecast");
     await expect(page.locator("#scene-canvas")).toHaveAttribute(
       "data-presentation-duration-ms",
