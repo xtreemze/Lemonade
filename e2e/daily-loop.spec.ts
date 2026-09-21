@@ -10,12 +10,12 @@ test("plays a complete day with keyboard controls", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Sell for the day" })).toHaveCount(1);
 
   const glasses = page.getByRole("slider", { name: /Glasses/ });
-  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.40");
+  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.10");
   await expect(page.locator("#signs-cost")).toHaveText("Cost $0.15");
   await expect(page.locator("#price-value")).toHaveText("Price $0.10 / glass");
   await glasses.focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.42");
+  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.12");
 
   const sell = page.getByRole("button", { name: "Sell for the day" });
   await sell.focus();
@@ -35,10 +35,10 @@ test("supports precise numeric entry synchronized with sliders", async ({ page }
   const glassesSlider = page.getByRole("slider", { name: "Glasses" });
   await glassesExact.focus();
   await page.keyboard.press("Control+A");
-  await page.keyboard.type("24");
-  await expect(glassesExact).toHaveValue("24");
-  await expect(glassesSlider).toHaveValue("24");
-  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.48");
+  await page.keyboard.type("14");
+  await expect(glassesExact).toHaveValue("14");
+  await expect(glassesSlider).toHaveValue("14");
+  await expect(page.locator("#glasses-cost")).toHaveText("Cost $0.28");
 
   const signsExact = page.getByRole("spinbutton", { name: "Signs Exact" });
   const signsSlider = page.getByRole("slider", { name: "Signs" });
@@ -63,18 +63,17 @@ test("supports precise numeric entry synchronized with sliders", async ({ page }
   await expect(glassesSlider).toHaveValue(maximumGlasses);
 });
 
-test("prevents an unaffordable plan before submission", async ({ page }) => {
+test("restores the level-one operating envelope independently of finance", async ({ page }) => {
   await page.goto("./");
 
-  const glasses = page.getByRole("slider", { name: /Glasses/ });
-  const signs = page.getByRole("slider", { name: /Signs/ });
-  await glasses.focus();
-  await page.keyboard.press("End");
-  await signs.focus();
-  await page.keyboard.press("End");
-
-  await expect(page.getByRole("alert")).toContainText("available cash and credit");
-  await expect(page.getByRole("button", { name: "Sell for the day" })).toBeDisabled();
+  await expect(page.locator("#finance-tier")).toHaveText("Stand level 1 · Business tier 0");
+  await expect(page.getByRole("slider", { name: /Glasses/ })).toHaveAttribute("max", "15");
+  await expect(page.getByRole("slider", { name: /Signs/ })).toHaveAttribute("max", "3");
+  await expect(page.getByRole("slider", { name: /Price/ })).toHaveAttribute("max", "299");
+  await expect(page.getByRole("spinbutton", { name: "Price Exact cents" })).toHaveAttribute(
+    "max",
+    "299",
+  );
 });
 
 test("restores both report and next-day phases across reloads", async ({ page }) => {
