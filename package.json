@@ -13,12 +13,14 @@
     "dev": "pnpm --filter @lemonade/web dev",
     "build": "pnpm -r --if-present build",
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm -r --if-present typecheck",
-    "lint": "eslint . && pnpm lint:antipatterns",
+    "lint": "eslint . && pnpm lint:antipatterns && pnpm lint:mobile-contract",
     "test": "pnpm -r --if-present test",
     "test:e2e": "playwright test",
     "certify": "pnpm --filter @lemonade/simulation build && node scripts/certify.mjs",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
-    "lint:antipatterns": "node scripts/lint-antipatterns.mjs"
+    "lint:antipatterns": "node scripts/lint-antipatterns.mjs",
+    "lint:mobile-contract": "node scripts/lint-mobile-contract.mjs",
+    "test:mobile-contract": "playwright test e2e/mobile-contract.spec.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
