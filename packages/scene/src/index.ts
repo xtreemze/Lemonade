@@ -62,8 +62,8 @@ const smoothStep = (value: number): number => {
 const lerp = (start: number, end: number, progress: number): number =>
   start + (end - start) * progress;
 
-const makeMaterial = (color: number): THREE.MeshLambertMaterial =>
-  new THREE.MeshLambertMaterial({ color, flatShading: true });
+const makeMaterial = (color: number): THREE.MeshBasicMaterial =>
+  new THREE.MeshBasicMaterial({ color });
 
 const addBox = (
   parent: THREE.Object3D,
@@ -458,11 +458,6 @@ export const createLemonsvilleScene = (
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
   camera.position.set(0, 6.8, 13.5);
   camera.lookAt(0, 1.7, 0);
-
-  scene.add(new THREE.HemisphereLight(0xfff2c6, 0x526b51, 2.0));
-  const sunlight = new THREE.DirectionalLight(0xfff0c9, 2.3);
-  sunlight.position.set(-5, 10, 7);
-  scene.add(sunlight);
 
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 24), makeMaterial(0x92ad68));
   ground.rotation.x = -Math.PI / 2;
