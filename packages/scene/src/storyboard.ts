@@ -124,3 +124,42 @@ export const completedSalesAt = (storyboard: StreetStoryboard, elapsedMs: number
 
 export const remainingCupsAt = (storyboard: StreetStoryboard, elapsedMs: number): number =>
   Math.max(0, storyboard.prepared - completedSalesAt(storyboard, elapsedMs));
+
+export type SceneCameraComposition = Readonly<{
+  mode: "portrait" | "balanced" | "wide";
+  fov: number;
+  position: readonly [number, number, number];
+  lookAt: readonly [number, number, number];
+}>;
+
+export const sceneCameraComposition = (
+  width: number,
+  height: number,
+): SceneCameraComposition => {
+  const safeWidth = Math.max(1, Number.isFinite(width) ? width : 1);
+  const safeHeight = Math.max(1, Number.isFinite(height) ? height : 1);
+  const aspect = safeWidth / safeHeight;
+
+  if (aspect < 0.72) {
+    return Object.freeze({
+      mode: "portrait",
+      fov: 47,
+      position: [0, 8.6, 17.8] as const,
+      lookAt: [0, 1.8, 1.1] as const,
+    });
+  }
+  if (aspect > 1.65) {
+    return Object.freeze({
+      mode: "wide",
+      fov: 32,
+      position: [0, 6.5, 12.8] as const,
+      lookAt: [0, 1.75, 0.7] as const,
+    });
+  }
+  return Object.freeze({
+    mode: "balanced",
+    fov: 36,
+    position: [0, 7.0, 14.2] as const,
+    lookAt: [0, 1.8, 0.8] as const,
+  });
+};
