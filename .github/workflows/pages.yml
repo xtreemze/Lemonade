@@ -40,8 +40,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f apps/web/dist/index.html
-          grep -q '/Lemonade/assets/' apps/web/dist/index.html
+          pnpm --filter @lemonade/web verify:pages-bundle
 
       - name: Publish build to gh-pages
         shell: bash
