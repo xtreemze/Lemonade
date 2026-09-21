@@ -43,9 +43,11 @@
   cursor: pointer;
 }
 
-.utility-button:hover:not(:disabled) {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 #211d14;
+@media (hover: hover) and (pointer: fine) {
+  .utility-button:hover:not(:disabled) {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 #211d14;
+  }
 }
 
 .utility-button:active:not(:disabled) {
