@@ -138,9 +138,9 @@ for (const [width, height] of [
 
 requireMatch(
   mobileSpec,
-  /scrollable[\s\S]*?overflowY[\s\S]*?overflowX[\s\S]*?expect\(contract\.scrollable\)\.toEqual\(\[\]\)/u,
-  "no-nested-scroll",
-  "Browser certification must reject nested user-scrollable containers, not only document scrolling.",
+  /overflowViolations[\s\S]*?overflowY[\s\S]*?overflowX[\s\S]*?verticallyClipped[\s\S]*?expect\(contract\.overflowViolations\)\.toEqual\(\[\]\)/u,
+  "no-nested-scroll-or-clipping",
+  "Browser certification must reject nested scrolling and vertically clipped content, not only document scrolling.",
 );
 
 requireMatch(
