@@ -3,7 +3,6 @@ import * as THREE from "three";
 import {
   buyerPhaseAt,
   createStreetStoryboard,
-  formatPriceLabel,
   remainingCupsAt,
   sceneCameraComposition,
   sceneShotAt,
@@ -553,7 +552,9 @@ export const createLemonsvilleScene = (
   const signs = Array.from({ length: 25 }, (_, index) => createSign(index));
   let signTexture: THREE.CanvasTexture | null = null;
   let signPriceLabel = "";
-  let signLabelModule: Promise<typeof import("./sign-label.js")> | null = null;
+  let signLabelModule:
+    | Promise<Readonly<{ createPriceSignSurface(priceLabel: string): HTMLCanvasElement }>>
+    | null = null;
   for (const sign of signs) scene.add(sign.root);
   const signOrigins = signs.map((sign) => sign.root.rotation.z);
 
