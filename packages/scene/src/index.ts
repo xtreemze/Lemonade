@@ -1,9 +1,9 @@
 import * as THREE from "three";
 
 import {
-  completedSalesAt,
   createStreetStoryboard,
   remainingCupsAt,
+  sceneCameraComposition,
 } from "./storyboard.js";
 
 export type SceneWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
@@ -570,7 +570,6 @@ export const createLemonsvilleScene = (
       weatherOrigins[state.weather] +
       Math.sin(seconds * 0.45) * (state.weather === "sunny" ? 0.08 : 0.3);
 
-    void completedSalesAt(storyboard, elapsedMs);
     render();
     animationFrame = window.requestAnimationFrame(animate);
   };
@@ -634,23 +633,12 @@ export const createLemonsvilleScene = (
   const resize = (width: number, height: number): void => {
     const safeWidth = Math.max(1, Math.floor(width));
     const safeHeight = Math.max(1, Math.floor(height));
-    const aspect = safeWidth / safeHeight;
+    const composition = sceneCameraComposition(safeWidth, safeHeight);
 
-    camera.aspect = aspect;
-    if (aspect < 0.72) {
-      camera.fov = 47;
-      camera.position.set(0, 8.6, 17.8);
-      camera.lookAt(0, 1.8, 1.1);
-    } else if (aspect > 1.65) {
-      camera.fov = 32;
-      camera.position.set(0, 6.5, 12.8);
-      camera.lookAt(0, 1.75, 0.7);
-    } else {
-      camera.fov = 36;
-      camera.position.set(0, 7.0, 14.2);
-      camera.lookAt(0, 1.8, 0.8);
-    }
-
+    camera.aspect = safeWidth / safeHeight;
+    camera.fov = composition.fov;
+    camera.position.set(...composition.position);
+    camera.lookAt(...composition.lookAt);
     camera.updateProjectionMatrix();
     renderer.setSize(safeWidth, safeHeight, false);
     render();
