@@ -1363,6 +1363,10 @@ body:has(.game-shell[data-view="forecast"]) {
     transform: none;
   }
 
+  .game-shell[data-view="report"] .next-day-button:active {
+    transform: scale(0.96);
+  }
+
   .game-shell[data-view="planning"] .simulation-button {
     position: static;
     margin: 3px auto 0;
