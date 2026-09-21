@@ -156,9 +156,9 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
     const description = describeScene(input);
     const state = createState(input, reducedMotion);
     elements.canvas.setAttribute("aria-label", description);
-    elements.canvas.dataset.presentationDurationMs = String(Math.max(0, input.durationMs));
-    elements.canvas.dataset.preparedCups = String(Math.max(0, input.prepared));
-    elements.canvas.dataset.plannedSales = String(Math.max(0, input.sold));
+    elements.canvas.dataset["presentationDurationMs"] = String(Math.max(0, input.durationMs));
+    elements.canvas.dataset["preparedCups"] = String(Math.max(0, input.prepared));
+    elements.canvas.dataset["plannedSales"] = String(Math.max(0, input.sold));
     elements.equivalent.textContent = description;
     elements.fallbackDescription.textContent = description;
 
