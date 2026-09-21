@@ -51,3 +51,5 @@ Revisit TypeScript 7 when typescript-eslint officially supports it, strict typed
 - Do not adopt beta or RC framework/tool releases in the production baseline.
 - Dependency upgrades must regenerate the pnpm lockfile and pass pnpm check plus browser acceptance.
 - Major UI migrations require a narrow architecture issue with rollback criteria.
+
+Revisit this decision after a substantial UI expansion or when a native/platform limitation becomes concrete; do not migrate frameworks on cadence alone.
