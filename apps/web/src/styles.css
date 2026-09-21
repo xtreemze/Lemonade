@@ -714,38 +714,6 @@ h2 {
 
 .game-shell[data-view="planning"] .decision-panel {
   margin-top: 0;
-  padding: 8px 10px 10px;
-  border-width: 1px;
-  box-shadow: 3px 3px 0 #211d14;
-}
-
-.game-shell[data-view="planning"] .panel-heading {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.game-shell[data-view="planning"] .panel-heading .eyebrow {
-  margin-bottom: 1px;
-  font-size: 0.58rem;
-}
-
-.game-shell[data-view="planning"] .panel-heading h2 {
-  font-size: 0.94rem;
-  letter-spacing: -0.02em;
-}
-
-.game-shell[data-view="planning"] .spend {
-  max-width: 15ch;
-  font-size: 0.62rem;
-  line-height: 1.1;
-  text-align: right;
-}
-
-.game-shell[data-view="planning"] .decision-panel {
-  margin-top: 0;
   padding: 4px 0 6px;
   border: 0;
   background: transparent;
