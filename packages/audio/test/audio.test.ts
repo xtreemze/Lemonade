@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { compileCue, type AudioCue, type WeatherAudioCue } from "../src/index.js";
+import {
+  WEATHER_FORECAST_DURATION_MS,
+  compileCue,
+  type AudioCue,
+  type WeatherAudioCue,
+} from "../src/index.js";
 
 const cues: readonly AudioCue[] = [
   "forecast:sunny",
@@ -77,13 +82,16 @@ describe("procedural cue compiler", () => {
     }
   });
 
-  it("keeps each weather melody inside the three-second forecast scene", () => {
+  it("stretches each weather melody across the six-second forecast scene", () => {
     for (const cue of Object.keys(weatherMelodies) as WeatherAudioCue[]) {
       const tones = compileCue(cue);
       const lastTone = tones.at(-1);
       expect(lastTone).toBeDefined();
       if (lastTone === undefined) throw new Error("expected weather melody tone");
-      expect(lastTone.startSeconds + lastTone.durationSeconds).toBeLessThanOrEqual(3);
+      expect(lastTone.startSeconds + lastTone.durationSeconds).toBeCloseTo(
+        WEATHER_FORECAST_DURATION_MS / 1_000,
+        5,
+      );
     }
   });
 
