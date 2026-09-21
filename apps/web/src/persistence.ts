@@ -438,7 +438,7 @@ const migrateVersionZero = (value: Record<string, unknown>): RunSaveDocumentV1 =
       seed: asNonNegativeInteger(value["seed"], "seed"),
       state: value["state"],
       environment: value["environment"],
-      draft: Object.freeze({ glasses: 20, signs: 1, price: 10 }),
+      draft: Object.freeze({ glasses: 5, signs: 1, price: 150 }),
     }),
   });
 };
