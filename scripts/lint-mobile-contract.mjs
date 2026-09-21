@@ -5,10 +5,14 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const stylesPath = resolve(root, "apps/web/src/styles.css");
 const componentsPath = resolve(root, "apps/web/src/components.ts");
+const mobileSpecPath = resolve(root, "e2e/mobile-contract.spec.ts");
+const workflowPath = resolve(root, ".github/workflows/ci.yml");
 
-const [styles, components] = await Promise.all([
+const [styles, components, mobileSpec, workflow] = await Promise.all([
   readFile(stylesPath, "utf8"),
   readFile(componentsPath, "utf8"),
+  readFile(mobileSpecPath, "utf8"),
+  readFile(workflowPath, "utf8"),
 ]);
 
 const failures = [];
@@ -100,16 +104,46 @@ for (const [index, match] of flowButtons.entries()) {
 
 requireMatch(
   styles,
-  /\.game-shell\[data-view="planning"\][\s\S]*?\.simulation-button\s*\{[\s\S]*?margin\s*:\s*[^;]*auto[^;]*0\s*;/u,
+  /\.game-shell\[data-view="planning"\][\s\S]*?\.simulation-button\s*\{(?=[^}]*\bposition\s*:\s*absolute\s*;)(?=[^}]*\bleft\s*:\s*50%\s*;)(?=[^}]*\bbottom\s*:)(?=[^}]*\btransform\s*:\s*translateX\(-50%\)\s*;)[^}]*\}/u,
   "bottom-docked-primary-action",
-  "The planning action must remain horizontally centered and bottom-docked.",
+  "The planning action must remain absolutely anchored, horizontally centered, and bottom-docked.",
 );
 
 requireMatch(
   styles,
-  /\.game-shell\[data-view="report"\][\s\S]*?\.next-day-button\s*\{[\s\S]*?margin\s*:\s*auto\s+auto\s+0\s*;/u,
+  /\.game-shell\[data-view="report"\][\s\S]*?\.next-day-button\s*\{(?=[^}]*\bposition\s*:\s*absolute\s*;)(?=[^}]*\bleft\s*:\s*50%\s*;)(?=[^}]*\bbottom\s*:)(?=[^}]*\btransform\s*:\s*translateX\(-50%\)\s*;)[^}]*\}/u,
   "bottom-docked-primary-action",
-  "The report action must remain horizontally centered and bottom-docked.",
+  "The report action must remain absolutely anchored, horizontally centered, and bottom-docked.",
+);
+
+for (const [width, height] of [
+  [320, 568],
+  [360, 740],
+  [390, 844],
+  [430, 932],
+  [740, 360],
+]) {
+  const literal = `width: ${String(width)}, height: ${String(height)}`;
+  if (!mobileSpec.includes(literal)) {
+    fail(
+      "mobile-viewport-matrix",
+      `Mobile browser contract must retain the ${String(width)}×${String(height)} viewport.`,
+    );
+  }
+}
+
+requireMatch(
+  mobileSpec,
+  /scrollable[\s\S]*?overflowY[\s\S]*?overflowX[\s\S]*?expect\(contract\.scrollable\)\.toEqual\(\[\]\)/u,
+  "no-nested-scroll",
+  "Browser certification must reject nested user-scrollable containers, not only document scrolling.",
+);
+
+requireMatch(
+  workflow,
+  /pnpm\s+test:mobile-contract/u,
+  "ci-mobile-gate",
+  "CI must run the dedicated mobile contract suite as an explicit merge gate.",
 );
 
 if (failures.length > 0) {
