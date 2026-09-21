@@ -516,8 +516,8 @@ export class LemonadeDayReport extends LitElement {
 
   readonly #onClick = (event: Event): void => {
     const target = event.target;
-    if (!(target instanceof HTMLButtonElement) || target.id !== "next-button") return;
-    this.dispatchEvent(new Event("lemonade-next-day", { bubbles: true, composed: true }));
+    if (!(target instanceof HTMLButtonElement) || target.id !== "review-history-button") return;
+    this.dispatchEvent(new Event("lemonade-review-history", { bubbles: true, composed: true }));
   };
 
   protected override render(): ReturnType<typeof html> {
@@ -651,8 +651,8 @@ export class LemonadeDayReport extends LitElement {
             ? `Tier ${String(report.nextState.tier)} unlocks tomorrow. New finance rules will be shown before you sell.`
             : ""}
         </p>
-        <button id="next-button" class="next-button" type="button">
-          Plan next day
+        <button id="review-history-button" class="next-button" type="button">
+          Review sales history
         </button>
       </section>
     `;
