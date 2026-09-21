@@ -1,5 +1,11 @@
 import * as THREE from "three";
 
+import {
+  completedSalesAt,
+  createStreetStoryboard,
+  remainingCupsAt,
+} from "./storyboard.js";
+
 export type SceneWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 export type CustomerActivity = "quiet" | "light" | "steady" | "lively" | "busy";
 export type ScenePhase = "idle" | "simulation" | "forecast";
@@ -10,6 +16,7 @@ export type LemonsvilleSceneState = Readonly<{
   visibleSigns: number;
   prepared: number;
   sold: number;
+  durationMs: number;
   sellThroughBasisPoints: number;
   phase: ScenePhase;
   reducedMotion: boolean;
@@ -29,12 +36,26 @@ const skyColor: Record<SceneWeather, number> = {
 };
 
 const customerCount: Record<CustomerActivity, number> = {
-  quiet: 1,
-  light: 3,
-  steady: 5,
-  lively: 8,
-  busy: 12,
+  quiet: 4,
+  light: 7,
+  steady: 10,
+  lively: 14,
+  busy: 18,
 };
+
+const PASSERBY_POOL_SIZE = 32;
+const BUYER_POOL_SIZE = 24;
+const MAX_PREPARED_CUPS = 250;
+
+const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
+
+const smoothStep = (value: number): number => {
+  const progress = clamp01(value);
+  return progress * progress * (3 - 2 * progress);
+};
+
+const lerp = (start: number, end: number, progress: number): number =>
+  start + (end - start) * progress;
 
 const makeMaterial = (color: number): THREE.MeshStandardMaterial =>
   new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92 });
@@ -115,57 +136,78 @@ const createSign = (index: number): THREE.Group => {
   return sign;
 };
 
-const createCustomer = (index: number): THREE.Group => {
-  const customer = new THREE.Group();
-  const bodyColors = [0xd75c51, 0x507d83, 0xe0a43c, 0x7766a6] as const;
+const createPerson = (index: number): THREE.Group => {
+  const person = new THREE.Group();
+  const bodyColors = [0xd75c51, 0x507d83, 0xe0a43c, 0x7766a6, 0x3f7d68, 0x9c5b72] as const;
   const color = bodyColors[index % bodyColors.length];
-  if (color === undefined) throw new Error("customer palette invariant failed");
+  if (color === undefined) throw new Error("pedestrian palette invariant failed");
 
   const body = new THREE.Mesh(
     new THREE.CylinderGeometry(0.24, 0.34, 1.0, 7),
     makeMaterial(color),
   );
   body.position.y = 0.55;
-  customer.add(body);
+  person.add(body);
 
   const head = new THREE.Mesh(
     new THREE.SphereGeometry(0.25, 8, 6),
     makeMaterial(0xe1ad83),
   );
   head.position.y = 1.27;
-  customer.add(head);
-
-  const angle = (index / 12) * Math.PI * 1.15 + 0.35;
-  const radius = 4.1 + (index % 3) * 0.7;
-  customer.position.set(
-    Math.cos(angle) * radius,
-    0,
-    2.5 + Math.sin(angle) * radius * 0.48,
-  );
-  customer.rotation.y = -angle;
-  return customer;
+  person.add(head);
+  return person;
 };
 
-const createCup = (index: number): THREE.Group => {
-  const cup = new THREE.Group();
-  const glass = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.17, 0.21, 0.46, 8),
+type CupInventory = Readonly<{
+  shells: THREE.InstancedMesh;
+  liquid: THREE.InstancedMesh;
+  setCount(count: number): void;
+}>;
+
+const createCupInventory = (): CupInventory => {
+  const shells = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.075, 0.09, 0.19, 6),
     makeMaterial(0xf7f3df),
+    MAX_PREPARED_CUPS,
   );
-  glass.position.y = 0.23;
-  cup.add(glass);
-
-  const liquid = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.145, 0.17, 0.26, 8),
+  const liquid = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.06, 0.07, 0.11, 6),
     makeMaterial(0xf5cf38),
+    MAX_PREPARED_CUPS,
   );
-  liquid.position.y = 0.2;
-  cup.add(liquid);
+  const matrix = new THREE.Matrix4();
 
-  const column = index % 5;
-  const row = Math.floor(index / 5);
-  cup.position.set(-1.1 + column * 0.55, 2.38 + row * 0.5, 0.92);
-  return cup;
+  for (let index = 0; index < MAX_PREPARED_CUPS; index += 1) {
+    const column = index % 20;
+    const row = Math.floor(index / 20) % 7;
+    const depth = Math.floor(index / 140);
+    const x = -1.7 + column * 0.18;
+    const y = 1.45 + row * 0.19;
+    const z = 1.04 - depth * 0.14;
+
+    matrix.makeTranslation(x, y, z);
+    shells.setMatrixAt(index, matrix);
+    matrix.makeTranslation(x, y - 0.015, z + 0.004);
+    liquid.setMatrixAt(index, matrix);
+  }
+
+  shells.instanceMatrix.needsUpdate = true;
+  liquid.instanceMatrix.needsUpdate = true;
+  shells.count = 0;
+  liquid.count = 0;
+
+  return Object.freeze({
+    shells,
+    liquid,
+    setCount(count: number): void {
+      const visible = Math.min(
+        MAX_PREPARED_CUPS,
+        Math.max(0, Number.isFinite(count) ? Math.trunc(count) : 0),
+      );
+      shells.count = visible;
+      liquid.count = visible;
+    },
+  });
 };
 
 const createLemon = (index: number): THREE.Group => {
@@ -328,13 +370,22 @@ export const createLemonsvilleScene = (
   for (const sign of signs) scene.add(sign);
   const signOrigins = signs.map((sign) => sign.rotation.z);
 
-  const customers = Array.from({ length: 12 }, (_, index) => createCustomer(index));
+  const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) =>
+    createPerson(index),
+  );
   for (const customer of customers) scene.add(customer);
-  const customerOrigins = customers.map((customer) => customer.position.clone());
 
-  const cups = Array.from({ length: 10 }, (_, index) => createCup(index));
-  for (const cup of cups) scene.add(cup);
-  const cupOrigins = cups.map((cup) => cup.position.y);
+  const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) =>
+    createPerson(index + PASSERBY_POOL_SIZE),
+  );
+  for (const buyer of buyers) {
+    buyer.visible = false;
+    scene.add(buyer);
+  }
+
+  const cupInventory = createCupInventory();
+  scene.add(cupInventory.shells);
+  scene.add(cupInventory.liquid);
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
   for (const lemon of lemons) scene.add(lemon);
@@ -351,25 +402,41 @@ export const createLemonsvilleScene = (
 
   let state = initialState;
   let animationFrame: number | null = null;
-  const animationEpoch = performance.now();
+  let animationEpoch = performance.now();
+  let storyboard = createStreetStoryboard({
+    durationMs: Math.max(1, state.durationMs),
+    prepared: state.prepared,
+    sold: state.phase === "simulation" ? state.sold : 0,
+    visibleSigns: state.visibleSigns,
+    ambientPedestrianCount: customerCount[state.customerActivity],
+  });
 
   const render = (): void => {
     renderer.render(scene, camera);
   };
 
-  const resetAnimatedObjects = (): void => {
+  const positionStaticPedestrians = (): void => {
+    const visibleCount = Math.min(
+      customers.length,
+      Math.max(6, customerCount[state.customerActivity] + 2),
+    );
     customers.forEach((customer, index) => {
-      const origin = customerOrigins[index];
-      if (origin === undefined) return;
-      customer.position.copy(origin);
+      customer.visible = index < visibleCount;
+      if (!customer.visible) return;
+      const row = index % 2;
+      const progress = visibleCount <= 1 ? 0.5 : index / (visibleCount - 1);
+      customer.position.set(-7.2 + progress * 14.4, 0, 3.65 + row * 0.7);
+      customer.rotation.y = index % 2 === 0 ? Math.PI / 2 : -Math.PI / 2;
     });
+    for (const buyer of buyers) buyer.visible = false;
+  };
+
+  const resetAnimatedObjects = (): void => {
+    positionStaticPedestrians();
     signs.forEach((sign, index) => {
       sign.rotation.z = signOrigins[index] ?? 0;
     });
-    cups.forEach((cup, index) => {
-      cup.position.y = cupOrigins[index] ?? cup.position.y;
-      cup.rotation.y = 0;
-    });
+    cupInventory.setCount(storyboard.prepared);
     lemons.forEach((lemon, index) => {
       lemon.position.y = lemonOrigins[index] ?? lemon.position.y;
       lemon.rotation.y = 0;
@@ -377,6 +444,93 @@ export const createLemonsvilleScene = (
     for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
       weatherObjects[weather].position.x = weatherOrigins[weather];
     }
+  };
+
+  const animateBuyers = (elapsedMs: number, seconds: number): number => {
+    for (const buyer of buyers) buyer.visible = false;
+    if (state.phase !== "simulation") return 0;
+
+    let activeBuyerCount = 0;
+    for (const sale of storyboard.sales) {
+      if (elapsedMs < sale.approachAtMs || elapsedMs > sale.departAtMs) continue;
+      const buyer = buyers[activeBuyerCount];
+      if (buyer === undefined) break;
+
+      const streetX = sale.direction === -1 ? -8.4 : 8.4;
+      const exitX = -streetX;
+      const streetZ = 4.0 + sale.lane * 0.34;
+      const counterX = sale.direction === -1 ? -0.7 : 0.7;
+      const counterZ = 1.65;
+      let x: number;
+      let z: number;
+
+      if (elapsedMs <= sale.purchaseAtMs) {
+        const duration = Math.max(1, sale.purchaseAtMs - sale.approachAtMs);
+        const progress = smoothStep((elapsedMs - sale.approachAtMs) / duration);
+        x = lerp(streetX, counterX, progress);
+        z = lerp(streetZ, counterZ, progress);
+      } else {
+        const duration = Math.max(1, sale.departAtMs - sale.purchaseAtMs);
+        const progress = smoothStep((elapsedMs - sale.purchaseAtMs) / duration);
+        x = lerp(counterX, exitX, progress);
+        z = lerp(counterZ, streetZ, progress);
+      }
+
+      buyer.visible = true;
+      buyer.position.set(x, Math.abs(Math.sin(seconds * 7 + sale.saleNumber)) * 0.05, z);
+      buyer.rotation.y = sale.direction === -1 ? Math.PI / 2 : -Math.PI / 2;
+      activeBuyerCount += 1;
+    }
+    return activeBuyerCount;
+  };
+
+  const animatePassersBy = (
+    elapsedMs: number,
+    seconds: number,
+    activeBuyerCount: number,
+  ): void => {
+    const targetCount = Math.min(
+      customers.length,
+      Math.max(
+        activeBuyerCount + 1,
+        customerCount[state.customerActivity] + 4,
+        Math.min(storyboard.passersBy.length, customers.length),
+      ),
+    );
+    const durationMs = Math.max(1, storyboard.durationMs);
+    const globalProgress = clamp01(elapsedMs / durationMs);
+
+    customers.forEach((customer, index) => {
+      customer.visible = index < targetCount;
+      if (!customer.visible) return;
+
+      const beat = storyboard.passersBy[index % storyboard.passersBy.length];
+      if (beat === undefined) {
+        customer.visible = false;
+        return;
+      }
+
+      const progress = (globalProgress + index / targetCount) % 1;
+      const startX = beat.direction === -1 ? -9 : 9;
+      const endX = -startX;
+      const attention =
+        beat.seesAdvertisement
+          ? Math.exp(-Math.pow((progress - 0.5) / 0.12, 2))
+          : 0;
+      const signSide = beat.signIndex >= 0 && beat.signIndex % 2 === 0 ? -1 : 1;
+      const baseX = lerp(startX, endX, progress);
+      const x = lerp(baseX, signSide * 4.1, attention * 0.22);
+      const z = 4.0 + beat.lane * 0.28 - attention * 0.7;
+      const bob = Math.abs(Math.sin(seconds * 5.2 + index * 0.7)) * 0.055;
+
+      customer.position.set(x, bob, z);
+      customer.rotation.y =
+        attention > 0.55
+          ? signSide * 0.72
+          : beat.direction === -1
+            ? Math.PI / 2
+            : -Math.PI / 2;
+    });
   };
 
   const animate = (timestamp: number): void => {
@@ -387,21 +541,22 @@ export const createLemonsvilleScene = (
       return;
     }
 
-    const seconds = (timestamp - animationEpoch) / 1000;
-    customers.forEach((customer, index) => {
-      if (!customer.visible) return;
-      const origin = customerOrigins[index];
-      if (origin === undefined) return;
-      customer.position.x = origin.x + Math.sin(seconds * 1.4 + index * 0.8) * 0.14;
-      customer.position.y = Math.abs(Math.sin(seconds * 2.8 + index)) * 0.07;
-    });
+    const elapsedMs = Math.min(
+      storyboard.durationMs,
+      Math.max(0, timestamp - animationEpoch),
+    );
+    const seconds = elapsedMs / 1000;
+    const activeBuyerCount = animateBuyers(elapsedMs, seconds);
+    animatePassersBy(elapsedMs, seconds, activeBuyerCount);
+
+    cupInventory.setCount(
+      state.phase === "simulation"
+        ? remainingCupsAt(storyboard, elapsedMs)
+        : storyboard.prepared,
+    );
+
     signs.forEach((sign, index) => {
       if (sign.visible) sign.rotation.z = Math.sin(seconds * 1.7 + index * 0.55) * 0.035;
-    });
-    cups.forEach((cup, index) => {
-      if (!cup.visible) return;
-      cup.position.y = (cupOrigins[index] ?? cup.position.y) + Math.sin(seconds * 2 + index) * 0.025;
-      cup.rotation.y = Math.sin(seconds + index) * 0.08;
     });
     lemons.forEach((lemon, index) => {
       if (!lemon.visible) return;
@@ -412,7 +567,10 @@ export const createLemonsvilleScene = (
 
     const activeWeather = weatherObjects[state.weather];
     activeWeather.position.x =
-      weatherOrigins[state.weather] + Math.sin(seconds * 0.45) * (state.weather === "sunny" ? 0.08 : 0.3);
+      weatherOrigins[state.weather] +
+      Math.sin(seconds * 0.45) * (state.weather === "sunny" ? 0.08 : 0.3);
+
+    void completedSalesAt(storyboard, elapsedMs);
     render();
     animationFrame = window.requestAnimationFrame(animate);
   };
@@ -430,7 +588,23 @@ export const createLemonsvilleScene = (
   };
 
   const update = (nextState: LemonsvilleSceneState): void => {
+    const presentationChanged =
+      state.phase !== nextState.phase ||
+      state.durationMs !== nextState.durationMs ||
+      state.prepared !== nextState.prepared ||
+      state.sold !== nextState.sold ||
+      state.visibleSigns !== nextState.visibleSigns;
+
     state = nextState;
+    storyboard = createStreetStoryboard({
+      durationMs: Math.max(1, state.durationMs),
+      prepared: state.prepared,
+      sold: state.phase === "simulation" ? state.sold : 0,
+      visibleSigns: state.visibleSigns,
+      ambientPedestrianCount: customerCount[state.customerActivity],
+    });
+    if (presentationChanged) animationEpoch = performance.now();
+
     renderer.setClearColor(skyColor[state.weather], 1);
 
     for (const [weather, weatherObject] of Object.entries(weatherObjects) as [
@@ -445,24 +619,13 @@ export const createLemonsvilleScene = (
       sign.visible = index < signLimit;
     });
 
-    let visibleCustomers = customerCount[state.customerActivity];
-    if (state.phase === "simulation") {
-      const sellThroughBoost = Math.round((state.sellThroughBasisPoints / 10_000) * 3);
-      visibleCustomers = Math.min(customers.length, visibleCustomers + sellThroughBoost);
-    }
-    customers.forEach((customer, index) => {
-      customer.visible = index < visibleCustomers;
-    });
-
-    const cupLimit = visibleInventoryCount(state.prepared, cups.length, 8);
-    cups.forEach((cup, index) => {
-      cup.visible = index < cupLimit;
-    });
-
     const lemonLimit = visibleInventoryCount(state.prepared, lemons.length, 12);
     lemons.forEach((lemon, index) => {
       lemon.visible = index < lemonLimit;
     });
+
+    cupInventory.setCount(storyboard.prepared);
+    if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
     render();
     syncAnimation();
@@ -471,7 +634,23 @@ export const createLemonsvilleScene = (
   const resize = (width: number, height: number): void => {
     const safeWidth = Math.max(1, Math.floor(width));
     const safeHeight = Math.max(1, Math.floor(height));
-    camera.aspect = safeWidth / safeHeight;
+    const aspect = safeWidth / safeHeight;
+
+    camera.aspect = aspect;
+    if (aspect < 0.72) {
+      camera.fov = 47;
+      camera.position.set(0, 8.6, 17.8);
+      camera.lookAt(0, 1.8, 1.1);
+    } else if (aspect > 1.65) {
+      camera.fov = 32;
+      camera.position.set(0, 6.5, 12.8);
+      camera.lookAt(0, 1.75, 0.7);
+    } else {
+      camera.fov = 36;
+      camera.position.set(0, 7.0, 14.2);
+      camera.lookAt(0, 1.8, 0.8);
+    }
+
     camera.updateProjectionMatrix();
     renderer.setSize(safeWidth, safeHeight, false);
     render();
