@@ -30,34 +30,50 @@ export class LemonadeRunTools extends LitElement {
     return this;
   }
 
-  readonly #onExport = (): void => {
-    this.dispatchEvent(new Event("lemonade-run-export", { bubbles: true, composed: true }));
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.addEventListener("click", this.#onClick);
+    this.addEventListener("change", this.#onChange);
+  }
+
+  override disconnectedCallback(): void {
+    this.removeEventListener("click", this.#onClick);
+    this.removeEventListener("change", this.#onChange);
+    super.disconnectedCallback();
+  }
+
+  readonly #onClick = (event: Event): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+
+    switch (target.id) {
+      case "export-run":
+        this.dispatchEvent(new Event("lemonade-run-export", { bubbles: true, composed: true }));
+        break;
+      case "import-run": {
+        if (!this.model.persistenceEnabled) return;
+        const input = this.querySelector("#import-file");
+        if (!(input instanceof HTMLInputElement)) {
+          throw new TypeError("Expected run import file input.");
+        }
+        input.click();
+        break;
+      }
+      case "reset-run":
+        if (!this.model.persistenceEnabled) return;
+        this.dispatchEvent(new Event("lemonade-run-reset", { bubbles: true, composed: true }));
+        break;
+    }
   };
 
-  readonly #onImport = (): void => {
-    if (!this.model.persistenceEnabled) return;
-    const input = this.querySelector("#import-file");
-    if (!(input instanceof HTMLInputElement)) {
-      throw new TypeError("Expected run import file input.");
-    }
-    input.click();
-  };
-
-  readonly #onImportFileChange = (event: Event): void => {
-    const input = event.currentTarget;
-    if (!(input instanceof HTMLInputElement)) {
-      throw new TypeError("Expected run import file input change target.");
-    }
+  readonly #onChange = (event: Event): void => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || input.id !== "import-file") return;
     const file = input.files?.item(0);
     input.value = "";
     if (file !== null && file !== undefined) {
       this.dispatchEvent(new RunImportFileEvent(file));
     }
-  };
-
-  readonly #onReset = (): void => {
-    if (!this.model.persistenceEnabled) return;
-    this.dispatchEvent(new Event("lemonade-run-reset", { bubbles: true, composed: true }));
   };
 
   protected override render() {
@@ -72,7 +88,7 @@ export class LemonadeRunTools extends LitElement {
           </p>
         </div>
         <div class="run-actions">
-          <button id="export-run" class="utility-button" type="button" @click=${this.#onExport}>
+          <button id="export-run" class="utility-button" type="button">
             Export run
           </button>
           <button
@@ -80,7 +96,7 @@ export class LemonadeRunTools extends LitElement {
             class="utility-button"
             type="button"
             ?disabled=${!persistenceEnabled}
-            @click=${this.#onImport}
+           
           >
             Import run
           </button>
@@ -89,14 +105,14 @@ export class LemonadeRunTools extends LitElement {
             type="file"
             accept="application/json,.json"
             hidden
-            @change=${this.#onImportFileChange}
+           
           />
           <button
             id="reset-run"
             class="utility-button utility-button-danger"
             type="button"
             ?disabled=${!persistenceEnabled}
-            @click=${this.#onReset}
+           
           >
             Reset run
           </button>
@@ -153,7 +169,7 @@ export class LemonadeDecisionPanel extends LitElement {
   }
 
   #emitDecision(kind: DecisionKind, event: Event): void {
-    const input = event.currentTarget;
+    const input = event.target;
     if (!(input instanceof HTMLInputElement)) {
       throw new TypeError("Expected decision range input.");
     }
@@ -161,19 +177,37 @@ export class LemonadeDecisionPanel extends LitElement {
     this.dispatchEvent(new DecisionChangeEvent(Object.freeze({ kind, value: input.valueAsNumber })));
   }
 
-  readonly #onGlassesInput = (event: Event): void => {
-    this.#emitDecision("glasses", event);
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.addEventListener("input", this.#onInput);
+    this.addEventListener("submit", this.#onSubmit);
+  }
+
+  override disconnectedCallback(): void {
+    this.removeEventListener("input", this.#onInput);
+    this.removeEventListener("submit", this.#onSubmit);
+    super.disconnectedCallback();
+  }
+
+  readonly #onInput = (event: Event): void => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+
+    switch (input.name) {
+      case "glasses":
+        this.#emitDecision("glasses", event);
+        break;
+      case "signs":
+        this.#emitDecision("signs", event);
+        break;
+      case "price":
+        this.#emitDecision("price", event);
+        break;
+    }
   };
 
-  readonly #onSignsInput = (event: Event): void => {
-    this.#emitDecision("signs", event);
-  };
-
-  readonly #onPriceInput = (event: Event): void => {
-    this.#emitDecision("price", event);
-  };
-
-  readonly #onSubmit = (event: SubmitEvent): void => {
+  readonly #onSubmit = (event: Event): void => {
+    if (!(event.target instanceof HTMLFormElement)) return;
     event.preventDefault();
     if (!this.model.affordable) return;
     this.dispatchEvent(new Event("lemonade-decision-submit", { bubbles: true, composed: true }));
@@ -182,7 +216,7 @@ export class LemonadeDecisionPanel extends LitElement {
   protected override render() {
     const model = this.model;
     return html`
-      <form id="decision-panel" class="decision-panel" ?hidden=${!model.visible} @submit=${this.#onSubmit}>
+      <form id="decision-panel" class="decision-panel" ?hidden=${!model.visible}>
         <header class="panel-heading">
           <div>
             <p class="eyebrow">Set today’s plan</p>
@@ -202,7 +236,7 @@ export class LemonadeDecisionPanel extends LitElement {
             step="1"
             .max=${String(model.maxGlasses)}
             .value=${String(model.glasses)}
-            @input=${this.#onGlassesInput}
+           
           />
         </label>
 
@@ -217,7 +251,7 @@ export class LemonadeDecisionPanel extends LitElement {
             step="1"
             .max=${String(model.maxSigns)}
             .value=${String(model.signs)}
-            @input=${this.#onSignsInput}
+           
           />
         </label>
 
@@ -232,7 +266,7 @@ export class LemonadeDecisionPanel extends LitElement {
             max="100"
             step="1"
             .value=${String(model.price)}
-            @input=${this.#onPriceInput}
+           
           />
         </label>
 
@@ -282,7 +316,19 @@ export class LemonadeDayReport extends LitElement {
     return this;
   }
 
-  readonly #onNextDay = (): void => {
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.addEventListener("click", this.#onClick);
+  }
+
+  override disconnectedCallback(): void {
+    this.removeEventListener("click", this.#onClick);
+    super.disconnectedCallback();
+  }
+
+  readonly #onClick = (event: Event): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement) || target.id !== "next-button") return;
     this.dispatchEvent(new Event("lemonade-next-day", { bubbles: true, composed: true }));
   };
 
@@ -351,7 +397,7 @@ export class LemonadeDayReport extends LitElement {
             ? `Tier ${String(report.nextState.tier)} unlocks tomorrow. New finance rules will be shown before you sell.`
             : ""}
         </p>
-        <button id="next-button" class="next-button" type="button" @click=${this.#onNextDay}>
+        <button id="next-button" class="next-button" type="button">
           Plan next day
         </button>
       </section>
