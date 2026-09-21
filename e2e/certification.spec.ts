@@ -8,6 +8,14 @@ const expectNoHorizontalOverflow = async (page: Page): Promise<void> => {
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 };
 
+const expectNoVerticalOverflow = async (page: Page): Promise<void> => {
+  const dimensions = await page.evaluate(() => ({
+    clientHeight: document.documentElement.clientHeight,
+    scrollHeight: document.documentElement.scrollHeight,
+  }));
+  expect(dimensions.scrollHeight).toBeLessThanOrEqual(dimensions.clientHeight + 1);
+};
+
 test("release artifact completes a day without uncaught runtime failures", async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -81,11 +89,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
 
   const simulationButton = page.getByRole("button", { name: "Sell for the day" });
   await expect(simulationButton).toBeVisible();
-  const planningBounds = await page.evaluate(() => ({
-    clientHeight: document.documentElement.clientHeight,
-    scrollHeight: document.documentElement.scrollHeight,
-  }));
-  expect(planningBounds.scrollHeight).toBeLessThanOrEqual(planningBounds.clientHeight + 1);
+  await expectNoVerticalOverflow(page);
 
   const buttonBox = await simulationButton.boundingBox();
   if (buttonBox === null) throw new Error("expected simulation button bounds");
@@ -114,6 +118,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   expect(artContract.floatsIce).toBe(true);
   expect(artContract.floatsStraw).toBe(true);
   expect(artContract.pours).toBe(true);
+  expect((await simulationButton.textContent())?.trim()).toBe("");
 
   await simulationButton.click();
   await expect(main).toHaveAttribute("data-view", "simulation");
@@ -128,10 +133,23 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   expect(simulationStage.width).toBeGreaterThanOrEqual(359);
   expect(simulationStage.height).toBeGreaterThanOrEqual(739);
   await expect(main).toHaveAttribute("data-view", "report");
-  await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await expectNoVerticalOverflow(page);
+  await expect(page.getByRole("region", { name: "Sales history" })).toBeHidden();
 
-  await page.getByRole("button", { name: "Plan next day" }).click();
+  const nextDayButton = page.getByRole("button", { name: "Plan next day" });
+  await expect(nextDayButton).toBeVisible();
+  expect((await nextDayButton.textContent())?.trim()).toBe("");
+  await expect(nextDayButton.locator("svg")).toHaveCount(1);
+  const nextDayBox = await nextDayButton.boundingBox();
+  if (nextDayBox === null) throw new Error("expected next-day control bounds");
+  expect(Math.abs(nextDayBox.x + nextDayBox.width / 2 - 180)).toBeLessThanOrEqual(2);
+  expect(740 - (nextDayBox.y + nextDayBox.height)).toBeLessThanOrEqual(24);
+
+  await nextDayButton.click();
   await expect(main).toHaveAttribute("data-view", "forecast");
+  await expectNoHorizontalOverflow(page);
+  await expectNoVerticalOverflow(page);
   await expect(page.locator("#scene-title")).not.toBeEmpty();
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-presentation-duration-ms",
@@ -140,6 +158,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expect(main).toHaveAttribute("data-view", "planning");
   await expect(page.locator("#status-day")).toHaveText("2");
   await expectNoHorizontalOverflow(page);
+  await expectNoVerticalOverflow(page);
 });
 
 test("reset requires explicit in-page confirmation", async ({ page }) => {
