@@ -12,8 +12,7 @@
 
 body {
   margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at 15% 10%, rgb(255 255 255 / 55%), transparent 26rem),
     linear-gradient(180deg, #f3df97 0%, #f5edcf 42%, #c8d7a2 100%);
@@ -37,17 +36,16 @@ input:focus-visible {
 }
 
 .game-shell {
-  width: min(1100px, calc(100% - 32px));
+  width: calc(100% - 20px);
   margin: 0 auto;
-  padding: 28px 0 52px;
+  padding: 18px 0 52px;
 }
 
 .topline,
-.panel-heading,
-.conditions,
-.results-grid {
+.panel-heading {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-direction: column;
   justify-content: space-between;
   gap: 20px;
 }
@@ -111,6 +109,9 @@ h2 {
 }
 
 .conditions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
   margin: 26px 0 18px;
   padding: 16px 18px;
   border: 2px solid #211d14;
@@ -130,7 +131,7 @@ h2 {
 .stand-stage {
   position: relative;
   overflow: hidden;
-  min-height: 310px;
+  min-height: 245px;
   border: 2px solid #211d14;
   background: linear-gradient(180deg, #7bc6d6 0 58%, #9cb976 58% 76%, #b99a71 76%);
   box-shadow: 8px 8px 0 #211d14;
@@ -198,7 +199,7 @@ h2 {
   inset: auto 5% 20px;
   display: flex;
   align-items: end;
-  justify-content: space-between;
+  justify-content: center;
 }
 
 .house,
@@ -209,6 +210,7 @@ h2 {
 }
 
 .house {
+  display: none;
   width: 150px;
   height: 112px;
   background: #e37a58;
@@ -244,8 +246,8 @@ h2 {
 }
 
 .stand {
-  width: min(330px, 44vw);
-  min-width: 230px;
+  width: min(78vw, 330px);
+  min-width: 0;
   height: 185px;
   background: #f0d285;
 }
@@ -298,7 +300,6 @@ h2 {
 }
 
 .panel-heading {
-  align-items: end;
   margin-bottom: 24px;
 }
 
@@ -315,7 +316,7 @@ h2 {
 
 .decision-control {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(64px, auto) minmax(220px, 2fr);
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 20px;
   padding: 21px 0;
@@ -352,7 +353,7 @@ h2 {
 
 .decision-exact input {
   width: 92px;
-  min-height: 42px;
+  min-height: 44px;
   padding: 8px 10px;
   border: 2px solid #211d14;
   background: #f8d354;
@@ -373,11 +374,15 @@ h2 {
   width: 76px;
 }
 
+.decision-control > .decision-slider {
+  grid-column: 1 / -1;
+}
+
 .decision-slider {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -386,12 +391,12 @@ h2 {
 }
 
 .decision-cost {
-  min-width: 9.5rem;
+  min-width: 8.8rem;
   padding: 7px 9px;
   border: 2px solid #211d14;
   background: #f5edd1;
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   font-weight: 900;
   text-align: right;
   white-space: nowrap;
@@ -421,10 +426,12 @@ input[type="range"] {
   cursor: pointer;
 }
 
-.sell-button:hover:not(:disabled),
-.next-button:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0 #211d14;
+@media (hover: hover) and (pointer: fine) {
+  .sell-button:hover:not(:disabled),
+  .next-button:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 #211d14;
+  }
 }
 
 .sell-button:active:not(:disabled),
@@ -450,7 +457,8 @@ input[type="range"] {
 
 .results-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
   margin: 22px 0;
 }
 
@@ -475,58 +483,64 @@ input[type="range"] {
   background: #f5edd1;
 }
 
-@media (max-width: 760px) {
+@media (width >= 47.5625rem) {
   .game-shell {
-    width: min(100% - 20px, 620px);
-    padding-top: 18px;
+    width: min(1100px, calc(100% - 32px));
+    padding: 28px 0 52px;
   }
 
-  .topline,
+  .topline {
+    align-items: center;
+    flex-direction: row;
+  }
+
   .panel-heading {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: end;
+    flex-direction: row;
   }
 
   .conditions {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .stand-stage {
-    min-height: 245px;
+    min-height: 310px;
   }
 
   .house {
-    display: none;
+    display: block;
   }
 
   .street {
-    justify-content: center;
+    justify-content: space-between;
   }
 
   .stand {
-    width: min(78vw, 330px);
+    width: min(330px, 44vw);
+    min-width: 230px;
   }
 
   .decision-control {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(150px, 1fr) minmax(64px, auto) minmax(220px, 2fr);
   }
 
   .decision-control > .decision-slider {
-    grid-column: 1 / -1;
+    grid-column: auto;
   }
 
   .decision-slider {
-    gap: 10px;
+    gap: 14px;
   }
 
   .decision-cost {
-    min-width: 8.8rem;
-    font-size: 0.8rem;
+    min-width: 9.5rem;
+    font-size: 0.86rem;
   }
 
   .results-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -534,9 +548,9 @@ input[type="range"] {
   *,
   *::before,
   *::after {
-    scroll-behavior: auto !important;
-    transition-duration: 0.001ms !important;
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
+    scroll-behavior: auto;
+    transition-duration: 0.001ms;
+    animation-duration: 0.001ms;
+    animation-iteration-count: 1;
   }
 }

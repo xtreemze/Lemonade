@@ -114,6 +114,9 @@ It has one primary submit action. Weather, market sentiment, financial obligatio
 
 - Prefer semantic HTML over generic containers with ARIA patches.
 - Preserve keyboard operation and precise input behavior.
+- Author responsive CSS mobile-first: narrow layouts are the source of truth and larger layouts are progressive enhancements using ascending relative-unit `width >= …` queries.
+- Do not hide horizontal overflow to conceal layout defects, use legacy `100vh/100vw` for full-viewport sizing, or rely on `!important`/broad `transition: all` overrides.
+- Gate hover decoration behind `(hover: hover) and (pointer: fine)`; touch and keyboard interaction must remain complete without hover.
 - Do not rely on color, animation, hover, canvas, or audio as the sole carrier of gameplay information.
 - Honor reduced-motion/reduced-sensory preferences.
 - Canvas/WebGL gameplay information requires a textual equivalent.

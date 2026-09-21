@@ -13,11 +13,11 @@ This review rechecks the Lemonade web stack after the MVP, with two goals: use c
 | Runtime | Node 24 LTS | Prefer the active LTS line over Node 26 Current for CI and contributor reproducibility. |
 | Package manager | pnpm 12.5.x | Current stable pnpm 12 line. |
 | Language | TypeScript 6.0.x for now | TypeScript 7 is stable, but stable typescript-eslint currently documents support below TypeScript 6.1. Keep supported typed linting rather than forcing an unsupported pairing. |
-| Lint | ESLint 10.11.x + typescript-eslint 8.70.x | Keeps strict type-aware rules while taking the latest supported ESLint improvements. |
+| Lint | ESLint 10.11.x + typescript-eslint 8.70.x + repository policy gate | Keeps strict type-aware rules, enforces simulation purity, and rejects responsive/CSS anti-patterns without adding a CSS-tooling dependency. |
 | Unit/invariant tests | Vitest 5.0.x | Current stable major and aligned with Vite. |
 | Browser acceptance | Playwright 1.63.x | Already current stable and directly certifies the production Pages artifact. |
 | 3D | Three.js 0.186.x | Already current; specialized scene-graph/WebGL complexity justifies the dependency. Align its type package to the same release. |
-| Styling | Native CSS | No Tailwind, CSS-in-JS, or PostCSS layer is justified at the current scale. |
+| Styling | Native CSS, mobile-first | No Tailwind, CSS-in-JS, PostCSS, or Stylelint dependency is justified at the current scale; project-specific policy checks are small enough to keep native. |
 | Charts | Native SVG + semantic tables | Current chart needs remain simple and deterministic. |
 
 ## Framework decision
@@ -37,6 +37,25 @@ Continue using native controls for buttons, ranges, file inputs, tables, and sim
 Web Awesome 3.x is the preferred external component-library candidate if the app later needs robust comboboxes, menus, drawers, complex dialogs, date/time widgets, tree views, or advanced selection controls. It is framework-agnostic and Web Component based, so it can coexist with native HTML or Lit. Import individual components; do not load an all-components bundle by default.
 
 Framework-bound kits such as React/shadcn, Svelte-only kits, Vue-only kits, and Tailwind-dependent systems are not baseline choices because they would couple the visual system to a stack the product otherwise does not require.
+
+## Enforced lint policy
+
+The lint contract intentionally combines the strictest practical type-aware TypeScript baseline with project-specific repository rules rather than adding another general-purpose dependency.
+
+ESLint enforces the deterministic-domain boundary directly in `packages/simulation/src`: browser/device globals, network I/O, ambient timers/clocks, `Math.random()`, rendering/UI imports, Node APIs, and platform runtimes are rejected. The general TypeScript surface also keeps unused-disable reporting and explicit high-value correctness/style rules on top of `strictTypeChecked` and `stylisticTypeChecked`.
+
+A dependency-free repository policy check scans authored CSS under `apps/` and `packages/`. It rejects:
+
+- desktop-first `max-width`/descending width queries;
+- legacy `min-width:` media syntax in favor of modern ascending range syntax;
+- pixel-based responsive breakpoints;
+- legacy `100vh/100vw` viewport sizing;
+- `overflow-x: hidden/clip` used to conceal responsive defects;
+- `transition: all`;
+- `!important`;
+- hover decoration outside `(hover: hover) and (pointer: fine)` capability queries.
+
+The existing narrow-viewport Playwright certification remains the runtime backstop for overflow and accessible data presentation. Static policy prevents known regressions from being introduced; browser tests verify that the composed layout still behaves correctly.
 
 ## TypeScript 7 hold
 

@@ -63,6 +63,22 @@ test("narrow viewport keeps the operating surface contained and data accessible"
   await expectNoHorizontalOverflow(page);
 });
 
+test("reset requires explicit in-page confirmation", async ({ page }) => {
+  await page.goto("./");
+
+  await page.getByRole("button", { name: "Reset run" }).click();
+  const dialog = page.getByRole("dialog", { name: "Reset this run?" });
+  await expect(dialog).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Keep run" }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lemonade", level: 1 })).toBeVisible();
+
+  await page.getByRole("button", { name: "Reset run" }).click();
+  await dialog.getByRole("button", { name: "Reset run" }).click();
+  await expect(page.getByRole("heading", { name: "Lemonade", level: 1 })).toBeVisible();
+});
+
 test("reduced-motion preference collapses decorative transition and animation durations", async ({
   page,
 }) => {

@@ -65,8 +65,16 @@ export class LemonadeRunTools extends LitElement {
         input.click();
         break;
       }
-      case "reset-run":
+      case "reset-run": {
         if (!this.model.persistenceEnabled) return;
+        const dialog = this.querySelector("#reset-dialog");
+        if (!(dialog instanceof HTMLDialogElement)) {
+          throw new TypeError("Expected reset confirmation dialog.");
+        }
+        dialog.showModal();
+        break;
+      }
+      case "confirm-reset":
         this.dispatchEvent(new Event("lemonade-run-reset", { bubbles: true, composed: true }));
         break;
     }
@@ -82,7 +90,7 @@ export class LemonadeRunTools extends LitElement {
     }
   };
 
-  protected override render() {
+  protected override render(): ReturnType<typeof html> {
     const { statusMessage, errorMessage, persistenceEnabled } = this.model;
     return html`
       <section class="run-tools" aria-label="Run data">
@@ -124,6 +132,24 @@ export class LemonadeRunTools extends LitElement {
           </button>
         </div>
       </section>
+      <dialog id="reset-dialog" class="reset-dialog" aria-labelledby="reset-dialog-title">
+        <form class="reset-dialog-card" method="dialog">
+          <p class="eyebrow">Destructive action</p>
+          <h2 id="reset-dialog-title">Reset this run?</h2>
+          <p>The local run will be deleted. Export it first if you want a portable copy.</p>
+          <div class="reset-dialog-actions">
+            <button class="utility-button" type="submit" value="cancel">Keep run</button>
+            <button
+              id="confirm-reset"
+              class="utility-button utility-button-danger"
+              type="submit"
+              value="confirm"
+            >
+              Reset run
+            </button>
+          </div>
+        </form>
+      </dialog>
     `;
   }
 }
@@ -279,7 +305,7 @@ export class LemonadeDecisionPanel extends LitElement {
     this.dispatchEvent(new Event("lemonade-decision-submit", { bubbles: true, composed: true }));
   };
 
-  protected override render() {
+  protected override render(): ReturnType<typeof html> {
     const model = this.model;
     return html`
       <form id="decision-panel" class="decision-panel" ?hidden=${!model.visible}>
@@ -477,7 +503,7 @@ export class LemonadeDayReport extends LitElement {
     this.dispatchEvent(new Event("lemonade-next-day", { bubbles: true, composed: true }));
   };
 
-  protected override render() {
+  protected override render(): ReturnType<typeof html> {
     const { report, weeklyReport, currentTier } = this.model;
     if (report === null) {
       return html`<section
