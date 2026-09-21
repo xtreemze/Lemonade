@@ -67,10 +67,15 @@ test("narrow viewport keeps the complete planning surface above the fold", async
       throw new Error(`expected ${name} slider bounds`);
     }
     expect(sliderBox.width).toBeGreaterThanOrEqual(controlBox.width * 0.95);
-    const thumbImage = await slider.evaluate((element) =>
-      getComputedStyle(element).getPropertyValue("--slider-thumb-image"),
-    );
-    expect(thumbImage).toContain(icon);
+    const thumbStyle = await slider.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        image: style.getPropertyValue("--slider-thumb-image"),
+        kind: style.getPropertyValue("--slider-thumb-kind").trim(),
+      };
+    });
+    expect(thumbStyle.kind).toBe(icon);
+    expect(thumbStyle.image).toContain("data:image/svg+xml");
   }
 
   const simulationButton = page.getByRole("button", { name: "Sell for the day" });
