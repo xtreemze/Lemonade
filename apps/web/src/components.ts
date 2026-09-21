@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import type { DayEnvironment, DayResolution, GameState } from "@lemonade/simulation";
+import type { WeeklyReport } from "@lemonade/ui";
 
 export type RunToolsModel = Readonly<{
   statusMessage: string;
@@ -434,11 +435,13 @@ const formatMoney = (cents: number): string => moneyFormatter.format(cents / 100
 
 export type DayReportModel = Readonly<{
   report: DayResolution | null;
+  weeklyReport: WeeklyReport | null;
   currentTier: GameState["tier"];
 }>;
 
 const DEFAULT_REPORT_MODEL: DayReportModel = Object.freeze({
   report: null,
+  weeklyReport: null,
   currentTier: 0,
 });
 
@@ -475,7 +478,7 @@ export class LemonadeDayReport extends LitElement {
   };
 
   protected override render() {
-    const { report, currentTier } = this.model;
+    const { report, weeklyReport, currentTier } = this.model;
     if (report === null) {
       return html`<section
         id="report-panel"
@@ -532,6 +535,72 @@ export class LemonadeDayReport extends LitElement {
             </tbody>
           </table>
         </div>
+
+        ${weeklyReport === null
+          ? null
+          : html`
+              <section
+                class="weekly-report"
+                aria-labelledby="weekly-report-title"
+              >
+                <header class="weekly-report-heading">
+                  <div>
+                    <p class="eyebrow">
+                      Weekly report · Days ${String(weeklyReport.startDay)}–${String(weeklyReport.endDay)}
+                    </p>
+                    <h3 id="weekly-report-title">Week ${String(weeklyReport.weekNumber)} results</h3>
+                  </div>
+                  <strong class=${weeklyReport.netCents >= 0 ? "weekly-profit" : "weekly-loss"}>
+                    ${weeklyReport.netCents >= 0 ? "+" : "−"}${formatMoney(Math.abs(weeklyReport.netCents))}
+                  </strong>
+                </header>
+
+                <dl class="weekly-results-grid">
+                  <div><dt>Revenue</dt><dd>${formatMoney(weeklyReport.revenueCents)}</dd></div>
+                  <div><dt>Expenses</dt><dd>${formatMoney(weeklyReport.expensesCents)}</dd></div>
+                  <div><dt>Sold</dt><dd>${String(weeklyReport.sold)} / ${String(weeklyReport.prepared)}</dd></div>
+                  <div>
+                    <dt>Sell-through</dt>
+                    <dd>${(weeklyReport.sellThroughBasisPoints / 100).toFixed(0)}%</dd>
+                  </div>
+                  <div>
+                    <dt>Average daily net</dt>
+                    <dd>
+                      ${weeklyReport.averageDailyNetCents >= 0 ? "+" : "−"}${formatMoney(
+                        Math.abs(weeklyReport.averageDailyNetCents),
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Profitable days</dt>
+                    <dd>${String(weeklyReport.profitableDays)} / 7</dd>
+                  </div>
+                  <div><dt>Closing cash</dt><dd>${formatMoney(weeklyReport.endingCashCents)}</dd></div>
+                  <div><dt>Closing debt</dt><dd>${formatMoney(weeklyReport.endingDebtCents)}</dd></div>
+                </dl>
+
+                <div class="weekly-highlights" aria-label="Week highlights">
+                  <p>
+                    <span>Best day</span>
+                    <strong>
+                      Day ${String(weeklyReport.bestDay.day)} ·
+                      ${weeklyReport.bestDay.netCents >= 0 ? "+" : "−"}${formatMoney(
+                        Math.abs(weeklyReport.bestDay.netCents),
+                      )}
+                    </strong>
+                  </p>
+                  <p>
+                    <span>Lowest day</span>
+                    <strong>
+                      Day ${String(weeklyReport.worstDay.day)} ·
+                      ${weeklyReport.worstDay.netCents >= 0 ? "+" : "−"}${formatMoney(
+                        Math.abs(weeklyReport.worstDay.netCents),
+                      )}
+                    </strong>
+                  </p>
+                </div>
+              </section>
+            `}
 
         <p id="report-event" class="event-note">${eventLabel[entry.environment.event.kind]}</p>
         <p id="report-progression" class="progression-note" ?hidden=${!progressed}>
