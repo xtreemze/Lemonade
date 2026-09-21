@@ -526,7 +526,7 @@ const environmentForWeather = (kind: Weather["kind"]): DayEnvironment => {
     weather: Object.freeze({
       kind,
       demandMultiplier: basisPoints(10_000),
-    }) as Weather,
+    }),
     sentiment: neutral.sentiment,
     event: neutral.event,
   });
