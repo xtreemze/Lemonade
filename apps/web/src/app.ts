@@ -434,10 +434,7 @@ export class LemonadeApp {
 
   readonly #onResetRun = (): void => {
     if (!this.#persistenceEnabled) return;
-    const confirmed = window.confirm(
-      "Reset this run? The local run will be deleted. Export it first if you want a portable copy.",
-    );
-    if (confirmed) void this.#resetRun();
+    void this.#resetRun();
   };
 
   async #importFile(file: File): Promise<void> {
