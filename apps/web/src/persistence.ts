@@ -1,4 +1,5 @@
 import {
+  DecisionOutsideOperatingScaleError,
   SIMULATION_SCHEMA_VERSION,
   basisPoints,
   createSeededRandom,
@@ -6,6 +7,7 @@ import {
   generateEnvironment,
   glassCount,
   moneyCents,
+  replayLegacyDay,
   seed,
   signedMoneyCents,
   signCount,
@@ -492,7 +494,13 @@ const parsePhase = (
   if (kind === "deciding") return Object.freeze({ kind: "deciding" });
 
   const nextState = parseGameState(record["nextState"], `${path}.nextState`);
-  const expected = simulateDay(state, draft, environment);
+  let expected: DayResolution;
+  try {
+    expected = simulateDay(state, draft, environment);
+  } catch (error) {
+    if (!(error instanceof DecisionOutsideOperatingScaleError)) throw error;
+    expected = replayLegacyDay(state, draft, environment);
+  }
   if (!serializedStatesEqual(nextState, expected.nextState)) {
     return invalidSave(path, "report state does not match the deterministic day resolution");
   }
