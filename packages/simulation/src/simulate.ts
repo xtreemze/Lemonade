@@ -19,7 +19,21 @@ import {
   signedMoneyCents,
 } from "./primitives.js";
 import { potentialDemand } from "./rules.js";
+import { operatingScaleForState } from "./scale.js";
 import { productionCostForDay } from "./state.js";
+
+export class DecisionOutsideOperatingScaleError extends Error {
+  public constructor(
+    public readonly field: "glasses" | "signs" | "price",
+    public readonly requested: number,
+    public readonly maximum: number,
+  ) {
+    super(
+      `${field} decision ${String(requested)} exceeds operating-scale maximum ${String(maximum)}`,
+    );
+    this.name = "DecisionOutsideOperatingScaleError";
+  }
+}
 
 export class UnaffordableDecisionError extends Error {
   public constructor(
@@ -68,6 +82,18 @@ export const simulateDay = (
 ): DayResolution => {
   if (Number(decision.price) <= 0) {
     throw new RangeError("price must be greater than zero");
+  }
+
+  const scale = operatingScaleForState(state);
+  const boundedDecisions = [
+    ["glasses", Number(decision.glasses), scale.maxGlasses],
+    ["signs", Number(decision.signs), scale.maxSigns],
+    ["price", Number(decision.price), scale.maxPriceCents],
+  ] as const;
+  for (const [field, requested, maximum] of boundedDecisions) {
+    if (requested > maximum) {
+      throw new DecisionOutsideOperatingScaleError(field, requested, maximum);
+    }
   }
 
   const finance = financeRulesForTier(state.tier);
