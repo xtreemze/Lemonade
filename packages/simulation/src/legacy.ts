@@ -19,9 +19,9 @@ const coreOperatingNetCents = (entry: DailyLedgerEntry): number =>
 export const legacyOperatingBalanceCents = (
   state: Pick<GameState, "ledger">,
 ): number =>
-  state.ledger.reduce(
+  state.ledger.reduce<number>(
     (balance, entry) => balance + coreOperatingNetCents(entry),
-    LEGACY_STARTING_BALANCE_CENTS,
+    Number(LEGACY_STARTING_BALANCE_CENTS),
   );
 
 const confidenceAfterEntry = (
