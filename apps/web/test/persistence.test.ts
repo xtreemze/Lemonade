@@ -29,7 +29,7 @@ const RUN_SEED = seed(0x1e_ad_2026);
 const decision = Object.freeze({
   glasses: glassCount(5),
   signs: signCount(1),
-  price: moneyCents(10),
+  price: moneyCents(150),
 });
 
 const createDecidingFixture = (): RunSnapshot => {
@@ -90,7 +90,7 @@ describe("run persistence", () => {
     const legacyDecision = Object.freeze({
       glasses: glassCount(20),
       signs: signCount(1),
-      price: moneyCents(10),
+      price: moneyCents(150),
     });
     const resolution = replayLegacyDay(state, legacyDecision, environment);
     const snapshot: RunSnapshot = Object.freeze({
