@@ -7,7 +7,8 @@
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
-    "build": "vite build"
+    "build": "vite build",
+    "verify:pages-bundle": "node ./scripts/verify-pages-bundle.mjs"
   },
   "dependencies": {
     "@lemonade/audio": "workspace:*",
