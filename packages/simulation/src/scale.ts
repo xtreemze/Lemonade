@@ -10,16 +10,18 @@ export type OperatingScaleRules = Readonly<{
 }>;
 
 /**
- * The historical browser game started with $10 of assets and widened its
- * decision ranges at $100, $500, and $5,000: 10x, 50x, and 500x starting
- * capital. The modern simulation starts with $2, so preserve those progression
- * ratios in the current cents-based economy rather than copying incompatible
- * absolute dollar thresholds.
+ * The historical browser game widened the three decision ranges as the stand
+ * accumulated capital. Its dollar thresholds belonged to a different economy
+ * (notably $1 production cost and dollar-scale prices), so copying those
+ * absolute amounts or ratios into the Apple-II-derived cents economy stalls
+ * progression. These milestones are balance-certified for the modern ruleset:
+ * early expansion at $5, meaningful scale at $20, and mature scale at $100.
+ * The historical slider ceilings themselves remain exact.
  */
 export const OPERATING_SCALE_THRESHOLDS_CENTS = Object.freeze({
-  level2: 2_000,
-  level3: 10_000,
-  level4: 100_000,
+  level2: 500,
+  level3: 2_000,
+  level4: 10_000,
 });
 
 const RULES: Readonly<Record<OperatingScaleLevel, OperatingScaleRules>> = Object.freeze({
