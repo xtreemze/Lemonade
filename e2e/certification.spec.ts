@@ -167,7 +167,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   expect(Math.abs(nextDayBox.x + nextDayBox.width / 2 - 180)).toBeLessThanOrEqual(2);
   expect(740 - (nextDayBox.y + nextDayBox.height)).toBeLessThanOrEqual(24);
 
-  await nextDayButton.click();
+  await nextDayButton.locator("svg").click();
   await expect(main).toHaveAttribute("data-view", "forecast");
   await expectNoHorizontalOverflow(page);
   await expectNoVerticalOverflow(page);
