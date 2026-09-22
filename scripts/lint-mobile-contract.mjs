@@ -139,6 +139,27 @@ for (const [width, height] of [
 
 requireMatch(
   mobileSpec,
+  /browser\.newContext\([\s\S]*?viewport:\s*\{\s*width:\s*viewport\.width,\s*height:\s*viewport\.height\s*\}[\s\S]*?screen:\s*\{\s*width:\s*viewport\.width,\s*height:\s*viewport\.height\s*\}[\s\S]*?hasTouch:\s*true[\s\S]*?isMobile:\s*true/u,
+  "exact-mobile-emulation",
+  "Every mobile contract case must create its browser context with matching viewport and screen dimensions plus touch/mobile emulation.",
+);
+
+requireMatch(
+  mobileSpec,
+  /screenWidth:\s*window\.screen\.width[\s\S]*?screenHeight:\s*window\.screen\.height[\s\S]*?screenWidth:\s*viewport\.width[\s\S]*?screenHeight:\s*viewport\.height/u,
+  "exact-mobile-emulation",
+  "The browser contract must assert the effective CSS viewport and emulated screen dimensions against the requested matrix.",
+);
+
+if (/\.setViewportSize\s*\(/u.test(mobileSpec)) {
+  fail(
+    "no-post-creation-mobile-resize",
+    "Mobile contract tests may not resize an already-created mobile page; create the context at the target viewport so device-width semantics remain exact.",
+  );
+}
+
+requireMatch(
+  mobileSpec,
   /overflowViolations[\s\S]*?overflowY[\s\S]*?overflowX[\s\S]*?verticallyClipped[\s\S]*?expect\(contract\.overflowViolations\)\.toEqual\(\[\]\)/u,
   "no-nested-scroll-or-clipping",
   "Browser certification must reject nested scrolling and vertically clipped content, not only document scrolling.",
