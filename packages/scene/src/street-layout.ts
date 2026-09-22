@@ -43,7 +43,7 @@ export type GardenSignPosition = Readonly<{
 }>;
 
 const STAND_GARDEN_SIGN_COLUMNS = [
-  -13,
+  -1,
   -11.8,
   -10.6,
   -10.1,
