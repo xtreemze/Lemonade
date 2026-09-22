@@ -337,7 +337,6 @@ export const createAmbientLife = (
           (index - vehicleOffset + vehicles.length) % vehicles.length;
         vehicle.visible =
           activeIndex < population.vehicles && progress > 0.04 && progress < 0.82;
-        if (!vehicle.visible) return;
         const x = direction === 1
           ? -62 + progress * 124
           : 62 - progress * 124;
