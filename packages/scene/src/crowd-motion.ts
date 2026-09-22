@@ -44,6 +44,7 @@ type PedestrianRoute = Readonly<{
   side: SidewalkSide;
   width: number;
   points: readonly Readonly<{ x: number; z: number }>[];
+  strips: readonly StreetStripSpec[];
   cumulative: readonly number[];
   total: number;
 }>;
@@ -79,11 +80,8 @@ const makePedestrianRoute = (
   ];
   const cumulative: number[] = [0];
   let total = 0;
-  for (let index = 1; index < points.length; index += 1) {
-    const previous = points[index - 1];
-    const current = points[index];
-    if (previous === undefined || current === undefined) continue;
-    total += Math.hypot(current.x - previous.x, current.z - previous.z);
+  for (const strip of ordered) {
+    total += strip.length;
     cumulative.push(total);
   }
   return Object.freeze({
@@ -92,6 +90,7 @@ const makePedestrianRoute = (
     side,
     width: first.width,
     points: Object.freeze(points),
+    strips: Object.freeze(ordered),
     cumulative: Object.freeze(cumulative),
     total: Math.max(0.001, total),
   });
@@ -130,31 +129,34 @@ const samplePedestrianRoute = (
   for (let index = 1; index < route.cumulative.length; index += 1) {
     const endDistance = route.cumulative[index];
     const startDistance = route.cumulative[index - 1];
-    const start = route.points[index - 1];
-    const end = route.points[index];
+    const strip = route.strips[index - 1];
     if (
       endDistance === undefined ||
       startDistance === undefined ||
-      start === undefined ||
-      end === undefined ||
+      strip === undefined ||
       bounded > endDistance
     ) {
       continue;
     }
+    const start = sidewalkEndpoint(strip, -1);
+    const end = sidewalkEndpoint(strip, 1);
     const segmentLength = Math.max(0.001, endDistance - startDistance);
     const progress = (bounded - startDistance) / segmentLength;
     return Object.freeze({
       x: start.x + (end.x - start.x) * progress,
       z: start.z + (end.z - start.z) * progress,
-      yaw: Math.atan2(end.z - start.z, end.x - start.x),
+      yaw: strip.rotationY,
     });
   }
-  const end = route.points.at(-1) ?? { x: 0, z: 0 };
-  const previous = route.points.at(-2) ?? end;
+  const last = route.strips.at(-1);
+  if (last === undefined) {
+    return Object.freeze({ x: 0, z: 0, yaw: 0 });
+  }
+  const end = sidewalkEndpoint(last, 1);
   return Object.freeze({
     x: end.x,
     z: end.z,
-    yaw: Math.atan2(end.z - previous.z, end.x - previous.x),
+    yaw: last.rotationY,
   });
 };
 
