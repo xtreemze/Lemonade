@@ -9,7 +9,6 @@ export default defineConfig({
     rolldownOptions: {
       output: {
         comments: false,
-        postBanner: "/* Third-party licenses: ./licenses.md */",
       },
     },
     // The intentionally lazy Three.js enhancement is budgeted separately.
