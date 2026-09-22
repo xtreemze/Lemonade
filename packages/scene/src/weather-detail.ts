@@ -236,12 +236,12 @@ export const populateWeatherObjects = (
 
   const lightning = new Group();
   lightning.userData["sceneRole"] = "storm-lightning";
-  lightning.position.set(0.45, -0.25, 1.15);
+  lightning.position.set(0.45, 0, 1.15);
   const lightningMaterials: MeshStandardMaterial[] = [];
   for (const [x, y, length, rotation] of [
-    [0, 0, 0.44, 0.34],
-    [0.08, -0.31, 0.38, -0.28],
-    [0.02, -0.59, 0.32, 0.42],
+    [0, 0, 0.34, 0.34],
+    [0.08, -0.26, 0.3, -0.28],
+    [0.02, -0.48, 0.26, 0.42],
   ] as const) {
     const boltMaterial = weatherMaterial(0xf8ec9b, 0xffffd1, 0);
     lightningMaterials.push(boltMaterial);
