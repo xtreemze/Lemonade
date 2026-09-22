@@ -18,6 +18,10 @@
   text-align: center;
 }
 
+.scene-fallback[hidden] {
+  display: none;
+}
+
 .scene-fallback strong {
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
   font-size: clamp(1.6rem, 5vw, 3.2rem);
