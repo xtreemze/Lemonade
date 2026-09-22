@@ -366,7 +366,7 @@ const generatePlantings = (
 ): readonly ResidentialPlanting[] => {
   const result: ResidentialPlanting[] = [];
   for (let attempt = 0; attempt < count * 120 && result.length < count; attempt += 1) {
-    const x = -51 + unit(seed, salt + attempt * 5) * 102;
+    const x = -108 + unit(seed, salt + attempt * 5) * 216;
     const z = zMin + unit(seed, salt + attempt * 5 + 1) * (zMax - zMin);
     const scale = 0.78 + unit(seed, salt + attempt * 5 + 2) * 0.34;
     const footprintClearance = clearance * scale;
