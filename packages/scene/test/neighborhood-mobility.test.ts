@@ -214,7 +214,8 @@ describe("unified neighborhood mobility", () => {
       ) ??
       layout.frontProperties.find((candidate) => candidate.drivewayX !== null);
     expect(property).toBeDefined();
-    if (property === undefined || property.drivewayX === null) return;
+    const drivewayX = property?.drivewayX;
+    if (typeof drivewayX !== "number" || property === undefined) return;
 
     const access = residentialAccessLayout(property, MOBILITY_SEED);
     const roadZ = roadLaneZ("vehicle", 0);
@@ -231,7 +232,7 @@ describe("unified neighborhood mobility", () => {
     const elapsedMs =
       (0.28 + enteringCrossingProgress * 0.14) * 14_000;
     const crossingObstacle = {
-      x: property.drivewayX,
+      x: drivewayX,
       z: access.sidewalkCenterZ,
     };
 
