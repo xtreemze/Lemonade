@@ -12,8 +12,6 @@ import {
 
 import {
   DEFAULT_RESIDENTIAL_SEED,
-  FRONT_DRIVEWAY_CENTER_Z,
-  FRONT_DRIVEWAY_DEPTH,
   generateResidentialLayout,
   residentialFootprintIntersectsHardscape,
   type ResidentialPropertySpec,
@@ -541,7 +539,7 @@ export const populateNeighborhood = (
   scene: Scene,
   seed = DEFAULT_RESIDENTIAL_SEED,
 ): NeighborhoodStats => {
-  const worldSpan = 150;
+  const worldSpan = 240;
   const layout = generateResidentialLayout(seed);
   const streetNetwork = generateStreetNetwork(seed);
   let roadSegments = streetNetwork.roads.length + streetNetwork.sidewalks.length;
@@ -554,7 +552,7 @@ export const populateNeighborhood = (
     streetStrip(scene, strip, 0xd4d0c6);
   }
 
-  for (let x = -72; x <= 72; x += 7.5) {
+  for (let x = -115; x <= 115; x += 7.5) {
     road(
       scene,
       3.2,
@@ -567,19 +565,36 @@ export const populateNeighborhood = (
     );
   }
 
-  for (const property of layout.frontProperties) {
+  const allProperties = [
+    ...layout.frontProperties,
+    ...layout.middleProperties,
+    ...layout.backProperties,
+    ...layout.outerProperties,
+  ];
+  for (const property of allProperties) {
+    const frontDirection = Math.cos(property.rotationY) >= 0 ? 1 : -1;
     if (property.drivewayX !== null) {
       road(
         scene,
         WORLD_SCALE.street.drivewayWidth,
-        FRONT_DRIVEWAY_DEPTH,
+        7.2,
         property.drivewayX,
-        FRONT_DRIVEWAY_CENTER_Z,
+        property.houseZ + frontDirection * 4.15,
         0xc9b995,
         0.019,
         "driveway",
       );
-      roadSegments += 1;
+      road(
+        scene,
+        1.04,
+        4,
+        property.houseX,
+        property.houseZ + frontDirection * 5.65,
+        0xd8c9aa,
+        0.021,
+        "front-path",
+      );
+      roadSegments += 2;
     }
     const color = HOUSE_PALETTE[property.color] ?? HOUSE_PALETTE[0];
     const home = houseLod(
@@ -589,23 +604,17 @@ export const populateNeighborhood = (
       property.scale,
       property.rotationY,
     );
-    home.userData["sceneRole"] = property.role;
+    home.userData["sceneRole"] = layout.frontProperties.includes(property)
+      ? property.role
+      : "residential-" + property.role;
     scene.add(home);
   }
 
-  const housePositions = [...layout.middleProperties, ...layout.backProperties];
-  for (const property of housePositions) {
-    const color = HOUSE_PALETTE[property.color] ?? HOUSE_PALETTE[0];
-    scene.add(
-      houseLod(
-        property.houseX,
-        property.houseZ,
-        color,
-        property.scale,
-        property.rotationY,
-      ),
-    );
-  }
+  const housePositions = [
+    ...layout.middleProperties,
+    ...layout.backProperties,
+    ...layout.outerProperties,
+  ];
 
   const yardDetails: Group[] = [];
   const clearYardX = (
@@ -647,6 +656,14 @@ export const populateNeighborhood = (
     ) {
       return;
     }
+    const intersectsTree = layout.trees.some((tree) => {
+      const clearance = 3.2 * tree.scale;
+      return (
+        Math.abs(tree.x - detail.position.x) <= clearance + halfWidth &&
+        Math.abs(tree.z - detail.position.z) <= clearance + halfDepth
+      );
+    });
+    if (intersectsTree) return;
     yardDetails.push(detail);
   };
 
@@ -696,18 +713,19 @@ export const populateNeighborhood = (
     scene.add(flower(planting.x, planting.z, color, 40 + index * 0.91));
   });
 
-  distantHill(scene, -52, -76, 24, 10, 0x718967);
-  distantHill(scene, -16, -82, 31, 13, 0x6b8264);
-  distantHill(scene, 24, -80, 29, 11, 0x748b6c);
-  distantHill(scene, 58, -76, 26, 12, 0x677e61);
-  atmosphereBand(scene, -63, 10, 150, 34, 0xb9c8bd, 0.08);
-  atmosphereBand(scene, -86, 12, 170, 38, 0xc8d2ca, 0.11);
+  distantHill(scene, -94, -102, 34, 13, 0x718967);
+  distantHill(scene, -48, -108, 38, 15, 0x6b8264);
+  distantHill(scene, 4, -112, 42, 16, 0x748b6c);
+  distantHill(scene, 62, -106, 36, 14, 0x677e61);
+  distantHill(scene, 104, -100, 30, 12, 0x718967);
+  atmosphereBand(scene, -82, 12, 260, 42, 0xb9c8bd, 0.08);
+  atmosphereBand(scene, -116, 15, 300, 48, 0xc8d2ca, 0.11);
 
   return Object.freeze({
     houseLods: layout.frontProperties.length + housePositions.length,
     featuredHomes: 1,
     frontProperties: layout.frontProperties.length,
-    driveways: layout.frontProperties.filter((property) => property.drivewayX !== null).length,
+    driveways: allProperties.filter((property) => property.drivewayX !== null).length,
     treeLods: layout.trees.length,
     shrubs: layout.shrubs.length,
     flowers: layout.flowers.length,
