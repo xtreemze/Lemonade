@@ -350,6 +350,18 @@ h2 {
   justify-content: space-between;
 }
 
+.decision-control small {
+  order: 1;
+}
+
+.decision-control .game-slider {
+  order: 3;
+}
+
+.decision-control .decision-exact {
+  order: 2;
+}
+
 .decision-control-heading {
   display: flex;
   align-items: end;
