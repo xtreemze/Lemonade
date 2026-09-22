@@ -6,7 +6,6 @@ import {
   DEFAULT_STREET_SEED,
   gardenSignPosition,
   generateStreetNetwork,
-  STREET_LAYOUT,
   sidewalkLaneZ,
   type SidewalkSide,
   type StreetStripSpec,
@@ -322,8 +321,11 @@ const separateCrowd = (poses: MutableCrowdPose[]): number => {
             const distance = Math.sqrt(Math.max(0.0001, distanceSquared));
             const deterministicSide =
               deterministicUnit(left + right, 71) < 0.5 ? -1 : 1;
+            const lateralDelta = b.lateralOffset - a.lateralOffset;
             const separationSide =
-              Math.abs(dz) > 0.01 ? Math.sign(dz) : deterministicSide;
+              Math.abs(lateralDelta) > 0.01
+                ? Math.sign(lateralDelta)
+                : deterministicSide;
             const push = (CROWD_SEPARATION - distance) * 0.52;
             const previousAOffset = a.lateralOffset;
             const previousBOffset = b.lateralOffset;
