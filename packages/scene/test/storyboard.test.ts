@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { characterProfileFor } from "../src/characters.js";
+import { STREET_LAYOUT } from "../src/street-layout.js";
 import {
   createStreetStoryboard,
   formatPriceLabel,
@@ -184,8 +185,10 @@ describe("street simulation storyboard", () => {
 
     expect(portraitForecast.position[1]).toBeGreaterThan(portraitStand.position[1]);
     expect(portraitForecast.position[2]).toBeGreaterThan(portraitStand.position[2]);
-    expect(portraitStand.position[2]).toBeGreaterThanOrEqual(22);
+    expect(portraitStand.position[2]).toBeGreaterThanOrEqual(26);
     expect(portraitStand.fov).toBeGreaterThanOrEqual(50);
+    expect(portraitStand.lookAt[2]).toBeGreaterThan(STREET_LAYOUT.road.minZ);
+    expect(portraitStand.lookAt[2]).toBeLessThan(STREET_LAYOUT.road.maxZ);
     expect(portraitRemaining.position[2]).toBeGreaterThanOrEqual(13);
     expect(portraitStand.position[2]).toBeGreaterThan(portraitRemaining.position[2]);
     expect(portraitForecast.lookAt[2]).toBeLessThan(portraitStand.lookAt[2]);
