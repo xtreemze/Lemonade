@@ -106,9 +106,13 @@ const contiguousSidewalkRuns = (
   const runs: StreetStripSpec[][] = [];
   for (const strip of ordered) {
     const current = runs.at(-1);
-    const previous = current?.at(-1);
-    if (previous === undefined) {
+    if (current === undefined) {
       runs.push([strip]);
+      continue;
+    }
+    const previous = current.at(-1);
+    if (previous === undefined) {
+      current.push(strip);
       continue;
     }
 
