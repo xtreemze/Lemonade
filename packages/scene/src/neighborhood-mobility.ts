@@ -649,7 +649,7 @@ export const createNeighborhoodMobilitySystem = (
             !state.inside,
           );
           actors.push(resident);
-          if (resident.visible) pedestrianPoints.push(sampled.point);
+          if (!state.inside) pedestrianPoints.push(sampled.point);
           addStatistical(counts, resident);
 
           if (index === 0) {
@@ -670,7 +670,7 @@ export const createNeighborhoodMobilitySystem = (
               !state.inside,
             );
             actors.push(pet);
-            if (pet.visible) pedestrianPoints.push(petPoint);
+            if (!state.inside) pedestrianPoints.push(petPoint);
             addStatistical(counts, pet);
           }
         });
