@@ -12,12 +12,6 @@ import {
 
 import { STREET_LAYOUT } from "./street-layout.js";
 
-export type NeighborhoodWeather =
-  | "sunny"
-  | "cloudy"
-  | "hot-and-dry"
-  | "thunderstorm";
-
 const material = (color: number, flatShading = true): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading, roughness: 0.92 });
 
@@ -92,10 +86,7 @@ const detailedHouse = (color: number): Group => {
   box(root, [2.8, 0.16, 0.52], [0, 0.12, 3.05], 0xc9b08d);
   box(root, [0.58, 1.15, 0.72], [1.75, 4.75, -0.72], 0x9b5f4f);
 
-  const porchLamp = new Mesh(
-    new SphereGeometry(0.12, 8, 6),
-    material(0xffd98a, false),
-  );
+  const porchLamp = new Mesh(new SphereGeometry(0.12, 8, 6), material(0xffd98a, false));
   porchLamp.position.set(0.92, 1.86, 2.5);
   root.add(porchLamp);
   return root;
@@ -146,16 +137,15 @@ const houseLod = (
   color: number,
   scale: number,
   rotationY: number,
-): Group =>
-  distanceLod(
-    detailedHouse(color),
-    distantHouse(color),
-    34,
-    x,
-    z,
-    scale,
-    rotationY,
-  );
+): Group => distanceLod(
+  detailedHouse(color),
+  distantHouse(color),
+  34,
+  x,
+  z,
+  scale,
+  rotationY,
+);
 
 const detailedTree = (color: number): Group => {
   const root = new Group();
@@ -170,10 +160,7 @@ const detailedTree = (color: number): Group => {
     [-0.65, 3.25, 0.2, 1.05],
     [0.62, 3.18, -0.15, 1.0],
   ] as const) {
-    const crown = new Mesh(
-      new SphereGeometry(1.35 * scale, 10, 7),
-      material(color),
-    );
+    const crown = new Mesh(new SphereGeometry(1.35 * scale, 10, 7), material(color));
     crown.position.set(x, y, z);
     root.add(crown);
   }
@@ -182,15 +169,9 @@ const detailedTree = (color: number): Group => {
 
 const distantTree = (color: number): Group => {
   const root = new Group();
-  const trunk = new Mesh(
-    new CylinderGeometry(0.22, 0.3, 2.4, 5),
-    material(0x765232),
-  );
+  const trunk = new Mesh(new CylinderGeometry(0.22, 0.3, 2.4, 5), material(0x765232));
   trunk.position.y = 1.2;
-  const crown = new Mesh(
-    new SphereGeometry(2.15, 7, 5),
-    material(color),
-  );
+  const crown = new Mesh(new SphereGeometry(2.15, 7, 5), material(color));
   crown.position.y = 3.55;
   root.add(trunk, crown);
   return root;
@@ -221,10 +202,7 @@ const shrub = (
     [0.15, 0, 0.92],
     [0.68, 0.18, 0.64],
   ] as const) {
-    const crown = new Mesh(
-      new SphereGeometry(size, 8, 6),
-      material(color),
-    );
+    const crown = new Mesh(new SphereGeometry(size, 8, 6), material(color));
     crown.position.set(offsetX, size * 0.72, offsetZ);
     root.add(crown);
   }
@@ -246,19 +224,12 @@ const flower = (
   );
   stem.position.y = 0.19;
   root.add(stem);
-
-  const center = new Mesh(
-    new SphereGeometry(0.055, 7, 5),
-    material(0xe1ad35),
-  );
+  const center = new Mesh(new SphereGeometry(0.055, 7, 5), material(0xe1ad35));
   center.position.y = 0.42;
   root.add(center);
   for (let index = 0; index < 5; index += 1) {
     const angle = (index / 5) * Math.PI * 2;
-    const petal = new Mesh(
-      new SphereGeometry(0.055, 7, 5),
-      material(color),
-    );
+    const petal = new Mesh(new SphereGeometry(0.055, 7, 5), material(color));
     petal.scale.set(1.3, 0.7, 0.55);
     petal.position.set(
       Math.cos(angle) * 0.075,
@@ -291,6 +262,13 @@ const mailbox = (x: number, z: number): Group => {
   box(root, [0.48, 0.32, 0.34], [0, 1.08, 0], 0x547c85);
   box(root, [0.08, 0.42, 0.08], [0.27, 1.18, 0], 0xc95b4c);
   root.position.set(x, 0, z);
+  return root;
+};
+
+const fenceRunDepth = (x: number, z: number, depth: number): Group => {
+  const root = fenceRun(0, 0, depth);
+  root.position.set(x, 0, z);
+  root.rotation.y = Math.PI / 2;
   return root;
 };
 
@@ -332,6 +310,8 @@ const atmosphereBand = (
 export type NeighborhoodStats = Readonly<{
   houseLods: number;
   featuredHomes: number;
+  frontProperties: number;
+  driveways: number;
   treeLods: number;
   shrubs: number;
   flowers: number;
@@ -340,6 +320,17 @@ export type NeighborhoodStats = Readonly<{
   windResponsive: number;
   roadSegments: number;
   worldSpan: number;
+}>;
+
+type FrontPropertySpec = Readonly<{
+  role: string;
+  houseX: number;
+  houseZ: number;
+  color: number;
+  scale: number;
+  rotationY: number;
+  drivewayX: number;
+  mailboxX: number;
 }>;
 
 const HOUSE_PALETTE = [
@@ -360,17 +351,107 @@ const TREE_PALETTE = [
   0x678f52,
   0x4f814c,
 ] as const;
-const FLOWER_PALETTE = [
-  0xe98d9e,
-  0xf1c75b,
-  0x9e83c7,
-  0xf4eee5,
-  0xd97058,
+const FLOWER_PALETTE = [0xe98d9e, 0xf1c75b, 0x9e83c7, 0xf4eee5, 0xd97058] as const;
+
+export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze([
+  Object.freeze({
+    role: "west-end",
+    houseX: -44.6,
+    houseZ: -7.1,
+    color: HOUSE_PALETTE[0],
+    scale: 0.96,
+    rotationY: 0.035,
+    drivewayX: -40.8,
+    mailboxX: -40.0,
+  }),
+  Object.freeze({
+    role: "west-mid",
+    houseX: -33.7,
+    houseZ: -8.4,
+    color: HOUSE_PALETTE[4],
+    scale: 1.02,
+    rotationY: -0.045,
+    drivewayX: -29.8,
+    mailboxX: -30.7,
+  }),
+  Object.freeze({
+    role: "west-near",
+    houseX: -24.0,
+    houseZ: -6.6,
+    color: HOUSE_PALETTE[2],
+    scale: 0.92,
+    rotationY: 0.06,
+    drivewayX: -20.7,
+    mailboxX: -21.5,
+  }),
+  Object.freeze({
+    role: "stand-home",
+    houseX: -4.7,
+    houseZ: -7.9,
+    color: 0xd8a766,
+    scale: 1.06,
+    rotationY: 0.045,
+    drivewayX: -8.45,
+    mailboxX: -7.65,
+  }),
+  Object.freeze({
+    role: "stand-neighbor",
+    houseX: 8.8,
+    houseZ: -8.6,
+    color: HOUSE_PALETTE[4],
+    scale: 0.97,
+    rotationY: -0.055,
+    drivewayX: 12.1,
+    mailboxX: 11.25,
+  }),
+  Object.freeze({
+    role: "east-mid",
+    houseX: 29.1,
+    houseZ: -6.8,
+    color: HOUSE_PALETTE[1],
+    scale: 1.01,
+    rotationY: 0.025,
+    drivewayX: 25.7,
+    mailboxX: 26.45,
+  }),
+  Object.freeze({
+    role: "east-end",
+    houseX: 41.5,
+    houseZ: -8.3,
+    color: HOUSE_PALETTE[5],
+    scale: 0.94,
+    rotationY: -0.05,
+    drivewayX: 45.0,
+    mailboxX: 44.1,
+  }),
+]);
+
+const MID_BLOCK_HOUSES = [
+  [-45.8, -26.2, 0xc97d65, 0.92, Math.PI + 0.035],
+  [-35.1, -24.0, 0xd5a66d, 1.05, Math.PI - 0.025],
+  [-24.5, -28.0, 0xc27a68, 0.98, Math.PI + 0.055],
+  [-9.1, -25.1, 0x8da9a1, 1.03, Math.PI - 0.045],
+  [4.0, -27.5, 0xd56f52, 0.92, Math.PI + 0.025],
+  [11.4, -24.0, 0xd4aa61, 1.0, Math.PI - 0.05],
+  [29.7, -26.7, 0xdfb76f, 0.97, Math.PI + 0.03],
+  [41.7, -24.7, 0xc97d65, 1.04, Math.PI - 0.04],
 ] as const;
 
-export const weatherWindStrength = (
-  weather: NeighborhoodWeather,
-): number => {
+const BACK_BLOCK_HOUSES = [
+  [-47.0, -50.2, 0x8da9a1, 1.0, Math.PI - 0.03],
+  [-36.5, -47.8, 0xd4aa61, 0.94, Math.PI + 0.05],
+  [-25.4, -51.5, 0xd56f52, 1.03, Math.PI - 0.04],
+  [-9.7, -48.5, 0xc27a68, 0.9, Math.PI + 0.025],
+  [3.5, -52.0, 0xdfb76f, 1.05, Math.PI - 0.055],
+  [12.0, -48.1, 0x8da9a1, 0.96, Math.PI + 0.045],
+  [28.5, -50.8, 0xd5a66d, 1.02, Math.PI - 0.03],
+  [39.6, -47.5, 0xc97d65, 0.93, Math.PI + 0.055],
+  [49.0, -52.4, 0xd4aa61, 0.99, Math.PI - 0.04],
+] as const;
+
+export type NeighborhoodWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
+
+export const weatherWindStrength = (weather: NeighborhoodWeather): number => {
   switch (weather) {
     case "sunny":
       return 0.012;
@@ -461,10 +542,7 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
     0.022,
     "sidewalk",
   );
-  addRoad(2.1, 6.4, 0, -2.5, 0xc9b995, 0.024, "garden-path");
 
-  // Sparse lane paint is enough to make the surface read as paved asphalt
-  // without turning the small neighborhood road into an arterial.
   for (let x = -72; x <= 72; x += 7.5) {
     road(
       scene,
@@ -478,40 +556,53 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
     );
   }
 
-  const standHome = houseLod(0, -7.1, 0xd8a766, 1.08, 0);
-  standHome.userData["sceneRole"] = "stand-home";
-  scene.add(standHome);
-
-  const yardDetails = [
-    fenceRun(-5.5, -3.55, 4.2),
-    fenceRun(5.5, -3.55, 4.2),
-    mailbox(3.25, -1.15),
-  ] as const;
-  for (const detail of yardDetails) scene.add(detail);
-
-  const housePositions: (readonly [number, number, number, number])[] = [];
-  for (const z of [-5.5, -25.5, -47.5]) {
-    for (const x of [-42, -31, -7, 5.5, 31, 43]) {
-      if (Math.abs(x) < 10 && z > -10) continue;
-      const colorIndex = Math.abs(Math.round(x + z)) % HOUSE_PALETTE.length;
-      const color = HOUSE_PALETTE[colorIndex] ?? HOUSE_PALETTE[0];
-      const scale = 0.92 + (Math.abs(Math.round(x * 3 + z)) % 7) * 0.025;
-      housePositions.push([x, z, color, scale]);
-    }
+  for (const property of FRONT_PROPERTY_LAYOUT) {
+    addRoad(2.15, 6.8, property.drivewayX, -2.55, 0xc9b995, 0.019, "driveway");
+    const home = houseLod(
+      property.houseX,
+      property.houseZ,
+      property.color,
+      property.scale,
+      property.rotationY,
+    );
+    home.userData["sceneRole"] = property.role;
+    scene.add(home);
   }
-  for (const [x, z, color, scale] of housePositions) {
-    const rotation = z < -10 ? Math.PI : 0;
+
+  const housePositions = [...MID_BLOCK_HOUSES, ...BACK_BLOCK_HOUSES] as const;
+  for (const [x, z, color, scale, rotation] of housePositions) {
     scene.add(houseLod(x, z, color, scale, rotation));
   }
 
+  const yardDetails: Group[] = [];
+  for (const property of FRONT_PROPERTY_LAYOUT) {
+    const detail = mailbox(property.mailboxX, 0.25);
+    detail.rotation.y = property.rotationY * 0.35;
+    yardDetails.push(detail);
+  }
+
+  yardDetails.push(
+    fenceRun(-5.7, -0.8, 2.9),
+    fenceRunDepth(1.9, -3.0, 5.1),
+    fenceRun(7.8, -0.65, 2.6),
+  );
+  for (const detail of yardDetails) scene.add(detail);
+
   const treePositions: (readonly [number, number, number, number])[] = [];
-  for (let index = 0; index < 44; index += 1) {
-    const side = index % 2 === 0 ? -1 : 1;
-    const ring = Math.floor(index / 2);
-    const x = side * (9.5 + (ring % 7) * 5.3);
-    const z = 0.4 - Math.floor(ring / 7) * 12.5 - (ring % 3) * 2.1;
+  for (let index = 0; index < 48; index += 1) {
+    const row = Math.floor(index / 12);
+    const slot = index % 12;
+    const jitterX = (((index * 17) % 7) - 3) * 0.55;
+    const jitterZ = ((index * 13) % 5) * 1.15;
+    let x = -49 + slot * 8.9 + jitterX + row * 0.85;
+    const z = -1.2 - row * 15.7 - jitterZ;
+
+    if (Math.abs(x + 15.5) < 3.8) x -= 4.4;
+    if (Math.abs(x - 18.5) < 3.8) x += 4.6;
+    if (row === 0 && Math.abs(x) < 3.3) x += 4.2;
+
     const color = TREE_PALETTE[index % TREE_PALETTE.length] ?? TREE_PALETTE[0];
-    const scale = 0.84 + (index % 6) * 0.055;
+    const scale = 0.82 + ((index * 5) % 7) * 0.045;
     treePositions.push([x, z, scale, color]);
   }
   treePositions.forEach(([x, z, scale, color], index) => {
@@ -519,46 +610,41 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   });
 
   const shrubPositions = [
-    [-6.8, -1.1],
-    [6.9, -1],
-    [-10.2, -7.2],
-    [11.6, -6.8],
-    [-2.8, -10.4],
-    [7.7, -10.6],
-    [-23, -3.2],
-    [25, -3.6],
-    [-28, -19],
-    [27, -20],
-    [-4, -31],
-    [8, -32],
+    [-11.4, -2.0],
+    [-5.5, -1.6],
+    [-2.1, -2.9],
+    [4.6, -3.2],
+    [14.2, -5.5],
+    [-27.5, -4.1],
+    [24.4, -2.8],
+    [35.8, -5.1],
+    [-31.2, -20.4],
+    [-18.8, -22.7],
+    [-3.1, -30.6],
+    [9.4, -28.3],
+    [26.9, -31.7],
+    [43.5, -20.2],
   ] as const;
   shrubPositions.forEach(([x, z], index) => {
-    const color =
-      TREE_PALETTE[(index + 2) % TREE_PALETTE.length] ?? TREE_PALETTE[0];
+    const color = TREE_PALETTE[(index + 2) % TREE_PALETTE.length] ?? TREE_PALETTE[0];
     scene.add(
-      shrub(
-        x,
-        z,
-        0.72 + (index % 4) * 0.06,
-        color,
-        18 + index * 0.83,
-      ),
+      shrub(x, z, 0.7 + (index % 5) * 0.055, color, 18 + index * 0.83),
     );
   });
 
   const flowerPositions = [
-    [-7.2, -2.05],
-    [-6.4, -2.32],
-    [-5.55, -2.12],
-    [5.5, -2.18],
-    [6.35, -2.4],
-    [7.15, -2.12],
-    [-9.8, -4.5],
-    [-8.9, -4.7],
-    [9.1, -4.55],
-    [10.05, -4.72],
-    [-3.2, -5.0],
-    [3.35, -5.1],
+    [-12.2, -2.0],
+    [-10.8, -2.35],
+    [-7.1, -2.15],
+    [-5.8, -2.55],
+    [-3.2, -3.0],
+    [-1.9, -3.35],
+    [-11.6, -4.5],
+    [-9.9, -4.8],
+    [-7.8, -5.0],
+    [-5.6, -4.7],
+    [-3.8, -5.15],
+    [-2.2, -4.85],
   ] as const;
   flowerPositions.forEach(([x, z], index) => {
     const color =
@@ -574,8 +660,10 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   atmosphereBand(scene, -86, 12, 170, 38, 0xc8d2ca, 0.11);
 
   return Object.freeze({
-    houseLods: housePositions.length + 1,
+    houseLods: FRONT_PROPERTY_LAYOUT.length + housePositions.length,
     featuredHomes: 1,
+    frontProperties: FRONT_PROPERTY_LAYOUT.length,
+    driveways: FRONT_PROPERTY_LAYOUT.length,
     treeLods: treePositions.length,
     shrubs: shrubPositions.length,
     flowers: flowerPositions.length,
