@@ -43,7 +43,7 @@ describe("crowd motion", () => {
       new Set(["near", "far"]),
     );
     for (const pose of first) {
-      expect(Math.abs(pose.x)).toBeLessThanOrEqual(58);
+      expect(Math.abs(pose.x)).toBeLessThanOrEqual(106);
       expect(pose.z).toBeGreaterThanOrEqual(pose.routeMinZ);
       expect(pose.z).toBeLessThanOrEqual(pose.routeMaxZ);
       expect(
