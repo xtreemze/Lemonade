@@ -10,7 +10,7 @@
 import type { SceneWeather, ScenePhase, LemonsvilleSceneState } from "@lemonade/scene";
 import { createLemonsvilleScene } from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
-// TODO: Fix gizmo controller export
+// TODO: Integrate gizmo controller for 3D editor tool (game-engine-like scene manipulation)
 // import { createGizmoController } from "@lemonade/scene";
 
 export const isSceneViewerEnabled = (): boolean => {
@@ -164,9 +164,9 @@ export const createPersistentSceneViewer = (
     reducedMotion: false,
   });
 
-  // Create scene
+  // Create scene (gizmo disabled for now - reserved for future 3D editor tool)
   const scene = createLemonsvilleScene(canvas, sceneState, {
-    enableGizmo: options.enableGizmo !== false, // Enable by default
+    enableGizmo: false,
   });
 
   if (!scene) {
@@ -188,36 +188,30 @@ export const createPersistentSceneViewer = (
     return null;
   }
 
-  // TODO: Initialize gizmo controller once module export is fixed
+  // TODO: Initialize gizmo controller for 3D editor (reserved for future development)
+  // Once gizmo is integrated, this will enable realtime scene object manipulation
   // let gizmoController: ReturnType<typeof createGizmoController> | null = null;
-  // if (options.enableGizmo !== false && scene.scene && scene.camera) {
-  //   gizmoController = createGizmoController({...})
+  // if (scene.scene && scene.camera) {
+  //   gizmoController = createGizmoController({ scene: scene.scene, camera: scene.camera, ... })
   // }
 
-  // Add a gizmo info section to the sidebar if gizmo is enabled
-  if (options.enableGizmo !== false) {
-    const gizmoSection = document.createElement("div");
-    gizmoSection.style.cssText = `
-      background: #1a1a1a;
-      border: 1px solid #9900ff;
-      border-radius: 4px;
-      padding: 12px;
-      font-size: 11px;
-      color: #f0f;
-    `;
-    gizmoSection.innerHTML = `
-      <div style="font-weight: bold; margin-bottom: 8px;">🎨 Gizmo Tool</div>
-      <div style="color: #aaa; line-height: 1.5;">
-        <div><strong>Click</strong> - Select object</div>
-        <div><strong>G</strong> - Move mode</div>
-        <div><strong>R</strong> - Rotate mode</div>
-        <div><strong>S</strong> - Scale mode</div>
-        <div><strong>Drag</strong> - Transform</div>
-        <div><strong>ESC</strong> - Deselect</div>
-      </div>
-    `;
-    sidebar.appendChild(gizmoSection);
-  }
+  // Gizmo section info (reserved for future 3D editor tool development)
+  const gizmoSection = document.createElement("div");
+  gizmoSection.style.cssText = `
+    background: #1a1a1a;
+    border: 1px solid #666666;
+    border-radius: 4px;
+    padding: 12px;
+    font-size: 11px;
+    color: #aaa;
+  `;
+  gizmoSection.innerHTML = `
+    <div style="font-weight: bold; margin-bottom: 8px; color: #888;">📐 3D Editor (Future)</div>
+    <div style="line-height: 1.5;">
+      <div style="font-size: 10px;">Infrastructure for realtime 3D manipulation and diagnostics. Enable when ready for game-engine-like editing capabilities.</div>
+    </div>
+  `;
+  sidebar.appendChild(gizmoSection);
 
   // Handle resize
   const handleResize = () => {
