@@ -96,6 +96,7 @@ const shrub = (x: number, z: number, scale: number, color: number): Group => {
 };
 
 export const populateNeighborhood = (scene: Scene): void => {
+  road(scene, 44, 4.2, 0, 4.1, 0xb2916e);
   road(scene, 5.2, 34, -11.5, -3.2, 0xb2916e);
   road(scene, 44, 3.3, 0, -10.2, 0xbda080);
   road(scene, 44, 0.7, 0, 1.68, 0xd9cfb4);
