@@ -91,18 +91,6 @@ const makeMaterial = (color: number): MeshStandardMaterial =>
 const makeCharacterMaterial = (color: number): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading: false, roughness: 0.88 });
 
-const makeWeatherMaterial = (
-  color: number,
-  emissive = 0x000000,
-  emissiveIntensity = 0,
-): MeshStandardMaterial =>
-  new MeshStandardMaterial({
-    color,
-    roughness: 0.88,
-    emissive,
-    emissiveIntensity,
-  });
-
 const addBox = (
   parent: Object3D,
   size: readonly [number, number, number],
@@ -218,8 +206,6 @@ const createSign = (index: number): SignModel => {
 type LimbRig = Readonly<{
   root: Group;
   lower: Group;
-  joint: Mesh;
-  extremity: Mesh;
 }>;
 
 type PersonRig = Readonly<{
@@ -286,7 +272,7 @@ const createLimb = (
   lower.add(extremity);
   root.add(lower);
 
-  return Object.freeze({ root, lower, joint, extremity });
+  return Object.freeze({ root, lower });
 };
 
 const createLemonadeCup = (scale = 1): Group => {
@@ -387,19 +373,13 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   );
   torso.position.y = 1.05;
 
-  const neck = new Mesh(
-    new CylinderGeometry(0.09, 0.1, 0.16, 9),
-    makeCharacterMaterial(profile.skinColor),
-  );
-  neck.position.y = 1.53;
-
   const head = new Mesh(
     new SphereGeometry(0.27, 12, 8),
     makeCharacterMaterial(profile.skinColor),
   );
   head.scale.set(0.94, 1.04, 0.9);
   head.position.y = 1.78;
-  root.add(torso, neck, head);
+  root.add(torso, head);
 
   const eyeMaterial = makeCharacterMaterial(0x263238);
   for (const x of [-0.09, 0.09]) {
@@ -424,13 +404,6 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   head.add(mouth);
 
   addCharacterHair(head, profile.hairStyle, profile.hairColor, profile.accessory);
-
-  const shoulderMaterial = makeCharacterMaterial(profile.clothingColor);
-  for (const x of [-0.35, 0.35]) {
-    const shoulder = new Mesh(new SphereGeometry(0.105, 9, 6), shoulderMaterial.clone());
-    shoulder.position.set(x, 1.39, 0);
-    root.add(shoulder);
-  }
 
   const leftArm = createLimb(
     0.38,
@@ -715,91 +688,6 @@ const createLemon = (index: number): Group => {
   return lemon;
 };
 
-const createCloud = (color: number): Group => {
-  const cloud = new Group();
-  const material = makeWeatherMaterial(color);
-  const puffs = [
-    { radius: 0.72, x: -0.78, y: 0, z: 0 },
-    { radius: 0.84, x: -0.08, y: 0.22, z: 0 },
-    { radius: 0.74, x: 0.72, y: 0.02, z: 0 },
-    { radius: 0.62, x: -0.22, y: -0.18, z: 0.18 },
-    { radius: 0.58, x: 0.3, y: -0.16, z: 0.12 },
-  ] as const;
-
-  for (const puff of puffs) {
-    const mesh = new Mesh(
-      new SphereGeometry(puff.radius, 20, 16),
-      material.clone(),
-    );
-    mesh.position.set(puff.x, puff.y, puff.z);
-    cloud.add(mesh);
-  }
-  return cloud;
-};
-
-const createSun = (radius: number): Group => {
-  const group = new Group();
-  const core = new Mesh(
-    new SphereGeometry(radius, 24, 18),
-    makeWeatherMaterial(0xffd447, 0xffc93a, 0.55),
-  );
-  group.add(core);
-
-  const halo = new Mesh(
-    new SphereGeometry(radius * 1.18, 24, 18),
-    new MeshStandardMaterial({
-      color: 0xffe27a,
-      emissive: 0xffd447,
-      emissiveIntensity: 0.45,
-      roughness: 1,
-      transparent: true,
-      opacity: 0.16,
-      depthWrite: false,
-    }),
-  );
-  group.add(halo);
-  return group;
-};
-
-const createWeatherObjects = (): Record<SceneWeather, Group> => {
-  const sunny = createSun(0.82);
-  sunny.position.set(5.1, 6.7, -1.8);
-
-  const partlyCloudy = new Group();
-  const partlySun = createSun(0.62);
-  partlySun.position.set(0.88, 0.5, -0.25);
-  partlyCloudy.add(partlySun);
-  const partlyCloud = createCloud(0xd7e0df);
-  partlyCloud.position.set(-0.35, 0, 0.15);
-  partlyCloudy.add(partlyCloud);
-  partlyCloudy.position.set(3.9, 6.25, -1.8);
-
-  const cloudy = createCloud(0xd7e0df);
-  cloudy.position.set(-4.1, 6.4, -1.8);
-
-  const thunderstorm = createCloud(0x657786);
-  thunderstorm.position.set(-3.6, 6.25, -1.4);
-  const bolt = new Mesh(
-    new CylinderGeometry(0, 0.16, 1.05, 8),
-    makeWeatherMaterial(0xf8d346, 0xf8d346, 0.3),
-  );
-  bolt.position.set(0.4, -1.05, 0.08);
-  bolt.rotation.z = 0.35;
-  thunderstorm.add(bolt);
-
-  for (let index = 0; index < 7; index += 1) {
-    const drop = new Mesh(
-      new CylinderGeometry(0.02, 0.02, 0.62, 8),
-      makeWeatherMaterial(0x7dc7df),
-    );
-    drop.position.set(-1.05 + index * 0.35, -1.25 - (index % 2) * 0.45, 0.15);
-    drop.rotation.z = -0.18;
-    thunderstorm.add(drop);
-  }
-
-  return { sunny, cloudy, "hot-and-dry": partlyCloudy, thunderstorm };
-};
-
 type DisposableMesh = Mesh<BufferGeometry, Material | Material[]>;
 
 const isDisposableMesh = (object: Object3D): object is DisposableMesh =>
@@ -909,14 +797,24 @@ export const createLemonsvilleScene = (
   for (const lemon of lemons) scene.add(lemon);
   const lemonOrigins = lemons.map((lemon) => lemon.position.y);
 
-  const weatherObjects = createWeatherObjects();
+  const weatherObjects: Record<SceneWeather, Group> = {
+    sunny: new Group(),
+    cloudy: new Group(),
+    "hot-and-dry": new Group(),
+    thunderstorm: new Group(),
+  };
+  weatherObjects.sunny.position.set(5.1, 6.7, -1.8);
+  weatherObjects["hot-and-dry"].position.set(3.9, 6.25, -1.8);
+  weatherObjects.cloudy.position.set(-4.1, 6.4, -1.8);
+  weatherObjects.thunderstorm.position.set(-3.6, 6.25, -1.4);
   for (const weatherObject of Object.values(weatherObjects)) scene.add(weatherObject);
   const weatherOrigins = Object.freeze({
-    sunny: weatherObjects.sunny.position.x,
-    cloudy: weatherObjects.cloudy.position.x,
-    "hot-and-dry": weatherObjects["hot-and-dry"].position.x,
-    thunderstorm: weatherObjects.thunderstorm.position.x,
+    sunny: 5.1,
+    cloudy: -4.1,
+    "hot-and-dry": 3.9,
+    thunderstorm: -3.6,
   });
+  canvas.dataset["weatherDetail"] = "loading";
 
   let state = initialState;
   let animationFrame: number | null = null;
@@ -998,6 +896,17 @@ export const createLemonsvilleScene = (
     })
     .catch(() => {
       if (!disposed) canvas.dataset["neighborhoodDetail"] = "core";
+    });
+
+  void import("./weather-detail.js")
+    .then(({ populateWeatherObjects }) => {
+      if (disposed) return;
+      populateWeatherObjects(weatherObjects);
+      canvas.dataset["weatherDetail"] = "ready";
+      render();
+    })
+    .catch(() => {
+      if (!disposed) canvas.dataset["weatherDetail"] = "core";
     });
 
   const positionStaticPedestrians = (): void => {
