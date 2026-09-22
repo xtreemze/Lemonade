@@ -8,7 +8,6 @@ export type CrowdPose = Readonly<{
   seesAdvertisement: boolean;
 }>;
 
-const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 const fract = (value: number): number => value - Math.floor(value);
 
 const deterministicUnit = (index: number, salt: number): number => {
