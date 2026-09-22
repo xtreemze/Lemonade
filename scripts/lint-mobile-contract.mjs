@@ -129,6 +129,8 @@ for (const [width, height] of [
   [844, 390],
   [932, 430],
   [1024, 768],
+  [800, 600],
+  [1280, 720],
 ]) {
   const literal = `width: ${String(width)}, height: ${String(height)}`;
   if (!mobileSpec.includes(literal)) {
@@ -197,12 +199,19 @@ if (/mobile-contract-(?:ignore|disable|exempt)|mobile-contract:\s*(?:ignore|disa
   );
 }
 
-requireMatch(
-  styles,
-  /@media\s*\(width\s*>=\s*47\.5625rem\)\s*and\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.game-shell\[data-view="planning"\][\s\S]*?\.game-shell\[data-view="report"\]/u,
-  "desktop-release-requires-fine-pointer",
-  "The mobile fullscreen contract may only be released for a sufficiently wide fine-pointer/hover environment; wide touch devices remain mobile.",
-);
+if (
+  /html:has\(\.game-shell\[data-view="(?:planning|report|simulation|forecast)"\]\)[\s\S]{0,600}?overflow\s*:\s*visible/u.test(
+    styles,
+  ) ||
+  /\.game-shell\[data-view="planning"\][\s\S]{0,300}?\.game-shell\[data-view="report"\][\s\S]{0,500}?position\s*:\s*static/u.test(
+    styles,
+  )
+) {
+  fail(
+    "no-fullscreen-release",
+    "Planning, simulation, report, and forecast may never release the viewport lock or fall back to document scrolling, including on wide fine-pointer desktops.",
+  );
+}
 
 requireMatch(
   indexHtml,
@@ -224,5 +233,5 @@ if (failures.length > 0) {
   }
   process.exitCode = 1;
 } else {
-  console.log("Mobile contract lint passed: fullscreen, no-scroll, no-clipping, touch-target, mobile-first, icon-only actions enforced with no exemptions.");
+  console.log("Flow contract lint passed: fullscreen, no-scroll, no-clipping, touch-target, mobile-first, icon-only actions enforced across mobile and desktop with no exemptions.");
 }
