@@ -7,7 +7,7 @@ import {
   DoubleSide,
   Group,
   HemisphereLight,
-  IcosahedronGeometry,
+  SphereGeometry,
   InstancedMesh,
   LinearFilter,
   type Material,
@@ -147,7 +147,7 @@ const createTree = (x: number, z: number): Group => {
   tree.add(trunk);
 
   const crown = new Mesh(
-    new IcosahedronGeometry(1.05, 1),
+    new SphereGeometry(1.05, 8, 6),
     makeMaterial(0x5f8d56),
   );
   crown.position.y = 2.0;
@@ -280,7 +280,7 @@ const addCharacterHair = (
   accessory: 0 | 1 | 2,
 ): void => {
   if (style === 1) {
-    const hair = new Mesh(new IcosahedronGeometry(0.255, 1), makeMaterial(color));
+    const hair = new Mesh(new SphereGeometry(0.255, 7, 4), makeMaterial(color));
     hair.scale.set(1, 0.42, 1);
     hair.position.y = 0.16;
     head.add(hair);
@@ -315,7 +315,7 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   );
   torso.position.y = 1.05;
   const head = new Mesh(
-    new IcosahedronGeometry(0.25, 1),
+    new SphereGeometry(0.25, 7, 5),
     makeMaterial(profile.skinColor),
   );
   head.position.y = 1.73;
@@ -323,7 +323,7 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
 
   const eyeMaterial = makeMaterial(0x263238);
   for (const x of [-0.085, 0.085]) {
-    const eye = new Mesh(new IcosahedronGeometry(0.024, 0), eyeMaterial.clone());
+    const eye = new Mesh(new SphereGeometry(0.024, 5, 4), eyeMaterial.clone());
     eye.position.set(x, 0.035, 0.232);
     head.add(eye);
   }
@@ -558,7 +558,7 @@ const createCupInventory = (): CupInventory => {
 const createLemon = (index: number): Group => {
   const lemon = new Group();
   const fruit = new Mesh(
-    new IcosahedronGeometry(0.22, 1),
+    new SphereGeometry(0.22, 7, 5),
     makeMaterial(0xf6d33b),
   );
   fruit.scale.set(1.15, 0.9, 0.9);
@@ -591,7 +591,7 @@ const createCloud = (color: number): Group => {
 
   for (const puff of puffs) {
     const mesh = new Mesh(
-      new IcosahedronGeometry(puff.radius, 2),
+      new SphereGeometry(puff.radius, 20, 16),
       material.clone(),
     );
     mesh.position.set(puff.x, puff.y, puff.z);
@@ -603,13 +603,13 @@ const createCloud = (color: number): Group => {
 const createSun = (radius: number): Group => {
   const group = new Group();
   const core = new Mesh(
-    new IcosahedronGeometry(radius, 3),
+    new SphereGeometry(radius, 24, 18),
     makeWeatherMaterial(0xffd447, 0xffc93a, 0.55),
   );
   group.add(core);
 
   const halo = new Mesh(
-    new IcosahedronGeometry(radius * 1.18, 3),
+    new SphereGeometry(radius * 1.18, 24, 18),
     new MeshStandardMaterial({
       color: 0xffe27a,
       emissive: 0xffd447,
