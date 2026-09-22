@@ -252,12 +252,12 @@ export const createGizmoController = (options: GizmoOptions) => {
       if (currentMode === "translate") {
         if (dragAxis === "x") selectedObject.position.x = initialPosition.x + delta.x;
         else if (dragAxis === "y") selectedObject.position.y = initialPosition.y + delta.y;
-        else if (dragAxis === "z") selectedObject.position.z = initialPosition.z + delta.z;
+        else if (dragAxis === "z") selectedObject.position.z = initialPosition.z - delta.y; // Z uses vertical mouse movement
       } else if (currentMode === "scale") {
         const scaleFactor = 1 + delta.x * 2;
         if (dragAxis === "x") selectedObject.scale.x = Math.max(0.1, initialScale.x * scaleFactor);
         else if (dragAxis === "y") selectedObject.scale.y = Math.max(0.1, initialScale.y * scaleFactor);
-        else if (dragAxis === "z") selectedObject.scale.z = Math.max(0.1, initialScale.z * scaleFactor);
+        else if (dragAxis === "z") selectedObject.scale.z = Math.max(0.1, initialScale.z * (1 - delta.y * 2));
       }
 
       onTransformChanged?.();
