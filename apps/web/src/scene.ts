@@ -4,6 +4,7 @@ import type {
   LemonsvilleSceneState,
   ScenePhase,
 } from "@lemonade/scene";
+import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
 import type { DayEnvironment } from "@lemonade/simulation";
 
 import type { createLemonsvilleScene } from "./scene-runtime.js";
@@ -15,6 +16,14 @@ const activityForConfidence = (confidence: number): CustomerActivity => {
   if (confidence === 3) return "lively";
   return "busy";
 };
+
+const pedestrianCount: Readonly<Record<CustomerActivity, number>> = Object.freeze({
+  quiet: 4,
+  light: 7,
+  steady: 10,
+  lively: 14,
+  busy: 18,
+});
 
 export type LemonsvilleSceneInput = Readonly<{
   environment: DayEnvironment;
@@ -73,22 +82,34 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
 const createState = (
   input: LemonsvilleSceneInput,
   reducedMotion: boolean,
-): LemonsvilleSceneState =>
-  Object.freeze({
+): LemonsvilleSceneState => {
+  const customerActivity = activityForConfidence(input.confidence);
+  const prepared = Math.max(0, input.prepared);
+  const sold = Math.max(0, input.sold);
+  const priceCents = Math.max(0, input.priceCents);
+  const durationMs = Math.max(0, input.durationMs);
+  return Object.freeze({
     weather: input.environment.weather.kind,
-    customerActivity: activityForConfidence(input.confidence),
+    customerActivity,
     visibleSigns: input.visibleSigns,
-    prepared: Math.max(0, input.prepared),
-    sold: Math.max(0, input.sold),
-    priceCents: Math.max(0, input.priceCents),
-    durationMs: Math.max(0, input.durationMs),
+    prepared,
+    sold,
+    priceCents,
+    durationMs,
+    storyboard: createStreetStoryboard({
+      durationMs: Math.max(1, durationMs),
+      prepared,
+      sold: input.phase === "simulation" ? sold : 0,
+      visibleSigns: input.visibleSigns,
+      priceCents,
+      ambientPedestrianCount: pedestrianCount[customerActivity],
+    }),
     sellThroughBasisPoints:
-      input.prepared > 0
-        ? Math.round((Math.max(0, input.sold) / input.prepared) * 10_000)
-        : 0,
+      prepared > 0 ? Math.round((sold / prepared) * 10_000) : 0,
     phase: input.phase,
     reducedMotion,
   });
+};
 
 export const createLemonsvilleSceneView = (elements: SceneElements): LemonsvilleSceneView => {
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
