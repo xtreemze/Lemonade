@@ -2,7 +2,7 @@ import {
   BoxGeometry,
   CylinderGeometry,
   DoubleSide,
-  Group,
+  type Group,
   InstancedMesh,
   Matrix4,
   Mesh,
