@@ -251,7 +251,6 @@ const treeLod = (
   );
   root.userData["sceneRole"] = "procedural-tree";
   root.userData["plantVariant"] = variant;
-  root.userData["clearanceRadius"] = 3.5 * scale;
   return markWindResponsive(root, phase);
 };
 
@@ -306,7 +305,6 @@ const shrubLod = (
   );
   root.userData["sceneRole"] = "procedural-shrub";
   root.userData["plantVariant"] = Math.floor(plantUnit(seed, 151) * 1_000);
-  root.userData["clearanceRadius"] = 1.9 * scale;
   return markWindResponsive(root, phase);
 };
 
@@ -339,7 +337,6 @@ const flower = (
   }
   root.position.set(x, 0, z);
   root.userData["sceneRole"] = "garden-flower";
-  root.userData["clearanceRadius"] = 0.16;
   return markWindResponsive(root, phase);
 };
 
@@ -354,8 +351,6 @@ const fenceRun = (x: number, z: number, width: number): Group => {
   }
   root.position.set(x, 0, z);
   root.userData["sceneRole"] = "fence";
-  root.userData["clearanceHalfWidth"] = width / 2;
-  root.userData["clearanceHalfDepth"] = 0.06;
   return root;
 };
 
@@ -369,7 +364,6 @@ const mailbox = (x: number, z: number): Group => {
   root.rotation.y = 0;
   root.userData["sceneRole"] = "mailbox";
   root.userData["streetFacingYaw"] = 0;
-  root.userData["clearanceRadius"] = 0.3;
   return root;
 };
 
@@ -377,8 +371,6 @@ const fenceRunDepth = (x: number, z: number, depth: number): Group => {
   const root = fenceRun(0, 0, depth);
   root.position.set(x, 0, z);
   root.rotation.y = Math.PI / 2;
-  root.userData["clearanceHalfWidth"] = 0.06;
-  root.userData["clearanceHalfDepth"] = depth / 2;
   return root;
 };
 
