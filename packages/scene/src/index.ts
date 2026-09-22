@@ -143,7 +143,7 @@ const createTree = (x: number, z: number): THREE.Group => {
 
 type SignModel = Readonly<{
   root: THREE.Group;
-  labelMaterial: THREE.MeshBasicMaterial;
+  labelMaterial: THREE.MeshStandardMaterial;
 }>;
 
 const createSign = (index: number): SignModel => {
@@ -151,8 +151,11 @@ const createSign = (index: number): SignModel => {
   addBox(root, [0.1, 0.85, 0.1], [0, 0.43, 0], 0x644c34);
   addBox(root, [0.95, 0.62, 0.12], [0, 1.05, 0], 0xf5d34c);
 
-  const labelMaterial = new THREE.MeshBasicMaterial({
+  const labelMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.35,
+    roughness: 0.9,
     side: THREE.DoubleSide,
   });
   const label = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.52), labelMaterial);
@@ -396,8 +399,11 @@ const createSun = (radius: number): THREE.Group => {
 
   const halo = new THREE.Mesh(
     new THREE.SphereGeometry(radius * 1.18, 24, 18),
-    new THREE.MeshBasicMaterial({
+    new THREE.MeshStandardMaterial({
       color: 0xffe27a,
+      emissive: 0xffd447,
+      emissiveIntensity: 0.45,
+      roughness: 1,
       transparent: true,
       opacity: 0.16,
       depthWrite: false,
