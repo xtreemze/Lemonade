@@ -131,44 +131,6 @@ const createStand = (): StandModel => {
   return Object.freeze({ root, shutter });
 };
 
-const createHouse = (x: number, color: number, scale: number): Group => {
-  const house = new Group();
-  addBox(house, [3.4, 2.6, 2.4], [0, 1.3, 0], color);
-
-  const roof = new Mesh(
-    new CylinderGeometry(0, 2.75, 1.6, 4),
-    makeMaterial(0x7f4a43),
-  );
-  roof.rotation.y = Math.PI / 4;
-  roof.position.y = 3.25;
-  house.add(roof);
-
-  addBox(house, [0.75, 1.55, 0.15], [0, 0.8, 1.28], 0x486c69);
-  house.position.x = x;
-  house.position.z = -3.8;
-  house.scale.setScalar(scale);
-  return house;
-};
-
-const createTree = (x: number, z: number): Group => {
-  const tree = new Group();
-  const trunk = new Mesh(
-    new CylinderGeometry(0.16, 0.24, 1.5, 7),
-    makeMaterial(0x765232),
-  );
-  trunk.position.y = 0.75;
-  tree.add(trunk);
-
-  const crown = new Mesh(
-    new SphereGeometry(1.05, 10, 7),
-    makeMaterial(0x5f8d56),
-  );
-  crown.position.y = 2;
-  tree.add(crown);
-  tree.position.set(x, 0, z);
-  return tree;
-};
-
 type SignModel = Readonly<{
   root: Group;
   labelMaterial: MeshStandardMaterial;
@@ -659,13 +621,6 @@ export const createLemonsvilleScene = (
   mainRoad.rotation.x = -Math.PI / 2;
   mainRoad.position.set(0, 0.012, 4.1);
   scene.add(mainRoad);
-
-  scene.add(createHouse(-7.2, 0xd56f52, 1));
-  scene.add(createHouse(7, 0xd4aa61, 0.9));
-  scene.add(createTree(-4.7, -2.9));
-  scene.add(createTree(4.9, -2.6));
-  scene.add(createTree(-8.2, 1.4));
-  scene.add(createTree(8.1, 1));
 
   const stand = createStand();
   scene.add(stand.root);
