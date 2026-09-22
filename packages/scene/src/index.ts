@@ -32,6 +32,7 @@ import {
   characterGroundClearance,
   WORLD_SCALE,
 } from "./world-scale.js";
+import { updateNeighborhoodWind } from "./neighborhood.js";
 import { SELLER_Z } from "./stand-anchors.js";
 import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
@@ -1008,6 +1009,7 @@ export const createLemonsvilleScene = (
       storyboard.durationMs,
       state.reducedMotion,
     );
+    updateNeighborhoodWind(scene, seconds, state.weather);
 
     render();
     animationFrame = window.requestAnimationFrame(animate);

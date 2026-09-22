@@ -298,20 +298,35 @@ export const populateWeatherObjects = (
   lightning.visible = false;
   weather.thunderstorm.add(lightning);
 
-  for (let index = 0; index < 7; index += 1) {
-    const drop = new Mesh(
-      new CylinderGeometry(0.02, 0.02, 0.62, 8),
-      weatherMaterial(0x7dc7df),
+  const rainGroups = thunderstormClouds.map((cloud, cloudIndex) => {
+    const rainGroup = new Group();
+    rainGroup.userData["rainCloudIndex"] = cloudIndex;
+    rainGroup.userData["baseCloudX"] = cloud.userData["baseX"];
+    rainGroup.userData["baseCloudY"] = cloud.userData["baseY"];
+
+    for (let dropIndex = 0; dropIndex < 6; dropIndex += 1) {
+      const drop = new Mesh(
+        new CylinderGeometry(0.015, 0.015, 1.2, 6),
+        weatherMaterial(0x7dc7df),
+      );
+      drop.position.set(
+        (dropIndex - 2.5) * 0.25,
+        -0.4 - dropIndex * 0.15,
+        0,
+      );
+      drop.scale.y = 0.6;
+      drop.rotation.z = -0.2;
+      rainGroup.add(drop);
+    }
+
+    rainGroup.position.set(
+      cloud.userData["baseX"] as number,
+      cloud.userData["baseY"] as number,
+      0,
     );
-    drop.position.set(
-      -1.05 + index * 0.35,
-      -0.48 - (index % 2) * 0.12,
-      0.35,
-    );
-    drop.scale.y = 0.45;
-    drop.rotation.z = -0.18;
-    weather.thunderstorm.add(drop);
-  }
+    weather.thunderstorm.add(rainGroup);
+    return rainGroup;
+  });
 
   return Object.freeze({
     update(
@@ -346,7 +361,7 @@ export const populateWeatherObjects = (
         cloud.position.x = baseX + localDrift;
       });
 
-      thunderstormClouds.forEach((cloud) => {
+      thunderstormClouds.forEach((cloud, cloudIndex) => {
         const baseX =
           typeof cloud.userData["baseX"] === "number"
             ? cloud.userData["baseX"]
@@ -366,6 +381,12 @@ export const populateWeatherObjects = (
           const turbulenceY = Math.sin(elapsedMs * 0.0005 + phaseOffset * 2) * 0.3;
           cloud.position.x = baseX + turbulence1 + turbulence2;
           cloud.position.y = baseY + turbulenceY;
+        }
+
+        const rainGroup = rainGroups[cloudIndex];
+        if (rainGroup) {
+          rainGroup.position.x = cloud.position.x;
+          rainGroup.position.y = cloud.position.y - 0.8;
         }
       });
 
