@@ -7,6 +7,7 @@ const viewports: readonly MobileViewport[] = Object.freeze([
   { name: "standard portrait", width: 360, height: 740 },
   { name: "tall portrait", width: 390, height: 844 },
   { name: "large portrait", width: 430, height: 932 },
+  { name: "compact landscape", width: 568, height: 320 },
   { name: "landscape", width: 740, height: 360 },
   { name: "wide phone landscape", width: 844, height: 390 },
   { name: "large phone landscape", width: 932, height: 430 },
@@ -23,25 +24,40 @@ const expectViewportContract = async (
     if (!(shell instanceof HTMLElement)) throw new TypeError("Expected .game-shell.");
 
     const rect = shell.getBoundingClientRect();
-    const overflowViolations = [...document.querySelectorAll<HTMLElement>("body *")]
+    const isVisuallyHidden = (element: HTMLElement): boolean => {
+      const style = getComputedStyle(element);
+      return (
+        (style.clipPath !== "none" && style.clipPath !== "") ||
+        (style.position === "absolute" &&
+          style.overflow === "hidden" &&
+          element.clientWidth <= 1 &&
+          element.clientHeight <= 1)
+      );
+    };
+
+    const isRendered = (element: HTMLElement): boolean => {
+      const style = getComputedStyle(element);
+      return (
+        element !== shell &&
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        element.getClientRects().length > 0 &&
+        !isVisuallyHidden(element)
+      );
+    };
+
+    const describe = (element: HTMLElement): string => {
+      const id = element.id.length > 0 ? `#${element.id}` : "";
+      const classes =
+        element.classList.length > 0 ? `.${[...element.classList].join(".")}` : "";
+      return `${element.tagName.toLowerCase()}${id}${classes}`;
+    };
+
+    const rendered = [...document.querySelectorAll<HTMLElement>("body *")].filter(isRendered);
+
+    const overflowViolations = rendered
       .filter((element) => {
         const style = getComputedStyle(element);
-        const visuallyHidden =
-          (style.clipPath !== "none" && style.clipPath !== "") ||
-          (style.position === "absolute" &&
-            style.overflow === "hidden" &&
-            element.clientWidth <= 1 &&
-            element.clientHeight <= 1);
-        if (
-          element === shell ||
-          style.display === "none" ||
-          style.visibility === "hidden" ||
-          element.getClientRects().length === 0 ||
-          visuallyHidden
-        ) {
-          return false;
-        }
-
         const verticalOverflow = element.scrollHeight > element.clientHeight + 1;
         const horizontalOverflow = element.scrollWidth > element.clientWidth + 1;
         const userScrollable =
@@ -52,12 +68,29 @@ const expectViewportContract = async (
 
         return userScrollable || verticallyClipped;
       })
-      .map((element) => {
-        const id = element.id.length > 0 ? `#${element.id}` : "";
-        const classes =
-          element.classList.length > 0 ? `.${[...element.classList].join(".")}` : "";
-        return `${element.tagName.toLowerCase()}${id}${classes}`;
-      });
+      .map(describe);
+
+    const viewportViolations = rendered
+      .filter((element) => {
+        const rect = element.getBoundingClientRect();
+        return (
+          rect.left < -1 ||
+          rect.top < -1 ||
+          rect.right > window.innerWidth + 1 ||
+          rect.bottom > window.innerHeight + 1
+        );
+      })
+      .map(describe);
+
+    const interactiveViolations = [
+      ...document.querySelectorAll<HTMLElement>(".flow-action-button, .game-slider"),
+    ]
+      .filter(isRendered)
+      .filter((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.width < 44 || rect.height < 44;
+      })
+      .map(describe);
 
     return {
       view: shell.dataset["view"],
@@ -79,6 +112,8 @@ const expectViewportContract = async (
       bodyOverflow: getComputedStyle(document.body).overflow,
       shellOverflow: getComputedStyle(shell).overflow,
       overflowViolations,
+      viewportViolations,
+      interactiveViolations,
     };
   });
 
@@ -93,6 +128,8 @@ const expectViewportContract = async (
   expect(contract.bodyOverflow).toBe("hidden");
   expect(contract.shellOverflow).toBe("hidden");
   expect(contract.overflowViolations).toEqual([]);
+  expect(contract.viewportViolations).toEqual([]);
+  expect(contract.interactiveViolations).toEqual([]);
 };
 
 const expectCenteredBottomAction = async (
