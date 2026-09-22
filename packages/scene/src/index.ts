@@ -512,7 +512,7 @@ export const createLemonsvilleScene = (
   scene.add(createTree(8.1, 1.0));
   scene.add(createStand());
 
-  const signs = Array.from({ length: 25 }, (_, index) => createSign(index));
+  const signs = Array.from({ length: 40 }, (_, index) => createSign(index));
   let signTexture: THREE.CanvasTexture | null = null;
   let signPriceLabel = "";
   let disposed = false;
