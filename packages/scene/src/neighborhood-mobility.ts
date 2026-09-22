@@ -323,7 +323,7 @@ const propertySidewalkPoint = (
 ): ResidentialPoint => {
   const access = residentialAccessLayout(property, seed);
   return Object.freeze({
-    x: access.pathCenterX,
+    x: access.sidewalkX,
     z: access.sidewalkCenterZ,
   });
 };
