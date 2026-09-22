@@ -84,6 +84,53 @@ const footprintIntersectsRect = (
   point.z + halfDepth >= rect.minZ &&
   point.z - halfDepth <= rect.maxZ;
 
+const resolvePropertyOverlaps = (
+  properties: readonly ResidentialPropertySpec[],
+): readonly ResidentialPropertySpec[] => {
+  const mutable = properties.map((p) => ({ ...p }));
+  const minClearance = 0.5;
+
+  for (let pass = 0; pass < 8; pass += 1) {
+    let anyMoved = false;
+    for (let i = 0; i < mutable.length; i += 1) {
+      const a = mutable[i];
+      if (a === undefined) continue;
+      const aFootprint = propertyFootprint(a);
+      let totalPushX = 0;
+      let totalPushZ = 0;
+
+      for (let j = i + 1; j < mutable.length; j += 1) {
+        const b = mutable[j];
+        if (b === undefined) continue;
+        const bFootprint = propertyFootprint(b);
+        const minDistX = aFootprint.halfWidth + bFootprint.halfWidth + minClearance;
+        const minDistZ = aFootprint.halfDepth + bFootprint.halfDepth + minClearance;
+        const distX = Math.abs(b.houseX - a.houseX);
+        const distZ = Math.abs(b.houseZ - a.houseZ);
+
+        if (distX < minDistX && distZ < minDistZ) {
+          const pushX = (minDistX - distX) * 0.5;
+          const pushZ = (minDistZ - distZ) * 0.5;
+          totalPushX += Math.sign(b.houseX - a.houseX) * pushX;
+          totalPushZ += Math.sign(b.houseZ - a.houseZ) * pushZ;
+        }
+      }
+
+      if (totalPushX !== 0 || totalPushZ !== 0) {
+        anyMoved = true;
+        mutable[i] = {
+          ...a,
+          houseX: a.houseX - totalPushX,
+          houseZ: a.houseZ - totalPushZ,
+        };
+      }
+    }
+    if (!anyMoved) break;
+  }
+
+  return Object.freeze(mutable);
+};
+
 const baseHardscape = (seed: number): readonly ResidentialRect[] =>
   baseExclusions(seed);
 
@@ -861,17 +908,24 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       false,
     ),
   ]);
-  const allProperties = [...front, ...middle, ...back, ...outer];
+  const allPropertiesRaw = [...front, ...middle, ...back, ...outer];
+  const allPropertiesResolved = resolvePropertyOverlaps(allPropertiesRaw);
+
+  const resolvedByRole = new Map(allPropertiesResolved.map((p) => [p.role, p]));
+  const resolveProperties = (props: readonly ResidentialPropertySpec[]) =>
+    Object.freeze(props.map((p) => resolvedByRole.get(p.role) ?? p));
+
+  const allProperties = allPropertiesResolved;
   const exclusions = Object.freeze([
     ...baseExclusions(safeSeed),
     ...accessExclusions(allProperties, safeSeed),
   ]);
   const partial = {
     exclusions,
-    frontProperties: front,
-    middleProperties: middle,
-    backProperties: back,
-    outerProperties: outer,
+    frontProperties: resolveProperties(front),
+    middleProperties: resolveProperties(middle),
+    backProperties: resolveProperties(back),
+    outerProperties: resolveProperties(outer),
   } as const;
 
   const backyardTrees = generatePropertyPlantings(

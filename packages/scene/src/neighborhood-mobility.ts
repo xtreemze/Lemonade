@@ -906,19 +906,20 @@ export const createNeighborhoodMobilitySystem = (
           addStatistical(counts, gardener);
         }
 
-        const parkedVehicles = [
-          { index: 2, position: [-18, 0.3, -1.2] as const },
-          { index: 5, position: [6, 0.3, -1.2] as const },
-          { index: 8, position: [32, 0.3, -1.2] as const },
-        ];
-        for (let i = 0; i < 2; i++) {
-          const vehicleInfo = parkedVehicles[deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) < 0.67 ? i : (i + 1) % 3];
-          if (vehicleInfo === undefined) continue;
+        const frontProperties = layout.frontProperties.filter((p) => p.drivewayX !== null);
+        for (let i = 0; i < Math.min(2, frontProperties.length); i++) {
+          const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) * frontProperties.length);
+          const property = frontProperties[propertyIndex];
+          if (property === undefined || property.drivewayX === null) continue;
+          const access = residentialAccessLayout(property);
           const parkedVehicle = makePose(
             `parked-vehicle-${i}`,
             "vehicle",
-            { x: vehicleInfo.position[0], z: vehicleInfo.position[2] },
-            vehicleInfo.position[1],
+            {
+              x: property.drivewayX,
+              z: access.drivewayCenterZ,
+            },
+            Math.PI / 2,
             0,
             focus,
             "none",
