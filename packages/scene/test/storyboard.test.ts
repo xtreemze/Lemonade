@@ -13,6 +13,7 @@ import {
   buyerSlotForSale,
   completedSalesAt,
   endingCloseupProgressAt,
+  endingConfidenceAt,
   remainingCameraProgressAt,
   remainingCupsAt,
   sceneCameraComposition,
@@ -217,6 +218,10 @@ describe("street simulation storyboard", () => {
     expect(endingCloseupProgressAt(storyboard, 6_000)).toBe(0);
     expect(endingCloseupProgressAt(storyboard, 7_000)).toBeCloseTo(0.5);
     expect(endingCloseupProgressAt(storyboard, 8_000)).toBe(1);
+
+    expect(endingConfidenceAt(storyboard, 6_000, 1, 5)).toBe(1);
+    expect(endingConfidenceAt(storyboard, 7_000, 1, 5)).toBeCloseTo(3);
+    expect(endingConfidenceAt(storyboard, 8_000, 1, 5)).toBe(5);
 
     expect(remainingCameraProgressAt(storyboard, 6_000)).toBe(0);
     expect(remainingCameraProgressAt(storyboard, 6_500)).toBeGreaterThan(0);
