@@ -1,3 +1,5 @@
+import { WORLD_SCALE } from "./world-scale.js";
+
 export const walkingCycleAtDistance = (
   travelDistance: number,
   heightScale: number,
@@ -12,7 +14,10 @@ export const walkingCycleAtDistance = (
     0.75,
     Math.min(1.35, Number.isFinite(walkPace) ? walkPace : 1),
   );
-  const cycleDistance = Math.max(0.55, (1.16 * safeHeight) / safePace);
+  const cycleDistance = Math.max(
+    0.44,
+    (1.16 * safeHeight * WORLD_SCALE.character.renderScale) / safePace,
+  );
   return (
     (Math.max(0, Number.isFinite(travelDistance) ? travelDistance : 0) /
       cycleDistance) *

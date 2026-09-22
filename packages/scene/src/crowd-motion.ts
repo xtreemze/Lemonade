@@ -1,6 +1,7 @@
 import type { Group, Scene } from "three";
 
 import { walkingCycleAtDistance } from "./gait.js";
+import { characterGroundClearance } from "./world-scale.js";
 import {
   clampToSidewalk,
   gardenSignPosition,
@@ -46,7 +47,12 @@ const deterministicUnit = (index: number, salt: number): number => {
 };
 
 export const crowdGroundClearance = (heightScale: number): number =>
-  0.225 * Math.max(0.62, Math.min(1.2, Number.isFinite(heightScale) ? heightScale : 1));
+  characterGroundClearance(
+    Math.max(
+      0.62,
+      Math.min(1.2, Number.isFinite(heightScale) ? heightScale : 1),
+    ),
+  );
 
 const basePose = (
   beat: PasserbyBeat,
