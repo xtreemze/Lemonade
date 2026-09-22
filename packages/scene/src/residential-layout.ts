@@ -211,16 +211,157 @@ const makeProperty = (
   });
 };
 
+const drivewayRectAt = (x: number): ResidentialRect => Object.freeze({
+  minX: x - DRIVEWAY_HALF_WIDTH,
+  maxX: x + DRIVEWAY_HALF_WIDTH,
+  minZ: FRONT_DRIVEWAY_MIN_Z,
+  maxZ: FRONT_DRIVEWAY_MAX_Z,
+  role: "driveway",
+});
+
+const propertyFootprint = (
+  property: ResidentialPropertySpec,
+): Readonly<{ halfWidth: number; halfDepth: number }> => {
+  const localHalfWidth = (HOUSE_FOOTPRINT_WIDTH * property.scale) / 2;
+  const localHalfDepth = (HOUSE_FOOTPRINT_DEPTH * property.scale) / 2;
+  return rotatedFootprintHalfExtents(
+    localHalfWidth,
+    localHalfDepth,
+    property.rotationY,
+  );
+};
+
+const drivewayClearsProperties = (
+  x: number,
+  properties: readonly ResidentialPropertySpec[],
+  occupied: readonly ResidentialRect[],
+): boolean => {
+  const driveway = drivewayRectAt(x);
+  const clearsHouses = properties.every((property) => {
+    const footprint = propertyFootprint(property);
+    return !footprintIntersectsRect(
+      driveway,
+      { x: property.houseX, z: property.houseZ },
+      footprint.halfWidth,
+      footprint.halfDepth,
+    );
+  });
+  if (!clearsHouses) return false;
+  return occupied.every(
+    (existing) =>
+      existing.maxX + 0.25 < driveway.minX ||
+      existing.minX - 0.25 > driveway.maxX,
+  );
+};
+
+const resolveFrontAccess = (
+  seed: number,
+  properties: readonly ResidentialPropertySpec[],
+): readonly ResidentialPropertySpec[] => {
+  const occupiedDriveways: ResidentialRect[] = [];
+  const resolvedDriveways = properties.map((property, index) => {
+    if (property.drivewayX === null) return property;
+
+    const preferredSide: -1 | 1 =
+      property.drivewayX < property.houseX ? -1 : 1;
+    const baseDistance = Math.abs(property.drivewayX - property.houseX);
+    let drivewayX: number | null = null;
+
+    for (let step = 0; step <= 12 && drivewayX === null; step += 1) {
+      const distance = baseDistance + step * 0.42;
+      for (const side of [preferredSide, -preferredSide] as const) {
+        const candidate = property.houseX + side * distance;
+        if (
+          drivewayClearsProperties(
+            candidate,
+            properties,
+            occupiedDriveways,
+          )
+        ) {
+          drivewayX = candidate;
+          break;
+        }
+      }
+    }
+
+    if (drivewayX === null) {
+      throw new Error("unable to place residential driveway clear of houses");
+    }
+    occupiedDriveways.push(drivewayRectAt(drivewayX));
+
+    return Object.freeze({
+      ...property,
+      drivewayX,
+      mailboxX: null,
+      role: property.role,
+      color: property.color,
+      scale: property.scale,
+      rotationY: property.rotationY,
+      houseX: property.houseX,
+      houseZ: property.houseZ,
+    });
+  });
+
+  return Object.freeze(
+    resolvedDriveways.map((property, index) => {
+      if (property.drivewayX === null) return property;
+      const drivewaySide: -1 | 1 =
+        property.drivewayX < property.houseX ? -1 : 1;
+      const preferredOffset =
+        DRIVEWAY_HALF_WIDTH +
+        MAILBOX_CLEARANCE_FROM_DRIVEWAY +
+        unit(seed, index * 17 + 9) * 0.18;
+      let mailboxX: number | null = null;
+
+      for (let step = 0; step <= 12 && mailboxX === null; step += 1) {
+        const offset = preferredOffset + step * 0.24;
+        for (const side of [drivewaySide, -drivewaySide] as const) {
+          const candidate = property.drivewayX + side * offset;
+          const clearOfStreet = mailboxAnchorIsClear(candidate, seed);
+          const clearOfDriveways = occupiedDriveways.every(
+            (driveway) =>
+              !footprintIntersectsRect(
+                driveway,
+                { x: candidate, z: -0.3 },
+                0.3,
+                0.3,
+              ),
+          );
+          if (clearOfStreet && clearOfDriveways) {
+            mailboxX = candidate;
+            break;
+          }
+        }
+      }
+
+      return Object.freeze({
+        ...property,
+        mailboxX,
+        role: property.role,
+        color: property.color,
+        scale: property.scale,
+        rotationY: property.rotationY,
+        houseX: property.houseX,
+        houseZ: property.houseZ,
+        drivewayX: property.drivewayX,
+      });
+    }),
+  );
+};
+
 const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
-  Object.freeze([
-    makeProperty(seed, 0, "west-end", -44.6, -7.1, 0.96, 0.035, false, 1),
-    makeProperty(seed, 1, "west-mid", -33.7, -8.4, 1.02, -0.045, false, 1),
-    makeProperty(seed, 2, "west-near", -24.0, -6.6, 0.92, 0.06, false, 1),
-    makeProperty(seed, 3, "stand-home", -4.7, -7.9, 1.06, 0.045, false, -1),
-    makeProperty(seed, 4, "stand-neighbor", 8.8, -8.6, 0.97, -0.055, false, 1),
-    makeProperty(seed, 5, "east-mid", 29.1, -6.8, 1.01, 0.025, false, -1),
-    makeProperty(seed, 6, "east-end", 41.5, -8.3, 0.94, -0.05, false, 1),
-  ]);
+  resolveFrontAccess(
+    seed,
+    Object.freeze([
+      makeProperty(seed, 0, "west-end", -44.6, -7.1, 0.96, 0.035, false, 1),
+      makeProperty(seed, 1, "west-mid", -33.7, -8.4, 1.02, -0.045, false, 1),
+      makeProperty(seed, 2, "west-near", -24.0, -6.6, 0.92, 0.06, false, 1),
+      makeProperty(seed, 3, "stand-home", -4.7, -7.9, 1.06, 0.045, false, -1),
+      makeProperty(seed, 4, "stand-neighbor", 8.8, -8.6, 0.97, -0.055, false, 1),
+      makeProperty(seed, 5, "east-mid", 29.1, -6.8, 1.01, 0.025, false, -1),
+      makeProperty(seed, 6, "east-end", 41.5, -8.3, 0.94, -0.05, false, 1),
+    ]),
+  );
 
 const rowProperties = (
   seed: number,
