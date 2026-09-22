@@ -355,9 +355,10 @@ h2 {
 .game-slider {
   --slider-thumb-image: none;
   --slider-thumb-kind: none;
+  --slider-track-size: 16px;
 
   width: 100%;
-  min-height: 56px;
+  min-height: 62px;
   margin: 0;
   border: 0;
   background: transparent;
@@ -382,16 +383,16 @@ h2 {
 }
 
 .game-slider::-webkit-slider-runnable-track {
-  height: 12px;
+  height: var(--slider-track-size);
   border: 2px solid #211d14;
   border-radius: 999px;
   background: #f8d354;
 }
 
 .game-slider::-webkit-slider-thumb {
-  width: 52px;
-  height: 52px;
-  margin-top: -20px;
+  width: 56px;
+  height: 56px;
+  margin-top: calc((var(--slider-track-size) - 56px) / 2);
   border: 0;
   border-radius: 0;
   background: var(--slider-thumb-image) center / contain no-repeat;
@@ -405,22 +406,22 @@ h2 {
 }
 
 .game-slider::-moz-range-track {
-  height: 9px;
+  height: var(--slider-track-size);
   border: 2px solid #211d14;
   border-radius: 999px;
   background: #f8d354;
 }
 
 .game-slider::-moz-range-progress {
-  height: 9px;
+  height: var(--slider-track-size);
   border: 2px solid #211d14;
   border-radius: 999px;
   background: #236f5e;
 }
 
 .game-slider::-moz-range-thumb {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border: 0;
   border-radius: 0;
   background: var(--slider-thumb-image) center / contain no-repeat;
@@ -806,8 +807,8 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .game-shell[data-view="planning"] .decision-control {
   flex: none;
-  gap: 4px;
-  padding: clamp(8px, 1.6dvh, 13px) 0;
+  gap: 7px;
+  padding: clamp(10px, 2dvh, 16px) 0;
   border-top-width: 1px;
 }
 
@@ -842,7 +843,7 @@ body:has(.game-shell[data-view="forecast"]) {
 }
 
 .game-shell[data-view="planning"] .game-slider {
-  min-height: 58px;
+  min-height: 62px;
 }
 
 .game-shell[data-view="planning"] .decision-exact {
