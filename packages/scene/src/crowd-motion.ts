@@ -213,8 +213,6 @@ const samplePedestrianRoute = (
   });
 };
 
-const fract = (value: number): number => value - Math.floor(value);
-
 const deterministicUnit = (index: number, salt: number): number => {
   let value = Math.imul((index + 1) >>> 0, 0x9e3779b1) ^ (salt >>> 0);
   value = Math.imul(value ^ (value >>> 16), 0x21f0aaad);
