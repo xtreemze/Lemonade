@@ -107,14 +107,13 @@ pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
-The non-negotiable mobile full-viewport contract can be run directly with:
+The non-negotiable mobile full-viewport contract is enforced with one command:
 
 ```sh
-pnpm lint:mobile-contract
-pnpm test:mobile-contract
+pnpm verify:mobile
 ```
 
-It verifies planning, simulation, report, and forecast as full-width/full-height touch-first states with no document scrolling, nested scrolling, or vertically clipped flow content. Wide touch devices remain on the mobile contract; desktop layout release is capability-gated.
+This runs both the static policy check and the Playwright touch-device matrix. It verifies planning, simulation, report, and forecast as full-width/full-height touch-first states with no document scrolling, nested scrolling, clipped or offscreen visible flow content, and no primary interaction target below 44×44 CSS pixels. Compact portrait and landscape viewports are mandatory. Wide touch devices remain on the mobile contract; desktop layout release is capability-gated. The contract suite may not use skip, fixme, expected-failure, or source exemption markers.
 
 The deterministic gameplay/balance certification report is:
 
