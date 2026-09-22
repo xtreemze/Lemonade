@@ -906,6 +906,29 @@ export const createNeighborhoodMobilitySystem = (
           addStatistical(counts, gardener);
         }
 
+        const parkedVehicles = [
+          { index: 2, position: [-18, 0.3, -1.2] as const },
+          { index: 5, position: [6, 0.3, -1.2] as const },
+          { index: 8, position: [32, 0.3, -1.2] as const },
+        ];
+        for (let i = 0; i < 2; i++) {
+          const vehicleInfo = parkedVehicles[deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) < 0.67 ? i : (i + 1) % 3];
+          if (vehicleInfo === undefined) continue;
+          const parkedVehicle = makePose(
+            `parked-vehicle-${i}`,
+            "vehicle",
+            { x: vehicleInfo.position[0], z: vehicleInfo.position[2] },
+            vehicleInfo.position[1],
+            0,
+            focus,
+            "none",
+            null,
+            true,
+          );
+          actors.push(parkedVehicle);
+          addStatistical(counts, parkedVehicle);
+        }
+
         const sunny = input.weather === "sunny";
         allProperties(layout).forEach((property, index) => {
           const morningOccupied =

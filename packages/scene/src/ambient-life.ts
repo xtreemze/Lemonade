@@ -63,6 +63,9 @@ export const ambientPopulationFor = (
   weather: AmbientWeather,
   phase: AmbientPhase,
 ): AmbientPopulation => {
+  if (phase === "forecast") {
+    return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 2 });
+  }
   if (phase !== "simulation") {
     return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 0 });
   }
