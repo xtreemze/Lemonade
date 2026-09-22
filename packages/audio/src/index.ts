@@ -68,7 +68,6 @@ type AppleWeatherMelody = Readonly<{
 type WeatherPhraseNote = Readonly<{
   note: number;
   beats: number;
-  gain?: number;
 }>;
 
 type WeatherPhraseCompletion = Readonly<{
@@ -351,7 +350,7 @@ const compileWeatherPhraseCompletion = (
         midiNote: note.note,
         startSeconds: cursor,
         durationSeconds,
-        gain: note.gain ?? APPLE_SPEAKER_GAIN,
+        gain: APPLE_SPEAKER_GAIN,
         waveform: "square",
         source: "source-phrase-completion",
       }),
