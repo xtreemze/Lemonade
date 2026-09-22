@@ -74,8 +74,8 @@ describe("crowd motion", () => {
     );
     const routeIds = new Set(first.map((pose) => pose?.routeId).filter(Boolean));
     expect(routeIds.size).toBeGreaterThan(4);
-    expect(routeIds.has("main:0")).toBe(true);
-    expect(routeIds.has("main:1")).toBe(true);
+    expect([...routeIds].some((routeId) => routeId.startsWith("main:0:"))).toBe(true);
+    expect([...routeIds].some((routeId) => routeId.startsWith("main:1:"))).toBe(true);
     const generatedRouteIds = new Set(
       neighborhoodSidewalkRoutes().map((route) => route.id),
     );
@@ -99,6 +99,65 @@ describe("crowd motion", () => {
         const distance = Math.hypot(a.x - b.x, a.z - b.z);
         expect(distance).toBeGreaterThan(0.42);
       }
+    }
+  });
+
+  it("keeps sidewalk routes contiguous and prevents frame-to-frame pedestrian teleports", () => {
+    const routes = neighborhoodSidewalkRoutes();
+    for (const route of routes) {
+      for (let index = 1; index < route.strips.length; index += 1) {
+        const previous = route.strips[index - 1];
+        const current = route.strips[index];
+        if (previous === undefined || current === undefined) continue;
+        expect(Math.floor(current.segmentIndex / 2)).toBe(
+          Math.floor(previous.segmentIndex / 2) + 1,
+        );
+      }
+    }
+
+    const longBeats = Object.freeze(
+      beats.map((beat) =>
+        Object.freeze({
+          ...beat,
+          startAtMs: 0,
+          endAtMs: 12_000,
+        }),
+      ),
+    );
+    const simulation = createCrowdSimulation(longBeats, 12, 12_000);
+    let previous = simulation.sample(0).poses;
+    for (let elapsedMs = 100; elapsedMs < 12_000; elapsedMs += 100) {
+      const current = simulation.sample(elapsedMs).poses;
+      for (let index = 0; index < current.length; index += 1) {
+        const before = previous[index];
+        const after = current[index];
+        if (before === undefined || after === undefined) continue;
+        expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeLessThan(
+          1.25,
+        );
+      }
+      previous = current;
+    }
+  });
+
+  it("uses left/right side-entry routes instead of top/bottom pedestrian approaches", () => {
+    const sample = crowdPosesAt(beats, 12, 2_750, 6_000);
+    const routes = new Map(
+      neighborhoodSidewalkRoutes().map((route) => [route.id, route] as const),
+    );
+    for (const pose of sample) {
+      if (pose === undefined) continue;
+      const route = routes.get(pose.routeId);
+      expect(route).toBeDefined();
+      if (route === undefined) continue;
+      const first = route.points[0];
+      const last = route.points.at(-1);
+      expect(first).toBeDefined();
+      expect(last).toBeDefined();
+      if (first === undefined || last === undefined) continue;
+      expect(Math.abs(last.x - first.x)).toBeGreaterThanOrEqual(
+        Math.abs(last.z - first.z),
+      );
     }
   });
 
@@ -296,8 +355,8 @@ describe("crowd motion", () => {
     );
     expect(extent).toBeGreaterThan(42);
     for (const pose of allPoses) {
-      expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.15);
-      expect(pose.worldSpeed).toBeLessThanOrEqual(2.05);
+      expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.18);
+      expect(pose.worldSpeed).toBeLessThanOrEqual(1.44);
     }
   });
 
