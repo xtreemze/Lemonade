@@ -228,6 +228,39 @@ const createLimb = (
   return Object.freeze({ root, lower });
 };
 
+const createLemonadeCup = (): Group => {
+  const cup = new Group();
+  const glass = new Mesh(
+    new CylinderGeometry(0.075, 0.09, 0.19, 8, 1, true),
+    new MeshStandardMaterial({
+      color: 0xaeffff,
+      transparent: true,
+      opacity: 0.46,
+      roughness: 0.22,
+      side: DoubleSide,
+      depthWrite: false,
+    }),
+  );
+  const liquid = new Mesh(
+    new CylinderGeometry(0.061, 0.073, 0.115, 8),
+    new MeshStandardMaterial({
+      color: 0xefff00,
+      transparent: true,
+      opacity: 0.68,
+      roughness: 0.75,
+    }),
+  );
+  liquid.position.y = -0.022;
+  const straw = new Mesh(
+    new CylinderGeometry(0.008, 0.008, 0.25, 6),
+    makeMaterial(0xff551d),
+  );
+  straw.position.set(0.028, 0.085, 0.008);
+  straw.rotation.z = -0.2;
+  cup.add(glass, liquid, straw);
+  return cup;
+};
+
 const createPerson = (characterSeed: number, index: number): PersonRig => {
   const profile = characterProfileFor(characterSeed, index);
   const root = new Group();
