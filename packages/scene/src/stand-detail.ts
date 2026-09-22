@@ -140,7 +140,7 @@ export const populateStand = (
       roughness: 0.28,
     }),
   );
-  pitcher.position.set(-0.57, STAND_LAYOUT.counterTopY + 0.19, -1.7);
+  pitcher.position.set(-0.57, STAND_LAYOUT.counterTopY + 0.19, 0.3);
   pitcher.userData["sceneRole"] = "stand-pitcher";
   detail.add(pitcher);
 
@@ -187,7 +187,7 @@ export const populateStand = (
     pitcherLemonade.position.set(
       -0.57,
       JUICE_BOTTOM_Y + (JUICE_FULL_HEIGHT * fraction) / 2,
-      -1.7,
+      0.3,
     );
 
     const lemonCount = visibleLemonCountForStock(remaining, prepared);
