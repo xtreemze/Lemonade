@@ -72,7 +72,7 @@ export interface LemonsvilleSceneController {
   camera?: any; // Three.js Camera for dev tools
 }
 
-const PASSERBY_POOL_SIZE = 32;
+const PASSERBY_POOL_SIZE = 64;
 const BUYER_POOL_SIZE = 192;
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
