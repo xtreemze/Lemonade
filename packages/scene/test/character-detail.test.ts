@@ -2,6 +2,7 @@ import { Group, Mesh, SphereGeometry, type Object3D } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
+  characterIdentityFor,
   decorateCharacterBody,
   decorateCharacterHead,
 } from "../src/character-detail.js";
@@ -17,7 +18,7 @@ describe("character geometry detail", () => {
     for (let index = 0; index < 8; index += 1) {
       const profile = characterProfileFor(0x1ead2026, index);
       const head = new Mesh(new SphereGeometry(0.27, 12, 8));
-      decorateCharacterHead(head, profile);
+      decorateCharacterHead(head, profile, characterIdentityFor(index, profile));
 
       const roles = new Set(head.children.map(sceneRole));
       expect(roles.has("hair-cover")).toBe(true);
@@ -31,7 +32,7 @@ describe("character geometry detail", () => {
     for (const index of [0, 1, 4, 5]) {
       const profile = characterProfileFor(0x1ead2026, index);
       const root = new Group();
-      decorateCharacterBody(root, profile);
+      decorateCharacterBody(root, profile, characterIdentityFor(index, profile));
       const garments = root.children.filter(
         (child) => sceneRole(child) === "garment-detail",
       );
