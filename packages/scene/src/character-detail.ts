@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   CylinderGeometry,
+  Group,
   Mesh,
   MeshStandardMaterial,
   SphereGeometry,
@@ -66,5 +67,29 @@ export const decorateCharacterHead = (
     const bridge = new Mesh(new BoxGeometry(0.18, 0.018, 0.018), material(0x273036));
     bridge.position.set(0, 0.035, 0.235);
     head.add(bridge);
+  }
+};
+
+
+export const decorateSellerExpression = (
+  eyebrows: readonly [Group, Group],
+  mouth: readonly [Group, Group],
+): void => {
+  const expressionMaterial = material(0x3a2a25);
+  for (const brow of eyebrows) {
+    brow.add(
+      new Mesh(
+        new BoxGeometry(0.11, 0.018, 0.018),
+        expressionMaterial.clone(),
+      ),
+    );
+  }
+  for (const half of mouth) {
+    half.add(
+      new Mesh(
+        new BoxGeometry(0.12, 0.018, 0.018),
+        expressionMaterial.clone(),
+      ),
+    );
   }
 };
