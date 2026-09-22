@@ -69,13 +69,13 @@ export const ambientPopulationFor = (
   }
   switch (weather) {
     case "sunny":
-      return Object.freeze({ pets: 2, wildlife: 4, bicycles: 2, vehicles: 1 });
+      return Object.freeze({ pets: 2, wildlife: 4, bicycles: 3, vehicles: 8 });
     case "hot-and-dry":
-      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 2, vehicles: 8 });
     case "cloudy":
-      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 2, vehicles: 8 });
     case "thunderstorm":
-      return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 3 });
+      return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 4 });
   }
 };
 
@@ -501,6 +501,7 @@ export const createAmbientLife = (
   scene: Scene,
   seed: number,
   owners: readonly Object3D[] = [],
+  mobilitySeed = seed,
 ): AmbientLifeController => {
   const pets = [createPet(0xa96f45), createPet(0x3e3a36), createPet(0xd1b48b)];
   const wildlife = [
@@ -519,6 +520,10 @@ export const createAmbientLife = (
     createVehicle(0xa65e52, seed, 1, "sports"),
     createVehicle(0x6b7c61, seed, 2, "pickup"),
     createVehicle(0x8a796d, seed, 3, "truck"),
+    createVehicle(0x526f86, seed, 4, "sedan"),
+    createVehicle(0xb17b45, seed, 5, "sports"),
+    createVehicle(0x63745f, seed, 6, "pickup"),
+    createVehicle(0x7d7270, seed, 7, "sedan"),
   ];
   const residents = [
     createTransportCharacter(seed ^ 0x7341, 12_000),
@@ -535,7 +540,7 @@ export const createAmbientLife = (
     resident.root.userData["residentIndex"] = index;
   });
 
-  const mobility = createNeighborhoodMobilitySystem(seed);
+  const mobility = createNeighborhoodMobilitySystem(mobilitySeed);
 
   for (const actor of [
     ...pets,
