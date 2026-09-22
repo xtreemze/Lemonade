@@ -26,8 +26,9 @@ describe("3d editor semantic object transforms", () => {
       "role:house-door:property:stand-home",
     );
 
-    named.uuid = "00000000-0000-0000-0000-000000000000";
-    expect(sceneEditorObjectKey(scene, named)).toBe("name:building-stand-home");
+    const key = sceneEditorObjectKey(scene, named);
+    expect(key).toBe("name:building-stand-home");
+    expect(key).not.toContain(named.uuid);
   });
 
   it("captures, reapplies, and indexes transforms by semantic key", () => {
