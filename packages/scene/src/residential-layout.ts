@@ -385,27 +385,59 @@ function baseExclusions(seed: number): ResidentialRect[] {
   }));
 }
 
+export type ResidentialAccessLayout = Readonly<{
+  frontDirection: -1 | 1;
+  drivewayCenterZ: number;
+  drivewayDepth: number;
+  pathCenterZ: number;
+  pathDepth: number;
+}>;
+
+export const residentialAccessLayout = (
+  property: ResidentialPropertySpec,
+): ResidentialAccessLayout => {
+  const frontDirection: -1 | 1 =
+    Math.cos(property.rotationY) >= 0 ? 1 : -1;
+  const footprint = propertyFootprint(property);
+  const pathDepth = 4;
+  const pathGap = 0.18;
+  const pathCenterZ =
+    property.houseZ +
+    frontDirection * (footprint.halfDepth + pathGap + pathDepth / 2);
+  const drivewayDepth = Math.max(7.2, footprint.halfDepth * 2 + 2.4);
+  const drivewayCenterZ =
+    property.houseZ + frontDirection * (drivewayDepth * 0.18);
+
+  return Object.freeze({
+    frontDirection,
+    drivewayCenterZ,
+    drivewayDepth,
+    pathCenterZ,
+    pathDepth,
+  });
+};
+
 const accessExclusions = (
   properties: readonly ResidentialPropertySpec[],
 ): ResidentialRect[] =>
   properties.flatMap((property) => {
     if (property.drivewayX === null) return [];
-    const frontDirection = Math.cos(property.rotationY) >= 0 ? 1 : -1;
-    const drivewayCenterZ = property.houseZ + frontDirection * 4.15;
-    const pathCenterZ = property.houseZ + frontDirection * 5.65;
+    const access = residentialAccessLayout(property);
+    const drivewayHalfDepth = access.drivewayDepth / 2;
+    const pathHalfDepth = access.pathDepth / 2;
     return [
       {
         minX: property.drivewayX - DRIVEWAY_HALF_WIDTH,
         maxX: property.drivewayX + DRIVEWAY_HALF_WIDTH,
-        minZ: drivewayCenterZ - 3.6,
-        maxZ: drivewayCenterZ + 3.6,
+        minZ: access.drivewayCenterZ - drivewayHalfDepth,
+        maxZ: access.drivewayCenterZ + drivewayHalfDepth,
         role: "driveway" as const,
       },
       {
         minX: property.houseX - 0.52,
         maxX: property.houseX + 0.52,
-        minZ: pathCenterZ - 2,
-        maxZ: pathCenterZ + 2,
+        minZ: access.pathCenterZ - pathHalfDepth,
+        maxZ: access.pathCenterZ + pathHalfDepth,
         role: "path" as const,
       },
     ];
