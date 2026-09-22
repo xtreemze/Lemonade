@@ -6,6 +6,7 @@ import "./persistence.css";
 
 import { LemonadeApp, createFreshRunSnapshot } from "./app.js";
 import { RunPersistenceError, clearCurrentRun, loadCurrentRun } from "./persistence.js";
+import { createPersistentSceneViewer, isSceneViewerEnabled } from "./dev-scene-viewer.js";
 
 const root = document.querySelector("#root");
 if (!(root instanceof HTMLElement)) {
@@ -53,6 +54,15 @@ const renderRecovery = (error: RunPersistenceError): void => {
 };
 
 const start = async (): Promise<void> => {
+  if (isSceneViewerEnabled()) {
+    createPersistentSceneViewer(root, {
+      enableGizmo: true,
+      weather: "hot-and-dry",
+      phase: "forecast",
+    });
+    return;
+  }
+
   try {
     const restored = await loadCurrentRun();
     new LemonadeApp(root, restored ?? createFreshRunSnapshot());
