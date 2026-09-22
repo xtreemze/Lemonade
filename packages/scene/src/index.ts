@@ -535,15 +535,7 @@ export const createLemonsvilleScene = (
 
   let cupInventory: CupInventory | null = null;
   canvas.dataset["cupVisualStyle"] = "original-svg-3d";
-  canvas.dataset["characterRigStyle"] = "articulated-joints-face";
-  canvas.dataset["walkCycleStyle"] = "seeded-articulated-gait";
-  canvas.dataset["sellerExpressionStyle"] = "face-posture-confidence";
   canvas.dataset["neighborhoodDetail"] = "loading";
-  canvas.dataset["worldScale"] = "kiosk-houses-mature-vegetation";
-  canvas.dataset["crowdModel"] = "loading";
-  canvas.dataset["groundContact"] = "height-aware-clearance";
-  canvas.dataset["ambientLife"] = "loading";
-  canvas.dataset["atmosphere"] = "layered-aerial-perspective";
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
   for (const lemon of lemons) scene.add(lemon);
@@ -667,10 +659,8 @@ export const createLemonsvilleScene = (
   void import("./neighborhood.js")
     .then(({ populateNeighborhood }) => {
       if (disposed) return;
-      const stats = populateNeighborhood(scene);
+      populateNeighborhood(scene);
       canvas.dataset["neighborhoodDetail"] = "lod-extended-streets-houses-vegetation";
-      canvas.dataset["neighborhoodLodObjects"] = String(stats.houseLods + stats.treeLods);
-      canvas.dataset["worldSpan"] = String(stats.worldSpan);
       render();
     })
     .catch(() => undefined);
@@ -679,7 +669,6 @@ export const createLemonsvilleScene = (
     .then(({ crowdPosesAt }) => {
       if (disposed) return;
       crowdMotion = Object.freeze({ crowdPosesAt });
-      canvas.dataset["crowdModel"] = "routed-separated-grounded";
       resetAnimatedObjects();
       render();
     })
@@ -689,7 +678,6 @@ export const createLemonsvilleScene = (
     .then(({ createAmbientLife }) => {
       if (disposed) return;
       ambientLife = createAmbientLife(scene, initialState.characterSeed);
-      canvas.dataset["ambientLife"] = "weather-aware-pets-wildlife-bicycles-vehicles";
       ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
       render();
     })
