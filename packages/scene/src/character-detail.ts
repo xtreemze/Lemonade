@@ -6,6 +6,7 @@ import {
   MeshStandardMaterial,
   SphereGeometry,
 } from "three";
+import type { Group } from "three";
 
 import type { CharacterProfile } from "./characters.js";
 
