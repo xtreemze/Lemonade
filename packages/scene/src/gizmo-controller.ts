@@ -48,8 +48,10 @@ let selectedObject: Object3D | null = null;
 let selectedHelper: BoxHelper | null = null;
 let currentMode: TransformMode = "translate";
 let isDragging = false;
+let dragAxis: 'x' | 'y' | 'z' | null = null;
 let dragPlane = new Vector3(0, 1, 0);
 let dragPoint = new Vector3();
+let dragStartWorldPos = new Vector3();
 let initialPosition = new Vector3();
 let initialRotation = new Euler();
 let initialScale = new Vector3();
@@ -107,30 +109,45 @@ export const createGizmoController = (options: GizmoOptions) => {
     const xCone = new Mesh(new ConeGeometry(coneRadius, coneHeight, 8), new MeshBasicMaterial({ color: 0xff0000 }));
     xCone.position.x = axisLength;
     xCone.rotation.z = Math.PI / 2;
+    xCone.name = "gizmo-x";
+    xCone.userData.axis = "x";
     gizmo.add(xCone);
 
     const xLineGeom = new BufferGeometry();
     xLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, axisLength - coneHeight / 2, 0, 0]), 3));
-    gizmo.add(new Line(xLineGeom, new LineBasicMaterial({ color: 0xff0000, linewidth: 3 })));
+    const xLine = new Line(xLineGeom, new LineBasicMaterial({ color: 0xff0000, linewidth: 3 }));
+    xLine.name = "gizmo-x";
+    xLine.userData.axis = "x";
+    gizmo.add(xLine);
 
     // Y axis (green)
     const yCone = new Mesh(new ConeGeometry(coneRadius, coneHeight, 8), new MeshBasicMaterial({ color: 0x00ff00 }));
     yCone.position.y = axisLength;
+    yCone.name = "gizmo-y";
+    yCone.userData.axis = "y";
     gizmo.add(yCone);
 
     const yLineGeom = new BufferGeometry();
     yLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, axisLength - coneHeight / 2, 0]), 3));
-    gizmo.add(new Line(yLineGeom, new LineBasicMaterial({ color: 0x00ff00, linewidth: 3 })));
+    const yLine = new Line(yLineGeom, new LineBasicMaterial({ color: 0x00ff00, linewidth: 3 }));
+    yLine.name = "gizmo-y";
+    yLine.userData.axis = "y";
+    gizmo.add(yLine);
 
     // Z axis (blue)
     const zCone = new Mesh(new ConeGeometry(coneRadius, coneHeight, 8), new MeshBasicMaterial({ color: 0x0000ff }));
     zCone.position.z = axisLength;
     zCone.rotation.x = Math.PI / 2;
+    zCone.name = "gizmo-z";
+    zCone.userData.axis = "z";
     gizmo.add(zCone);
 
     const zLineGeom = new BufferGeometry();
     zLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, 0, axisLength - coneHeight / 2]), 3));
-    gizmo.add(new Line(zLineGeom, new LineBasicMaterial({ color: 0x0000ff, linewidth: 3 })));
+    const zLine = new Line(zLineGeom, new LineBasicMaterial({ color: 0x0000ff, linewidth: 3 }));
+    zLine.name = "gizmo-z";
+    zLine.userData.axis = "z";
+    gizmo.add(zLine);
 
     return gizmo;
   };
@@ -213,26 +230,53 @@ export const createGizmoController = (options: GizmoOptions) => {
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    raycaster.setFromCamera(mouse, camera as any);
+    if (isDragging && selectedObject && dragAxis) {
+      raycaster.setFromCamera(mouse, camera as any);
 
+      // Calculate world position at current mouse
+      const distance = camera.position.z - selectedObject.position.z;
+      const vFOV = (camera as any).fov * (Math.PI / 180);
+      const height = 2 * Math.tan(vFOV / 2) * distance;
+      const width = height * (container.clientWidth / container.clientHeight);
+
+      const worldPos = new Vector3(
+        (mouse.x * width) / 2,
+        (mouse.y * height) / 2,
+        selectedObject.position.z,
+      );
+
+      // Calculate delta from drag start
+      const delta = worldPos.clone().sub(dragStartWorldPos);
+
+      // Apply delta only on the selected axis
+      if (currentMode === "translate") {
+        if (dragAxis === "x") selectedObject.position.x = initialPosition.x + delta.x;
+        else if (dragAxis === "y") selectedObject.position.y = initialPosition.y + delta.y;
+        else if (dragAxis === "z") selectedObject.position.z = initialPosition.z + delta.z;
+      } else if (currentMode === "scale") {
+        const scaleFactor = 1 + delta.x * 2;
+        if (dragAxis === "x") selectedObject.scale.x = Math.max(0.1, initialScale.x * scaleFactor);
+        else if (dragAxis === "y") selectedObject.scale.y = Math.max(0.1, initialScale.y * scaleFactor);
+        else if (dragAxis === "z") selectedObject.scale.z = Math.max(0.1, initialScale.z * scaleFactor);
+      }
+
+      onTransformChanged?.();
+      return;
+    }
+
+    raycaster.setFromCamera(mouse, camera as any);
     const objects = getSelectableObjects();
     const intersects = raycaster.intersectObjects(objects, true);
 
-    // Hover effect
     if (selectedObject && selectedHelper) {
       selectedHelper.update();
     }
 
     if (intersects.length > 0 && !isDragging) {
-      const target = intersects[0]?.object;
-      if (target) {
-        container.style.cursor = "pointer";
-      }
+      container.style.cursor = "pointer";
     } else if (!isDragging) {
       container.style.cursor = "default";
     }
-
-    // TransformControls handles dragging now
   };
 
   const onMouseDown = (event: MouseEvent) => {
@@ -248,25 +292,59 @@ export const createGizmoController = (options: GizmoOptions) => {
 
     if (intersects.length > 0) {
       let target = intersects[0]!.object;
+      let foundAxis: 'x' | 'y' | 'z' | null = null;
+
+      // Check if we hit a gizmo part (axis indicator)
+      if (target.userData?.axis) {
+        foundAxis = target.userData.axis;
+      } else {
+        // Traverse up to find a gizmo part
+        let current = target;
+        while (current.parent && !foundAxis) {
+          if (current.userData?.axis) {
+            foundAxis = current.userData.axis;
+          }
+          current = current.parent;
+        }
+      }
+
+      // Find the main selectable object (not a gizmo)
       while (target.parent && target.parent !== scene) {
-        if (target.name && !target.name.startsWith("Gizmo")) {
+        if (target.name && !target.name.startsWith("gizmo-") && !target.name.includes("GizmoVisuals")) {
           break;
         }
         target = target.parent;
       }
 
-      selectObject(target);
-      isDragging = true;
-      dragPoint.copy(selectedObject!.position);
-      initialPosition.copy(selectedObject!.position);
-      initialRotation.copy(selectedObject!.rotation);
-      initialScale.copy(selectedObject!.scale);
-      container.style.cursor = "grabbing";
+      // If we don't have a selected object, select one; otherwise, start dragging on the selected axis
+      if (!selectedObject) {
+        selectObject(target);
+      } else if (foundAxis) {
+        isDragging = true;
+        dragAxis = foundAxis;
+        initialPosition.copy(selectedObject.position);
+        initialRotation.copy(selectedObject.rotation);
+        initialScale.copy(selectedObject.scale);
+
+        // Store world position at drag start
+        const distance = camera.position.z - selectedObject.position.z;
+        const vFOV = (camera as any).fov * (Math.PI / 180);
+        const height = 2 * Math.tan(vFOV / 2) * distance;
+        const width = height * (container.clientWidth / container.clientHeight);
+        dragStartWorldPos.set(
+          (mouse.x * width) / 2,
+          (mouse.y * height) / 2,
+          selectedObject.position.z,
+        );
+
+        container.style.cursor = "grabbing";
+      }
     }
   };
 
   const onMouseUp = () => {
     isDragging = false;
+    dragAxis = null;
     container.style.cursor = "default";
   };
 
