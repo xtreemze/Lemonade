@@ -64,8 +64,8 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
 
   const price =
     input.priceCents < 100
-      ? `${String(Math.max(0, input.priceCents))}¢`
-      : `${(Math.max(0, input.priceCents) / 100).toFixed(2)}`;
+      ? String(Math.max(0, input.priceCents)) + "¢"
+      : "$" + (Math.max(0, input.priceCents) / 100).toFixed(2);
 
   return `${weather} weather; confidence ${String(input.confidence)}/5; ${String(input.visibleSigns)} advertising signs at ${price} per cup; ${String(input.prepared)} glasses prepared; ${activity}.`;
 };
