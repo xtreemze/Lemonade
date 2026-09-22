@@ -68,7 +68,15 @@ const expectViewportContract = async (
 
         return userScrollable || verticallyClipped;
       })
-      .map(describe);
+      .map((element) => {
+        const style = getComputedStyle(element);
+        return {
+          element: describe(element),
+          client: { width: element.clientWidth, height: element.clientHeight },
+          scroll: { width: element.scrollWidth, height: element.scrollHeight },
+          overflow: { x: style.overflowX, y: style.overflowY },
+        };
+      });
 
     const viewportViolations = rendered
       .filter((element) => {
@@ -80,7 +88,20 @@ const expectViewportContract = async (
           rect.bottom > window.innerHeight + 1
         );
       })
-      .map(describe);
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          element: describe(element),
+          rect: {
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+            width: rect.width,
+            height: rect.height,
+          },
+        };
+      });
 
     const interactiveViolations = [
       ...document.querySelectorAll<HTMLElement>(".flow-action-button, .game-slider"),
