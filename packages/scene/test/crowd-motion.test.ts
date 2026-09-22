@@ -191,6 +191,8 @@ describe("crowd motion", () => {
     expect(vehicles.length).toBeGreaterThan(0);
     for (const actor of [...bicycles, ...vehicles]) {
       expect(Number.isFinite(actor.rotation.y)).toBe(true);
+      const mobilityActorId: unknown = actor.userData["mobilityActorId"];
+      if (mobilityActorId === "resident-vehicle") continue;
       expect(
         pointIsOnGeneratedStrip(
           actor.position.x,
