@@ -563,7 +563,7 @@ export const createAmbientLife = (
       durationMs,
       dayNumber = 1,
       focus = Object.freeze({ x: 0, z: 0 }),
-    ): void {
+    ): NeighborhoodMobilitySample {
       updateNeighborhoodWind(scene, elapsedMs / 1000, weather);
       const population = ambientPopulationFor(weather, phase);
       const pedestrianObstacles: Array<Readonly<{ x: number; z: number }>> = [];
