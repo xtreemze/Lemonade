@@ -32,7 +32,7 @@ const pedestrianCount: Readonly<Record<CustomerActivity, number>> = Object.freez
   light: 7,
   steady: 10,
   lively: 14,
-  busy: 18,
+  busy: 54,
 });
 
 export type LemonsvilleSceneInput = Readonly<{
