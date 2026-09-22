@@ -460,8 +460,13 @@ const rowProperties = (
     ),
   );
 
+const baseExclusionCache = new Map<number, ResidentialRect[]>();
+
 function baseExclusions(seed: number): ResidentialRect[] {
-  return streetNetworkHardscapeRects(seed).map((rect) => ({
+  const safeSeed = Number.isFinite(seed) ? Math.trunc(seed) >>> 0 : DEFAULT_RESIDENTIAL_SEED;
+  const cached = baseExclusionCache.get(safeSeed);
+  if (cached !== undefined) return cached;
+  const generated = streetNetworkHardscapeRects(safeSeed).map((rect) => ({
     minX: rect.minX,
     maxX: rect.maxX,
     minZ: rect.minZ,
@@ -473,6 +478,8 @@ function baseExclusions(seed: number): ResidentialRect[] {
     width: rect.width,
     rotationY: rect.rotationY,
   }));
+  baseExclusionCache.set(safeSeed, generated);
+  return generated;
 }
 
 const rectCenterZ = (rect: ResidentialRect): number =>
@@ -553,8 +560,15 @@ export type ResidentialAccessLayout = Readonly<{
   entryX: number;
   entryZ: number;
   parkingZ: number;
+  drivewaySidewalkX: number;
+  drivewaySidewalkZ: number;
+  roadX: number;
+  roadCenterZ: number;
+  drivewayCenterX: number;
   drivewayCenterZ: number;
   drivewayDepth: number;
+  drivewayLength: number;
+  drivewayRotationY: number;
   pathCenterX: number;
   pathCenterZ: number;
   pathWidth: number;
@@ -611,9 +625,36 @@ export const residentialAccessLayout = (
   const pathRotationY = Math.atan2(pathDeltaZ, pathDeltaX);
 
   const drivewayX = property.drivewayX ?? property.houseX;
-  const road = nearestAccessRect(property, drivewayX, "road", seed);
-  const roadCenterZ =
-    road === null ? STREET_LAYOUT.road.centerZ : rectCenterZ(road);
+  const parkingZ =
+    property.houseZ +
+    frontDirection * Math.min(1.35, Math.max(0.82, footprint.halfDepth * 0.34));
+  const drivewaySidewalk = nearestAccessRect(
+    property,
+    drivewayX,
+    "sidewalk",
+    seed,
+  );
+  const drivewaySidewalkTarget =
+    drivewaySidewalk === null
+      ? Object.freeze({ x: drivewayX, z: fallbackSidewalk.centerZ })
+      : closestPointOnRectCenterline(drivewaySidewalk, {
+          x: drivewayX,
+          z: parkingZ,
+        });
+  const drivewaySidewalkX = drivewaySidewalkTarget.x;
+  const drivewaySidewalkZ = drivewaySidewalkTarget.z;
+  const road = nearestAccessRect(
+    property,
+    drivewaySidewalkX,
+    "road",
+    seed,
+  );
+  const roadTarget =
+    road === null
+      ? Object.freeze({ x: drivewaySidewalkX, z: STREET_LAYOUT.road.centerZ })
+      : closestPointOnRectCenterline(road, drivewaySidewalkTarget);
+  const roadX = roadTarget.x;
+  const roadCenterZ = roadTarget.z;
   const roadEdgeZ =
     road === null
       ? frontDirection > 0
@@ -622,14 +663,16 @@ export const residentialAccessLayout = (
       : roadCenterZ >= property.houseZ
         ? road.minZ
         : road.maxZ;
-  const parkingZ =
-    property.houseZ +
-    frontDirection * Math.min(1.35, Math.max(0.82, footprint.halfDepth * 0.34));
-  const drivewayDepth = Math.max(
+  const drivewayDeltaX = roadX - drivewayX;
+  const drivewayDeltaZ = roadCenterZ - parkingZ;
+  const drivewayLength = Math.max(
     3.2,
-    Math.abs(roadCenterZ - parkingZ) + 0.3,
+    Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.3,
   );
+  const drivewayDepth = drivewayLength;
+  const drivewayCenterX = (drivewayX + roadX) / 2;
   const drivewayCenterZ = (parkingZ + roadCenterZ) / 2;
+  const drivewayRotationY = Math.atan2(drivewayDeltaZ, drivewayDeltaX);
 
   return Object.freeze({
     frontDirection,
@@ -642,8 +685,15 @@ export const residentialAccessLayout = (
     entryX,
     entryZ,
     parkingZ,
+    drivewaySidewalkX,
+    drivewaySidewalkZ,
+    roadX,
+    roadCenterZ,
+    drivewayCenterX,
     drivewayCenterZ,
     drivewayDepth,
+    drivewayLength,
+    drivewayRotationY,
     pathCenterX,
     pathCenterZ,
     pathWidth,
@@ -662,14 +712,12 @@ const drivewayRectForProperty = (
     Object.freeze({ ...property, drivewayX }),
     seed,
   );
-  const halfDepth = access.drivewayDepth / 2;
-  return Object.freeze({
-    minX: drivewayX - DRIVEWAY_HALF_WIDTH,
-    maxX: drivewayX + DRIVEWAY_HALF_WIDTH,
-    minZ: access.drivewayCenterZ - halfDepth,
-    maxZ: access.drivewayCenterZ + halfDepth,
-    role: "driveway",
-  });
+  return orientedAccessRect(
+    "driveway",
+    { x: drivewayX, z: access.parkingZ },
+    { x: access.roadX, z: access.roadCenterZ },
+    WORLD_SCALE.street.drivewayWidth,
+  );
 };
 
 const rectsHaveClearance = (
@@ -727,6 +775,7 @@ const resolveGeneratedAccess = (
   seed: number,
 ): readonly ResidentialPropertySpec[] => {
   const occupied: ResidentialRect[] = [];
+  const hardscape = baseExclusions(seed);
   const resolved = properties.map((property) => {
     if (property.drivewayX === null) return property;
 
@@ -744,7 +793,6 @@ const resolveGeneratedAccess = (
           candidateX,
           seed,
         );
-        const hardscape = baseExclusions(seed);
         const reachesSidewalk = hardscape.some(
           (rect) => rect.role === "sidewalk" && rectsOverlap(candidateRect, rect),
         );
@@ -755,7 +803,7 @@ const resolveGeneratedAccess = (
 
         const clearsHouses = properties.every((other) => {
           const footprint = propertyFootprint(other);
-          return !footprintIntersectsRect(
+          return !footprintIntersectsHardscapeRect(
             candidateRect,
             { x: other.houseX, z: other.houseZ },
             footprint.halfWidth,
@@ -791,23 +839,14 @@ const accessExclusions = (
   properties.flatMap((property) => {
     if (property.drivewayX === null) return [];
     const access = residentialAccessLayout(property, seed);
-    const drivewayHalfDepth = access.drivewayDepth / 2;
+    const driveway = drivewayRectForProperty(property, property.drivewayX, seed);
     const path = orientedAccessRect(
       "path",
       { x: access.entryX, z: access.entryZ },
       { x: access.sidewalkX, z: access.sidewalkCenterZ },
       access.pathWidth,
     );
-    return [
-      {
-        minX: property.drivewayX - DRIVEWAY_HALF_WIDTH,
-        maxX: property.drivewayX + DRIVEWAY_HALF_WIDTH,
-        minZ: access.drivewayCenterZ - drivewayHalfDepth,
-        maxZ: access.drivewayCenterZ + drivewayHalfDepth,
-        role: "driveway" as const,
-      },
-      path,
-    ];
+    return [driveway, path];
   });
 
 const blockedByHouseFootprint = (
@@ -973,8 +1012,8 @@ const generatePropertyPlantings = (
     for (let attempt = 0; attempt < (yardZone === "back" ? 180 : 28); attempt += 1) {
       const scale =
         yardZone === "back"
-          ? 0.34 +
-            unit(seed, salt + propertyIndex * 107 + attempt * 7 + 2) * 0.14
+          ? 0.3 +
+            unit(seed, salt + propertyIndex * 107 + attempt * 7 + 2) * 0.12
           : 0.84 +
             unit(seed, salt + propertyIndex * 107 + attempt * 7 + 2) * 0.22;
       const footprintClearance = clearance * scale;
