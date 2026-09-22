@@ -308,7 +308,11 @@ test("scene runtime failure falls back without blocking gameplay", async ({ page
   await expect(page.locator("#scene-fallback-description")).not.toBeEmpty();
   expect(sceneRequests).toHaveLength(1);
 
-  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible({
+  const reviewHistory = page.getByRole("button", { name: "Review sales history" });
+  await expect(reviewHistory).toBeVisible({
     timeout: SIMULATION_PRESENTATION_MS + PHASE_SETTLE_MARGIN_MS,
   });
+  await reviewHistory.click();
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "history");
+  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
 });
