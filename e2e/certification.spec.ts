@@ -105,7 +105,34 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   );
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-neighborhood-detail",
-    "expanded-streets-houses-vegetation",
+    "lod-extended-streets-houses-vegetation",
+    { timeout: 4_000 },
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-neighborhood-lod-objects",
+    /\d+/u,
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-world-span", "150");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-world-scale",
+    "kiosk-houses-mature-vegetation",
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-crowd-model",
+    "routed-separated-grounded",
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-ground-contact",
+    "height-aware-clearance",
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-ambient-life",
+    "weather-aware-pets-bicycles-vehicles",
+    { timeout: 4_000 },
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-atmosphere",
+    "weather-fog-depth",
   );
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-seller-mood",
