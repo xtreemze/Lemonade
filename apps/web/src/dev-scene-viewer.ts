@@ -705,7 +705,6 @@ export const createPersistentSceneViewer = (
   };
 
   const densityForObject = (
-    key: string,
     object: ReturnType<
       typeof indexSceneEditorObjects
     > extends ReadonlyMap<string, infer TObject>
@@ -740,7 +739,6 @@ export const createPersistentSceneViewer = (
     }
     if (roleName === "ambient-bird") return state.density.wildlife;
 
-    void key;
     return null;
   };
 
@@ -748,7 +746,7 @@ export const createPersistentSceneViewer = (
     if (sceneController === null) return;
     const objects = indexSceneEditorObjects(sceneController.scene);
     for (const [key, object] of objects) {
-      const density = densityForObject(key, object);
+      const density = densityForObject(object);
       if (density === null) continue;
       const shouldShow = density >= 1 || stableUnit(key, state.seed) <= density;
 
@@ -825,9 +823,7 @@ export const createPersistentSceneViewer = (
   };
 
   const startEnforcement = (): void => {
-    if (enforcementFrame === null) {
-      enforcementFrame = window.requestAnimationFrame(enforceEditorOverrides);
-    }
+    enforcementFrame ??= window.requestAnimationFrame(enforceEditorOverrides);
   };
 
   const buildGizmo = (): void => {
@@ -1241,7 +1237,9 @@ export const createPersistentSceneViewer = (
     root,
     '[data-action="import"]',
     HTMLButtonElement,
-  ).addEventListener("click", () => importFile.click());
+  ).addEventListener("click", () => {
+    importFile.click();
+  });
 
   importFile.addEventListener("change", () => {
     const file = importFile.files?.[0];
@@ -1269,7 +1267,9 @@ export const createPersistentSceneViewer = (
 
   requireElement(root, '[data-action="exit"]', HTMLButtonElement).addEventListener(
     "click",
-    disableSceneViewer,
+    () => {
+      disableSceneViewer();
+    },
   );
 
   sidebarToggle.addEventListener("click", () => {
@@ -1290,7 +1290,6 @@ export const createPersistentSceneViewer = (
 
   return Object.freeze({
     dispose(): void {
-      if (disposed) return;
       disposed = true;
       resizeObserver.disconnect();
       if (objectRefreshTimer !== null) window.clearInterval(objectRefreshTimer);
