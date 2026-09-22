@@ -1,9 +1,12 @@
 import type { Group, Scene } from "three";
 
 import {
-  clampToNearSidewalk,
+  clampToSidewalk,
   gardenSignPosition,
   sidewalkLaneZ,
+  sidewalkLaneZForSide,
+  sidewalkSideForActor,
+  type SidewalkSide,
 } from "./street-layout.js";
 import type { PasserbyBeat } from "./storyboard.js";
 
@@ -15,6 +18,7 @@ export type CrowdPose = Readonly<{
   heading: number;
   pace: number;
   worldSpeed: number;
+  side: SidewalkSide;
   seesAdvertisement: boolean;
 }>;
 
@@ -60,25 +64,29 @@ const basePose = (
   const endX = -startX;
   const x = startX + (endX - startX) * progress;
 
-  const laneBase = sidewalkLaneZ(beat.lane);
+  const side = sidewalkSideForActor(beat.pedestrianIndex);
+  const laneBase = sidewalkLaneZForSide(side, beat.lane);
   const meander = Math.sin(progress * Math.PI * 2 + actorIndex * 0.83) * 0.045;
   const attention = beat.seesAdvertisement
     ? Math.exp(-Math.pow((progress - 0.5) / 0.13, 2))
     : 0;
   const signSide = beat.signIndex >= 0 && beat.signIndex % 2 === 0 ? -1 : 1;
   const signPull = attention * signSide * 0.22;
-  const z = clampToNearSidewalk(laneBase + meander - attention * 0.07, 0.12);
+  const standwardDrift = side === "near" ? -attention * 0.07 : -attention * 0.025;
+  const z = clampToSidewalk(laneBase + meander + standwardDrift, side, 0.12);
 
   const worldSpeed = Math.abs(endX - startX) * routeRate / durationSeconds;
   const pace = Math.max(0.72, Math.min(1.7, worldSpeed / 1.55));
   const baseHeading = direction === -1 ? Math.PI / 2 : -Math.PI / 2;
-  const attentionHeading = signSide * 0.48 * attention;
+  const attentionHeading =
+    signSide * (side === "near" ? 0.48 : 0.32) * attention;
   return Object.freeze({
     x: x + signPull,
     z,
     heading: baseHeading + attentionHeading,
     pace,
     worldSpeed,
+    side,
     seesAdvertisement: beat.seesAdvertisement,
   });
 };
@@ -89,6 +97,7 @@ interface MutableCrowdPose {
   heading: number;
   pace: number;
   worldSpeed: number;
+  side: SidewalkSide;
   seesAdvertisement: boolean;
 }
 
@@ -121,7 +130,7 @@ const separateCrowd = (poses: MutableCrowdPose[]): number => {
         for (const right of bucket) {
           if (right <= left) continue;
           const b = poses[right];
-          if (b === undefined) continue;
+          if (b === undefined || a.side !== b.side) continue;
           neighborChecks += 1;
 
           const dx = b.x - a.x;
@@ -132,10 +141,11 @@ const separateCrowd = (poses: MutableCrowdPose[]): number => {
           const distance = Math.sqrt(Math.max(0.0001, distanceSquared));
           const deterministicSide =
             deterministicUnit(left + right, 71) < 0.5 ? -1 : 1;
-          const side = Math.abs(dz) > 0.01 ? Math.sign(dz) : deterministicSide;
+          const separationSide =
+            Math.abs(dz) > 0.01 ? Math.sign(dz) : deterministicSide;
           const push = (CROWD_SEPARATION - distance) * 0.52;
-          a.z = clampToNearSidewalk(a.z - push * side, 0.1);
-          b.z = clampToNearSidewalk(b.z + push * side, 0.1);
+          a.z = clampToSidewalk(a.z - push * separationSide, a.side, 0.1);
+          b.z = clampToSidewalk(b.z + push * separationSide, b.side, 0.1);
         }
       }
     }
