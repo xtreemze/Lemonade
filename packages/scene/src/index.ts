@@ -1035,4 +1035,4 @@ export const createLemonsvilleScene = (
   return Object.freeze({ update, resize, dispose, scene, camera });
 };
 
-export { createGizmoController } from "./gizmo-controller.js";
+export { createGizmoController, type GizmoController } from "./gizmo-controller.js";
