@@ -783,8 +783,11 @@ const resolveGeneratedAccess = (
       property.drivewayX < property.houseX ? -1 : 1;
     const baseDistance = Math.abs(property.drivewayX - property.houseX);
     let drivewayX: number | null = null;
+    let sharedAccessFallback:
+      | Readonly<{ x: number; rect: ResidentialRect }>
+      | null = null;
 
-    for (let step = 0; step <= 48 && drivewayX === null; step += 1) {
+    for (let step = 0; step <= 72 && drivewayX === null; step += 1) {
       const distance = baseDistance + step * 0.42;
       for (const side of [preferredSide, -preferredSide] as const) {
         const candidateX = property.houseX + side * distance;
@@ -811,6 +814,11 @@ const resolveGeneratedAccess = (
           );
         });
         if (!clearsHouses) continue;
+
+        sharedAccessFallback ??= Object.freeze({
+          x: candidateX,
+          rect: candidateRect,
+        });
         if (!occupied.every((existing) => rectsHaveClearance(candidateRect, existing))) {
           continue;
         }
@@ -820,8 +828,15 @@ const resolveGeneratedAccess = (
       }
     }
 
+    if (drivewayX === null && sharedAccessFallback !== null) {
+      drivewayX = sharedAccessFallback.x;
+      occupied.push(sharedAccessFallback.rect);
+    }
     if (drivewayX === null) {
-      throw new Error("unable to place generated driveway clear of residential footprints");
+      throw new Error(
+        "unable to place generated driveway clear of residential footprints for " +
+          property.role,
+      );
     }
     return Object.freeze({
       ...property,
@@ -1006,10 +1021,13 @@ const generatePropertyPlantings = (
       : access.frontDirection;
     const lateralCandidates =
       yardZone === "back"
-        ? [-2.4, 2.4, 0, -3.5, 3.5, -4.8, 4.8, -6.2, 6.2, -7.5, 7.5, -9, 9]
+        ? [
+            -2.4, 2.4, 0, -3.5, 3.5, -4.8, 4.8, -6.2, 6.2, -7.5, 7.5,
+            -9, 9, -10.5, 10.5, -12, 12,
+          ]
         : [-2.2, 2.2, -3.05, 3.05];
 
-    for (let attempt = 0; attempt < (yardZone === "back" ? 180 : 28); attempt += 1) {
+    for (let attempt = 0; attempt < (yardZone === "back" ? 240 : 28); attempt += 1) {
       const scale =
         yardZone === "back"
           ? 0.3 +
@@ -1085,9 +1103,37 @@ const generatePropertyPlantings = (
   return Object.freeze(result);
 };
 
+const restoreFrontMailboxes = (
+  properties: readonly ResidentialPropertySpec[],
+  seed: number,
+): readonly ResidentialPropertySpec[] =>
+  Object.freeze(
+    properties.map((property, index) => {
+      if (property.drivewayX === null) return property;
+      const drivewaySide: -1 | 1 =
+        property.drivewayX < property.houseX ? -1 : 1;
+      const offset =
+        DRIVEWAY_HALF_WIDTH +
+        MAILBOX_CLEARANCE_FROM_DRIVEWAY +
+        unit(seed, index * 17 + 31) * 0.18;
+      return Object.freeze({
+        ...property,
+        mailboxX: mailboxXForDriveway(
+          property.drivewayX,
+          drivewaySide,
+          offset,
+          seed,
+        ),
+      });
+    }),
+  );
+
 export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): ResidentialLayout => {
   const safeSeed = Number.isFinite(seed) ? Math.trunc(seed) >>> 0 : DEFAULT_RESIDENTIAL_SEED;
-  const front = frontProperties(safeSeed);
+  const front = restoreFrontMailboxes(
+    resolveGeneratedAccess(frontProperties(safeSeed), safeSeed),
+    safeSeed,
+  );
   const middle = resolveGeneratedAccess(
     rowProperties(
       safeSeed,
