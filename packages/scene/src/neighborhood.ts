@@ -545,7 +545,7 @@ export const populateNeighborhood = (
   const layout = generateResidentialLayout(seed);
   const streetNetwork = generateStreetNetwork(seed);
   let roadSegments = streetNetwork.roads.length + streetNetwork.sidewalks.length;
-  let pavedRoads = streetNetwork.roads.length;
+  const pavedRoads = streetNetwork.roads.length;
 
   for (const strip of streetNetwork.roads) {
     streetStrip(scene, strip, strip.streetId === "main" ? 0x596065 : 0x62686b);
