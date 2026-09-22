@@ -356,8 +356,12 @@ const mailbox = (x: number, z: number): Group => {
   const root = new Group();
   box(root, [0.12, 1.05, 0.12], [0, 0.53, 0], 0x6e5a43);
   box(root, [0.48, 0.32, 0.34], [0, 1.08, 0], 0x547c85);
+  box(root, [0.42, 0.25, 0.035], [0, 1.08, 0.19], 0x456b73);
   box(root, [0.08, 0.42, 0.08], [0.27, 1.18, 0], 0xc95b4c);
   root.position.set(x, 0, z);
+  root.rotation.y = 0;
+  root.userData["sceneRole"] = "mailbox";
+  root.userData["streetFacingYaw"] = 0;
   return root;
 };
 
@@ -588,7 +592,6 @@ export const populateNeighborhood = (
   for (const property of layout.frontProperties) {
     if (property.mailboxX === null) continue;
     const detail = mailbox(property.mailboxX, 0.25);
-    detail.rotation.y = property.rotationY * 0.35;
     yardDetails.push(detail);
   }
 
