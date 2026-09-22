@@ -88,9 +88,11 @@ EXAMPLE:
   `);
 };
 
-// Make dev tools globally available
+// Make dev tools globally available.
 if (typeof window !== "undefined") {
-  (window as any).enableGizmo = enableGizmo;
-  (window as any).disableGizmo = disableGizmo;
-  (window as any).gizmoHelp = printGizmoHelp;
+  Object.assign(window, {
+    enableGizmo,
+    disableGizmo,
+    gizmoHelp: printGizmoHelp,
+  });
 }
