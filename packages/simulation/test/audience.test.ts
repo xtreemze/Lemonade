@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertCustomerOutcomeConsistency,
-  audienceRulesForScale,
-  createNamedRandom,
+  audienceTargetsForLevel,
+  createMarketRandom,
   customerId,
+  customerTraitsFor,
+  dayAudienceFor,
   dayNumber,
-  deriveCustomerTraits,
   seed,
-  selectDayAudience,
   summarizeAudience,
   type CustomerOutcome,
 } from "../src/index.js";
@@ -25,68 +25,70 @@ const outcome = (
   });
 
 describe("audience identity and selection", () => {
-  it("derives stable customer traits from neighborhood seed and customer id", () => {
-    const neighborhoodSeed = seed(0x1e_ad_2026);
+  it("derives stable customer traits from the run seed and customer id", () => {
+    const runSeed = seed(0x1234_5678);
     const id = customerId(17);
-    const first = deriveCustomerTraits(neighborhoodSeed, id);
 
-    expect(deriveCustomerTraits(neighborhoodSeed, id)).toEqual(first);
-    expect(
-      deriveCustomerTraits(neighborhoodSeed, customerId(18)),
-    ).not.toEqual(first);
-    expect(
-      deriveCustomerTraits(seed(0x1e_ad_2027), id),
-    ).not.toEqual(first);
+    const first = customerTraitsFor(runSeed, id);
+    const repeated = customerTraitsFor(runSeed, id);
+
+    expect(repeated).toEqual(first);
+    expect(customerTraitsFor(seed(0x1234_5679), id)).not.toEqual(first);
+    expect(customerTraitsFor(runSeed, customerId(18))).not.toEqual(first);
   });
 
-  it("selects deterministic daily audiences from finite scale-specific pools", () => {
-    const neighborhoodSeed = seed(0x4c_45_4d_4f);
+  it("keeps audience selection independent from unrelated named random streams", () => {
+    const runSeed = seed(0xfeed_beef);
+    const day = dayNumber(8);
+    const before = dayAudienceFor(runSeed, day, 3);
+    const unrelated = createMarketRandom(runSeed, "conversion", {
+      day,
+      customerId: customerId(4),
+    });
+
+    for (let draw = 0; draw < 100; draw += 1) {
+      unrelated.nextUnit();
+    }
+
+    expect(dayAudienceFor(runSeed, day, 3)).toEqual(before);
+  });
+
+  it("selects deterministic, unique audiences within every operating-scale pool", () => {
+    const runSeed = seed(42);
+    const day = dayNumber(5);
 
     for (const level of [1, 2, 3, 4] as const) {
-      const rules = audienceRulesForScale(level);
-      const audience = selectDayAudience(
-        neighborhoodSeed,
-        dayNumber(12),
-        level,
-      );
+      const targets = audienceTargetsForLevel(level);
+      const first = dayAudienceFor(runSeed, day, level);
+      const repeated = dayAudienceFor(runSeed, day, level);
+      const ids = first.customerIds.map(Number);
 
-      expect(audience.neighborhoodSize).toBe(rules.neighborhoodSize);
-      expect(audience.customerIds).toHaveLength(rules.dailyAudience);
-      expect(new Set(audience.customerIds).size).toBe(rules.dailyAudience);
-      expect(
-        audience.customerIds.every(
-          (id) => Number(id) >= 0 && Number(id) < rules.neighborhoodSize,
-        ),
-      ).toBe(true);
-      expect(
-        selectDayAudience(neighborhoodSeed, dayNumber(12), level),
-      ).toEqual(audience);
+      expect(repeated).toEqual(first);
+      expect(first.neighborhoodSize).toBe(targets.neighborhoodSize);
+      expect(first.customerIds).toHaveLength(targets.dailyAudience);
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(ids.every((id) => id >= 0 && id < first.neighborhoodSize)).toBe(
+        true,
+      );
     }
   });
 
-  it("keeps audience selection isolated from unrelated named random streams", () => {
-    const neighborhoodSeed = seed(0x0a_11_ce);
-    const baseline = selectDayAudience(
-      neighborhoodSeed,
-      dayNumber(7),
-      3,
-    );
-    const presentation = createNamedRandom(
-      neighborhoodSeed,
-      "scene-presentation",
-      7,
-    );
+  it("changes the active audience by day without changing customer identity rules", () => {
+    const runSeed = seed(777);
+    const firstDay = dayAudienceFor(runSeed, dayNumber(1), 2);
+    const secondDay = dayAudienceFor(runSeed, dayNumber(2), 2);
 
-    for (let draw = 0; draw < 1_000; draw += 1) {
-      presentation.nextUnit();
-    }
+    expect(secondDay.customerIds).not.toEqual(firstDay.customerIds);
 
-    expect(
-      selectDayAudience(neighborhoodSeed, dayNumber(7), 3),
-    ).toEqual(baseline);
-    expect(
-      selectDayAudience(neighborhoodSeed, dayNumber(8), 3).customerIds,
-    ).not.toEqual(baseline.customerIds);
+    const recurringId = firstDay.customerIds.find((id) =>
+      secondDay.customerIds.includes(id),
+    );
+    expect(recurringId).toBeDefined();
+    if (recurringId === undefined) return;
+
+    expect(customerTraitsFor(runSeed, recurringId)).toEqual(
+      customerTraitsFor(runSeed, recurringId),
+    );
   });
 });
 
