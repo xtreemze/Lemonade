@@ -52,17 +52,22 @@ describe("unified neighborhood mobility", () => {
     const trafficVehicles = sample.actors.filter(
       (actor) => actor.id.startsWith("traffic-vehicle:"),
     );
-    expect(trafficVehicles).toHaveLength(7);
+    expect(trafficVehicles).toHaveLength(14);
     expect(new Set(trafficVehicles.map((actor) => actor.id))).toEqual(
-      new Set([
-        "traffic-vehicle:main",
-        "traffic-vehicle:front-grid",
-        "traffic-vehicle:deep-grid",
-        "traffic-vehicle:middle-curve",
-        "traffic-vehicle:back-curve",
-        "traffic-vehicle:west-curve",
-        "traffic-vehicle:east-curve",
-      ]),
+      new Set(
+        [
+          "main",
+          "front-grid",
+          "deep-grid",
+          "middle-curve",
+          "back-curve",
+          "west-curve",
+          "east-curve",
+        ].flatMap((streetId) => [
+          `traffic-vehicle:${streetId}:v0`,
+          `traffic-vehicle:${streetId}:v1`,
+        ]),
+      ),
     );
   });
 
@@ -86,6 +91,31 @@ describe("unified neighborhood mobility", () => {
           (actor.kind === "vehicle" || actor.kind === "bicycle") &&
           actor.waiting &&
           actor.interaction === "crossing",
+      );
+    expect(yielding.length).toBeGreaterThan(0);
+    expect(yielding.every((actor) => actor.speed === 0)).toBe(true);
+  });
+
+  it("coordinates deterministic right-of-way between cars and bicycles", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const samples = Array.from({ length: 96 }, (_, index) =>
+      system.sample({
+        weather: "sunny",
+        phase: "simulation",
+        elapsedMs: index * 125,
+        durationMs: 12_000,
+        dayNumber: 3,
+        focus: { x: 0, z: 0 },
+      }),
+    );
+
+    const yielding = samples
+      .flatMap((sample) => sample.actors)
+      .filter(
+        (actor) =>
+          (actor.kind === "vehicle" || actor.kind === "bicycle") &&
+          actor.waiting &&
+          actor.interaction === "traffic",
       );
     expect(yielding.length).toBeGreaterThan(0);
     expect(yielding.every((actor) => actor.speed === 0)).toBe(true);
@@ -300,11 +330,19 @@ describe("unified neighborhood mobility", () => {
         )
         .every((actor) => actor.speed === 1.42),
     ).toBe(true);
+    const gardenerDays = mailDays.filter((sample) =>
+      sample.actors.some((actor) => actor.kind === "gardener"),
+    );
+    expect(gardenerDays).toHaveLength(1);
     expect(
-      mailDays.filter((sample) =>
-        sample.actors.some((actor) => actor.kind === "gardener"),
-      ),
-    ).toHaveLength(1);
+      gardenerDays
+        .flatMap((sample) => sample.actors)
+        .filter(
+          (actor) =>
+            actor.kind === "gardener" && actor.interaction !== "gardening",
+        )
+        .every((actor) => actor.speed === 1.42),
+    ).toBe(true);
     expect(
       mailDays.some((sample) =>
         sample.properties.some((property) => property.mailServiced),
@@ -322,10 +360,49 @@ describe("unified neighborhood mobility", () => {
     expect(simulation.properties.some((property) => property.sprinklerOn)).toBe(false);
   });
 
+  it("keeps mobility decisions invariant when only render LOD focus changes", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const baseInput = {
+      weather: "sunny" as const,
+      phase: "simulation" as const,
+      elapsedMs: 6_300,
+      durationMs: 12_000,
+      dayNumber: 3,
+    };
+    const near = system.sample({
+      ...baseInput,
+      focus: { x: 0, z: 0 },
+    });
+    const far = system.sample({
+      ...baseInput,
+      focus: { x: 10_000, z: 10_000 },
+    });
+    const behavior = (sample: NeighborhoodMobilitySample) =>
+      sample.actors.map((actor) => ({
+        id: actor.id,
+        kind: actor.kind,
+        x: actor.x,
+        z: actor.z,
+        yaw: actor.yaw,
+        speed: actor.speed,
+        waiting: actor.waiting,
+        interaction: actor.interaction,
+        propertyRole: actor.propertyRole,
+      }));
+
+    expect(behavior(far)).toEqual(behavior(near));
+    expect(far.actors.every((actor) => actor.detail === "statistical")).toBe(
+      true,
+    );
+  });
+
   it("uses independent simulation LOD and collapses distant actors statistically", () => {
     expect(mobilityDetailForDistance(12)).toBe("full");
     expect(mobilityDetailForDistance(50)).toBe("reduced");
     expect(mobilityDetailForDistance(120)).toBe("statistical");
+    expect(mobilityDetailForDistance(Number.POSITIVE_INFINITY)).toBe(
+      "statistical",
+    );
 
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const distant = system.sample({
