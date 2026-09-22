@@ -9,6 +9,8 @@ import {
 
 import { STAND_LAYOUT } from "./stand-layout.js";
 
+export const STAND_SIGN_CENTER_Y = 3.28;
+
 const material = (
   color: number,
   options: Readonly<{
@@ -51,7 +53,15 @@ export const populateStand = (root: Group, shutter: Group): void => {
   const detail = new Group();
   detail.userData["sceneRole"] = "stand-detail";
 
-  const signBoard = addBox(detail, [1.58, 0.56, 0.1], [0, 2.43, 0.65], 0xffe36a);
+  addBox(detail, [0.08, 0.54, 0.08], [-0.58, 3.0, 0.58], 0x6b573d);
+  addBox(detail, [0.08, 0.54, 0.08], [0.58, 3.0, 0.58], 0x6b573d);
+  const signBoard = addBox(
+    detail,
+    [1.58, 0.56, 0.1],
+    [0, STAND_SIGN_CENTER_Y, 0.65],
+    0xffe36a,
+  );
+  signBoard.userData["sceneRole"] = "stand-sign";
   signBoard.rotation.z = -0.055;
 
   const lemonBadge = new Mesh(
@@ -59,7 +69,7 @@ export const populateStand = (root: Group, shutter: Group): void => {
     material(0xf6d33b),
   );
   lemonBadge.scale.set(1.22, 0.86, 0.24);
-  lemonBadge.position.set(-0.48, 2.43, 0.72);
+  lemonBadge.position.set(-0.48, STAND_SIGN_CENTER_Y, 0.72);
   lemonBadge.rotation.z = 0.18;
   detail.add(lemonBadge);
 
@@ -68,10 +78,10 @@ export const populateStand = (root: Group, shutter: Group): void => {
     material(0x4f8c4a),
   );
   badgeLeaf.rotation.z = Math.PI / 2.6;
-  badgeLeaf.position.set(-0.27, 2.58, 0.72);
+  badgeLeaf.position.set(-0.27, STAND_SIGN_CENTER_Y + 0.15, 0.72);
   detail.add(badgeLeaf);
-  addBox(detail, [0.62, 0.07, 0.04], [0.33, 2.5, 0.72], 0x6b573d);
-  addBox(detail, [0.76, 0.06, 0.04], [0.25, 2.36, 0.72], 0x6b573d);
+  addBox(detail, [0.62, 0.07, 0.04], [0.33, STAND_SIGN_CENTER_Y + 0.07, 0.72], 0x6b573d);
+  addBox(detail, [0.76, 0.06, 0.04], [0.25, STAND_SIGN_CENTER_Y - 0.07, 0.72], 0x6b573d);
 
   addBox(
     detail,
