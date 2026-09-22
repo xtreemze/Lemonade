@@ -45,6 +45,14 @@ describe("procedural residential layout", () => {
       expect(Math.abs(property.mailboxX - property.drivewayX)).toBeGreaterThan(
         DRIVEWAY_HALF_WIDTH + 0.3,
       );
+      expect(
+        residentialFootprintIntersectsHardscape(
+          { x: property.mailboxX, z: -0.3 },
+          layout,
+          0.3,
+          0.3,
+        ),
+      ).toBe(false);
     }
   });
 
