@@ -268,6 +268,26 @@ describe("crowd motion", () => {
     }
   });
 
+  it("never wraps a visible passer from one route endpoint to the other", () => {
+    const simulation = createCrowdSimulation(beats, 36, 12_000);
+
+    for (let elapsedMs = 0; elapsedMs < 11_900; elapsedMs += 100) {
+      const current = simulation.sample(elapsedMs).poses;
+      const next = simulation.sample(elapsedMs + 100).poses;
+      for (let index = 0; index < current.length; index += 1) {
+        const before = current[index];
+        const after = next[index];
+        if (before === undefined || after === undefined) continue;
+
+        const displacement = Math.hypot(
+          after.x - before.x,
+          after.z - before.z,
+        );
+        expect(displacement).toBeLessThan(1);
+      }
+    }
+  });
+
   it("advances gait phase from measured world-space travel distance", () => {
     const earlier = crowdPosesAt(beats, 1, 1_000, 6_000)[0];
     const later = crowdPosesAt(beats, 1, 1_100, 6_000)[0];
@@ -296,8 +316,8 @@ describe("crowd motion", () => {
     );
     expect(extent).toBeGreaterThan(42);
     for (const pose of allPoses) {
-      expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.15);
-      expect(pose.worldSpeed).toBeLessThanOrEqual(2.05);
+      expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.1);
+      expect(pose.worldSpeed).toBeLessThanOrEqual(1.45);
     }
   });
 
