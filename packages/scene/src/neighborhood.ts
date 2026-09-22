@@ -257,7 +257,7 @@ const detailedTree = (color: number, seed: number): Group => {
   for (const direction of [-1, 1] as const) {
     const branchLength = 0.82 + plantUnit(seed, 23 + direction) * 0.52;
     const branch = new Mesh(
-      new CylinderGeometry(0.06, 0.1, branchLength, 6),
+      new CylinderGeometry(0.04, 0.12, branchLength, 8),
       material(0x765232),
     );
     branch.position.set(
