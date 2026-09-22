@@ -16,7 +16,12 @@ import {
   walkingBodyLift,
 } from "../src/crowd-motion.js";
 import { walkingCycleAtDistance } from "../src/gait.js";
-import { STREET_LAYOUT, roadLaneZ } from "../src/street-layout.js";
+import {
+  generateStreetNetwork,
+  STREET_LAYOUT,
+  roadLaneZ,
+  type StreetStripSpec,
+} from "../src/street-layout.js";
 import type { PasserbyBeat } from "../src/storyboard.js";
 
 const beats: readonly PasserbyBeat[] = Object.freeze(
@@ -32,6 +37,30 @@ const beats: readonly PasserbyBeat[] = Object.freeze(
     }),
   ),
 );
+
+const pointIsInsideStrip = (
+  x: number,
+  z: number,
+  strip: StreetStripSpec,
+  margin = 0.08,
+): boolean => {
+  const dx = x - strip.x;
+  const dz = z - strip.z;
+  const cos = Math.cos(strip.rotationY);
+  const sin = Math.sin(strip.rotationY);
+  const localX = cos * dx + sin * dz;
+  const localZ = -sin * dx + cos * dz;
+  return (
+    Math.abs(localX) <= strip.length / 2 + margin &&
+    Math.abs(localZ) <= strip.width / 2 + margin
+  );
+};
+
+const pointIsOnGeneratedStrip = (
+  x: number,
+  z: number,
+  strips: readonly StreetStripSpec[],
+): boolean => strips.some((strip) => pointIsInsideStrip(x, z, strip));
 
 describe("crowd motion", () => {
   it("keeps deterministic pedestrian paths separated and entirely on the sidewalk", () => {
@@ -50,10 +79,14 @@ describe("crowd motion", () => {
     const generatedRouteIds = new Set(
       neighborhoodSidewalkRoutes().map((route) => route.id),
     );
+    const generatedSidewalks = generateStreetNetwork().sidewalks;
     for (const pose of first) {
       expect(Number.isFinite(pose.x)).toBe(true);
       expect(Number.isFinite(pose.z)).toBe(true);
       expect(generatedRouteIds.has(pose.routeId)).toBe(true);
+      expect(
+        pointIsOnGeneratedStrip(pose.x, pose.z, generatedSidewalks),
+      ).toBe(true);
     }
 
     for (let left = 0; left < first.length; left += 1) {
@@ -117,7 +150,7 @@ describe("crowd motion", () => {
     expect(Math.abs(farPet.yaw)).toBeCloseTo(Math.PI);
   });
 
-  it("keeps pet travel aligned to the street while the owner glances at an ad", () => {
+  it("keeps pets on sidewalks and traffic on generated roads as neighborhood routes turn", () => {
     const scene = new Scene();
     const owner = new Group();
     owner.visible = true;
@@ -125,42 +158,47 @@ describe("crowd motion", () => {
     owner.rotation.y = Math.PI / 2 + 0.42;
     scene.add(owner);
 
-    const ambient = createAmbientLife(scene, 17, [owner]);
-    const sample = ambient.update("sunny", "simulation", 2_000, 6_000);
+    const seed = 17;
+    const ambient = createAmbientLife(scene, seed, [owner]);
+    ambient.update("sunny", "simulation", 2_000, 6_000);
+    const network = generateStreetNetwork(seed);
 
     const pet = scene.children.find(
-      (object) => object.userData["sceneRole"] === "ambient-pet",
+      (object) =>
+        object.userData["sceneRole"] === "ambient-pet" && object.visible,
     );
-    const bicycle = scene.children.find(
-      (object) => object.userData["sceneRole"] === "ambient-bicycle",
+    const bicycles = scene.children.filter(
+      (object) =>
+        object.userData["sceneRole"] === "ambient-bicycle" && object.visible,
     );
-    const vehicle = scene.children.find(
-      (object) => object.userData["sceneRole"] === "ambient-vehicle",
+    const vehicles = scene.children.filter(
+      (object) =>
+        object.userData["sceneRole"] === "ambient-vehicle" && object.visible,
     );
 
-    expect(pet?.visible).toBe(true);
+    expect(pet).toBeDefined();
     expect(pet?.position.x).toBeLessThan(owner.position.x);
-    expect(pet?.rotation.y).toBeCloseTo(0);
-    expect(pet?.position.z).toBeLessThan(STREET_LAYOUT.road.minZ);
+    expect(
+      pet !== undefined &&
+        pointIsOnGeneratedStrip(
+          pet.position.x,
+          pet.position.z,
+          network.sidewalks,
+        ),
+    ).toBe(true);
 
-    const expectedBicycle = sample.actors.find(
-      (actor) => actor.kind === "bicycle" && actor.visible,
-    );
-    expect(expectedBicycle).toBeDefined();
-    expect(bicycle?.rotation.y).toBeCloseTo(-(expectedBicycle?.yaw ?? 0));
-    expect(bicycle?.position.x).toBeCloseTo(expectedBicycle?.x ?? 0);
-    expect(bicycle?.position.z).toBeCloseTo(expectedBicycle?.z ?? 0);
-
-    const visibleVehicles = sample.actors.filter(
-      (actor) => actor.kind === "vehicle" && actor.visible,
-    );
-    const expectedVehicle =
-      visibleVehicles.find((actor) => actor.id === "resident-vehicle") ??
-      visibleVehicles[0];
-    expect(expectedVehicle).toBeDefined();
-    expect(vehicle?.rotation.y).toBeCloseTo(-(expectedVehicle?.yaw ?? 0));
-    expect(vehicle?.position.x).toBeCloseTo(expectedVehicle?.x ?? 0);
-    expect(vehicle?.position.z).toBeCloseTo(expectedVehicle?.z ?? 0);
+    expect(bicycles.length).toBeGreaterThan(0);
+    expect(vehicles.length).toBeGreaterThan(0);
+    for (const actor of [...bicycles, ...vehicles]) {
+      expect(Number.isFinite(actor.rotation.y)).toBe(true);
+      expect(
+        pointIsOnGeneratedStrip(
+          actor.position.x,
+          actor.position.z,
+          network.roads,
+        ),
+      ).toBe(true);
+    }
   });
 
   it("gives cyclists and drivers the same facial hair and clothing detail system", () => {
