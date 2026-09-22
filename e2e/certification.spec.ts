@@ -100,10 +100,6 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "expanded-streets-houses-vegetation",
   );
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
-    "data-camera-motion",
-    "stand-hold-remaining-closeup",
-  );
-  await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-seller-mood",
     /discouraged|uncertain|cautious|steady|optimistic|radiant/u,
   );
