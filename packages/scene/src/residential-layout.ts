@@ -29,7 +29,7 @@ export type ResidentialRect = Readonly<{
   maxX: number;
   minZ: number;
   maxZ: number;
-  role: "road" | "sidewalk" | "driveway";
+  role: "road" | "sidewalk" | "driveway" | "path";
 }>;
 
 export type ResidentialLayout = Readonly<{
@@ -37,6 +37,7 @@ export type ResidentialLayout = Readonly<{
   frontProperties: readonly ResidentialPropertySpec[];
   middleProperties: readonly ResidentialPropertySpec[];
   backProperties: readonly ResidentialPropertySpec[];
+  outerProperties: readonly ResidentialPropertySpec[];
   trees: readonly ResidentialPlanting[];
   shrubs: readonly ResidentialPlanting[];
   flowers: readonly ResidentialPlanting[];
@@ -368,7 +369,7 @@ const rowProperties = (
         0.94 + unit(seed, rowSalt + index * 3 + 1) * 0.1,
         signed(seed, rowSalt + index * 3 + 2) * 0.035,
         backFacing,
-        0,
+        index % 2 === 0 ? -1 : 1,
         seed,
       ),
     ),
@@ -384,22 +385,31 @@ function baseExclusions(seed: number): ResidentialRect[] {
   }));
 }
 
-const drivewayExclusions = (
+const accessExclusions = (
   properties: readonly ResidentialPropertySpec[],
 ): ResidentialRect[] =>
-  properties.flatMap((property) =>
-    property.drivewayX === null
-      ? []
-      : [
-          {
-            minX: property.drivewayX - DRIVEWAY_HALF_WIDTH,
-            maxX: property.drivewayX + DRIVEWAY_HALF_WIDTH,
-            minZ: FRONT_DRIVEWAY_MIN_Z,
-            maxZ: FRONT_DRIVEWAY_MAX_Z,
-            role: "driveway" as const,
-          },
-        ],
-  );
+  properties.flatMap((property) => {
+    if (property.drivewayX === null) return [];
+    const frontDirection = Math.cos(property.rotationY) >= 0 ? 1 : -1;
+    const drivewayCenterZ = property.houseZ + frontDirection * 4.15;
+    const pathCenterZ = property.houseZ + frontDirection * 5.65;
+    return [
+      {
+        minX: property.drivewayX - DRIVEWAY_HALF_WIDTH,
+        maxX: property.drivewayX + DRIVEWAY_HALF_WIDTH,
+        minZ: drivewayCenterZ - 3.6,
+        maxZ: drivewayCenterZ + 3.6,
+        role: "driveway" as const,
+      },
+      {
+        minX: property.houseX - 0.52,
+        maxX: property.houseX + 0.52,
+        minZ: pathCenterZ - 2,
+        maxZ: pathCenterZ + 2,
+        role: "path" as const,
+      },
+    ];
+  });
 
 const blockedByHouseFront = (
   point: ResidentialPoint,
@@ -433,13 +443,13 @@ export const residentialFootprintIntersectsHardscape = (
 
 export const residentialPointIsBlocked = (
   point: ResidentialPoint,
-  layout: Pick<ResidentialLayout, "exclusions" | "frontProperties" | "middleProperties" | "backProperties">,
+  layout: Pick<ResidentialLayout, "exclusions" | "frontProperties" | "middleProperties" | "backProperties"> & Partial<Pick<ResidentialLayout, "outerProperties">>,
   clearance = 0,
 ): boolean =>
   residentialFootprintIntersectsHardscape(point, layout, clearance, clearance) ||
   blockedByHouseFront(
     point,
-    [...layout.frontProperties, ...layout.middleProperties, ...layout.backProperties],
+    [...layout.frontProperties, ...layout.middleProperties, ...layout.backProperties, ...(layout.outerProperties ?? [])],
     clearance,
   );
 
@@ -449,13 +459,13 @@ const generatePlantings = (
   salt: number,
   zMin: number,
   zMax: number,
-  layout: Pick<ResidentialLayout, "exclusions" | "frontProperties" | "middleProperties" | "backProperties">,
+  layout: Pick<ResidentialLayout, "exclusions" | "frontProperties" | "middleProperties" | "backProperties"> & Partial<Pick<ResidentialLayout, "outerProperties">>,
   clearance: number,
   spacing: number,
 ): readonly ResidentialPlanting[] => {
   const result: ResidentialPlanting[] = [];
   for (let attempt = 0; attempt < count * 120 && result.length < count; attempt += 1) {
-    const x = -68 + unit(seed, salt + attempt * 5) * 136;
+    const x = -108 + unit(seed, salt + attempt * 5) * 216;
     const z = zMin + unit(seed, salt + attempt * 5 + 1) * (zMax - zMin);
     const scale = 0.78 + unit(seed, salt + attempt * 5 + 2) * 0.34;
     const footprintClearance = clearance * scale;
@@ -484,7 +494,7 @@ const generatePlantings = (
 
 const generateFlowers = (
   seed: number,
-  layout: Pick<ResidentialLayout, "exclusions" | "frontProperties" | "middleProperties" | "backProperties">,
+  layout: Pick<ResidentialLayout, "exclusions" | "frontProperties" | "middleProperties" | "backProperties"> & Partial<Pick<ResidentialLayout, "outerProperties">>,
 ): readonly ResidentialPlanting[] => {
   const result: ResidentialPlanting[] = [];
   for (let attempt = 0; attempt < 180 && result.length < 12; attempt += 1) {
@@ -521,33 +531,51 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     [-47, -36.5, -25.4, -9.7, 3.5, 12, 28.5, 39.6, 49],
     true,
   );
+  const outer = Object.freeze([
+    ...rowProperties(
+      safeSeed,
+      2_900,
+      16.8,
+      [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
+      false,
+    ),
+    ...rowProperties(
+      safeSeed,
+      3_000,
+      -72,
+      [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
+      true,
+    ),
+  ]);
+  const allProperties = [...front, ...middle, ...back, ...outer];
   const exclusions = Object.freeze([
     ...baseExclusions(safeSeed),
-    ...drivewayExclusions(front),
+    ...accessExclusions(allProperties),
   ]);
   const partial = {
     exclusions,
     frontProperties: front,
     middleProperties: middle,
     backProperties: back,
+    outerProperties: outer,
   } as const;
 
   const trees = generatePlantings(
     safeSeed,
-    48,
+    72,
     3_100,
-    -67,
-    0.2,
+    -88,
+    38,
     partial,
     3.5,
     1.3,
   );
   const shrubs = generatePlantings(
     safeSeed,
-    14,
+    20,
     5_100,
-    -33,
-    -1.1,
+    -76,
+    30,
     partial,
     1.9,
     0.65,
@@ -559,6 +587,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     frontProperties: front,
     middleProperties: middle,
     backProperties: back,
+    outerProperties: outer,
     trees,
     shrubs,
     flowers,
