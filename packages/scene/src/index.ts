@@ -211,7 +211,7 @@ const createLemonadeCup = (scale = 1): THREE.Group => {
 
   const glass = new THREE.Mesh(
     new THREE.CylinderGeometry(0.075, 0.09, 0.19, 8, 1, true),
-    new THREE.MeshPhysicalMaterial({
+    new THREE.MeshStandardMaterial({
       color: 0xaeffff,
       transparent: true,
       opacity: 0.46,
@@ -464,7 +464,7 @@ type CupInventory = Readonly<{
 const createCupInventory = (): CupInventory => {
   const shells = new THREE.InstancedMesh(
     new THREE.CylinderGeometry(0.075, 0.09, 0.19, 8, 1, true),
-    new THREE.MeshPhysicalMaterial({
+    new THREE.MeshStandardMaterial({
       color: 0xaeffff,
       transparent: true,
       opacity: 0.42,
