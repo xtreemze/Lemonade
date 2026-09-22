@@ -11,6 +11,7 @@ export type SignCount = Brand<number, "SignCount">;
 export type DayNumber = Brand<number, "DayNumber">;
 export type Seed = Brand<number, "Seed">;
 export type BasisPoints = Brand<number, "BasisPoints">;
+export type CustomerId = Brand<number, "CustomerId">;
 
 const requireSafeInteger = (value: number, name: string): void => {
   if (!Number.isSafeInteger(value)) {
@@ -67,4 +68,9 @@ export const basisPoints = (value: number): BasisPoints => {
     throw new RangeError("basis points exceed supported simulation range");
   }
   return value as BasisPoints;
+};
+
+export const customerId = (value: number): CustomerId => {
+  requireNonNegativeInteger(value, "customer id");
+  return value as CustomerId;
 };
