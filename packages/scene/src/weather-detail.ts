@@ -246,7 +246,7 @@ export const populateWeatherObjects = (
 
   addCloud(weather.cloudy, 0xd7e0df);
 
-  const cloudyTownClouds = CLOUDY_TOWN_CLOUD_LAYOUT.slice(0, 4).map((layout, index) => {
+  const cloudyTownClouds = CLOUDY_TOWN_CLOUD_LAYOUT.slice(0, 5).map((layout, index) => {
     const cloud = new Group();
     cloud.userData["sceneRole"] = "town-cloud";
     cloud.userData["driftPhase"] = layout.driftPhase;
