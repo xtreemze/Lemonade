@@ -1089,6 +1089,13 @@ body:has(.game-shell[data-view="forecast"]) {
   display: flex;
   flex-direction: column;
   flex: 1;
+  justify-content: space-around;
+}
+
+.game-shell[data-view="report"] .ledger-breakdown tr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .game-shell[data-view="report"] .ledger-breakdown th,
