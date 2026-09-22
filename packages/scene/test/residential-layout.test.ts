@@ -137,7 +137,6 @@ describe("procedural residential layout", () => {
     for (const property of allProperties) {
       expect(property.drivewayX).not.toBeNull();
       if (property.drivewayX === null) continue;
-      const drivewayX = property.drivewayX;
       const access = residentialAccessLayout(property, layout.seed);
       const path = layout.exclusions.find(
         (rect) =>
