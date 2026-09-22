@@ -184,6 +184,9 @@ describe("street simulation storyboard", () => {
 
     expect(portraitForecast.position[1]).toBeGreaterThan(portraitStand.position[1]);
     expect(portraitForecast.position[2]).toBeGreaterThan(portraitStand.position[2]);
+    expect(portraitStand.position[2]).toBeGreaterThanOrEqual(22);
+    expect(portraitStand.fov).toBeGreaterThanOrEqual(50);
+    expect(portraitRemaining.position[2]).toBeGreaterThanOrEqual(13);
     expect(portraitStand.position[2]).toBeGreaterThan(portraitRemaining.position[2]);
     expect(portraitForecast.lookAt[2]).toBeLessThan(portraitStand.lookAt[2]);
     expect(portraitRemaining.lookAt[2]).toBeGreaterThanOrEqual(1);
