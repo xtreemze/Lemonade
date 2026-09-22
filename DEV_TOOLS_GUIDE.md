@@ -1,6 +1,48 @@
 # Developer Tools Guide
 
-Complete guide to Lemonsville's two powerful dev tools for interactive scene development and testing.
+Complete guide to Lemonsville's persistent scene editor and focused development utilities for interactive scene development and testing.
+
+---
+
+## Persistent Scene Editor
+
+The scene editor is the primary integrated workspace for Three.js scene development. It keeps the simulation viewport visible beside a development sidebar and does not modify saved gameplay state.
+
+### Enable
+
+```javascript
+enableSceneViewer()
+// Refresh once to enter the dedicated editor.
+```
+
+Disable and return to the normal game with:
+
+```javascript
+disableSceneViewer()
+// Refresh once to return to gameplay.
+```
+
+The editor state is stored separately under `LEMONADE_DEV_SCENE_EDITOR_STATE`. Weather, phase, procedural seed, population controls, camera state, and explicitly saved object transforms survive reloads. Use **Reset editor** to remove this state.
+
+### Sidebar controls
+
+- **Scene and conditions** — sunny, cloudy, hot-and-dry, thunderstorm; forecast, idle, or simulation; confidence, stock, sales, signs, and day.
+- **Crowd and traffic** — pedestrian population and motion speed plus independent vehicle, bicycle, pet, and wildlife counts. Changes apply while the scene is running.
+- **Procedural neighborhood** — deterministic seed and development density controls for buildings, vegetation, and streets. **Regenerate** rebuilds the scene from the selected seed.
+- **Weather, day and atmosphere** — live day cycle or fixed time-of-day scrubbing, sun intensity, ambient light intensity, and wind-response scaling.
+- **Camera and view** — editable position, target, and field of view; Stand, Street, Top, and Wide presets; optional editor-camera lock.
+- **Selection and transform** — select named scene objects, use Move / Rotate / Scale modes, edit XYZ values directly, and save transforms by stable scene name.
+- **Presets and persistence** — export/import complete editor JSON and reset the editor state.
+
+### Viewport interaction
+
+When **Lock editor camera** is enabled:
+
+- right- or middle-drag orbits around the target;
+- mouse wheel dollies toward or away from the target;
+- left-drag remains available to the object transform gizmo.
+
+The legacy standalone gizmo and scene launcher remain useful as focused tools, but the persistent scene editor combines their capabilities with procedural, population, camera, and atmosphere controls in one sidebar.
 
 ---
 
