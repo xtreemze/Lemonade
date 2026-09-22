@@ -86,7 +86,7 @@ const makeProperty = (
   const mailboxX =
     drivewayX === null
       ? null
-      : drivewayX - drivewaySide * (0.66 + unit(seed, index * 11 + 6) * 0.22);
+      : drivewayX - drivewaySide * (1.34 + unit(seed, index * 11 + 6) * 0.22);
 
   return Object.freeze({
     role,
@@ -113,7 +113,7 @@ const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
       scale: 1.06,
       rotationY: 0.045,
       drivewayX: -8.45,
-      mailboxX: -7.65,
+      mailboxX: -7.05,
     }),
     Object.freeze({
       role: "stand-neighbor",
@@ -123,7 +123,7 @@ const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
       scale: 0.97,
       rotationY: -0.055,
       drivewayX: 12.1,
-      mailboxX: 11.25,
+      mailboxX: 10.7,
     }),
     makeProperty(seed, 5, "east-mid", 29.1, -6.8, 1.01, 0.025, false, -1),
     makeProperty(seed, 6, "east-end", 41.5, -8.3, 0.94, -0.05, false, 1),
@@ -202,12 +202,15 @@ const blockedByHouseFront = (
   properties: readonly ResidentialPropertySpec[],
   clearance: number,
 ): boolean =>
-  properties.some(
-    (property) =>
+  properties.some((property) => {
+    const forwardZ = Math.cos(property.rotationY);
+    const forwardDistance = (point.z - property.houseZ) * forwardZ;
+    return (
       Math.abs(point.x - property.houseX) < 3.45 + clearance &&
-      point.z > property.houseZ - 0.4 &&
-      point.z < STREET_LAYOUT.nearSidewalk.minZ,
-  );
+      forwardDistance > -0.4 - clearance &&
+      forwardDistance < 6.5 + clearance
+    );
+  });
 
 export const residentialPointIsBlocked = (
   point: ResidentialPoint,
