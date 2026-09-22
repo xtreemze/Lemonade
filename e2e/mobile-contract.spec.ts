@@ -221,6 +221,12 @@ test("simulation action art keeps the repaired transparent animated glass", asyn
   expect(svg).toContain('class="pour-stream"');
   expect(svg).toContain("@keyframes pour");
   expect(svg).toContain("@keyframes bob");
+  expect(svg).toContain('id="glassBottom"');
+  expect(svg).toContain('id="straw-2"');
+  expect(svg).toContain('id="cube5"');
+  expect(svg).toContain('id="highlight"');
+  expect(svg).not.toMatch(/stroke\s*:\s*#(?:211d14|000000|000)\b/i);
+  expect(svg).not.toContain('class="outline"');
   expect(svg).not.toContain("<rect width=\"128\" height=\"128\"");
 });
 
