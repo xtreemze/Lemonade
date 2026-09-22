@@ -184,7 +184,7 @@ const separateCrowd = (poses: MutableCrowdPose[]): number => {
         for (const right of bucket) {
           if (right <= left) continue;
           const b = poses[right];
-          if (b?.side !== a.side) continue;
+          if (b === undefined) continue;
           neighborChecks += 1;
 
           const dx = b.x - a.x;
