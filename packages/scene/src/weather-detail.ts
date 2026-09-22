@@ -429,7 +429,7 @@ export const populateWeatherObjects = (
 
       const sunArc = Math.max(0, Math.sin(daylight.progress * Math.PI));
       sunContainer.position.y = sunArc * 2.5 - 0.8;
-      sunContainer.position.z = sunArc < 0.2 ? -3.5 : sunArc > 0.85 ? -3.5 : 1.5;
+      sunContainer.position.z = -6 - sunArc * 2;
 
       lightning.visible = flash > 0.06;
       for (const boltMaterial of lightningMaterials) {
