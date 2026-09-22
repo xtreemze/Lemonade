@@ -20,7 +20,8 @@
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
     "lint:antipatterns": "node scripts/lint-antipatterns.mjs",
     "lint:mobile-contract": "node scripts/lint-mobile-contract.mjs",
-    "test:mobile-contract": "playwright test e2e/mobile-contract.spec.ts"
+    "test:mobile-contract": "playwright test e2e/mobile-contract.spec.ts",
+    "verify:mobile": "pnpm lint:mobile-contract && pnpm test:mobile-contract"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
