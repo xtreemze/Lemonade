@@ -22,7 +22,7 @@ import {
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { CupInventory } from "./cup-inventory.js";
-import { LEMON_CENTER_Y, SELLER_Z } from "./stand-layout.js";
+import { LEMON_CENTER_Y, SELLER_Z } from "./stand-anchors.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
