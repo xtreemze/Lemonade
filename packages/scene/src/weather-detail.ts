@@ -141,7 +141,7 @@ export const sunBackdropPositionAt = (
   return Object.freeze([
     lerp(-5.6, 3.6, p),
     -0.55 + arc * 2.35,
-    -6.7 - arc * 1.1,
+    -2.75 - arc * 0.35,
   ] as const);
 };
 
