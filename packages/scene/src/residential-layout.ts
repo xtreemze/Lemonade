@@ -58,12 +58,6 @@ const mix32 = (seed: number, salt: number): number => {
 const unit = (seed: number, salt: number): number => mix32(seed, salt) / 0xffff_ffff;
 const signed = (seed: number, salt: number): number => unit(seed, salt) * 2 - 1;
 
-const rectContains = (rect: ResidentialRect, point: ResidentialPoint, inset = 0): boolean =>
-  point.x >= rect.minX - inset &&
-  point.x <= rect.maxX + inset &&
-  point.z >= rect.minZ - inset &&
-  point.z <= rect.maxZ + inset;
-
 const footprintIntersectsRect = (
   rect: ResidentialRect,
   point: ResidentialPoint,
