@@ -5,7 +5,6 @@ import {
   CylinderGeometry,
   DirectionalLight,
   DoubleSide,
-  FogExp2,
   Group,
   HemisphereLight,
   SphereGeometry,
@@ -69,13 +68,6 @@ const earlyMorningSkyColor: Record<SceneWeather, number> = {
   cloudy: 0x899ca7,
   "hot-and-dry": 0xa8b9bd,
   thunderstorm: 0x485866,
-};
-
-const atmosphericFogDensity: Record<SceneWeather, number> = {
-  sunny: 0.007,
-  cloudy: 0.009,
-  "hot-and-dry": 0.008,
-  thunderstorm: 0.013,
 };
 
 const PASSERBY_POOL_SIZE = 32;
@@ -494,8 +486,6 @@ export const createLemonsvilleScene = (
   renderer.shadowMap.enabled = false;
 
   const scene = new Scene();
-  const fog = new FogExp2(earlyMorningSkyColor[initialState.weather], 0.01);
-  scene.fog = fog;
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
   camera.position.set(0, 6.8, 13.5);
   camera.lookAt(0, 1.7, 0);
@@ -553,7 +543,7 @@ export const createLemonsvilleScene = (
   canvas.dataset["crowdModel"] = "loading";
   canvas.dataset["groundContact"] = "height-aware-clearance";
   canvas.dataset["ambientLife"] = "loading";
-  canvas.dataset["atmosphere"] = "weather-fog-depth";
+  canvas.dataset["atmosphere"] = "layered-aerial-perspective";
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
   for (const lemon of lemons) scene.add(lemon);
@@ -1020,9 +1010,6 @@ export const createLemonsvilleScene = (
     const atmosphereColor =
       state.phase === "forecast" ? earlyMorningSkyColor[state.weather] : skyColor[state.weather];
     renderer.setClearColor(atmosphereColor, 1);
-    fog.color.setHex(atmosphereColor);
-    fog.density =
-      atmosphericFogDensity[state.weather] + (state.phase === "forecast" ? 0.0025 : 0);
     hemisphere.intensity = state.phase === "forecast" ? 1.35 : 1.9;
     sunlight.intensity = state.phase === "forecast" ? 1.05 : 1.8;
 
