@@ -773,7 +773,7 @@ export const createLemonsvilleScene = (
       const buyer = buyers[buyerSlotForSale(sale, buyers.length)];
       if (buyer === undefined) continue;
 
-      const streetX = sale.direction === -1 ? -8.4 : 8.4;
+      const streetX = sale.direction === -1 ? -2.6 : 2.6;
       const exitX = -streetX;
       const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
