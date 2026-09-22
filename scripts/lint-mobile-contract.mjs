@@ -129,6 +129,8 @@ for (const [width, height] of [
   [844, 390],
   [932, 430],
   [1024, 768],
+  [800, 600],
+  [1280, 720],
 ]) {
   const literal = `width: ${String(width)}, height: ${String(height)}`;
   if (!mobileSpec.includes(literal)) {
