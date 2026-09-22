@@ -42,6 +42,7 @@ const road = (
 const detailedHouse = (color: number): Group => {
   const root = new Group();
   box(root, [5.8, 3.4, 4.5], [0, 1.7, 0], color);
+  box(root, [5.95, 0.18, 4.62], [0, 0.18, 0], 0xc7a980);
   const roof = new Mesh(
     new CylinderGeometry(0, 4.4, 2.25, 4),
     material(0x7f4a43),
@@ -49,11 +50,32 @@ const detailedHouse = (color: number): Group => {
   roof.rotation.y = Math.PI / 4;
   roof.position.y = 4.45;
   root.add(roof);
+
   box(root, [1.05, 2.0, 0.18], [0, 1.05, 2.34], 0x486c69);
+  box(root, [1.22, 0.12, 0.12], [0, 2.08, 2.47], 0xf1dfbd);
+  box(root, [0.11, 2.12, 0.12], [-0.59, 1.08, 2.47], 0xf1dfbd);
+  box(root, [0.11, 2.12, 0.12], [0.59, 1.08, 2.47], 0xf1dfbd);
+  const knob = new Mesh(new SphereGeometry(0.07, 8, 6), material(0xc89a3c));
+  knob.position.set(0.33, 1.05, 2.47);
+  root.add(knob);
+
   for (const x of [-1.7, 1.7]) {
     box(root, [0.92, 0.95, 0.14], [x, 2.1, 2.36], 0xb8d9d2);
+    box(root, [1.08, 0.1, 0.11], [x, 2.62, 2.46], 0xf1dfbd);
+    box(root, [1.08, 0.1, 0.11], [x, 1.58, 2.46], 0xf1dfbd);
+    box(root, [0.1, 1.05, 0.11], [x - 0.51, 2.1, 2.46], 0xf1dfbd);
+    box(root, [0.1, 1.05, 0.11], [x + 0.51, 2.1, 2.46], 0xf1dfbd);
+    box(root, [0.08, 0.95, 0.1], [x, 2.1, 2.47], 0xf1dfbd);
+    box(root, [0.92, 0.08, 0.1], [x, 2.1, 2.47], 0xf1dfbd);
   }
+
   box(root, [3.8, 0.22, 1.05], [0, 0.25, 2.62], 0xb99b78);
+  box(root, [2.8, 0.16, 0.52], [0, 0.12, 3.05], 0xc9b08d);
+  box(root, [0.58, 1.15, 0.72], [1.75, 4.75, -0.72], 0x9b5f4f);
+
+  const porchLamp = new Mesh(new SphereGeometry(0.12, 8, 6), material(0xffd98a, false));
+  porchLamp.position.set(0.92, 1.86, 2.5);
+  root.add(porchLamp);
   return root;
 };
 
@@ -161,6 +183,28 @@ const shrub = (x: number, z: number, scale: number, color: number): Group => {
   return root;
 };
 
+const fenceRun = (x: number, z: number, width: number): Group => {
+  const root = new Group();
+  box(root, [width, 0.1, 0.1], [0, 0.56, 0], 0xe9dfc7);
+  box(root, [width, 0.1, 0.1], [0, 0.92, 0], 0xe9dfc7);
+  const posts = 6;
+  for (let index = 0; index < posts; index += 1) {
+    const offset = -width / 2 + (index / (posts - 1)) * width;
+    box(root, [0.12, 1.2, 0.12], [offset, 0.6, 0], 0xf4ead4);
+  }
+  root.position.set(x, 0, z);
+  return root;
+};
+
+const mailbox = (x: number, z: number): Group => {
+  const root = new Group();
+  box(root, [0.12, 1.05, 0.12], [0, 0.53, 0], 0x6e5a43);
+  box(root, [0.48, 0.32, 0.34], [0, 1.08, 0], 0x547c85);
+  box(root, [0.08, 0.42, 0.08], [0.27, 1.18, 0], 0xc95b4c);
+  root.position.set(x, 0, z);
+  return root;
+};
+
 const distantHill = (
   scene: Scene,
   x: number,
@@ -198,8 +242,10 @@ const atmosphereBand = (
 
 export type NeighborhoodStats = Readonly<{
   houseLods: number;
+  featuredHomes: number;
   treeLods: number;
   shrubs: number;
+  yardDetails: number;
   roadSegments: number;
   worldSpan: number;
 }>;
@@ -223,6 +269,18 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   addRoad(worldSpan, 4.4, 0, -37, 0xb59a80);
   addRoad(worldSpan, 0.9, 0, 1.55, 0xd9cfb4, 0.018);
   addRoad(worldSpan, 0.9, 0, 8.05, 0xd9cfb4, 0.018);
+  addRoad(2.1, 6.4, 0, -2.5, 0xc9b995, 0.019);
+
+  const standHome = houseLod(0, -7.1, 0xd8a766, 1.08, 0);
+  standHome.userData["sceneRole"] = "stand-home";
+  scene.add(standHome);
+
+  const yardDetails = [
+    fenceRun(-5.5, -3.55, 4.2),
+    fenceRun(5.5, -3.55, 4.2),
+    mailbox(3.25, -1.15),
+  ] as const;
+  for (const detail of yardDetails) scene.add(detail);
 
   const housePositions: (readonly [number, number, number, number])[] = [];
   for (const z of [-5.5, -25.5, -47.5]) {
@@ -271,9 +329,11 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   atmosphereBand(scene, -86, 12, 170, 38, 0xc8d2ca, 0.11);
 
   return Object.freeze({
-    houseLods: housePositions.length,
+    houseLods: housePositions.length + 1,
+    featuredHomes: 1,
     treeLods: treePositions.length,
     shrubs: shrubPositions.length,
+    yardDetails: yardDetails.length,
     roadSegments,
     worldSpan,
   });
