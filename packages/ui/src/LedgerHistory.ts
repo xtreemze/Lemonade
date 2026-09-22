@@ -2,9 +2,9 @@ import type { DailyLedgerEntry } from "@lemonade/simulation";
 
 import { projectLedger, sellThroughBasisPoints, type LedgerPoint } from "./ledger.js";
 
-const CHART_WIDTH = 720;
-const CHART_HEIGHT = 180;
-const CHART_PADDING = 18;
+const CHART_WIDTH = 300;
+const CHART_HEIGHT = 200;
+const CHART_PADDING = 12;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
