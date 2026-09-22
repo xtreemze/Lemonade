@@ -228,15 +228,14 @@ export const populateWeatherObjects = (
   weather.sunny.add(sunContainer);
 
   const partlySun = new Group();
-  partlySun.position.set(0.88, 0.5, -0.25);
+  partlySun.position.set(0, 0.8, -2);
   addSun(partlySun, 0.62);
   weather["hot-and-dry"].add(partlySun);
 
   const partlyCloudGroup = new Group();
   for (let i = 0; i < 3; i++) {
     const partlyCloud = new Group();
-    const baseLayout = i === 0 ? HOT_DRY_CLOUD_LAYOUT :
-      { position: [-1.5 + i * 1.5, 1.5 + i * 0.2, -0.2], scale: 0.9 + i * 0.1 } as const;
+    const baseLayout = { position: [-1.5 + i * 1.5, 1.5 + i * 0.2, -0.2], scale: 0.9 + i * 0.1 } as const;
     partlyCloud.position.set(...baseLayout.position);
     partlyCloud.scale.setScalar(baseLayout.scale);
     addCloud(partlyCloud, 0xd7e0df);
