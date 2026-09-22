@@ -118,22 +118,25 @@ export const captureObjectTransform = (
 ): ObjectTransform =>
   Object.freeze({
     key: sceneEditorObjectKey(scene, object),
-    name: object.name || semanticRole(object) || object.type,
+    name:
+      object.name.length > 0
+        ? object.name
+        : (semanticRole(object) ?? object.type),
     position: Object.freeze([
       object.position.x,
       object.position.y,
       object.position.z,
-    ]) as readonly [number, number, number],
+    ]),
     rotation: Object.freeze([
       object.rotation.x,
       object.rotation.y,
       object.rotation.z,
-    ]) as readonly [number, number, number],
+    ]),
     scale: Object.freeze([
       object.scale.x,
       object.scale.y,
       object.scale.z,
-    ]) as readonly [number, number, number],
+    ]),
   });
 
 export const applyObjectTransform = (
@@ -158,11 +161,10 @@ export const indexSceneEditorObjects = (
   return index;
 };
 
-const isMesh = (object: Object3D): object is Mesh =>
-  (object as Mesh).isMesh === true;
+const isMesh = (object: Object3D): object is Mesh => object instanceof Mesh;
 
 const editorHelper = (object: Object3D): boolean =>
-  object.userData["sceneEditorHelper"] === true;
+  Boolean(object.userData["sceneEditorHelper"]);
 
 const selectableRoot = (scene: Scene, hit: Object3D): Object3D => {
   let current: Object3D = hit;
@@ -188,9 +190,30 @@ const setCameraFov = (camera: Camera, fov: number): void => {
   candidate.updateProjectionMatrix?.();
 };
 
+export type GizmoController = Readonly<{
+  selectObject(object: Object3D): void;
+  deselectObject(): void;
+  setMode(mode: TransformMode): void;
+  getMode(): TransformMode;
+  getSelectedObject(): Object3D | null;
+  getSelection(): SceneObjectSelection | null;
+  captureSelectedTransform(): ObjectTransform | null;
+  setOrbitEnabled(enabled: boolean): void;
+  getCameraState(): SceneEditorCameraState;
+  applyCameraState(state: SceneEditorCameraState): void;
+  setView(view: SceneEditorView): void;
+  focusSelected(): void;
+  saveTransform(): ObjectTransform | null;
+  getSavedTransforms(): readonly ObjectTransform[];
+  exportAsJSON(): string;
+  exportAsCode(): string;
+  setFov(fov: number): void;
+  dispose(): void;
+}>;
+
 export const createGizmoController = (
   options: GizmoControllerOptions,
-) => {
+): GizmoController => {
   const { camera, scene, container } = options;
   const raycaster = new Raycaster();
   const pointer = new Vector2();
@@ -215,12 +238,12 @@ export const createGizmoController = (
         camera.position.x,
         camera.position.y,
         camera.position.z,
-      ]) as readonly [number, number, number],
+      ]),
       target: Object.freeze([
         orbit.target.x,
         orbit.target.y,
         orbit.target.z,
-      ]) as readonly [number, number, number],
+      ]),
       fov: cameraFov(camera),
     });
 
@@ -233,7 +256,10 @@ export const createGizmoController = (
       ? null
       : Object.freeze({
           key: sceneEditorObjectKey(scene, selected),
-          name: selected.name || semanticRole(selected) || selected.type,
+          name:
+            selected.name.length > 0
+              ? selected.name
+              : (semanticRole(selected) ?? selected.type),
           role: semanticRole(selected),
         });
 
@@ -372,7 +398,9 @@ export const createGizmoController = (
     event.preventDefault();
   };
 
-  const onOrbitChange = (): void => notifyCamera();
+  const onOrbitChange = (): void => {
+    notifyCamera();
+  };
   orbit.addEventListener("change", onOrbitChange);
 
   transform.addEventListener("change", notifyTransform);
@@ -434,4 +462,3 @@ export const createGizmoController = (
   });
 };
 
-export type GizmoController = ReturnType<typeof createGizmoController>;
