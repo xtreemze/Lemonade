@@ -59,20 +59,6 @@ export interface LemonsvilleSceneController {
   dispose(): void;
 }
 
-const skyColor: Record<SceneWeather, number> = {
-  sunny: 0x79cbe0,
-  cloudy: 0xaabcc3,
-  "hot-and-dry": 0x9fc9d3,
-  thunderstorm: 0x536471,
-};
-
-const earlyMorningSkyColor: Record<SceneWeather, number> = {
-  sunny: 0x9db9c9,
-  cloudy: 0x899ca7,
-  "hot-and-dry": 0xa8b9bd,
-  thunderstorm: 0x485866,
-};
-
 const PASSERBY_POOL_SIZE = 32;
 const BUYER_POOL_SIZE = 192;
 
@@ -514,19 +500,15 @@ export const createLemonsvilleScene = (
 
   let state = initialState;
   let crowdMotion: StreetMotion | null = null;
-  let dayCycleAt:
-    | ((
-        elapsedMs: number,
-        durationMs: number,
-        weather: SceneWeather,
-      ) => Readonly<{
-        progress: number;
-        skyColor: number;
-        sunColor: number;
-        hemisphereIntensity: number;
-        sunlightIntensity: number;
-        sunPosition: readonly [number, number, number];
-      }>)
+  let atmosphere:
+    | Readonly<{
+        update(
+          phase: ScenePhase,
+          weather: SceneWeather,
+          elapsedMs: number,
+          durationMs: number,
+        ): void;
+      }>
     | null = null;
   let weatherDetail:
     | Readonly<{
@@ -618,37 +600,36 @@ export const createLemonsvilleScene = (
   };
 
   const applyAtmosphere = (elapsedMs: number): void => {
-    if (state.phase === "simulation" && dayCycleAt !== null) {
-      const cycle = dayCycleAt(
+    if (atmosphere !== null) {
+      atmosphere.update(
+        state.phase,
+        state.weather,
         elapsedMs,
         Math.max(1, storyboard.durationMs),
-        state.weather,
       );
-      renderer.setClearColor(cycle.skyColor, 1);
-      hemisphere.intensity = cycle.hemisphereIntensity;
-      sunlight.intensity = cycle.sunlightIntensity;
-      sunlight.color.setHex(cycle.sunColor);
-      sunlight.position.set(...cycle.sunPosition);
-      canvas.dataset["dayProgress"] = cycle.progress.toFixed(3);
       return;
     }
-
-    const atmosphereColor =
-      state.phase === "forecast"
-        ? earlyMorningSkyColor[state.weather]
-        : skyColor[state.weather];
-    renderer.setClearColor(atmosphereColor, 1);
-    hemisphere.intensity = state.phase === "forecast" ? 1.35 : 1.9;
-    sunlight.intensity = state.phase === "forecast" ? 1.05 : 1.8;
-    sunlight.color.setHex(0xfff0c9);
-    sunlight.position.set(-5, 10, 7);
-    canvas.dataset["dayProgress"] = state.phase === "simulation" ? "0.000" : "";
+    renderer.setClearColor(state.phase === "forecast" ? 0x91a6b1 : 0x8fb9c4, 1);
   };
 
   void import("./day-cycle.js")
-    .then((module) => {
+    .then(({ createAtmosphereController }) => {
       if (disposed) return;
-      dayCycleAt = module.dayCycleAt;
+      atmosphere = createAtmosphereController({
+        setSky: (color) => renderer.setClearColor(color, 1),
+        setHemisphere: (intensity) => {
+          hemisphere.intensity = intensity;
+        },
+        setSun: (color, intensity, position) => {
+          sunlight.color.setHex(color);
+          sunlight.intensity = intensity;
+          sunlight.position.set(...position);
+        },
+        setProgress: (progress) => {
+          canvas.dataset["dayProgress"] =
+            progress === null ? "" : progress.toFixed(3);
+        },
+      });
       applyAtmosphere(0);
       render();
     })
