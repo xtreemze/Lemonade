@@ -15,6 +15,12 @@ const viewports: readonly MobileViewport[] = Object.freeze([
   { name: "tablet landscape", width: 1024, height: 768 },
 ]);
 
+const desktopViewports: readonly MobileViewport[] = Object.freeze([
+  { name: "compact desktop", width: 800, height: 600 },
+  { name: "standard desktop", width: 1024, height: 768 },
+  { name: "wide desktop", width: 1280, height: 720 },
+]);
+
 const expectViewportContract = async (
   page: Page,
   expectedView: "planning" | "simulation" | "report" | "forecast",
@@ -294,6 +300,55 @@ for (const viewport of viewports) {
 
       await expect(main).toHaveAttribute("data-view", "planning", { timeout: 10_000 });
       await expectViewportContract(page, "planning");
+    } finally {
+      await context.close();
+    }
+  });
+}
+
+for (const viewport of desktopViewports) {
+  test(`fullscreen contract: ${viewport.name} never falls back to page scrolling`, async ({ browser }, testInfo) => {
+    test.slow();
+
+    const configuredBaseURL = testInfo.project.use.baseURL;
+    if (typeof configuredBaseURL !== "string") {
+      throw new TypeError("Flow contract requires a configured Playwright baseURL.");
+    }
+
+    const context = await browser.newContext({
+      baseURL: configuredBaseURL,
+      viewport: { width: viewport.width, height: viewport.height },
+      screen: { width: viewport.width, height: viewport.height },
+      deviceScaleFactor: 1,
+      hasTouch: false,
+      isMobile: false,
+    });
+    const page = await context.newPage();
+
+    try {
+      await page.goto("./");
+
+      const main = page.getByRole("main");
+      await expect(main).toBeVisible();
+      await expect(main).toHaveAttribute("data-view", "forecast");
+      await expectViewportContract(page, "forecast");
+
+      await expect(main).toHaveAttribute("data-view", "planning", { timeout: 10_000 });
+      await expectViewportContract(page, "planning");
+      await expectPlanningControlWeight(page);
+      await expectCenteredBottomAction(page, page.getByRole("button", { name: "Sell for the day" }));
+
+      await page.getByRole("button", { name: "Sell for the day" }).click();
+      await expect(main).toHaveAttribute("data-view", "simulation");
+      await expectViewportContract(page, "simulation");
+
+      await expect(main).toHaveAttribute("data-view", "report", { timeout: 15_000 });
+      await expectViewportContract(page, "report");
+      await expectCenteredBottomAction(page, page.getByRole("button", { name: "Plan next day" }));
+
+      await page.getByRole("button", { name: "Plan next day" }).click();
+      await expect(main).toHaveAttribute("data-view", "forecast");
+      await expectViewportContract(page, "forecast");
     } finally {
       await context.close();
     }
