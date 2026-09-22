@@ -21,6 +21,7 @@ import {
 } from "three";
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
+import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { LEMON_CENTER_Y, SELLER_Z } from "./stand-anchors.js";
 import {
@@ -136,8 +137,6 @@ const createSign = (): SignModel => {
   label.position.set(0, 1.05, 0.066);
   root.add(label);
 
-  root.position.z = -1;
-  root.visible = false;
   return Object.freeze({ root, labelMaterial });
 };
 
@@ -501,13 +500,11 @@ export const createLemonsvilleScene = (
   let signLabelModule:
     | Promise<Readonly<{ createPriceSignSurface(priceLabel: string): HTMLCanvasElement }>>
     | null = null;
-  const signOrigins = signs.map((sign) => sign.root.rotation.z);
 
   const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) =>
     createPerson(initialState.characterSeed, index),
   );
   for (const customer of customers) scene.add(customer.root);
-  const petOwners = customers.map((customer) => customer.root);
 
   const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) =>
     createPerson(initialState.characterSeed, index + PASSERBY_POOL_SIZE),
@@ -548,23 +545,7 @@ export const createLemonsvilleScene = (
   };
 
   let state = initialState;
-  let crowdMotion:
-    | Readonly<{
-        crowdPosesAt(
-          beats: StreetStoryboard["passersBy"],
-          actorCount: number,
-          elapsedMs: number,
-          durationMs: number,
-        ): readonly Readonly<{
-          x: number;
-          z: number;
-          heading: number;
-          pace: number;
-          seesAdvertisement: boolean;
-        }>[];
-        sidewalkLaneZ(lane: number): number;
-      }>
-    | null = null;
+  let crowdMotion: StreetMotion | null = null;
   let ambientLife:
     | Readonly<{
         update(
@@ -572,7 +553,6 @@ export const createLemonsvilleScene = (
           phase: ScenePhase,
           elapsedMs: number,
           durationMs: number,
-          owners?: readonly Group[],
         ): void;
       }>
     | null = null;
@@ -663,15 +643,9 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./crowd-motion.js")
-    .then(({ crowdPosesAt, gardenSignPosition, sidewalkLaneZ }) => {
+    .then(({ initializeStreetMotion }) => {
       if (disposed) return;
-      crowdMotion = Object.freeze({ crowdPosesAt, sidewalkLaneZ });
-      signs.forEach((sign, index) => {
-        const position = gardenSignPosition(index);
-        sign.root.position.set(position.x, position.y, position.z);
-        sign.root.rotation.y = position.rotationY;
-        scene.add(sign.root);
-      });
+      crowdMotion = initializeStreetMotion(scene, signs);
       resetAnimatedObjects();
       render();
     })
@@ -680,7 +654,11 @@ export const createLemonsvilleScene = (
   void import("./ambient-life.js")
     .then(({ createAmbientLife }) => {
       if (disposed) return;
-      ambientLife = createAmbientLife(scene, initialState.characterSeed);
+      ambientLife = createAmbientLife(
+        scene,
+        initialState.characterSeed,
+        customers.map((customer) => customer.root),
+      );
       ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
       render();
     })
@@ -712,27 +690,15 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./character-detail.js")
-    .then(({ decorateCharacter, decorateSellerExpression }) => {
+    .then(({ decorateSceneCharacters }) => {
       if (disposed) return;
-      customers.forEach((person, index) => {
-        decorateCharacter(person.root, person.head, person.profile, index);
-      });
-      buyers.forEach((person, index) => {
-        decorateCharacter(
-          person.root,
-          person.head,
-          person.profile,
-          index + PASSERBY_POOL_SIZE,
-        );
-      });
-      decorateCharacter(
-        seller.person.root,
-        seller.person.head,
-        seller.person.profile,
-        10_001,
-        false,
+      decorateSceneCharacters(
+        customers,
+        buyers,
+        seller.person,
+        seller.eyebrows,
+        seller.mouth,
       );
-      decorateSellerExpression(seller.eyebrows, seller.mouth);
       render();
     })
     .catch(() => undefined);
@@ -806,8 +772,8 @@ export const createLemonsvilleScene = (
     positionStaticPedestrians();
     applySellerExpression(seller, state.confidence);
     applyPhaseStaging();
-    signs.forEach((sign, index) => {
-      sign.root.rotation.z = signOrigins[index] ?? 0;
+    signs.forEach((sign) => {
+      sign.root.rotation.z = 0;
     });
     lemons.forEach((lemon, index) => {
       lemon.position.y = lemonOrigins[index] ?? lemon.position.y;
@@ -820,8 +786,7 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, storyboard.durationMs),
-      petOwners,
+      Math.max(1, storyboard.durationMs)
     );
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
@@ -969,8 +934,7 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       elapsedMs,
-      storyboard.durationMs,
-      petOwners,
+      storyboard.durationMs
     );
 
     cupInventory?.setCount(
@@ -1045,8 +1009,7 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, state.durationMs),
-      petOwners,
+      Math.max(1, state.durationMs)
     );
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
