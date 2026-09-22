@@ -31,6 +31,7 @@ import {
   buyerPhaseAt,
   buyerSlotForSale,
   endingConfidenceAt,
+  sellerGestureAt,
   remainingCameraProgressAt,
   remainingCupsAt,
   sceneCameraComposition,
@@ -879,17 +880,40 @@ export const createLemonsvilleScene = (
   const animateSeller = (seconds: number, elapsedMs: number): void => {
     seller.person.root.visible = state.phase !== "forecast";
     if (state.phase === "forecast") return;
-    applySellerExpression(seller, sellerConfidenceAt(elapsedMs));
+
+    const confidence = sellerConfidenceAt(elapsedMs);
+    applySellerExpression(seller, confidence);
+
+    if (state.phase === "simulation") {
+      const gesture = sellerGestureAt(
+        storyboard,
+        elapsedMs,
+        state.confidence,
+        state.nextConfidence,
+      );
+      seller.person.torso.position.y += gesture.torsoLift;
+      seller.person.head.rotation.x += gesture.headTilt;
+      seller.person.arms[0].root.rotation.x += gesture.armLift;
+      seller.person.arms[1].root.rotation.x += gesture.armLift;
+      seller.person.arms[0].root.rotation.z = -gesture.armSpread;
+      seller.person.arms[1].root.rotation.z = gesture.armSpread;
+      canvas.dataset["sellerGestureStrength"] = gesture.strength.toFixed(3);
+    } else {
+      canvas.dataset["sellerGestureStrength"] = "0.000";
+    }
+
     if (state.reducedMotion || state.phase === "idle") return;
     const breathing = Math.sin(seconds * 2.1) * 0.025;
-    seller.person.torso.position.y = 1.05 + breathing;
-    seller.person.head.position.y = 1.73 + breathing * 0.7;
+    seller.person.torso.position.y += breathing;
+    seller.person.head.position.y += breathing * 0.7;
     seller.person.arms[0].root.rotation.x += Math.sin(seconds * 1.7) * 0.035;
     seller.person.arms[1].root.rotation.x += Math.sin(seconds * 1.7 + 0.8) * 0.035;
 
-    const serving = storyboard.sales.some(
-      (sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing",
-    );
+    const serving =
+      elapsedMs < storyboard.activeDurationMs &&
+      storyboard.sales.some(
+        (sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing",
+      );
     if (serving) {
       seller.person.arms[1].root.rotation.x = -1.2;
       seller.person.torso.rotation.x -= 0.06;
