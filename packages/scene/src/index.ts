@@ -2,13 +2,11 @@ import {
   BoxGeometry,
   type BufferGeometry,
   CanvasTexture,
-  ConeGeometry,
   CylinderGeometry,
   DirectionalLight,
   DoubleSide,
   Group,
   HemisphereLight,
-  IcosahedronGeometry,
   InstancedMesh,
   LinearFilter,
   type Material,
@@ -136,7 +134,7 @@ const createHouse = (x: number, color: number, scale: number): Group => {
   addBox(house, [3.4, 2.6, 2.4], [0, 1.3, 0], color);
 
   const roof = new Mesh(
-    new ConeGeometry(2.75, 1.6, 4),
+    new CylinderGeometry(0, 2.75, 1.6, 4),
     makeMaterial(0x7f4a43),
   );
   roof.rotation.y = Math.PI / 4;
@@ -160,7 +158,7 @@ const createTree = (x: number, z: number): Group => {
   tree.add(trunk);
 
   const crown = new Mesh(
-    new IcosahedronGeometry(1.05, 0),
+    new SphereGeometry(1.05, 6, 4),
     makeMaterial(0x5f8d56),
   );
   crown.position.y = 2.0;
@@ -581,14 +579,14 @@ const createCupInventory = (): CupInventory => {
 const createLemon = (index: number): Group => {
   const lemon = new Group();
   const fruit = new Mesh(
-    new IcosahedronGeometry(0.22, 1),
+    new SphereGeometry(0.22, 7, 5),
     makeMaterial(0xf6d33b),
   );
   fruit.scale.set(1.15, 0.9, 0.9);
   lemon.add(fruit);
 
   const leaf = new Mesh(
-    new ConeGeometry(0.08, 0.22, 5),
+    new CylinderGeometry(0, 0.08, 0.22, 5),
     makeMaterial(0x4f8c4a),
   );
   leaf.rotation.z = Math.PI / 2;
@@ -666,7 +664,7 @@ const createWeatherObjects = (): Record<SceneWeather, Group> => {
   const thunderstorm = createCloud(0x657786);
   thunderstorm.position.set(-3.6, 6.25, -1.4);
   const bolt = new Mesh(
-    new ConeGeometry(0.16, 1.05, 8),
+    new CylinderGeometry(0, 0.16, 1.05, 8),
     makeWeatherMaterial(0xf8d346, 0xf8d346, 0.3),
   );
   bolt.position.set(0.4, -1.05, 0.08);
