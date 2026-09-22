@@ -13,6 +13,7 @@ import {
 import {
   DEFAULT_RESIDENTIAL_SEED,
   generateResidentialLayout,
+  residentialFootprintIntersectsHardscape,
   type ResidentialPropertySpec,
 } from "./residential-layout.js";
 import { STREET_LAYOUT } from "./street-layout.js";
@@ -250,6 +251,7 @@ const treeLod = (
   );
   root.userData["sceneRole"] = "procedural-tree";
   root.userData["plantVariant"] = variant;
+  root.userData["clearanceRadius"] = 2.15 * scale;
   return markWindResponsive(root, phase);
 };
 
@@ -304,6 +306,7 @@ const shrubLod = (
   );
   root.userData["sceneRole"] = "procedural-shrub";
   root.userData["plantVariant"] = Math.floor(plantUnit(seed, 151) * 1_000);
+  root.userData["clearanceRadius"] = 1.05 * scale;
   return markWindResponsive(root, phase);
 };
 
@@ -336,6 +339,7 @@ const flower = (
   }
   root.position.set(x, 0, z);
   root.userData["sceneRole"] = "garden-flower";
+  root.userData["clearanceRadius"] = 0.16;
   return markWindResponsive(root, phase);
 };
 
@@ -349,6 +353,9 @@ const fenceRun = (x: number, z: number, width: number): Group => {
     box(root, [0.12, 1.2, 0.12], [offset, 0.6, 0], 0xf4ead4);
   }
   root.position.set(x, 0, z);
+  root.userData["sceneRole"] = "fence";
+  root.userData["clearanceHalfWidth"] = width / 2;
+  root.userData["clearanceHalfDepth"] = 0.06;
   return root;
 };
 
@@ -362,6 +369,7 @@ const mailbox = (x: number, z: number): Group => {
   root.rotation.y = 0;
   root.userData["sceneRole"] = "mailbox";
   root.userData["streetFacingYaw"] = 0;
+  root.userData["clearanceRadius"] = 0.3;
   return root;
 };
 
@@ -369,6 +377,8 @@ const fenceRunDepth = (x: number, z: number, depth: number): Group => {
   const root = fenceRun(0, 0, depth);
   root.position.set(x, 0, z);
   root.rotation.y = Math.PI / 2;
+  root.userData["clearanceHalfWidth"] = 0.06;
+  root.userData["clearanceHalfDepth"] = depth / 2;
   return root;
 };
 
@@ -589,17 +599,33 @@ export const populateNeighborhood = (
   }
 
   const yardDetails: Group[] = [];
+  const addYardDetailIfClear = (
+    detail: Group,
+    halfWidth: number,
+    halfDepth: number,
+  ): void => {
+    if (
+      residentialFootprintIntersectsHardscape(
+        { x: detail.position.x, z: detail.position.z },
+        layout,
+        halfWidth,
+        halfDepth,
+      )
+    ) {
+      return;
+    }
+    yardDetails.push(detail);
+  };
+
   for (const property of layout.frontProperties) {
     if (property.mailboxX === null) continue;
-    const detail = mailbox(property.mailboxX, 0.25);
-    yardDetails.push(detail);
+    const detail = mailbox(property.mailboxX, -0.3);
+    addYardDetailIfClear(detail, 0.3, 0.3);
   }
 
-  yardDetails.push(
-    fenceRun(-5.7, -0.8, 2.9),
-    fenceRunDepth(1.9, -3.0, 5.1),
-    fenceRun(7.8, -0.65, 2.6),
-  );
+  addYardDetailIfClear(fenceRun(-5.7, -0.8, 2.9), 2.9 / 2, 0.06);
+  addYardDetailIfClear(fenceRunDepth(1.9, -3.0, 5.1), 0.06, 5.1 / 2);
+  addYardDetailIfClear(fenceRun(7.8, -0.65, 2.6), 2.6 / 2, 0.06);
   for (const detail of yardDetails) scene.add(detail);
 
   layout.trees.forEach((planting, index) => {
