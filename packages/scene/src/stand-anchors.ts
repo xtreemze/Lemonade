@@ -1,1 +1,1 @@
-export const SELLER_Z = -0.48;
+export const SELLER_Z = -1.48;

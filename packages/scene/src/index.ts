@@ -477,6 +477,7 @@ export const createLemonsvilleScene = (
 
   const stand = createStand();
   stand.root.name = "lemonadeStand";
+  stand.root.position.z = -1;
   scene.add(stand.root);
 
   const signs = Array.from({ length: 40 }, (_, index) => {
