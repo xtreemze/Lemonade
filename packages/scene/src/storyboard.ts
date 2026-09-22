@@ -117,26 +117,26 @@ export const sceneCameraComposition = (
   const aspect = safeWidth / safeHeight;
   const mode = aspect < 0.72 ? "portrait" : aspect > 1.65 ? "wide" : "balanced";
 
-  let fov = mode === "portrait" ? 47 : mode === "wide" ? 32 : 36;
+  let fov = mode === "portrait" ? 50 : mode === "wide" ? 32 : 36;
   let x = 0;
-  let y = mode === "portrait" ? 8.6 : mode === "wide" ? 6.5 : 7;
-  let z = mode === "portrait" ? 17.8 : mode === "wide" ? 12.8 : 14.2;
+  let y = mode === "portrait" ? 9.2 : mode === "wide" ? 6.5 : 7;
+  let z = mode === "portrait" ? 20.5 : mode === "wide" ? 12.8 : 14.2;
   let lookY = mode === "wide" ? 1.75 : 1.8;
   let lookZ = mode === "portrait" ? 1.1 : mode === "wide" ? 0.7 : 0.8;
 
   if (shot === "street") {
-    fov -= mode === "portrait" ? 4 : 1;
-    y -= mode === "portrait" ? 1.7 : mode === "wide" ? 1 : 1.1;
-    z -= mode === "portrait" ? 2.4 : mode === "wide" ? 1.3 : 1.5;
-    lookY -= mode === "portrait" ? 0.25 : 0.35;
-    lookZ += mode === "portrait" ? 1.6 : 1.75;
+    fov -= mode === "portrait" ? 1 : 1;
+    y -= mode === "portrait" ? 1.1 : mode === "wide" ? 1 : 1.1;
+    z -= mode === "portrait" ? 1.7 : mode === "wide" ? 1.3 : 1.5;
+    lookY -= mode === "portrait" ? 0.2 : 0.35;
+    lookZ += mode === "portrait" ? 1.5 : 1.75;
   } else if (shot === "purchase") {
-    fov -= mode === "portrait" ? 10 : 2;
-    x = mode === "portrait" ? 2.8 : mode === "wide" ? 3.2 : 3.1;
-    y -= mode === "portrait" ? 3.8 : mode === "wide" ? 2.5 : 2.7;
-    z -= mode === "portrait" ? 8.2 : mode === "wide" ? 5 : 5.7;
-    lookY -= mode === "portrait" ? 0.25 : 0.3;
-    lookZ += mode === "portrait" ? 0.25 : 0.45;
+    fov -= mode === "portrait" ? 4 : 2;
+    x = mode === "portrait" ? 2.2 : mode === "wide" ? 3.2 : 3.1;
+    y -= mode === "portrait" ? 2.4 : mode === "wide" ? 2.5 : 2.7;
+    z -= mode === "portrait" ? 5.2 : mode === "wide" ? 5 : 5.7;
+    lookY -= mode === "portrait" ? 0.15 : 0.3;
+    lookZ += mode === "portrait" ? 0.5 : 0.45;
   }
 
   return Object.freeze({
