@@ -72,6 +72,10 @@ export interface LemonsvilleSceneController {
   camera?: any; // Three.js Camera for dev tools
 }
 
+export type LemonsvilleSceneOptions = Readonly<{
+  enableGizmo?: boolean;
+}>;
+
 const PASSERBY_POOL_SIZE = 32;
 const BUYER_POOL_SIZE = 192;
 
@@ -431,6 +435,7 @@ const disposeObject = (object: Object3D): void => {
 export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
+  options: LemonsvilleSceneOptions = Object.freeze({}),
 ): LemonsvilleSceneController | null => {
   let renderer: WebGLRenderer;
   try {
@@ -473,6 +478,16 @@ export const createLemonsvilleScene = (
   let signTexture: CanvasTexture | null = null;
   let signPriceLabel = "";
   let disposed = false;
+  let gizmoController: Readonly<{ dispose(): void }> | null = null;
+  if (options.enableGizmo && canvas.parentElement instanceof HTMLElement) {
+    const container = canvas.parentElement;
+    void import("./gizmo-controller.js")
+      .then(({ createGizmoController }) => {
+        if (disposed) return;
+        gizmoController = createGizmoController({ camera, scene, container });
+      })
+      .catch(() => undefined);
+  }
   let signTextureGeneration = 0;
   let signLabelModule:
     | Promise<Readonly<{ createPriceSignSurface(priceLabel: string): HTMLCanvasElement }>>
@@ -1125,6 +1140,8 @@ export const createLemonsvilleScene = (
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
     animationFrame = null;
     signTexture?.dispose();
+    gizmoController?.dispose();
+    gizmoController = null;
     scene.traverse(disposeObject);
     renderer.dispose();
   };
