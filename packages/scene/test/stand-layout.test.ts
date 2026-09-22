@@ -1,15 +1,30 @@
 import { describe, expect, it } from "vitest";
 
 import { STAND_LAYOUT, standCounterBounds } from "../src/stand-layout.js";
+import { tallestAdultRenderedHeight, WORLD_SCALE } from "../src/world-scale.js";
 
 describe("lemonade stand staging", () => {
-  it("keeps the vendor behind a deliberately shallow serving surface", () => {
+  it("keeps the vendor in an open bay behind a human-height serving surface", () => {
     const bounds = standCounterBounds();
     const sellerFront = STAND_LAYOUT.sellerZ + STAND_LAYOUT.sellerFrontRadius;
+    const bodyBack = STAND_LAYOUT.body.position[2] - STAND_LAYOUT.body.size[2] / 2;
 
+    expect(bounds.topY).toBeCloseTo(WORLD_SCALE.stand.counterHeight);
+    expect(bounds.topY).toBeGreaterThanOrEqual(0.85);
+    expect(bounds.topY).toBeLessThanOrEqual(1.05);
+    expect(sellerFront).toBeLessThan(bounds.minZ - 0.08);
+    expect(sellerFront).toBeLessThan(bodyBack - 0.25);
     expect(STAND_LAYOUT.counter.size[2]).toBeLessThanOrEqual(0.8);
-    expect(sellerFront).toBeLessThan(bounds.minZ);
-    expect(STAND_LAYOUT.canopy.size[2]).toBeLessThanOrEqual(0.85);
+  });
+
+  it("keeps the canopy above the tallest adult without making the kiosk house-sized", () => {
+    const canopyBottom =
+      STAND_LAYOUT.canopy.position[1] - STAND_LAYOUT.canopy.size[1] / 2;
+    const canopyTop =
+      STAND_LAYOUT.canopy.position[1] + STAND_LAYOUT.canopy.size[1] / 2;
+    expect(canopyBottom).toBeGreaterThan(tallestAdultRenderedHeight() + 0.08);
+    expect(canopyTop).toBeLessThan(2.35);
+    expect(STAND_LAYOUT.body.size[0]).toBeLessThan(3);
   });
 
   it("keeps prepared cups inside the serving-surface footprint", () => {
