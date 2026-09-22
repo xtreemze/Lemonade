@@ -709,14 +709,10 @@ export const populateNeighborhood = (
   for (const property of allProperties) {
     const access = residentialAccessLayout(property, seed);
     if (property.drivewayX !== null) {
-      const constrainedDrivewayWidth = Math.min(
-        WORLD_SCALE.street.drivewayWidth,
-        WORLD_SCALE.street.sidewalkWidth,
-      );
       accessStrip(
         scene,
         access.drivewayLength,
-        constrainedDrivewayWidth,
+        WORLD_SCALE.vehicle.width,
         access.drivewayCenterX,
         access.drivewayCenterZ,
         access.drivewayRotationY,

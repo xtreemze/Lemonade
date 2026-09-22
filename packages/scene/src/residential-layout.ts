@@ -759,15 +759,11 @@ const drivewayRectForProperty = (
     Object.freeze({ ...property, drivewayX }),
     seed,
   );
-  const constrainedDrivewayWidth = Math.min(
-    WORLD_SCALE.street.drivewayWidth,
-    WORLD_SCALE.street.sidewalkWidth,
-  );
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
     { x: access.roadX, z: access.roadCenterZ },
-    constrainedDrivewayWidth,
+    WORLD_SCALE.vehicle.width,
   );
 };
 
