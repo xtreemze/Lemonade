@@ -59,8 +59,8 @@ export type DevSceneEditorState = Readonly<{
 }>;
 
 const DEFAULT_CAMERA: SceneEditorCameraState = Object.freeze({
-  position: Object.freeze([0, 6.8, 13.5]),
-  target: Object.freeze([0, 1.7, 0]),
+  position: Object.freeze([0, 6.8, 13.5] as const),
+  target: Object.freeze([0, 1.7, 0] as const),
   fov: 34,
 });
 
@@ -77,7 +77,7 @@ export const DEFAULT_DEV_SCENE_EDITOR_STATE: DevSceneEditorState =
     sold: 10,
     visibleSigns: 5,
     priceCents: 150,
-    durationMs: 14_000,
+    durationMs: 10_000,
     density: Object.freeze({
       pedestrians: 1,
       vehicles: 1,
@@ -253,8 +253,8 @@ const transformValue = (value: unknown): ObjectTransform | null => {
   if (typeof key !== "string" || key.length === 0) return null;
   if (typeof name !== "string") return null;
 
-  const identity = Object.freeze([0, 0, 0]);
-  const unit = Object.freeze([1, 1, 1]);
+  const identity = Object.freeze([0, 0, 0] as const);
+  const unit = Object.freeze([1, 1, 1] as const);
   const scale = tuple3(value["scale"], unit);
   return Object.freeze({
     key,
@@ -265,7 +265,7 @@ const transformValue = (value: unknown): ObjectTransform | null => {
       Math.max(0.001, scale[0]),
       Math.max(0.001, scale[1]),
       Math.max(0.001, scale[2]),
-    ]),
+    ] as const),
   });
 };
 
