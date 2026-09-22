@@ -145,13 +145,7 @@ const createStand = (): StandModel => {
   return Object.freeze({ root, shutter });
 };
 
-const createHouse = (
-  x: number,
-  z: number,
-  color: number,
-  scale: number,
-  rotationY = 0,
-): Group => {
+const createHouse = (x: number, color: number, scale: number): Group => {
   const house = new Group();
   addBox(house, [3.4, 2.6, 2.4], [0, 1.3, 0], color);
 
@@ -164,20 +158,13 @@ const createHouse = (
   house.add(roof);
 
   addBox(house, [0.75, 1.55, 0.15], [0, 0.8, 1.28], 0x486c69);
-  addBox(house, [0.58, 0.7, 0.12], [-0.92, 1.55, 1.3], 0xb8d9d2);
-  addBox(house, [0.58, 0.7, 0.12], [0.92, 1.55, 1.3], 0xb8d9d2);
-  house.position.set(x, 0, z);
-  house.rotation.y = rotationY;
+  house.position.x = x;
+  house.position.z = -3.8;
   house.scale.setScalar(scale);
   return house;
 };
 
-const createTree = (
-  x: number,
-  z: number,
-  scale = 1,
-  crownColor = 0x5f8d56,
-): Group => {
+const createTree = (x: number, z: number): Group => {
   const tree = new Group();
   const trunk = new Mesh(
     new CylinderGeometry(0.16, 0.24, 1.5, 7),
@@ -188,32 +175,12 @@ const createTree = (
 
   const crown = new Mesh(
     new SphereGeometry(1.05, 10, 7),
-    makeMaterial(crownColor),
+    makeMaterial(0x5f8d56),
   );
-  crown.position.y = 2.0;
+  crown.position.y = 2;
   tree.add(crown);
   tree.position.set(x, 0, z);
-  tree.scale.setScalar(scale);
   return tree;
-};
-
-const createShrub = (x: number, z: number, scale: number, color: number): Group => {
-  const shrub = new Group();
-  for (const [offsetX, offsetZ, size] of [
-    [-0.32, 0.04, 0.56],
-    [0.2, 0, 0.68],
-    [0.5, 0.12, 0.48],
-  ] as const) {
-    const crown = new Mesh(
-      new SphereGeometry(size, 9, 6),
-      makeMaterial(color),
-    );
-    crown.position.set(offsetX, size * 0.72, offsetZ);
-    shrub.add(crown);
-  }
-  shrub.position.set(x, 0, z);
-  shrub.scale.setScalar(scale);
-  return shrub;
 };
 
 type SignModel = Readonly<{
@@ -434,15 +401,11 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   head.position.y = 1.78;
   root.add(torso, neck, head);
 
-  const eyeWhiteMaterial = makeCharacterMaterial(0xf5f1e7);
   const eyeMaterial = makeCharacterMaterial(0x263238);
   for (const x of [-0.09, 0.09]) {
-    const eyeWhite = new Mesh(new SphereGeometry(0.035, 8, 6), eyeWhiteMaterial.clone());
-    eyeWhite.position.set(x, 0.045, 0.232);
-    head.add(eyeWhite);
-    const iris = new Mesh(new SphereGeometry(0.018, 8, 6), eyeMaterial.clone());
-    iris.position.set(x, 0.045, 0.262);
-    head.add(iris);
+    const eye = new Mesh(new SphereGeometry(0.026, 8, 6), eyeMaterial.clone());
+    eye.position.set(x, 0.045, 0.248);
+    head.add(eye);
   }
 
   const nose = new Mesh(
@@ -459,16 +422,6 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   );
   mouth.position.set(0, -0.11, 0.246);
   head.add(mouth);
-
-  for (const x of [-0.255, 0.255]) {
-    const ear = new Mesh(
-      new SphereGeometry(0.055, 8, 6),
-      makeCharacterMaterial(profile.skinColor),
-    );
-    ear.scale.set(0.55, 0.85, 0.55);
-    ear.position.set(x, 0, 0);
-    head.add(ear);
-  }
 
   addCharacterHair(head, profile.hairStyle, profile.hairColor, profile.accessory);
 
@@ -906,58 +859,12 @@ export const createLemonsvilleScene = (
   mainRoad.position.set(0, 0.012, 4.1);
   scene.add(mainRoad);
 
-  const crossRoad = new Mesh(new PlaneGeometry(5.2, 34), makeMaterial(0xb2916e));
-  crossRoad.rotation.x = -Math.PI / 2;
-  crossRoad.position.set(-11.5, 0.014, -3.2);
-  scene.add(crossRoad);
-
-  const backRoad = new Mesh(new PlaneGeometry(44, 3.3), makeMaterial(0xbda080));
-  backRoad.rotation.x = -Math.PI / 2;
-  backRoad.position.set(0, 0.013, -10.2);
-  scene.add(backRoad);
-
-  const sidewalk = new Mesh(new PlaneGeometry(44, 0.7), makeMaterial(0xd9cfb4));
-  sidewalk.rotation.x = -Math.PI / 2;
-  sidewalk.position.set(0, 0.02, 1.68);
-  scene.add(sidewalk);
-
-  for (const [x, z, color, scale, rotation] of [
-    [-7.2, -3.8, 0xd56f52, 1.0, 0],
-    [7.0, -3.8, 0xd4aa61, 0.9, 0],
-    [-17.0, -7.8, 0xc97d65, 0.92, 0.12],
-    [-7.1, -13.0, 0xd5a66d, 0.86, Math.PI],
-    [1.0, -13.2, 0x8da9a1, 0.9, Math.PI],
-    [9.2, -12.8, 0xc27a68, 0.88, Math.PI],
-    [16.5, -6.9, 0xdfb76f, 0.82, -0.1],
-  ] as const) {
-    scene.add(createHouse(x, z, color, scale, rotation));
-  }
-
-  for (const [x, z, scale, color] of [
-    [-4.7, -2.9, 1.0, 0x5f8d56],
-    [4.9, -2.6, 1.05, 0x54874f],
-    [-8.2, 1.4, 0.9, 0x6a965d],
-    [8.1, 1.0, 1.05, 0x527e4b],
-    [-15.2, -2.0, 1.12, 0x668e53],
-    [-13.7, -12.2, 0.95, 0x507f4b],
-    [-3.2, -10.7, 0.88, 0x6d985e],
-    [5.1, -9.8, 1.08, 0x58854f],
-    [13.7, -11.3, 1.0, 0x678f52],
-    [17.5, 0.7, 1.06, 0x4f814c],
-  ] as const) {
-    scene.add(createTree(x, z, scale, color));
-  }
-
-  for (const [x, z, scale, color] of [
-    [-5.8, -0.8, 0.72, 0x678f52],
-    [5.9, -0.7, 0.68, 0x5f8b55],
-    [-9.0, -6.2, 0.8, 0x759d61],
-    [11.4, -5.8, 0.78, 0x698f58],
-    [-1.8, -8.8, 0.66, 0x6f985f],
-    [7.2, -9.0, 0.72, 0x618a54],
-  ] as const) {
-    scene.add(createShrub(x, z, scale, color));
-  }
+  scene.add(createHouse(-7.2, 0xd56f52, 1));
+  scene.add(createHouse(7, 0xd4aa61, 0.9));
+  scene.add(createTree(-4.7, -2.9));
+  scene.add(createTree(4.9, -2.6));
+  scene.add(createTree(-8.2, 1.4));
+  scene.add(createTree(8.1, 1));
 
   const stand = createStand();
   scene.add(stand.root);
@@ -995,7 +902,7 @@ export const createLemonsvilleScene = (
   for (const mesh of cupInventory.meshes) scene.add(mesh);
   canvas.dataset["cupVisualStyle"] = "original-svg-3d";
   canvas.dataset["characterRigStyle"] = "articulated-joints-face";
-  canvas.dataset["neighborhoodDetail"] = "expanded-streets-houses-vegetation";
+  canvas.dataset["neighborhoodDetail"] = "loading";
   canvas.dataset["cameraMotion"] = "stand-hold-remaining-closeup";
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
@@ -1081,6 +988,17 @@ export const createLemonsvilleScene = (
   const render = (): void => {
     renderer.render(scene, camera);
   };
+
+  void import("./neighborhood.js")
+    .then(({ populateNeighborhood }) => {
+      if (disposed) return;
+      populateNeighborhood(scene);
+      canvas.dataset["neighborhoodDetail"] = "expanded-streets-houses-vegetation";
+      render();
+    })
+    .catch(() => {
+      if (!disposed) canvas.dataset["neighborhoodDetail"] = "core";
+    });
 
   const positionStaticPedestrians = (): void => {
     if (state.phase === "forecast") {
