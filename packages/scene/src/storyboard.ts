@@ -1,5 +1,7 @@
 export type StreetDirection = -1 | 1;
 
+export const BUYER_POOL_SIZE = 192 as const;
+
 export type BuyerPhase =
   | "inactive"
   | "approaching"
