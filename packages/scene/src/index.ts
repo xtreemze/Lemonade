@@ -450,7 +450,7 @@ const createLemon = (index: number): Group => {
 
   const column = index % 4;
   const row = Math.floor(index / 4);
-  lemon.position.set(-0.9 + column * 0.6, 2.75 + row * 0.5, 0.55);
+  lemon.position.set(-0.75 + column * 0.5, 1.5 + row * 0.32, 0.58);
   return lemon;
 };
 
@@ -550,6 +550,7 @@ export const createLemonsvilleScene = (
   canvas.dataset["neighborhoodDetail"] = "loading";
   canvas.dataset["worldScale"] = "kiosk-houses-mature-vegetation";
   canvas.dataset["crowdModel"] = "routed-separated-grounded";
+  canvas.dataset["groundContact"] = "height-aware-clearance";
   canvas.dataset["ambientLife"] = "loading";
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
@@ -725,20 +726,25 @@ export const createLemonsvilleScene = (
 
     const visibleCount = Math.min(
       customers.length,
-      Math.max(6, storyboard.passersBy.length),
+      Math.max(6, Math.min(18, storyboard.passersBy.length)),
+    );
+    const poses = crowdPosesAt(
+      storyboard.passersBy,
+      visibleCount,
+      0,
+      Math.max(1, storyboard.durationMs),
     );
     customers.forEach((customer, index) => {
-      customer.root.visible = index < visibleCount;
+      const pose = poses[index];
+      customer.root.visible = pose !== undefined;
       resetPersonPose(customer);
-      if (!customer.root.visible) return;
-      const row = index % 2;
-      const progress = visibleCount <= 1 ? 0.5 : index / (visibleCount - 1);
+      if (pose === undefined) return;
       customer.root.position.set(
-        -7.2 + progress * 14.4,
+        pose.x,
         crowdGroundClearance(customer.profile.heightScale),
-        3.65 + row * 0.7,
+        pose.z,
       );
-      customer.root.rotation.y = index % 2 === 0 ? Math.PI / 2 : -Math.PI / 2;
+      customer.root.rotation.y = pose.heading;
     });
     for (const buyer of buyers) {
       resetPersonPose(buyer);
