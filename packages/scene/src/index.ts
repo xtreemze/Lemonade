@@ -492,21 +492,14 @@ export const createLemonsvilleScene = (
     scene.add(buyer.root);
   }
 
-  const updateBuyerOpacity = (buyer: PersonRig, elapsedMs: number): void => {
+  const updateBuyerOpacity = (buyer: PersonRig): void => {
     const fade = buyerFadeState.get(buyer);
     if (!fade) return;
 
-    if (fade.opacity !== fade.targetOpacity) {
-      const duration = 300;
-      const progress = Math.min(1, (elapsedMs % duration) / duration);
-      const direction = fade.targetOpacity > fade.opacity ? 1 : -1;
-      fade.opacity = Math.max(0, Math.min(1, fade.opacity + direction * 0.016));
-    }
-
     buyer.root.traverse((node) => {
       if (node instanceof Mesh && node.material instanceof MeshStandardMaterial) {
-        node.material.opacity = fade.opacity;
-        node.material.transparent = fade.opacity < 1;
+        node.material.opacity = fade.targetOpacity;
+        node.material.transparent = false;
       }
     });
   };
@@ -800,7 +793,7 @@ export const createLemonsvilleScene = (
       const fade = buyerFadeState.get(buyer);
       if (fade) fade.targetOpacity = 0;
       resetPersonPose(buyer);
-      updateBuyerOpacity(buyer, elapsedMs);
+      updateBuyerOpacity(buyer);
     }
     if (state.phase !== "simulation") return 0;
 
@@ -859,7 +852,7 @@ export const createLemonsvilleScene = (
       const fade = buyerFadeState.get(buyer);
       if (fade) {
         fade.targetOpacity = 1;
-        updateBuyerOpacity(buyer, elapsedMs);
+        updateBuyerOpacity(buyer);
       }
       buyer.root.visible = true;
       buyer.root.position.set(x, personGroundY(buyer), z);
