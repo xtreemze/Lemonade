@@ -69,11 +69,11 @@ export const ambientPopulationFor = (
   }
   switch (weather) {
     case "sunny":
-      return Object.freeze({ pets: 2, wildlife: 4, bicycles: 3, vehicles: 4 });
+      return Object.freeze({ pets: 2, wildlife: 4, bicycles: 2, vehicles: 1 });
     case "hot-and-dry":
-      return Object.freeze({ pets: 1, wildlife: 1, bicycles: 2, vehicles: 3 });
+      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 1, vehicles: 1 });
     case "cloudy":
-      return Object.freeze({ pets: 1, wildlife: 1, bicycles: 2, vehicles: 3 });
+      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 1, vehicles: 1 });
     case "thunderstorm":
       return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 3 });
   }
