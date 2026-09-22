@@ -434,7 +434,7 @@ export type SellerGestureApplier = (
   rightArm: Group,
   progress: number,
   confidence: number,
-) => number;
+) => void;
 
 export const applySellerConfidenceGesture: SellerGestureApplier = (
   torso,
@@ -443,7 +443,7 @@ export const applySellerConfidenceGesture: SellerGestureApplier = (
   rightArm,
   progress,
   confidence,
-): number => {
+): void => {
   const closeup = Math.min(1, Math.max(0, progress));
   const gestureProgress = Math.min(
     1,
@@ -466,7 +466,6 @@ export const applySellerConfidenceGesture: SellerGestureApplier = (
   rightArm.rotation.x += armLift;
   leftArm.rotation.z = -armSpread;
   rightArm.rotation.z = armSpread;
-  return strength;
 };
 
 export const decorateSellerExpression = (
