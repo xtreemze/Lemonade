@@ -7,10 +7,12 @@ const viewports: readonly MobileViewport[] = Object.freeze([
   { name: "standard portrait", width: 360, height: 740 },
   { name: "tall portrait", width: 390, height: 844 },
   { name: "large portrait", width: 430, height: 932 },
+  { name: "tablet portrait", width: 768, height: 1024 },
   { name: "compact landscape", width: 568, height: 320 },
   { name: "landscape", width: 740, height: 360 },
   { name: "wide phone landscape", width: 844, height: 390 },
   { name: "large phone landscape", width: 932, height: 430 },
+  { name: "tablet landscape", width: 1024, height: 768 },
 ]);
 
 const expectViewportContract = async (
