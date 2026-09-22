@@ -218,8 +218,8 @@ describe("unified neighborhood mobility", () => {
 
     const access = residentialAccessLayout(property, MOBILITY_SEED);
     const crossingObstacle = {
-      x: drivewayX,
-      z: access.sidewalkCenterZ,
+      x: access.drivewaySidewalkX,
+      z: access.drivewaySidewalkZ,
     };
     const crossingSamples = Array.from({ length: 17 }, (_, index) => {
       const t = 0.28 + (index / 16) * 0.139;
