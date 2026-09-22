@@ -131,142 +131,10 @@ h2 {
 .stand-stage {
   position: relative;
   overflow: hidden;
-  min-height: max(300px, 40dvh);
   border: 2px solid #211d14;
   background: linear-gradient(180deg, #7bc6d6 0 58%, #9cb976 58% 76%, #b99a71 76%);
   box-shadow: 8px 8px 0 #211d14;
   isolation: isolate;
-}
-
-.weather-cloudy,
-.weather-thunderstorm {
-  width: 105px;
-  height: 48px;
-  border-radius: 30px;
-  background: #c6d1cf;
-}
-
-.weather-cloudy::before,
-.weather-thunderstorm::before {
-  position: absolute;
-  top: -26px;
-  left: 18px;
-  width: 52px;
-  height: 52px;
-  border: 3px solid #211d14;
-  border-bottom: 0;
-  border-radius: 50% 50% 0 0;
-  background: inherit;
-  content: "";
-}
-
-.weather-hot-and-dry {
-  width: 82px;
-  height: 82px;
-  background: #ffb633;
-  box-shadow: 0 0 0 12px rgb(249 204 59 / 30%);
-}
-
-.weather-thunderstorm {
-  background: #657786;
-}
-
-.weather-thunderstorm::after {
-  position: absolute;
-  top: 38px;
-  left: 52px;
-  width: 14px;
-  height: 42px;
-  background: #f8d346;
-  clip-path: polygon(45% 0, 100% 0, 62% 40%, 92% 40%, 20% 100%, 38% 55%, 0 55%);
-  content: "";
-}
-
-.street {
-  position: absolute;
-  inset: auto 5% 20px;
-  display: flex;
-  align-items: end;
-  justify-content: center;
-  z-index: 1;
-}
-
-.house,
-.stand {
-  position: relative;
-  border: 3px solid #211d14;
-  box-shadow: 7px 7px 0 rgb(33 29 20 / 20%);
-}
-
-.house {
-  display: none;
-  width: 150px;
-  height: 112px;
-  background: #e37a58;
-  z-index: 5;
-}
-
-.house::before {
-  position: absolute;
-  top: -63px;
-  left: -10px;
-  width: 166px;
-  height: 64px;
-  border: 3px solid #211d14;
-  background: #8c4d4a;
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
-  content: "";
-}
-
-.house::after {
-  position: absolute;
-  bottom: 0;
-  left: 56px;
-  width: 38px;
-  height: 68px;
-  border: 3px solid #211d14;
-  border-bottom: 0;
-  background: #5d7d7a;
-  content: "";
-}
-
-.house-right {
-  transform: scale(0.84);
-  background: #d7b068;
-}
-
-.stand {
-  width: min(78vw, 330px);
-  min-width: 0;
-  height: 185px;
-  background: #f0d285;
-  z-index: 10;
-}
-
-.awning {
-  position: absolute;
-  top: -35px;
-  left: -18px;
-  width: calc(100% + 36px);
-  height: 48px;
-  border: 3px solid #211d14;
-  background: repeating-linear-gradient(90deg, #f7e8b8 0 36px, #e3a538 36px 72px);
-  transform: perspective(160px) rotateX(-12deg);
-}
-
-.counter {
-  position: absolute;
-  right: 14px;
-  bottom: 22px;
-  left: 14px;
-  padding: 12px 8px;
-  border: 3px solid #211d14;
-  background: #f8eab9;
-  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  font-size: clamp(1.1rem, 3.8vw, 2.4rem);
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  text-align: center;
 }
 
 .scene-equivalent {
@@ -319,16 +187,6 @@ h2 {
   justify-content: space-between;
 }
 
-.decision-control-heading {
-  grid-column: 1 / -1;
-  grid-row: 1;
-}
-
-.decision-control small {
-  grid-column: 1;
-  grid-row: 2;
-}
-
 .decision-control .decision-exact {
   grid-column: 2;
   grid-row: 2;
@@ -342,6 +200,8 @@ h2 {
 
 .decision-control-heading {
   display: flex;
+  grid-column: 1 / -1;
+  grid-row: 1;
   align-items: end;
   justify-content: space-between;
   gap: 12px;
@@ -383,6 +243,8 @@ h2 {
 }
 
 .decision-control small {
+  grid-column: 1;
+  grid-row: 2;
   max-width: 35ch;
   color: #655f50;
 }
@@ -613,23 +475,6 @@ h2 {
     justify-content: space-between;
   }
 
-  .stand-stage {
-    min-height: max(350px, 45dvh);
-  }
-
-  .house {
-    display: block;
-  }
-
-  .street {
-    justify-content: space-between;
-  }
-
-  .stand {
-    width: min(330px, 44vw);
-    min-width: 230px;
-  }
-
   .decision-control {
     padding-block: 18px;
   }
@@ -664,22 +509,6 @@ h2 {
   --sun-right: 65%;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto;
-    transition-duration: 0.001ms;
-    animation-duration: 0.001ms;
-    animation-iteration-count: 1;
-  }
-
-  .weather-orb {
-    transition: none;
-  }
-}
-
-
 /* Mobile-first daily-loop invariant: every primary state owns the full dynamic viewport. */
 html:has(.game-shell[data-view="planning"]),
 html:has(.game-shell[data-view="report"]),
@@ -708,8 +537,6 @@ body:has(.game-shell[data-view="forecast"]) {
   width: 100%;
   height: 100dvh;
   min-width: 0;
-  min-height: 0;
-  max-width: none;
   max-height: 100dvh;
   margin: 0;
   overflow: hidden;
@@ -724,7 +551,6 @@ body:has(.game-shell[data-view="forecast"]) {
     max(10px, env(safe-area-inset-right))
     max(8px, env(safe-area-inset-bottom))
     max(10px, env(safe-area-inset-left));
-  overflow: hidden;
 }
 
 .game-shell[data-view="planning"] > .topline,
@@ -948,7 +774,6 @@ body:has(.game-shell[data-view="forecast"]) {
   letter-spacing: 0.03em;
   transform: translateX(-50%);
   cursor: pointer;
-  transition: transform 120ms ease-out;
   border-radius: 12px;
 }
 
@@ -967,7 +792,6 @@ body:has(.game-shell[data-view="forecast"]) {
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 200ms ease-out;
   margin-bottom: 8px;
   z-index: 50;
 }
@@ -983,7 +807,6 @@ body:has(.game-shell[data-view="forecast"]) {
   width: 88px;
   height: 88px;
   filter: drop-shadow(4px 4px 0 rgb(33 29 20 / 20%));
-  transition: transform 120ms ease-out, filter 120ms ease-out;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -996,7 +819,6 @@ body:has(.game-shell[data-view="forecast"]) {
 .game-shell[data-view="planning"] .simulation-button:focus-visible {
   outline: 3px solid #1d6d5d;
   outline-offset: 4px;
-  border-radius: 12px;
 }
 
 .game-shell[data-view="planning"] .simulation-button:disabled {
@@ -1007,7 +829,6 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .game-shell[data-view="planning"] .simulation-button:disabled .simulation-button-art {
   opacity: 0.72;
-  transform: none;
 }
 
 .game-shell[data-view="planning"] .simulation-button:active:not(:disabled) {
@@ -1093,7 +914,6 @@ body:has(.game-shell[data-view="forecast"]) {
     max(10px, env(safe-area-inset-right))
     max(8px, env(safe-area-inset-bottom))
     max(10px, env(safe-area-inset-left));
-  overflow: hidden;
 }
 
 .game-shell[data-view="report"] > .topline,
@@ -1459,7 +1279,6 @@ body:has(.game-shell[data-view="forecast"]) {
     max(10px, env(safe-area-inset-right))
     max(8px, env(safe-area-inset-bottom))
     max(10px, env(safe-area-inset-left));
-  overflow: hidden;
 }
 
 .game-shell[data-view="history"] > :not(#ledger-history-host):not(#history-next-button) {
@@ -1509,7 +1328,6 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .game-shell[data-view="simulation"] .stand-stage,
 .game-shell[data-view="forecast"] .stand-stage {
-  min-height: 100dvh;
   border: 0;
   box-shadow: none;
 }
@@ -1614,22 +1432,6 @@ body:has(.game-shell[data-view="forecast"]) {
 .game-shell[data-view="history"] .next-day-icon {
   width: 52px;
   height: 52px;
-  }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .game-shell[data-view="planning"] .simulation-button:hover:not(:disabled) {
-    transform: translateX(-50%) scale(1.035);
-    box-shadow: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .game-shell[data-view="planning"] .simulation-button,
-  .game-shell[data-view="planning"] .simulation-button::after,
-  .game-shell[data-view="planning"] .simulation-button-art {
-    transition: none;
-    animation: none;
   }
 }
 
