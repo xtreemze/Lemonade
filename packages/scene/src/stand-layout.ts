@@ -1,3 +1,5 @@
+import { LEMON_CENTER_Y, SELLER_Z } from "./stand-anchors.js";
+
 export type StandBoxSpec = Readonly<{
   size: readonly [number, number, number];
   position: readonly [number, number, number];
@@ -11,9 +13,6 @@ const box = (
 const counter = box([3.55, 0.14, 0.78], [0, 1.28, 0.32]);
 const canopy = box([3.45, 0.14, 0.82], [0, 2.72, 0.18]);
 const counterTopY = counter.position[1] + counter.size[1] / 2;
-
-export const SELLER_Z = -0.86;
-export const LEMON_CENTER_Y = counterTopY + 0.21;
 
 export const STAND_LAYOUT = Object.freeze({
   body: box([3.25, 1.18, 1.32], [0, 0.59, 0]),
