@@ -194,9 +194,9 @@ const makeProperty = (
 
 const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
   Object.freeze([
-    makeProperty(seed, 0, "west-end", -44.6, -7.1, 0.96, 0.035, false, 1),
-    makeProperty(seed, 1, "west-mid", -33.7, -8.4, 1.02, -0.045, false, 1),
-    makeProperty(seed, 2, "west-near", -24.0, -6.6, 0.92, 0.06, false, 1),
+    makeProperty(seed, 0, "west-end", -46, -7.1, 0.96, 0.035, false, -1),
+    makeProperty(seed, 1, "west-mid", -33, -8.4, 1.02, -0.045, false, 1),
+    makeProperty(seed, 2, "west-near", -20, -6.6, 0.92, 0.06, false, 1),
     Object.freeze({
       role: "stand-home",
       houseX: -4.7,
@@ -218,7 +218,7 @@ const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
       mailboxX: 11.9,
     }),
     makeProperty(seed, 5, "east-mid", 29.1, -6.8, 1.01, 0.025, false, -1),
-    makeProperty(seed, 6, "east-end", 41.5, -8.3, 0.94, -0.05, false, 1),
+    makeProperty(seed, 6, "east-end", 42, -8.3, 0.94, -0.05, false, 1),
   ]);
 
 const rowProperties = (
@@ -229,8 +229,15 @@ const rowProperties = (
   backFacing: boolean,
 ): readonly ResidentialPropertySpec[] =>
   Object.freeze(
-    xs.map((baseX, index) =>
-      makeProperty(
+    xs.map((baseX, index) => {
+      const leftGap =
+        index === 0 ? Number.POSITIVE_INFINITY : baseX - (xs[index - 1] ?? baseX);
+      const rightGap =
+        index === xs.length - 1
+          ? Number.POSITIVE_INFINITY
+          : (xs[index + 1] ?? baseX) - baseX;
+      const drivewaySide: -1 | 1 = leftGap >= rightGap ? -1 : 1;
+      return makeProperty(
         seed ^ rowSalt,
         index + 10,
         "row-" + String(rowSalt) + "-" + String(index),
@@ -239,9 +246,9 @@ const rowProperties = (
         0.94 + unit(seed, rowSalt + index * 3 + 1) * 0.1,
         signed(seed, rowSalt + index * 3 + 2) * 0.035,
         backFacing,
-        index % 2 === 0 ? -1 : 1,
-      ),
-    ),
+        drivewaySide,
+      );
+    }),
   );
 
 function baseExclusions(): ResidentialRect[] {
@@ -267,13 +274,13 @@ function baseExclusions(): ResidentialRect[] {
     maxZ: STREET_LAYOUT.farSidewalk.maxZ,
     role: "sidewalk",
   },
-  { minX: -51.2, maxX: -44.8, minZ: -86, maxZ: 42, role: "road" },
+  { minX: -61.2, maxX: -54.8, minZ: -86, maxZ: 42, role: "road" },
   { minX: -18.6, maxX: -12.4, minZ: -86, maxZ: 42, role: "road" },
   { minX: 15.4, maxX: 21.6, minZ: -86, maxZ: 42, role: "road" },
-  { minX: 48.8, maxX: 55.2, minZ: -86, maxZ: 42, role: "road" },
-  { minX: -120, maxX: 120, minZ: -17.9, maxZ: -13.1, role: "road" },
-  { minX: -120, maxX: 120, minZ: -20.1, maxZ: -18.1, role: "sidewalk" },
-  { minX: -120, maxX: 120, minZ: -12.9, maxZ: -10.9, role: "sidewalk" },
+  { minX: 54.8, maxX: 61.2, minZ: -86, maxZ: 42, role: "road" },
+  { minX: -120, maxX: 120, minZ: -19.4, maxZ: -14.6, role: "road" },
+  { minX: -120, maxX: 120, minZ: -21.6, maxZ: -19.6, role: "sidewalk" },
+  { minX: -120, maxX: 120, minZ: -14.4, maxZ: -12.4, role: "sidewalk" },
   { minX: -120, maxX: 120, minZ: -39.2, maxZ: -34.8, role: "road" },
   { minX: -120, maxX: 120, minZ: -41.4, maxZ: -39.4, role: "sidewalk" },
   { minX: -120, maxX: 120, minZ: -34.6, maxZ: -32.6, role: "sidewalk" },
