@@ -37,8 +37,8 @@ describe("crowd motion", () => {
 
     for (const pose of first) {
       expect(Math.abs(pose.x)).toBeLessThanOrEqual(12.8);
-      expect(pose.z).toBeGreaterThan(2.4);
-      expect(pose.z).toBeLessThan(5.1);
+      expect(pose.z).toBeGreaterThan(0.3);
+      expect(pose.z).toBeLessThan(2.05);
     }
 
     for (let left = 0; left < first.length; left += 1) {
@@ -91,27 +91,30 @@ describe("crowd motion", () => {
       "simulation",
       2_000,
       10_000,
-      [{ x: 2.4, z: 3.3, heading: Math.PI / 2 }],
+      [{ x: 2.4, z: 1.2, heading: Math.PI / 2 }],
     );
 
     const actor = (role: string) =>
       scene.children.find((child) => child.userData["sceneRole"] === role);
 
     expect(actor("ambient-pet")?.rotation.y).toBeCloseTo(0);
+    expect(actor("ambient-pet")?.position.z).toBeLessThan(2.1);
     expect(actor("ambient-bird")?.rotation.y).toBeCloseTo(0);
     expect(actor("ambient-bicycle")?.rotation.y).toBeCloseTo(Math.PI);
+    expect(actor("ambient-bicycle")?.position.z).toBeGreaterThan(2.1);
     expect(actor("ambient-vehicle")?.rotation.y).toBeCloseTo(0);
+    expect(actor("ambient-vehicle")?.position.z).toBeGreaterThan(2.1);
   });
 
   it("keeps pets behind and beside their walking owner", () => {
-    const owner = { x: 4, z: 3.4, heading: Math.PI / 2 };
+    const owner = { x: 4, z: 1.2, heading: Math.PI / 2 };
     const pet = petFollowerPose(owner, 0);
 
     expect(pet.x).toBeLessThan(owner.x);
     expect(Math.abs(pet.z - owner.z)).toBeLessThanOrEqual(0.3);
     expect(pet.heading).toBe(0);
 
-    const reverseOwner = { x: -2, z: 3.7, heading: -Math.PI / 2 };
+    const reverseOwner = { x: -2, z: 1.5, heading: -Math.PI / 2 };
     const reversePet = petFollowerPose(reverseOwner, 1);
     expect(reversePet.x).toBeGreaterThan(reverseOwner.x);
     expect(reversePet.heading).toBe(Math.PI);
