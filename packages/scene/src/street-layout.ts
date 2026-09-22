@@ -42,17 +42,27 @@ export type GardenSignPosition = Readonly<{
   rotationY: number;
 }>;
 
+const STAND_GARDEN_SIGN_COLUMNS = [
+  -13,
+  -11.8,
+  -10.6,
+  -9.7,
+  -6.8,
+  -5.6,
+  -4.4,
+  -3.2,
+  -2,
+] as const;
+
 export const gardenSignPosition = (index: number): GardenSignPosition => {
   const safeIndex = Math.max(0, Math.trunc(Number.isFinite(index) ? index : 0));
-  const side = safeIndex % 2 === 0 ? -1 : 1;
-  const slot = Math.floor(safeIndex / 2);
-  const column = slot % 5;
-  const row = Math.floor(slot / 5);
+  const column = safeIndex % STAND_GARDEN_SIGN_COLUMNS.length;
+  const row = Math.floor(safeIndex / STAND_GARDEN_SIGN_COLUMNS.length);
   return Object.freeze({
-    x: side * (3.8 + column * 1.35),
+    x: STAND_GARDEN_SIGN_COLUMNS[column] ?? -5.6,
     y: 0,
-    z: -1.05 - row * 1.9,
-    rotationY: side * 0.12,
+    z: -0.85 - row * 1.05,
+    rotationY: (safeIndex % 3 - 1) * 0.055,
   });
 };
 
