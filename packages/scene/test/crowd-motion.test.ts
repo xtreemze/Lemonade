@@ -5,7 +5,12 @@ import {
   petFollowPose,
   xTravelYaw,
 } from "../src/ambient-life.js";
-import { crowdGroundClearance, crowdPosesAt, walkingBodyLift } from "../src/crowd-motion.js";
+import {
+  createCrowdSimulation,
+  crowdGroundClearance,
+  crowdPosesAt,
+  walkingBodyLift,
+} from "../src/crowd-motion.js";
 import { STREET_LAYOUT, roadLaneZ } from "../src/street-layout.js";
 import type { PasserbyBeat } from "../src/storyboard.js";
 
@@ -68,6 +73,23 @@ describe("crowd motion", () => {
     expect(pet.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
     expect(pet.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
     expect(pet.yaw).toBeCloseTo(0);
+  });
+
+  it("uses a reusable spatial crowd sampler with travel-aligned gait speed", () => {
+    const simulation = createCrowdSimulation(beats, 12, 6_000);
+    const sample = simulation.sample(2_750);
+    const repeated = simulation.sample(2_750);
+
+    expect(repeated.poses).toEqual(sample.poses);
+    expect(sample.poses).toHaveLength(12);
+    expect(sample.neighborChecks).toBeLessThan(12 * 11 / 2);
+
+    for (const pose of sample.poses) {
+      expect(pose.worldSpeed).toBeGreaterThan(0);
+      expect(pose.pace).toBeGreaterThan(0);
+      const travelHeading = pose.heading > 0 ? Math.PI / 2 : -Math.PI / 2;
+      expect(Math.abs(pose.heading - travelHeading)).toBeLessThan(0.6);
+    }
   });
 
   it("provides enough ground clearance for adult and child seeded heights", () => {
