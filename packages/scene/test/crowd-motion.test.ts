@@ -159,6 +159,24 @@ describe("crowd motion", () => {
     }
   });
 
+  it("flies sunny-day birds across town in both street directions", () => {
+    const scene = new Scene();
+    const ambient = createAmbientLife(scene, 0x1ead2026, []);
+    ambient.update("sunny", "simulation", 2_000, 10_000);
+
+    const birds = scene.children.filter(
+      (object) => object.userData["sceneRole"] === "ambient-bird" && object.visible,
+    );
+    expect(birds).toHaveLength(4);
+    expect(birds.some((bird) => Math.abs(bird.rotation.y) < 0.01)).toBe(true);
+    expect(birds.some((bird) => Math.abs(Math.abs(bird.rotation.y) - Math.PI) < 0.01)).toBe(true);
+
+    ambient.update("cloudy", "simulation", 2_000, 10_000);
+    expect(
+      birds.every((bird) => !bird.visible),
+    ).toBe(true);
+  });
+
   it("uses a reusable spatial crowd sampler with travel-aligned gait speed", () => {
     const simulation = createCrowdSimulation(beats, 12, 6_000);
     const sample = simulation.sample(2_750);
@@ -204,10 +222,12 @@ describe("crowd motion", () => {
   it("reduces exposed street life in storms without changing simulation population math", () => {
     expect(ambientPopulationFor("sunny", "simulation")).toEqual({
       pets: 2,
-      wildlife: 3,
+      wildlife: 4,
       bicycles: 2,
       vehicles: 1,
     });
+    expect(ambientPopulationFor("cloudy", "simulation").wildlife).toBe(0);
+    expect(ambientPopulationFor("hot-and-dry", "simulation").wildlife).toBe(0);
     expect(ambientPopulationFor("thunderstorm", "simulation")).toEqual({
       pets: 0,
       wildlife: 0,
