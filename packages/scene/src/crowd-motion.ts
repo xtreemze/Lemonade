@@ -274,10 +274,10 @@ const basePose = (
     throw new Error("crowd motion requires generated sidewalk routes");
   }
 
-  const sideEntryOffset = Math.min(
-    route.total * 0.42,
-    10 + deterministicUnit(actorIndex, 29) * 6,
-  );
+  const requestedEntryOffset = beat.seesAdvertisement
+    ? 10 + deterministicUnit(actorIndex, 29) * 6
+    : 38 + deterministicUnit(actorIndex, 29) * 18;
+  const sideEntryOffset = Math.min(route.total * 0.42, requestedEntryOffset);
   const spawnDistance =
     beat.direction === -1
       ? Math.max(0, route.total / 2 - sideEntryOffset)
