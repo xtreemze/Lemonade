@@ -341,13 +341,35 @@ h2 {
 }
 
 .decision-control {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
   gap: 12px;
   padding: 20px 0;
   border-top: 2px solid #d9cda9;
   flex: 1;
   justify-content: space-between;
+}
+
+.decision-control-heading {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.decision-control small {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.decision-control .decision-exact {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
+}
+
+.decision-control .game-slider {
+  grid-column: 1 / -1;
+  grid-row: 3;
 }
 
 .decision-control-heading {
@@ -372,7 +394,7 @@ h2 {
 
 .decision-control strong::before {
   content: '';
-  display: inline-block;
+  display: none;
   width: 28px;
   height: 28px;
   background-size: contain;
