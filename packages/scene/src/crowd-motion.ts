@@ -83,17 +83,18 @@ const basePose = (
   });
 };
 
-type MutableCrowdPose = {
+interface MutableCrowdPose {
   x: number;
   z: number;
   heading: number;
   pace: number;
   worldSpeed: number;
   seesAdvertisement: boolean;
-};
+}
 
 const cellCoordinate = (value: number): number => Math.floor(value / CROWD_CELL_SIZE);
-const cellKey = (x: number, z: number): string => `${cellCoordinate(x)}:${cellCoordinate(z)}`;
+const cellKey = (x: number, z: number): string =>
+  String(cellCoordinate(x)) + ":" + String(cellCoordinate(z));
 
 const separateCrowd = (poses: MutableCrowdPose[]): number => {
   const cells = new Map<string, number[]>();
@@ -113,7 +114,9 @@ const separateCrowd = (poses: MutableCrowdPose[]): number => {
 
     for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
       for (let offsetZ = -1; offsetZ <= 1; offsetZ += 1) {
-        const bucket = cells.get(`${cellX + offsetX}:${cellZ + offsetZ}`);
+        const bucket = cells.get(
+          String(cellX + offsetX) + ":" + String(cellZ + offsetZ),
+        );
         if (bucket === undefined) continue;
         for (const right of bucket) {
           if (right <= left) continue;
@@ -224,9 +227,7 @@ export const initializeStreetMotion = (
       cachedDurationMs = safeDurationMs;
       cachedSimulation = createCrowdSimulation(beats, safeActorCount, safeDurationMs);
     }
-    const simulation = cachedSimulation;
-    if (simulation === null) return Object.freeze([]);
-    return simulation.sample(elapsedMs).poses;
+    return cachedSimulation.sample(elapsedMs).poses;
   };
 
   return Object.freeze({
