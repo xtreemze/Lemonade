@@ -312,10 +312,8 @@ const propertyDoorPoint = (
 ): ResidentialPoint => {
   const access = residentialAccessLayout(property, seed);
   return Object.freeze({
-    x: property.houseX,
-    z:
-      property.houseZ +
-      access.frontDirection * Math.max(2.35, Math.abs(access.pathCenterZ - property.houseZ) * 0.72),
+    x: access.doorX,
+    z: access.doorZ,
   });
 };
 
@@ -324,7 +322,10 @@ const propertySidewalkPoint = (
   seed: number,
 ): ResidentialPoint => {
   const access = residentialAccessLayout(property, seed);
-  return Object.freeze({ x: property.houseX, z: access.sidewalkCenterZ });
+  return Object.freeze({
+    x: access.pathCenterX,
+    z: access.sidewalkCenterZ,
+  });
 };
 
 const residentRoute = (
@@ -337,9 +338,10 @@ const residentRoute = (
   const sidewalk = propertySidewalkPoint(property, seed);
   return makeRoute("resident:" + property.role, [
     door,
-    { x: property.houseX, z: path.pathCenterZ },
+    { x: path.entryX, z: path.entryZ },
+    { x: path.pathCenterX, z: path.pathCenterZ },
     sidewalk,
-    { x: property.houseX + direction * 12, z: sidewalk.z },
+    { x: sidewalk.x + direction * 12, z: sidewalk.z },
   ]);
 };
 
@@ -689,7 +691,7 @@ export const createNeighborhoodMobilitySystem = (
           });
           const parkPoint = Object.freeze({
             x: drivewayProperty.drivewayX,
-            z: access.drivewayCenterZ,
+            z: access.parkingZ,
           });
           let vehiclePoint = roadPoint;
           let vehicleYaw = 0;
@@ -750,8 +752,8 @@ export const createNeighborhoodMobilitySystem = (
           const driverRoute = makeRoute("resident-driver", [
             parkPoint,
             Object.freeze({
-              x: drivewayProperty.houseX,
-              z: access.pathCenterZ,
+              x: access.entryX,
+              z: access.entryZ,
             }),
             propertyDoorPoint(drivewayProperty, safeSeed),
           ]);
