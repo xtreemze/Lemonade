@@ -6,7 +6,14 @@ import {
   populateNeighborhood,
   weatherWindStrength,
 } from "../src/neighborhood.js";
+import {
+  DEFAULT_RESIDENTIAL_SEED,
+  generateResidentialLayout,
+  residentialFootprintIntersectsHardscape,
+  residentialPointIsBlocked,
+} from "../src/residential-layout.js";
 import { STAND_LAYOUT } from "../src/stand-layout.js";
+import { gardenSignPosition, STREET_LAYOUT } from "../src/street-layout.js";
 
 describe("neighborhood world scale", () => {
   it("extends the world with LOD scenery beyond the cinematic camera envelope", () => {
@@ -59,6 +66,78 @@ describe("neighborhood world scale", () => {
     expect(flowerCount).toBe(stats.flowers);
     expect(treeVariants.size).toBeGreaterThan(8);
     expect(shrubVariants.size).toBeGreaterThan(4);
+  });
+
+  it("keeps rendered static scenery and signs off roads, sidewalks, and driveways", () => {
+    const layout = generateResidentialLayout(DEFAULT_RESIDENTIAL_SEED);
+    const scene = new Scene();
+    populateNeighborhood(scene, DEFAULT_RESIDENTIAL_SEED);
+
+    const checkedRoles = new Set([
+      "procedural-tree",
+      "procedural-shrub",
+      "garden-flower",
+      "mailbox",
+      "fence",
+    ]);
+    let checkedScenery = 0;
+
+    scene.traverse((object) => {
+      const role = object.userData["sceneRole"];
+      if (typeof role !== "string" || !checkedRoles.has(role)) return;
+
+      const halfWidth = object.userData["clearanceHalfWidth"];
+      const halfDepth = object.userData["clearanceHalfDepth"];
+      if (typeof halfWidth === "number" && typeof halfDepth === "number") {
+        expect(
+          residentialFootprintIntersectsHardscape(
+            { x: object.position.x, z: object.position.z },
+            layout,
+            halfWidth,
+            halfDepth,
+          ),
+        ).toBe(false);
+      } else {
+        const radius =
+          typeof object.userData["clearanceRadius"] === "number"
+            ? object.userData["clearanceRadius"]
+            : 0;
+        expect(
+          residentialFootprintIntersectsHardscape(
+            { x: object.position.x, z: object.position.z },
+            layout,
+            radius,
+            radius,
+          ),
+        ).toBe(false);
+
+        if (role === "procedural-tree") {
+          expect(
+            residentialPointIsBlocked(
+              { x: object.position.x, z: object.position.z },
+              layout,
+              radius,
+            ),
+          ).toBe(false);
+        }
+      }
+      checkedScenery += 1;
+    });
+
+    expect(checkedScenery).toBeGreaterThanOrEqual(80);
+
+    for (let index = 0; index < 40; index += 1) {
+      const sign = gardenSignPosition(index);
+      expect(sign.z).toBeLessThan(STREET_LAYOUT.nearSidewalk.minZ);
+      expect(
+        residentialFootprintIntersectsHardscape(
+          { x: sign.x, z: sign.z },
+          layout,
+          0.48,
+          0.12,
+        ),
+      ).toBe(false);
+    }
   });
 
   it("makes storm wind materially stronger than ordinary weather", () => {
