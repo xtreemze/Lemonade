@@ -994,6 +994,9 @@ export const createLemonsvilleScene = (
   const cupInventory = createCupInventory();
   for (const mesh of cupInventory.meshes) scene.add(mesh);
   canvas.dataset["cupVisualStyle"] = "original-svg-3d";
+  canvas.dataset["characterRigStyle"] = "articulated-joints-face";
+  canvas.dataset["neighborhoodDetail"] = "expanded-streets-houses-vegetation";
+  canvas.dataset["cameraMotion"] = "stand-hold-remaining-closeup";
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
   for (const lemon of lemons) scene.add(lemon);
@@ -1307,9 +1310,11 @@ export const createLemonsvilleScene = (
     animateSeller(seconds, elapsedMs);
 
     cupInventory.setCount(
-      state.phase === "simulation"
-        ? remainingCupsAt(storyboard, elapsedMs)
-        : storyboard.prepared,
+      state.phase === "forecast"
+        ? 0
+        : state.phase === "simulation"
+          ? remainingCupsAt(storyboard, elapsedMs)
+          : storyboard.prepared,
     );
 
     signs.forEach((sign, index) => {
