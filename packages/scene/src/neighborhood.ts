@@ -13,6 +13,7 @@ import {
 import {
   DEFAULT_RESIDENTIAL_SEED,
   generateResidentialLayout,
+  residentialAccessLayout,
   residentialFootprintIntersectsHardscape,
   type ResidentialPropertySpec,
 } from "./residential-layout.js";
@@ -572,14 +573,14 @@ export const populateNeighborhood = (
     ...layout.outerProperties,
   ];
   for (const property of allProperties) {
-    const frontDirection = Math.cos(property.rotationY) >= 0 ? 1 : -1;
+    const access = residentialAccessLayout(property);
     if (property.drivewayX !== null) {
       road(
         scene,
         WORLD_SCALE.street.drivewayWidth,
-        7.2,
+        access.drivewayDepth,
         property.drivewayX,
-        property.houseZ + frontDirection * 4.15,
+        access.drivewayCenterZ,
         0xc9b995,
         0.019,
         "driveway",
@@ -587,9 +588,9 @@ export const populateNeighborhood = (
       road(
         scene,
         1.04,
-        4,
+        access.pathDepth,
         property.houseX,
-        property.houseZ + frontDirection * 5.65,
+        access.pathCenterZ,
         0xd8c9aa,
         0.021,
         "front-path",
