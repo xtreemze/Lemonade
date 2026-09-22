@@ -774,7 +774,7 @@ export const createLemonsvilleScene = (
       if (buyer === undefined) continue;
 
       const streetX = sale.direction === -1 ? -2.6 : 2.6;
-      const exitX = -streetX;
+      const exitX = sale.direction === -1 ? 1.9 : -1.9;
       const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
       const counterZ = 1.22;
