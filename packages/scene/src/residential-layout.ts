@@ -417,6 +417,79 @@ export const residentialAccessLayout = (
   });
 };
 
+const drivewayRectForProperty = (
+  property: ResidentialPropertySpec,
+  drivewayX: number,
+): ResidentialRect => {
+  const access = residentialAccessLayout(property);
+  const halfDepth = access.drivewayDepth / 2;
+  return Object.freeze({
+    minX: drivewayX - DRIVEWAY_HALF_WIDTH,
+    maxX: drivewayX + DRIVEWAY_HALF_WIDTH,
+    minZ: access.drivewayCenterZ - halfDepth,
+    maxZ: access.drivewayCenterZ + halfDepth,
+    role: "driveway",
+  });
+};
+
+const rectsHaveClearance = (
+  left: ResidentialRect,
+  right: ResidentialRect,
+  clearance = 0.25,
+): boolean =>
+  left.maxX + clearance < right.minX ||
+  left.minX - clearance > right.maxX ||
+  left.maxZ + clearance < right.minZ ||
+  left.minZ - clearance > right.maxZ;
+
+const resolveGeneratedAccess = (
+  properties: readonly ResidentialPropertySpec[],
+): readonly ResidentialPropertySpec[] => {
+  const occupied: ResidentialRect[] = [];
+  const resolved = properties.map((property) => {
+    if (property.drivewayX === null) return property;
+
+    const preferredSide: -1 | 1 =
+      property.drivewayX < property.houseX ? -1 : 1;
+    const baseDistance = Math.abs(property.drivewayX - property.houseX);
+    let drivewayX: number | null = null;
+
+    for (let step = 0; step <= 16 && drivewayX === null; step += 1) {
+      const distance = baseDistance + step * 0.42;
+      for (const side of [preferredSide, -preferredSide] as const) {
+        const candidateX = property.houseX + side * distance;
+        const candidateRect = drivewayRectForProperty(property, candidateX);
+        const clearsHouses = properties.every((other) => {
+          const footprint = propertyFootprint(other);
+          return !footprintIntersectsRect(
+            candidateRect,
+            { x: other.houseX, z: other.houseZ },
+            footprint.halfWidth,
+            footprint.halfDepth,
+          );
+        });
+        if (!clearsHouses) continue;
+        if (!occupied.every((existing) => rectsHaveClearance(candidateRect, existing))) {
+          continue;
+        }
+        drivewayX = candidateX;
+        occupied.push(candidateRect);
+        break;
+      }
+    }
+
+    if (drivewayX === null) {
+      throw new Error("unable to place generated driveway clear of residential footprints");
+    }
+    return Object.freeze({
+      ...property,
+      drivewayX,
+      mailboxX: null,
+    });
+  });
+  return Object.freeze(resolved);
+};
+
 const accessExclusions = (
   properties: readonly ResidentialPropertySpec[],
 ): ResidentialRect[] =>
@@ -549,21 +622,25 @@ const generateFlowers = (
 export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): ResidentialLayout => {
   const safeSeed = Number.isFinite(seed) ? Math.trunc(seed) >>> 0 : DEFAULT_RESIDENTIAL_SEED;
   const front = frontProperties(safeSeed);
-  const middle = rowProperties(
-    safeSeed,
-    1_100,
-    -26,
-    [-46, -35, -24.5, -9.1, 4, 11.4, 29.7, 41.7],
-    true,
+  const middle = resolveGeneratedAccess(
+    rowProperties(
+      safeSeed,
+      1_100,
+      -26,
+      [-46, -35, -24.5, -9.1, 4, 11.4, 29.7, 41.7],
+      true,
+    ),
   );
-  const back = rowProperties(
-    safeSeed,
-    2_300,
-    -49.5,
-    [-47, -36.5, -25.4, -9.7, 3.5, 12, 28.5, 39.6, 49],
-    true,
+  const back = resolveGeneratedAccess(
+    rowProperties(
+      safeSeed,
+      2_300,
+      -49.5,
+      [-47, -36.5, -25.4, -9.7, 3.5, 12, 28.5, 39.6, 49],
+      true,
+    ),
   );
-  const outer = Object.freeze([
+  const outer = resolveGeneratedAccess([
     ...rowProperties(
       safeSeed,
       2_900,
