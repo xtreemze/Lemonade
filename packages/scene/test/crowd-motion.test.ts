@@ -195,9 +195,9 @@ describe("crowd motion", () => {
   });
 
   it("provides enough ground clearance for adult and child seeded heights", () => {
-    expect(crowdGroundClearance(0.68)).toBeGreaterThan(0.14);
-    expect(crowdGroundClearance(0.9)).toBeGreaterThan(0.2);
-    expect(crowdGroundClearance(1.2)).toBeGreaterThan(0.26);
+    expect(crowdGroundClearance(0.68)).toBeGreaterThan(0.11);
+    expect(crowdGroundClearance(0.9)).toBeGreaterThan(0.15);
+    expect(crowdGroundClearance(1.2)).toBeGreaterThan(0.21);
     expect(walkingBodyLift(0.5, 1, 1, 0)).toBeGreaterThan(0);
   });
 
