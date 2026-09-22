@@ -157,7 +157,6 @@ type PersonRig = Readonly<{
   walkPace: number;
   gaitAmplitude: number;
   profile: CharacterProfile;
-  index: number;
 }>;
 
 type SellerRig = Readonly<{
@@ -299,7 +298,6 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
     walkPace: profile.walkPace,
     gaitAmplitude: profile.gaitAmplitude,
     profile,
-    index,
   });
 };
 
@@ -496,7 +494,6 @@ export const createLemonsvilleScene = (
   scene.add(stand.root);
 
   const signs = Array.from({ length: 40 }, () => createSign());
-  let streetLayoutReady = false;
   let signTexture: CanvasTexture | null = null;
   let signPriceLabel = "";
   let disposed = false;
@@ -504,7 +501,6 @@ export const createLemonsvilleScene = (
   let signLabelModule:
     | Promise<Readonly<{ createPriceSignSurface(priceLabel: string): HTMLCanvasElement }>>
     | null = null;
-  for (const sign of signs) scene.add(sign.root);
   const signOrigins = signs.map((sign) => sign.root.rotation.z);
 
   const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) =>
@@ -567,12 +563,6 @@ export const createLemonsvilleScene = (
           seesAdvertisement: boolean;
         }>[];
         sidewalkLaneZ(lane: number): number;
-        gardenSignPosition(index: number): Readonly<{
-          x: number;
-          y: number;
-          z: number;
-          rotationY: number;
-        }>;
       }>
     | null = null;
   let ambientLife:
@@ -583,15 +573,6 @@ export const createLemonsvilleScene = (
           elapsedMs: number,
           durationMs: number,
           owners?: readonly Group[],
-        ): void;
-      }>
-    | null = null;
-  let neighborhoodWind:
-    | Readonly<{
-        updateNeighborhoodWind(
-          scene: Scene,
-          seconds: number,
-          weather: SceneWeather,
         ): void;
       }>
     | null = null;
@@ -666,11 +647,9 @@ export const createLemonsvilleScene = (
   };
 
   void import("./neighborhood.js")
-    .then(({ populateNeighborhood, updateNeighborhoodWind }) => {
+    .then(({ populateNeighborhood }) => {
       if (disposed) return;
       populateNeighborhood(scene);
-      neighborhoodWind = Object.freeze({ updateNeighborhoodWind });
-      neighborhoodWind.updateNeighborhoodWind(scene, 0, state.weather);
       render();
     })
     .catch(() => undefined);
@@ -686,17 +665,13 @@ export const createLemonsvilleScene = (
   void import("./crowd-motion.js")
     .then(({ crowdPosesAt, gardenSignPosition, sidewalkLaneZ }) => {
       if (disposed) return;
-      crowdMotion = Object.freeze({
-        crowdPosesAt,
-        gardenSignPosition,
-        sidewalkLaneZ,
-      });
+      crowdMotion = Object.freeze({ crowdPosesAt, sidewalkLaneZ });
       signs.forEach((sign, index) => {
         const position = gardenSignPosition(index);
         sign.root.position.set(position.x, position.y, position.z);
         sign.root.rotation.y = position.rotationY;
+        scene.add(sign.root);
       });
-      streetLayoutReady = true;
       resetAnimatedObjects();
       render();
     })
@@ -739,14 +714,22 @@ export const createLemonsvilleScene = (
   void import("./character-detail.js")
     .then(({ decorateCharacter, decorateSellerExpression }) => {
       if (disposed) return;
-      for (const person of [...customers, ...buyers]) {
-        decorateCharacter(person.root, person.head, person.profile, person.index);
-      }
+      customers.forEach((person, index) => {
+        decorateCharacter(person.root, person.head, person.profile, index);
+      });
+      buyers.forEach((person, index) => {
+        decorateCharacter(
+          person.root,
+          person.head,
+          person.profile,
+          index + PASSERBY_POOL_SIZE,
+        );
+      });
       decorateCharacter(
         seller.person.root,
         seller.person.head,
         seller.person.profile,
-        seller.person.index,
+        10_001,
         false,
       );
       decorateSellerExpression(seller.eyebrows, seller.mouth);
@@ -806,7 +789,7 @@ export const createLemonsvilleScene = (
       ? 0
       : Math.max(0, Math.min(signs.length, Math.trunc(state.visibleSigns)));
     signs.forEach((sign, index) => {
-      sign.root.visible = streetLayoutReady && index < signLimit;
+      sign.root.visible = index < signLimit;
     });
 
     const lemonLimit = forecast
@@ -833,7 +816,6 @@ export const createLemonsvilleScene = (
     for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
       weatherObjects[weather].position.x = weatherOrigins[weather];
     }
-    neighborhoodWind?.updateNeighborhoodWind(scene, 0, state.weather);
     ambientLife?.update(
       state.weather,
       state.phase,
@@ -990,7 +972,6 @@ export const createLemonsvilleScene = (
       storyboard.durationMs,
       petOwners,
     );
-    neighborhoodWind?.updateNeighborhoodWind(scene, seconds, state.weather);
 
     cupInventory?.setCount(
       state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs),
@@ -1067,7 +1048,6 @@ export const createLemonsvilleScene = (
       Math.max(1, state.durationMs),
       petOwners,
     );
-    neighborhoodWind?.updateNeighborhoodWind(scene, 0, state.weather);
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
     render();
