@@ -113,7 +113,7 @@ The non-negotiable mobile full-viewport contract is enforced with one command:
 pnpm verify:mobile
 ```
 
-This runs both the static policy check and the Playwright touch-device matrix. It verifies planning, simulation, report, and forecast as full-width/full-height touch-first states with no document scrolling, nested scrolling, clipped or offscreen visible flow content, and no primary interaction target below 44×44 CSS pixels. Compact portrait and landscape viewports are mandatory. Wide touch devices remain on the mobile contract; desktop layout release is capability-gated. The contract suite may not use skip, fixme, expected-failure, or source exemption markers.
+This runs both the static policy check and Playwright viewport matrices. It verifies planning, simulation, report, and forecast as full-width/full-height states with no document scrolling, nested scrolling, clipped or offscreen visible flow content, and no primary interaction target below 44×44 CSS pixels. Compact portrait/landscape touch viewports and fine-pointer desktop viewports are mandatory. Larger screens may recompose the interface, but they may never release the fullscreen/no-scroll shell. The contract suite may not use skip, fixme, expected-failure, or source exemption markers.
 
 The deterministic gameplay/balance certification report is:
 
@@ -133,7 +133,7 @@ Key rules:
 - No floating-point dollars in accounting; use integer cents/fixed precision.
 - No DOM, UI runtime, Three.js, Web Audio, storage, network I/O, ambient clocks, or Tauri imports in the simulation package.
 - Responsive CSS is mobile-first: narrow layouts are the default; larger layouts use ascending relative-unit `width >= …` capability queries.
-- Planning, simulation, report, and forecast must each occupy the complete dynamic viewport on mobile/touch devices. No document scroll, nested scroll, or vertically clipped flow content is permitted; oversized content must be split into sequential screens.
+- Planning, simulation, report, and forecast must each occupy the complete dynamic viewport on every device class. No document scroll, nested scroll, or vertically clipped flow content is permitted; oversized content must be split into sequential screens.
 - The primary mobile action is icon-led, accessible, horizontally centered, and safe-area-aware at the bottom edge.
 - Do not mask responsive defects with desktop-first `max-width` queries, `overflow-x: hidden`, legacy `100vh/100vw`, `transition: all`, or `!important`.
 - Gate hover-only decoration behind fine-pointer/hover capability queries so touch remains first-class.
