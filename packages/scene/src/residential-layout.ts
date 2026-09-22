@@ -767,6 +767,23 @@ const drivewayRectForProperty = (
   );
 };
 
+const drivewayExclusionRectForProperty = (
+  property: ResidentialPropertySpec,
+  drivewayX: number,
+  seed: number,
+): ResidentialRect => {
+  const access = residentialAccessLayout(
+    Object.freeze({ ...property, drivewayX }),
+    seed,
+  );
+  return orientedAccessRect(
+    "driveway",
+    { x: drivewayX, z: access.parkingZ },
+    { x: access.roadX, z: access.roadCenterZ },
+    WORLD_SCALE.vehicle.width,
+  );
+};
+
 const rectsHaveClearance = (
   left: ResidentialRect,
   right: ResidentialRect,
@@ -901,7 +918,7 @@ const accessExclusions = (
   properties.flatMap((property) => {
     if (property.drivewayX === null) return [];
     const access = residentialAccessLayout(property, seed);
-    const driveway = drivewayRectForProperty(property, property.drivewayX, seed);
+    const driveway = drivewayExclusionRectForProperty(property, property.drivewayX, seed);
     const path = orientedAccessRect(
       "path",
       { x: access.entryX, z: access.entryZ },
