@@ -1,6 +1,7 @@
 export * from "./advertising.js";
 export * from "./audience.js";
 export * from "./certification.js";
+export * from "./conversion.js";
 export * from "./environment.js";
 export * from "./finance.js";
 export * from "./legacy.js";
