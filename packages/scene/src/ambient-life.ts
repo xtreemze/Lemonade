@@ -70,7 +70,7 @@ export const ambientPopulationFor = (
     return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 2 });
   }
   if (phase !== "simulation") {
-    return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 0 });
+    return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 6 });
   }
   switch (weather) {
     case "sunny":
@@ -504,6 +504,30 @@ const applyMobilityRenderDetail = (
   });
 };
 
+const distributedTrafficPoses = (
+  poses: readonly MobilityPose[],
+  limit: number,
+): readonly MobilityPose[] => {
+  const safeLimit = Math.max(0, Math.trunc(limit));
+  if (safeLimit === 0) return Object.freeze([]);
+
+  const primaryByStreet = new Map<string, MobilityPose>();
+  const extras: MobilityPose[] = [];
+  for (const pose of poses) {
+    const match = /^traffic-vehicle:([^:]+):v\d+$/.exec(pose.id);
+    const streetId = match?.[1];
+    if (streetId !== undefined && !primaryByStreet.has(streetId)) {
+      primaryByStreet.set(streetId, pose);
+    } else {
+      extras.push(pose);
+    }
+  }
+
+  return Object.freeze(
+    [...primaryByStreet.values(), ...extras].slice(0, safeLimit),
+  );
+};
+
 const placeRig = (
   rig: TransportCharacterRig,
   pose: MobilityPose | undefined,
@@ -715,8 +739,8 @@ export const createAmbientLife = (
       );
       const vehiclePoses = [
         ...(residentVehicle === undefined ? [] : [residentVehicle]),
-        ...throughTraffic.slice(
-          0,
+        ...distributedTrafficPoses(
+          throughTraffic,
           Math.max(
             0,
             population.vehicles - (residentVehicle === undefined ? 0 : 1),
