@@ -14,6 +14,7 @@ export type CrowdPose = Readonly<{
   z: number;
   heading: number;
   pace: number;
+  travelDistance: number;
   seesAdvertisement: boolean;
 }>;
 
@@ -38,13 +39,17 @@ const basePose = (
 ): CrowdPose => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
   const count = Math.max(1, actorCount);
-  const speed = 0.76 + deterministicUnit(actorIndex, 17) * 0.34;
+  const speedMultiplier = 0.76 + deterministicUnit(actorIndex, 17) * 0.34;
   const phaseOffset = actorIndex / count + deterministicUnit(actorIndex, 29) * 0.11;
-  const progress = fract((Math.max(0, elapsedMs) / safeDuration) * speed + phaseOffset);
+  const unwrappedProgress =
+    (Math.max(0, elapsedMs) / safeDuration) * speedMultiplier + phaseOffset;
+  const progress = fract(unwrappedProgress);
   const direction = beat.direction;
   const startX = direction === -1 ? -12.5 : 12.5;
   const endX = -startX;
+  const pathDistance = Math.abs(endX - startX);
   const x = startX + (endX - startX) * progress;
+  const worldSpeed = pathDistance * speedMultiplier / (safeDuration / 1000);
 
   const laneBase = sidewalkLaneZ(beat.lane);
   const meander = Math.sin(progress * Math.PI * 2 + actorIndex * 0.83) * 0.045;
@@ -61,7 +66,8 @@ const basePose = (
     x: x + signPull,
     z,
     heading: baseHeading + attentionHeading,
-    pace: speed,
+    pace: worldSpeed,
+    travelDistance: pathDistance * unwrappedProgress,
     seesAdvertisement: beat.seesAdvertisement,
   });
 };
@@ -107,8 +113,42 @@ export const crowdPosesAt = (
   return Object.freeze(poses.map((pose) => Object.freeze(pose)));
 };
 
-export const walkingBodyLift = (seconds: number, pace: number, strideOffset: number): number => {
-  const cycle = seconds * 7.2 * pace + strideOffset;
+export const walkingCycleAtDistance = (
+  travelDistance: number,
+  heightScale: number,
+  walkPace: number,
+  strideOffset: number,
+): number => {
+  const safeHeight = Math.max(
+    0.62,
+    Math.min(1.2, Number.isFinite(heightScale) ? heightScale : 1),
+  );
+  const safePace = Math.max(
+    0.75,
+    Math.min(1.35, Number.isFinite(walkPace) ? walkPace : 1),
+  );
+  const cycleDistance = Math.max(0.55, (1.16 * safeHeight) / safePace);
+  return (
+    (Math.max(0, Number.isFinite(travelDistance) ? travelDistance : 0) /
+      cycleDistance) *
+      Math.PI *
+      2 +
+    strideOffset
+  );
+};
+
+export const walkingBodyLift = (
+  travelDistance: number,
+  heightScale: number,
+  walkPace: number,
+  strideOffset: number,
+): number => {
+  const cycle = walkingCycleAtDistance(
+    travelDistance,
+    heightScale,
+    walkPace,
+    strideOffset,
+  );
   const stance = Math.abs(Math.sin(cycle));
   return 0.018 + stance * 0.028;
 };
