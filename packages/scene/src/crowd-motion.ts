@@ -239,9 +239,11 @@ const basePose = (
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
   const count = Math.max(1, actorCount);
   const worldSpeed = 1.24 + deterministicUnit(actorIndex, 17) * 0.22;
-  const phaseOffset = actorIndex / count + deterministicUnit(actorIndex, 29) * 0.11;
   const elapsedSeconds =
-    Math.max(0, Math.min(elapsedMs, safeDuration * 8)) / 1_000;
+    Math.max(
+      0,
+      Math.min(elapsedMs - beat.startAtMs, safeDuration * 8),
+    ) / 1_000;
 
   const mainRoutes = routes.filter((route) => route.streetId === "main");
   const neighborhoodRoutes = routes.filter((route) => route.streetId !== "main");
@@ -267,9 +269,8 @@ const basePose = (
     throw new Error("crowd motion requires generated sidewalk routes");
   }
 
-  const startDistance = phaseOffset * route.total;
   const traveled = elapsedSeconds * worldSpeed;
-  const forwardDistance = startDistance + traveled;
+  const forwardDistance = traveled;
   if (forwardDistance > route.total) return undefined;
   const progress = forwardDistance / route.total;
   const routeDistance =
@@ -304,7 +305,7 @@ const basePose = (
     heading,
     pace: Math.max(0.88, Math.min(1.14, worldSpeed / 1.3)),
     worldSpeed,
-    travelDistance: startDistance + traveled,
+    travelDistance: traveled,
     side: route.side,
     routeId: route.id,
     seesAdvertisement: beat.seesAdvertisement,
