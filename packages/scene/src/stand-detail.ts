@@ -137,7 +137,7 @@ export const populateStand = (
       roughness: 0.28,
     }),
   );
-  pitcher.position.set(-0.58, STAND_LAYOUT.counterTopY + 0.25, 0.34);
+  pitcher.position.set(-0.66, STAND_LAYOUT.counterTopY + 0.25, 0.34);
   pitcher.userData["sceneRole"] = "stand-pitcher";
   detail.add(pitcher);
 
@@ -182,7 +182,7 @@ export const populateStand = (
     pitcherLemonade.visible = fraction > 0;
     pitcherLemonade.scale.y = Math.max(0.001, fraction);
     pitcherLemonade.position.set(
-      -0.58,
+      -0.66,
       JUICE_BOTTOM_Y + (JUICE_FULL_HEIGHT * fraction) / 2,
       0.34,
     );
