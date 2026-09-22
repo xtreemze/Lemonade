@@ -123,7 +123,7 @@ export const populateStand = (
 
   const basket = new Group();
   basket.userData["sceneRole"] = "stand-basket";
-  basket.position.set(-0.95, STAND_LAYOUT.counterTopY, 0.3);
+  basket.position.set(-0.91, STAND_LAYOUT.counterTopY, 0.3);
   addBox(basket, [0.54, 0.05, 0.36], [0, 0.025, 0], 0x9b6a3c);
   addBox(basket, [0.54, 0.09, 0.04], [0, 0.09, -0.16], 0xa77745);
   addBox(basket, [0.54, 0.09, 0.04], [0, 0.09, 0.16], 0xa77745);
@@ -139,7 +139,7 @@ export const populateStand = (
       roughness: 0.28,
     }),
   );
-  pitcher.position.set(-0.48, STAND_LAYOUT.counterTopY + 0.19, 0.3);
+  pitcher.position.set(-0.57, STAND_LAYOUT.counterTopY + 0.19, 0.3);
   pitcher.userData["sceneRole"] = "stand-pitcher";
   detail.add(pitcher);
 
@@ -184,7 +184,7 @@ export const populateStand = (
     pitcherLemonade.visible = fraction > 0;
     pitcherLemonade.scale.y = Math.max(0.001, fraction);
     pitcherLemonade.position.set(
-      -0.48,
+      -0.57,
       JUICE_BOTTOM_Y + (JUICE_FULL_HEIGHT * fraction) / 2,
       0.3,
     );
