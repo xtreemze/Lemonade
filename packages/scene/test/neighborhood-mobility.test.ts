@@ -305,7 +305,7 @@ describe("unified neighborhood mobility", () => {
           (actor) =>
             actor.kind === "mail-carrier" && actor.interaction !== "mailbox",
         )
-        .every((actor) => actor.speed === 1.42),
+        .every((actor) => actor.speed === 4.2),
     ).toBe(true);
     expect(
       mailDays.filter((sample) =>
