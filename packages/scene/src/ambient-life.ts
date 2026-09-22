@@ -33,6 +33,8 @@ export type AmbientPopulation = Readonly<{
   vehicles: number;
 }>;
 
+export type AmbientPopulationOverride = Readonly<Partial<AmbientPopulation>>;
+
 export type AmbientOwnerAnchor = Readonly<{
   x: number;
   z: number;
@@ -53,6 +55,7 @@ export type AmbientLifeController = Readonly<{
     durationMs: number,
     dayNumber?: number,
     focus?: Readonly<{ x: number; z: number }>,
+    populationOverride?: AmbientPopulationOverride,
   ): NeighborhoodMobilitySample;
 }>;
 
@@ -565,9 +568,16 @@ export const createAmbientLife = (
       durationMs,
       dayNumber = 1,
       focus = Object.freeze({ x: 0, z: 0 }),
+      populationOverride = Object.freeze({}),
     ): NeighborhoodMobilitySample {
       updateNeighborhoodWind(scene, elapsedMs / 1000, weather);
-      const population = ambientPopulationFor(weather, phase);
+      const basePopulation = ambientPopulationFor(weather, phase);
+      const population = Object.freeze({
+        pets: Math.max(0, Math.min(pets.length, Math.trunc(populationOverride.pets ?? basePopulation.pets))),
+        wildlife: Math.max(0, Math.min(wildlife.length, Math.trunc(populationOverride.wildlife ?? basePopulation.wildlife))),
+        bicycles: Math.max(0, Math.min(bicycles.length, Math.trunc(populationOverride.bicycles ?? basePopulation.bicycles))),
+        vehicles: Math.max(0, Math.min(vehicles.length, Math.trunc(populationOverride.vehicles ?? basePopulation.vehicles))),
+      });
       const pedestrianObstacles: Readonly<{ x: number; z: number }>[] = [];
 
       pets.slice(0, 2).forEach((pet, index) => {
