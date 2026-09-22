@@ -76,6 +76,28 @@ const streetStrip = (
   return mesh;
 };
 
+const accessStrip = (
+  scene: Scene,
+  length: number,
+  width: number,
+  x: number,
+  z: number,
+  rotationY: number,
+  color: number,
+  y: number,
+  role: string,
+): Mesh => {
+  const mesh = new Mesh(
+    new BoxGeometry(length, 0.018, width),
+    material(color),
+  );
+  mesh.position.set(x, y, z);
+  mesh.rotation.y = -rotationY;
+  mesh.userData["sceneRole"] = role;
+  scene.add(mesh);
+  return mesh;
+};
+
 const markWindResponsive = (root: Group, phase: number): Group => {
   root.userData["windResponsive"] = true;
   root.userData["windPhase"] = phase;
@@ -372,28 +394,53 @@ const flower = (
   phase: number,
 ): Group => {
   const root = new Group();
-  const stem = new Mesh(
-    new CylinderGeometry(0.018, 0.025, 0.38, 5),
-    material(0x4f8246),
-  );
-  stem.position.y = 0.19;
-  root.add(stem);
-  const center = new Mesh(new SphereGeometry(0.055, 7, 5), material(0xe1ad35));
-  center.position.y = 0.42;
-  root.add(center);
-  for (let index = 0; index < 5; index += 1) {
-    const angle = (index / 5) * Math.PI * 2;
-    const petal = new Mesh(new SphereGeometry(0.055, 7, 5), material(color));
-    petal.scale.set(1.3, 0.7, 0.55);
-    petal.position.set(
-      Math.cos(angle) * 0.075,
-      0.42 + Math.sin(angle) * 0.075,
-      0.012,
+  const offsets = [
+    [0, 0],
+    [-0.22, 0.06],
+    [0.21, -0.05],
+    [-0.11, 0.2],
+    [0.13, 0.19],
+  ] as const;
+
+  offsets.forEach(([offsetX, offsetZ], flowerIndex) => {
+    const cluster = new Group();
+    const height = 0.34 + (flowerIndex % 3) * 0.035;
+    const stem = new Mesh(
+      new CylinderGeometry(0.018, 0.025, height, 5),
+      material(0x4f8246),
     );
-    root.add(petal);
-  }
+    stem.position.y = height / 2;
+    cluster.add(stem);
+
+    const centerY = height + 0.035;
+    const center = new Mesh(
+      new SphereGeometry(0.055, 7, 5),
+      material(0xe1ad35),
+    );
+    center.position.y = centerY;
+    cluster.add(center);
+
+    for (let petalIndex = 0; petalIndex < 5; petalIndex += 1) {
+      const angle = (petalIndex / 5) * Math.PI * 2;
+      const petal = new Mesh(
+        new SphereGeometry(0.055, 7, 5),
+        material(color),
+      );
+      petal.scale.set(1.3, 0.7, 0.55);
+      petal.position.set(
+        Math.cos(angle) * 0.075,
+        centerY + Math.sin(angle) * 0.075,
+        0.012,
+      );
+      cluster.add(petal);
+    }
+    cluster.position.set(offsetX, 0, offsetZ);
+    root.add(cluster);
+  });
+
   root.position.set(x, 0, z);
   root.userData["sceneRole"] = "garden-flower";
+  root.userData["flowerCount"] = offsets.length;
   return markWindResponsive(root, phase);
 };
 
@@ -421,13 +468,6 @@ const mailbox = (x: number, z: number): Group => {
   root.rotation.y = -Math.PI / 2;
   root.userData["sceneRole"] = "mailbox";
   root.userData["streetFacingYaw"] = -Math.PI / 2;
-  return root;
-};
-
-const fenceRunDepth = (x: number, z: number, depth: number): Group => {
-  const root = fenceRun(0, 0, depth);
-  root.position.set(x, 0, z);
-  root.rotation.y = Math.PI / 2;
   return root;
 };
 
@@ -667,24 +707,26 @@ export const populateNeighborhood = (
     ...layout.outerProperties,
   ];
   for (const property of allProperties) {
-    const access = residentialAccessLayout(property);
+    const access = residentialAccessLayout(property, seed);
     if (property.drivewayX !== null) {
-      road(
+      accessStrip(
         scene,
+        access.drivewayLength,
         WORLD_SCALE.street.drivewayWidth,
-        access.drivewayDepth,
-        property.drivewayX,
+        access.drivewayCenterX,
         access.drivewayCenterZ,
+        access.drivewayRotationY,
         0xc9b995,
         0.019,
         "driveway",
       );
-      road(
+      accessStrip(
         scene,
-        1.04,
-        access.pathDepth,
-        property.houseX,
+        access.pathLength,
+        access.pathWidth,
+        access.pathCenterX,
         access.pathCenterZ,
+        access.pathRotationY,
         0xd8c9aa,
         0.021,
         "front-path",
@@ -771,15 +813,69 @@ export const populateNeighborhood = (
     yardDetails.push(mailbox(safeX, -0.3));
   }
 
-  addYardDetailIfClear(fenceRun(-5.7, -0.8, 2.9), 2.9 / 2, 0.06);
-  addYardDetailIfClear(fenceRunDepth(1.9, -3.0, 5.1), 0.06, 5.1 / 2);
-  addYardDetailIfClear(fenceRun(7.8, -0.65, 2.6), 2.6 / 2, 0.06);
-  addYardDetailIfClear(fenceRun(0, -4.7, 1.4), 1.4 / 2, 0.06);
+  const fencedProperties = [
+    ...layout.frontProperties,
+    ...layout.middleProperties,
+    ...layout.backProperties,
+  ];
+  for (const property of fencedProperties) {
+    const access = residentialAccessLayout(property, seed);
+    const fenceZ =
+      access.entryZ +
+      access.frontDirection *
+        Math.min(1.15, Math.max(0.72, access.pathDepth * 0.18));
+    const lotHalfWidth = Math.max(3.8, 4.45 * property.scale);
+    const gaps = [
+      Object.freeze({
+        minX: access.pathCenterX - Math.max(0.86, access.pathWidth / 2 + 0.34),
+        maxX: access.pathCenterX + Math.max(0.86, access.pathWidth / 2 + 0.34),
+      }),
+      ...(property.drivewayX === null
+        ? []
+        : [
+            Object.freeze({
+              minX:
+                property.drivewayX -
+                WORLD_SCALE.street.drivewayWidth / 2 -
+                0.28,
+              maxX:
+                property.drivewayX +
+                WORLD_SCALE.street.drivewayWidth / 2 +
+                0.28,
+            }),
+          ]),
+    ]
+      .map((gap) =>
+        Object.freeze({
+          minX: Math.max(property.houseX - lotHalfWidth, gap.minX),
+          maxX: Math.min(property.houseX + lotHalfWidth, gap.maxX),
+        }),
+      )
+      .filter((gap) => gap.maxX > gap.minX)
+      .sort((left, right) => left.minX - right.minX);
+
+    let cursor = property.houseX - lotHalfWidth;
+    for (const gap of gaps) {
+      const width = gap.minX - cursor;
+      if (width >= 1.15) {
+        const fence = fenceRun(cursor + width / 2, fenceZ, width);
+        fence.userData["propertyRole"] = property.role;
+        addYardDetailIfClear(fence, width / 2, 0.06);
+      }
+      cursor = Math.max(cursor, gap.maxX);
+    }
+    const finalWidth = property.houseX + lotHalfWidth - cursor;
+    if (finalWidth >= 1.15) {
+      const fence = fenceRun(cursor + finalWidth / 2, fenceZ, finalWidth);
+      fence.userData["propertyRole"] = property.role;
+      addYardDetailIfClear(fence, finalWidth / 2, 0.06);
+    }
+  }
   for (const detail of yardDetails) scene.add(detail);
 
   allProperties.forEach((property, index) => {
     if (index % 3 !== 0) return;
-    const access = residentialAccessLayout(property);
+    const access = residentialAccessLayout(property, seed);
     const lateral = index % 2 === 0 ? 2.15 : -2.15;
     const x = property.houseX + lateral;
     const z = access.pathCenterZ;
@@ -798,35 +894,45 @@ export const populateNeighborhood = (
 
   layout.trees.forEach((planting, index) => {
     const color = TREE_PALETTE[planting.paletteIndex] ?? TREE_PALETTE[0];
-    scene.add(
-      treeLod(
-        planting.x,
-        planting.z,
-        planting.scale,
-        color,
-        index * 0.71,
-        seed ^ Math.imul(index + 1, 0x45d9f3b),
-      ),
+    const tree = treeLod(
+      planting.x,
+      planting.z,
+      planting.scale,
+      color,
+      index * 0.71,
+      seed ^ Math.imul(index + 1, 0x45d9f3b),
     );
+    tree.userData["propertyRole"] = planting.propertyRole;
+    tree.userData["yardZone"] = planting.yardZone;
+    scene.add(tree);
   });
 
   layout.shrubs.forEach((planting, index) => {
     const color = TREE_PALETTE[planting.paletteIndex] ?? TREE_PALETTE[0];
-    scene.add(
-      shrubLod(
-        planting.x,
-        planting.z,
-        planting.scale,
-        color,
-        18 + index * 0.83,
-        seed ^ Math.imul(index + 1, 0x27d4eb2d),
-      ),
+    const shrub = shrubLod(
+      planting.x,
+      planting.z,
+      planting.scale,
+      color,
+      18 + index * 0.83,
+      seed ^ Math.imul(index + 1, 0x27d4eb2d),
     );
+    shrub.userData["propertyRole"] = planting.propertyRole;
+    shrub.userData["yardZone"] = planting.yardZone;
+    scene.add(shrub);
   });
 
   layout.flowers.forEach((planting, index) => {
     const color = FLOWER_PALETTE[planting.paletteIndex] ?? FLOWER_PALETTE[0];
-    scene.add(flower(planting.x, planting.z, color, 40 + index * 0.91));
+    const bed = flower(
+      planting.x,
+      planting.z,
+      color,
+      40 + index * 0.91,
+    );
+    bed.userData["propertyRole"] = planting.propertyRole;
+    bed.userData["yardZone"] = planting.yardZone;
+    scene.add(bed);
   });
 
   distantHill(scene, -94, -102, 34, 13, 0x718967);

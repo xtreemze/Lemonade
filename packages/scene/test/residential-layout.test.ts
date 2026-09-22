@@ -6,6 +6,7 @@ import {
   HOUSE_FOOTPRINT_DEPTH,
   HOUSE_FOOTPRINT_WIDTH,
   generateResidentialLayout,
+  residentialAccessLayout,
   residentialFootprintIntersectsHardscape,
   residentialPointIsBlocked,
 } from "../src/residential-layout.js";
@@ -59,8 +60,8 @@ describe("procedural residential layout", () => {
   it("keeps complete house and planting footprints out of roads, sidewalks, driveways and house fronts", () => {
     const layout = generateResidentialLayout(0xdecafbad);
     expect(layout.trees).toHaveLength(72);
-    expect(layout.shrubs).toHaveLength(20);
-    expect(layout.flowers).toHaveLength(12);
+    expect(layout.shrubs.length).toBeGreaterThanOrEqual(20);
+    expect(layout.flowers.length).toBeGreaterThanOrEqual(12);
 
     const blockedHouses = [
       ...layout.frontProperties,
@@ -74,7 +75,9 @@ describe("procedural residential layout", () => {
       const sine = Math.abs(Math.sin(property.rotationY));
       const blocked = residentialFootprintIntersectsHardscape(
         { x: property.houseX, z: property.houseZ },
-        layout,
+        {
+          exclusions: layout.exclusions.filter((rect) => rect.role !== "path"),
+        },
         localHalfWidth * cosine + localHalfDepth * sine,
         localHalfWidth * sine + localHalfDepth * cosine,
       );
@@ -108,11 +111,142 @@ describe("procedural residential layout", () => {
     }
     for (const planting of layout.shrubs) {
       const clearance = 1.9 * planting.scale;
-      expect(residentialPointIsBlocked(planting, layout, clearance)).toBe(false);
+      if (planting.propertyRole !== null && planting.yardZone === "front") {
+        expect(
+          residentialFootprintIntersectsHardscape(
+            planting,
+            layout,
+            clearance,
+            clearance,
+          ),
+        ).toBe(false);
+      } else {
+        expect(residentialPointIsBlocked(planting, layout, clearance)).toBe(false);
+      }
     }
     for (const planting of layout.flowers) {
-      expect(residentialPointIsBlocked(planting, layout, 0.16)).toBe(false);
+      if (planting.propertyRole !== null && planting.yardZone === "front") {
+        expect(
+          residentialFootprintIntersectsHardscape(
+            planting,
+            layout,
+            0.38,
+            0.38,
+          ),
+        ).toBe(false);
+      } else {
+        expect(residentialPointIsBlocked(planting, layout, 0.38)).toBe(false);
+      }
     }
+  });
+
+  it("connects every home path to a sidewalk and every driveway through the sidewalk to a road", () => {
+    const layout = generateResidentialLayout(0x51de);
+    const allProperties = [
+      ...layout.frontProperties,
+      ...layout.middleProperties,
+      ...layout.backProperties,
+      ...layout.outerProperties,
+    ];
+    const overlaps = (
+      left: (typeof layout.exclusions)[number],
+      right: (typeof layout.exclusions)[number],
+      margin = 0.16,
+    ): boolean =>
+      left.maxX + margin >= right.minX &&
+      left.minX - margin <= right.maxX &&
+      left.maxZ + margin >= right.minZ &&
+      left.minZ - margin <= right.maxZ;
+
+    for (const property of allProperties) {
+      expect(property.drivewayX).not.toBeNull();
+      if (property.drivewayX === null) continue;
+      const access = residentialAccessLayout(property, layout.seed);
+      const path = layout.exclusions.find(
+        (rect) =>
+          rect.role === "path" &&
+          Math.abs((rect.minX + rect.maxX) / 2 - access.pathCenterX) < 0.02 &&
+          Math.abs((rect.minZ + rect.maxZ) / 2 - access.pathCenterZ) < 0.02,
+      );
+      const driveway = layout.exclusions.find(
+        (rect) =>
+          rect.role === "driveway" &&
+          Math.abs(
+            (rect.minX + rect.maxX) / 2 - access.drivewayCenterX,
+          ) < 0.02 &&
+          Math.abs(
+            (rect.minZ + rect.maxZ) / 2 - access.drivewayCenterZ,
+          ) < 0.02,
+      );
+      expect(path).toBeDefined();
+      expect(driveway).toBeDefined();
+      if (path === undefined || driveway === undefined) continue;
+
+      expect(
+        layout.exclusions.some(
+          (rect) => rect.role === "sidewalk" && overlaps(path, rect),
+        ),
+      ).toBe(true);
+      expect(
+        layout.exclusions.some(
+          (rect) => rect.role === "sidewalk" && overlaps(driveway, rect),
+        ),
+      ).toBe(true);
+      expect(
+        layout.exclusions.some(
+          (rect) => rect.role === "road" && overlaps(driveway, rect),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("assigns most homes a backyard tree plus grouped front-yard planting zones", () => {
+    const layout = generateResidentialLayout(0x7a11);
+    const allProperties = [
+      ...layout.frontProperties,
+      ...layout.middleProperties,
+      ...layout.backProperties,
+      ...layout.outerProperties,
+    ];
+    const byRole = new Map(allProperties.map((property) => [property.role, property]));
+
+    const backyardTrees = layout.trees.filter(
+      (planting) =>
+        planting.propertyRole !== null && planting.yardZone === "back",
+    );
+    expect(backyardTrees.length).toBeGreaterThan(
+      layout.trees.length / 2,
+    );
+    for (const tree of backyardTrees) {
+      const property =
+        tree.propertyRole === null ? undefined : byRole.get(tree.propertyRole);
+      expect(property).toBeDefined();
+      if (property === undefined) continue;
+      const access = residentialAccessLayout(property, layout.seed);
+      expect((tree.z - property.houseZ) * access.frontDirection).toBeLessThan(0);
+    }
+
+    const detailedRoles = new Set(
+      [
+        ...layout.frontProperties,
+        ...layout.middleProperties,
+        ...layout.backProperties,
+      ].map((property) => property.role),
+    );
+    expect(
+      layout.shrubs.filter(
+        (planting) =>
+          planting.propertyRole !== null &&
+          detailedRoles.has(planting.propertyRole),
+      ).length,
+    ).toBeGreaterThanOrEqual(12);
+    expect(
+      layout.flowers.filter(
+        (planting) =>
+          planting.propertyRole !== null &&
+          detailedRoles.has(planting.propertyRole),
+      ).length,
+    ).toBeGreaterThanOrEqual(12);
   });
 
   it("produces a continuous asymmetric residential population", () => {

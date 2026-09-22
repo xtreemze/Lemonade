@@ -28,7 +28,9 @@ import {
   characterGroundClearance,
   WORLD_SCALE,
 } from "./world-scale.js";
-import { SELLER_Z } from "./stand-anchors.js";
+import { updateNeighborhoodWind } from "./neighborhood.js";
+import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
+import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
 import type { WeatherDetailController } from "./weather-detail.js";
 import {
@@ -463,7 +465,7 @@ export const createLemonsvilleScene = (
   scene.add(ground);
 
   const stand = createStand();
-  stand.root.position.z = -1;
+  stand.root.position.z = STAND_WORLD_Z;
   scene.add(stand.root);
 
   const signs = Array.from({ length: 40 }, () => createSign());
@@ -492,7 +494,7 @@ export const createLemonsvilleScene = (
   seller.person.root.position.set(
     0,
     personGroundY(seller.person),
-    SELLER_Z,
+    STAND_WORLD_Z + SELLER_Z,
   );
   seller.person.root.scale.multiplyScalar(0.98);
   scene.add(seller.person.root);
@@ -661,7 +663,10 @@ export const createLemonsvilleScene = (
       }
       const nextInventory = createCupInventory();
       cupInventory = nextInventory;
-      for (const mesh of nextInventory.meshes) scene.add(mesh);
+      for (const mesh of nextInventory.meshes) {
+        mesh.position.z = STAND_WORLD_Z;
+        scene.add(mesh);
+      }
       nextInventory.setStock(
         state.phase === "forecast" ? 0 : storyboard.prepared,
         storyboard.prepared,
@@ -785,9 +790,24 @@ export const createLemonsvilleScene = (
       const exitX = -streetX;
       const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
-      const counterZ = 1.22;
+      const counterZ = STAND_WORLD_Z + 1.22;
       const drinkX = sale.direction === -1 ? -1.35 : 1.35;
-      const drinkZ = 1.78;
+      const drinkZ = STAND_WORLD_Z + 1.78;
+      const approachDurationSeconds =
+        Math.max(1, sale.purchaseAtMs - sale.approachAtMs) / 1_000;
+      const approachTargetDistance = 1.5 * approachDurationSeconds;
+      const approachZDistance = Math.abs(counterZ - streetZ);
+      const approachXDistance = Math.sqrt(
+        Math.max(
+          0.04,
+          approachTargetDistance * approachTargetDistance -
+            approachZDistance * approachZDistance,
+        ),
+      );
+      const streetX =
+        counterX +
+        (sale.direction === -1 ? -approachXDistance : approachXDistance);
+>>>>>>> origin/master
       const approachDistance = Math.hypot(counterX - streetX, counterZ - streetZ);
       const departDistance = Math.hypot(exitX - drinkX, streetZ - drinkZ);
       let x = counterX;

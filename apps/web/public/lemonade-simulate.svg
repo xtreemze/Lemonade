@@ -55,6 +55,20 @@
         animation: lemon-float 2.5s ease-in-out infinite alternate;
       }
 
+      .pour-stream {
+        fill: #efff00;
+        opacity: .62;
+        transform-box: fill-box;
+        transform-origin: center top;
+        animation: pour 1.45s ease-in-out infinite;
+      }
+
+      @keyframes pour {
+        0%, 18% { transform: translateY(-18px) scaleY(.15); opacity: 0; }
+        34%, 72% { transform: translateY(0) scaleY(1); opacity: .72; }
+        100% { transform: translateY(18px) scaleY(.28); opacity: 0; }
+      }
+
       @keyframes slosh {
         from { transform: translateY(-1px) rotate(-.55deg); }
         to { transform: translateY(1px) rotate(.55deg); }
@@ -79,7 +93,8 @@
         .liquid-surface,
         .ice-float,
         .straw-float,
-        .lemon-float {
+        .lemon-float,
+        .pour-stream {
           animation: none;
         }
       }
@@ -98,6 +113,8 @@
     <path class="lemon-edge-shade" d="M130.5,91.66477a29.4989,29.4989,0,0,1-29.49787-29.33238c-.00031.056-.00213.11157-.00213.16761a29.5,29.5,0,0,0,59,0c0-.056-.00182-.11165-.00213-.16761A29.4989,29.4989,0,0,1,130.5,91.66477Z" transform="translate(-33.38623 -33)"/>
     <path class="lemon-highlight" d="M130.33239,33.33332a29.33131,29.33131,0,0,1,29.33028,29.16573c.00031-.05564.00212-.11094.00212-.16666a29.33239,29.33239,0,0,0-58.66478,0c0,.05572.00181.111.00212.16666A29.33131,29.33131,0,0,1,130.33239,33.33332Z" transform="translate(-33.38623 -33)"/>
   </g>
+
+  <rect class="pour-stream" x="59" y="-8" width="8" height="48" rx="4"/>
 
   <path id="glassBottom" class="glass-bottom" d="M130.92,56H62.22269a3.50343,3.50343,0,0,0-3.49086,3.79993l8.32322,97.99315A3.50343,3.50343,0,0,0,70.54591,161h52.05088a3.50343,3.50343,0,0,0,3.49086-3.20692l8.32322-97.99315A3.50343,3.50343,0,0,0,130.92,56Z" transform="translate(-33.38623 -33)"/>
 

@@ -13,6 +13,7 @@ import {
   residentialFootprintIntersectsHardscape,
   residentialPointIsBlocked,
 } from "../src/residential-layout.js";
+import { STAND_WORLD_Z } from "../src/stand-anchors.js";
 import { STAND_LAYOUT } from "../src/stand-layout.js";
 import { gardenSignPosition, STREET_LAYOUT } from "../src/street-layout.js";
 
@@ -27,7 +28,7 @@ describe("neighborhood world scale", () => {
     expect(stats.frontProperties).toBeGreaterThanOrEqual(7);
     expect(stats.driveways).toBe(stats.houseLods);
     expect(stats.treeLods).toBeGreaterThanOrEqual(64);
-    expect(stats.yardDetails).toBeGreaterThanOrEqual(7);
+    expect(stats.yardDetails).toBeGreaterThanOrEqual(12);
     expect(stats.flowers).toBeGreaterThanOrEqual(8);
     expect(stats.pavedRoads).toBeGreaterThanOrEqual(60);
     expect(stats.windResponsive).toBeGreaterThanOrEqual(stats.treeLods + stats.shrubs);
@@ -65,6 +66,25 @@ describe("neighborhood world scale", () => {
     expect(standNeighborCount).toBe(1);
     expect(pavedRoadCount).toBe(stats.pavedRoads);
     expect(flowerCount).toBe(stats.flowers);
+    const flowerBeds = scene.children.filter(
+      (object) => object.userData["sceneRole"] === "garden-flower",
+    );
+    expect(
+      flowerBeds.every(
+        (bed) =>
+          bed.userData["flowerCount"] === 5 &&
+          bed.children.length === 5,
+      ),
+    ).toBe(true);
+    const fences = scene.children.filter(
+      (object) => object.userData["sceneRole"] === "fence",
+    );
+    expect(fences.length).toBeGreaterThanOrEqual(8);
+    expect(
+      fences.every(
+        (fence) => typeof fence.userData["propertyRole"] === "string",
+      ),
+    ).toBe(true);
     expect(treeVariants.size).toBeGreaterThan(8);
     expect(shrubVariants.size).toBeGreaterThan(4);
 
@@ -243,6 +263,22 @@ describe("neighborhood world scale", () => {
     expect(standHome.drivewayX).toBeLessThan(standHome.houseX);
     expect(sharedBoundaryX).toBeGreaterThan(standRightEdge);
     expect(sharedBoundaryX - standRightEdge).toBeLessThan(0.75);
+
+    const standBoxes = [
+      STAND_LAYOUT.body,
+      STAND_LAYOUT.counter,
+      STAND_LAYOUT.frontPanel,
+      STAND_LAYOUT.canopy,
+      ...STAND_LAYOUT.posts,
+    ];
+    const standFrontEdge = Math.max(
+      ...standBoxes.map(
+        (part) =>
+          STAND_WORLD_Z + part.position[2] + part.size[2] / 2,
+      ),
+    );
+    expect(standFrontEdge).toBeLessThan(STREET_LAYOUT.nearSidewalk.minZ);
+    expect(STAND_WORLD_Z).toBeLessThan(STREET_LAYOUT.nearSidewalk.minZ);
   });
 
   it("faces every mailbox toward the street independent of house orientation", () => {
