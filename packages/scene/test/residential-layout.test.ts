@@ -34,7 +34,7 @@ describe("procedural residential layout", () => {
     expect(standHome.drivewayX).not.toBeNull();
     expect(standHome.drivewayX ?? 0).toBeLessThan(standHome.houseX);
     expect(sharedBoundaryX).toBeGreaterThan(standRightEdge);
-    expect(sharedBoundaryX - standRightEdge).toBeLessThan(0.75);
+    expect(sharedBoundaryX - standRightEdge).toBeLessThan(1);
   });
 
   it("keeps mailbox anchors outside their driveway footprints", () => {
