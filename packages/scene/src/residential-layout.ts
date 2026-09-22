@@ -441,11 +441,12 @@ export const residentialAccessLayout = (
   const frontDirection: -1 | 1 = frontZ >= 0 ? 1 : -1;
   const footprint = propertyFootprint(property);
   const doorDistance = 2.34 * property.scale;
-  const entryDistance = 3.34 * property.scale;
+  const entryDistance = footprint.halfDepth + 0.55;
   const doorX = property.houseX + frontX * doorDistance;
   const doorZ = property.houseZ + frontZ * doorDistance;
   const entryX = property.houseX + frontX * entryDistance;
-  const entryZ = property.houseZ + frontZ * entryDistance;
+  const entryZ =
+    property.houseZ + frontDirection * entryDistance;
   const sidewalk = nearestAccessRect(
     property,
     entryX,
