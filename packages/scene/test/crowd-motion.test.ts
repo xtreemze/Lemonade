@@ -251,11 +251,11 @@ describe("crowd motion", () => {
     expect(ambientPopulationFor("sunny", "simulation")).toEqual({
       pets: 2,
       wildlife: 4,
-      bicycles: 2,
-      vehicles: 1,
+      bicycles: 3,
+      vehicles: 4,
     });
-    expect(ambientPopulationFor("cloudy", "simulation").wildlife).toBe(0);
-    expect(ambientPopulationFor("hot-and-dry", "simulation").wildlife).toBe(0);
+    expect(ambientPopulationFor("cloudy", "simulation")).toEqual({ pets: 1, wildlife: 0, bicycles: 2, vehicles: 3 });
+    expect(ambientPopulationFor("hot-and-dry", "simulation")).toEqual({ pets: 1, wildlife: 0, bicycles: 2, vehicles: 3 });
     expect(ambientPopulationFor("thunderstorm", "simulation")).toEqual({
       pets: 0,
       wildlife: 0,
