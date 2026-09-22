@@ -786,8 +786,7 @@ export const createLemonsvilleScene = (
       const buyer = buyers[buyerSlotForSale(sale, buyers.length)];
       if (buyer === undefined) continue;
 
-      const streetX = sale.direction === -1 ? -8.4 : 8.4;
-      const exitX = -streetX;
+      const exitX = sale.direction === -1 ? 8.4 : -8.4;
       const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
       const counterZ = STAND_WORLD_Z + 1.22;
@@ -807,7 +806,6 @@ export const createLemonsvilleScene = (
       const streetX =
         counterX +
         (sale.direction === -1 ? -approachXDistance : approachXDistance);
->>>>>>> origin/master
       const approachDistance = Math.hypot(counterX - streetX, counterZ - streetZ);
       const departDistance = Math.hypot(exitX - drinkX, streetZ - drinkZ);
       let x = counterX;
