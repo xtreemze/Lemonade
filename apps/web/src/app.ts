@@ -54,7 +54,6 @@ import {
   createSceneLauncherUI,
   type ScenePreset,
 } from "./dev-scene-launcher.js";
-import { isSceneViewerEnabled, createPersistentSceneViewer } from "./dev-scene-viewer.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
 const ACTIVE_SIMULATION_PRESENTATION_MS = 10_000;
@@ -69,6 +68,22 @@ const weatherLabel: Record<DayEnvironment["weather"]["kind"], string> = {
   cloudy: "Cloudy",
   "hot-and-dry": "Partly cloudy",
   thunderstorm: "Thunderstorm",
+};
+
+const scenePresetWeather = (
+  kind: DayEnvironment["weather"]["kind"],
+  demandMultiplier: DayEnvironment["weather"]["demandMultiplier"],
+): DayEnvironment["weather"] => {
+  switch (kind) {
+    case "sunny":
+      return Object.freeze({ kind: "sunny", demandMultiplier });
+    case "cloudy":
+      return Object.freeze({ kind: "cloudy", demandMultiplier });
+    case "hot-and-dry":
+      return Object.freeze({ kind: "hot-and-dry", demandMultiplier });
+    case "thunderstorm":
+      return Object.freeze({ kind: "thunderstorm", demandMultiplier });
+  }
 };
 
 const sellerMoodLabel = (confidence: number): string => {
@@ -310,6 +325,7 @@ export class LemonadeApp {
   #glasses: number;
   #signs: number;
   #price: number;
+  #sceneConfidenceOverride: number | null = null;
   #runStatusMessage = "";
   #runErrorMessage: string | null = null;
   #saveChain: Promise<void> = Promise.resolve();
@@ -320,13 +336,6 @@ export class LemonadeApp {
     initialRun: RunSnapshot = createFreshRunSnapshot(),
     options: LemonadeAppOptions = DEFAULT_OPTIONS,
   ) {
-    // Check for persistent 3D scene viewer dev mode
-    if (isSceneViewerEnabled()) {
-      console.log("🎥 Scene Viewer mode activated - launching persistent 3D scene");
-      createPersistentSceneViewer(root, { enableGizmo: true, weather: "hot-and-dry", phase: "forecast" });
-      return;
-    }
-
     this.#runSeed = initialRun.seed;
     this.#random = restoreEnvironmentRandom(initialRun);
     this.#game = initialRun.state;
@@ -373,20 +382,13 @@ export class LemonadeApp {
       const onPresetSelect = (preset: ScenePreset) => {
         this.#environment = {
           ...this.#environment,
-          weather: {
-            kind: preset.weather,
-            temperature: preset.weather === "thunderstorm" ? 55 : 72,
-          },
+          weather: scenePresetWeather(
+            preset.weather,
+            this.#environment.weather.demandMultiplier,
+          ),
         };
-        this.#presentation =
-          preset.phase === "forecast" ? "forecast" : preset.phase === "idle" ? "idle" : "simulation";
-
-        if (preset.confidence !== undefined) {
-          this.#game = {
-            ...this.#game,
-            confidence: preset.confidence,
-          };
-        }
+        this.#presentation = preset.phase === "idle" ? "planning" : preset.phase;
+        this.#sceneConfidenceOverride = preset.confidence ?? null;
 
         this.#glasses = preset.prepared ?? 5;
         this.#signs = preset.visibleSigns ?? 1;
@@ -885,11 +887,13 @@ export class LemonadeApp {
       this.#presentation === "simulation" || this.#presentation === "forecast"
         ? this.#presentation
         : "idle";
-    const confidence = legacyConfidenceForState(this.#game);
+    const confidence =
+      this.#sceneConfidenceOverride ?? legacyConfidenceForState(this.#game);
     const nextConfidence =
-      phase.kind === "report"
+      this.#sceneConfidenceOverride ??
+      (phase.kind === "report"
         ? legacyConfidenceForState(phase.resolution.nextState)
-        : confidence;
+        : confidence);
     this.#scene.update({
       environment: this.#environment,
       confidence,
