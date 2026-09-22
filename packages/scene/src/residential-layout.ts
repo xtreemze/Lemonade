@@ -77,6 +77,19 @@ const footprintIntersectsRect = (
 
 const baseHardscape = (): readonly ResidentialRect[] => baseExclusions();
 
+const rotatedFootprintHalfExtents = (
+  halfWidth: number,
+  halfDepth: number,
+  rotationY: number,
+): Readonly<{ halfWidth: number; halfDepth: number }> => {
+  const cosine = Math.abs(Math.cos(rotationY));
+  const sine = Math.abs(Math.sin(rotationY));
+  return Object.freeze({
+    halfWidth: halfWidth * cosine + halfDepth * sine,
+    halfDepth: halfWidth * sine + halfDepth * cosine,
+  });
+};
+
 const clearHouseFromBaseHardscape = (
   point: ResidentialPoint,
   halfWidth: number,
@@ -121,21 +134,26 @@ const makeProperty = (
   const candidateHouseX = featured ? baseX : baseX + signed(seed, index * 11 + 1) * 0.82;
   const candidateHouseZ = featured ? baseZ : baseZ + signed(seed, index * 11 + 2) * 1.05;
   const scale = baseScale + signed(seed, index * 11 + 3) * 0.055;
-  const houseHalfWidth = (HOUSE_FOOTPRINT_WIDTH * scale) / 2;
-  const houseHalfDepth = (HOUSE_FOOTPRINT_DEPTH * scale) / 2;
-  const clearHouse = clearHouseFromBaseHardscape(
-    { x: candidateHouseX, z: candidateHouseZ },
-    houseHalfWidth,
-    houseHalfDepth,
-  );
-  const houseX = clearHouse.x;
-  const houseZ = clearHouse.z;
   const rotationY =
     baseRotation +
     signed(seed, index * 11 + 4) * (featured ? 0.014 : 0.055) +
     (facingBack ? Math.PI : 0);
+  const localHalfWidth = (HOUSE_FOOTPRINT_WIDTH * scale) / 2;
+  const localHalfDepth = (HOUSE_FOOTPRINT_DEPTH * scale) / 2;
+  const footprint = rotatedFootprintHalfExtents(
+    localHalfWidth,
+    localHalfDepth,
+    rotationY,
+  );
+  const clearHouse = clearHouseFromBaseHardscape(
+    { x: candidateHouseX, z: candidateHouseZ },
+    footprint.halfWidth,
+    footprint.halfDepth,
+  );
+  const houseX = clearHouse.x;
+  const houseZ = clearHouse.z;
   const drivewayOffset =
-    houseHalfWidth +
+    footprint.halfWidth +
     DRIVEWAY_HALF_WIDTH +
     HOUSE_HARDSCAPE_MARGIN +
     unit(seed, index * 11 + 5) * 0.24;
@@ -216,7 +234,8 @@ const rowProperties = (
     ),
   );
 
-const baseExclusions = (): ResidentialRect[] => [
+function baseExclusions(): ResidentialRect[] {
+  return [
   {
     minX: -75,
     maxX: 75,
@@ -242,7 +261,8 @@ const baseExclusions = (): ResidentialRect[] => [
   { minX: 15.4, maxX: 21.6, minZ: -76, maxZ: 36, role: "road" },
   { minX: -75, maxX: 75, minZ: -17.9, maxZ: -13.1, role: "road" },
   { minX: -75, maxX: 75, minZ: -39.2, maxZ: -34.8, role: "road" },
-];
+  ];
+}
 
 const drivewayExclusions = (
   properties: readonly ResidentialPropertySpec[],
