@@ -713,19 +713,16 @@ export class LemonadeApp {
     }
   }
 
-  #scheduleHaptic(delayMs: number, cue: HapticCue): void {
-    const timer = window.setTimeout(() => {
-      this.#feedbackTimers = this.#feedbackTimers.filter((candidate) => candidate !== timer);
-      if (!this.#disposed) this.#haptics.play(cue);
-    }, Math.max(0, delayMs));
-    this.#feedbackTimers.push(timer);
-  }
-
   #scheduleStormFeedback(durationMs: number): void {
     const duration = Math.max(700, durationMs);
     this.#scheduleFeedback(180, "storm:thunder", "storm:thunder");
-    this.#scheduleHaptic(Math.min(duration - 180, duration * 0.34), "storm:gust");
-    this.#scheduleHaptic(Math.min(duration - 90, duration * 0.72), "storm:gust");
+    for (const progress of [0.28, 0.52, 0.76] as const) {
+      this.#scheduleFeedback(
+        Math.min(duration - 90, duration * progress),
+        "ambient:wind-gust",
+        "storm:gust",
+      );
+    }
   }
 
   #playWeatherForecastCue(weather: DayEnvironment["weather"]["kind"]): void {
