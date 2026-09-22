@@ -12,6 +12,10 @@ import {
 import { characterProfileFor } from "./characters.js";
 import { decorateCharacter } from "./character-detail.js";
 import { updateNeighborhoodWind } from "./neighborhood.js";
+import {
+  createNeighborhoodMobilitySystem,
+  type MobilityPose,
+} from "./neighborhood-mobility.js";
 import { WORLD_SCALE } from "./world-scale.js";
 import {
   clampToSidewalk,
@@ -47,6 +51,8 @@ export type AmbientLifeController = Readonly<{
     phase: AmbientPhase,
     elapsedMs: number,
     durationMs: number,
+    dayNumber?: number,
+    focus?: Readonly<{ x: number; z: number }>,
   ): void;
 }>;
 
@@ -62,13 +68,13 @@ export const ambientPopulationFor = (
   }
   switch (weather) {
     case "sunny":
-      return Object.freeze({ pets: 2, wildlife: 3, bicycles: 2, vehicles: 1 });
+      return Object.freeze({ pets: 2, wildlife: 4, bicycles: 3, vehicles: 4 });
     case "hot-and-dry":
-      return Object.freeze({ pets: 1, wildlife: 1, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 1, bicycles: 2, vehicles: 3 });
     case "cloudy":
-      return Object.freeze({ pets: 1, wildlife: 1, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 1, bicycles: 2, vehicles: 3 });
     case "thunderstorm":
-      return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 2 });
+      return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 3 });
   }
 };
 
@@ -457,6 +463,39 @@ const routeProgress = (
   return progress - Math.floor(progress);
 };
 
+const applyTransportWalk = (
+  rig: TransportCharacterRig,
+  elapsedMs: number,
+  speed: number,
+): void => {
+  const cycle = elapsedMs * 0.009 * Math.max(0.4, speed);
+  const stride = Math.sin(cycle) * 0.52;
+  rig.legs[0].rotation.x = stride;
+  rig.legs[1].rotation.x = -stride;
+  rig.arms[0].rotation.x = -stride * 0.72;
+  rig.arms[1].rotation.x = stride * 0.72;
+  rig.root.position.y = Math.abs(Math.sin(cycle)) * 0.018;
+};
+
+const placeRig = (
+  rig: TransportCharacterRig,
+  pose: MobilityPose | undefined,
+  elapsedMs: number,
+): void => {
+  rig.root.visible = pose?.visible === true;
+  if (pose === undefined || !pose.visible) return;
+  rig.root.position.set(pose.x, 0, pose.z);
+  rig.root.rotation.y = -pose.yaw;
+  applyTransportWalk(rig, elapsedMs, pose.speed);
+  if (pose.interaction === "gardening") {
+    rig.arms[0].rotation.x = -1.05;
+    rig.arms[1].rotation.x = -0.72;
+    rig.root.rotation.z = Math.sin(elapsedMs * 0.004) * 0.08;
+  } else if (pose.interaction === "mailbox") {
+    rig.arms[1].rotation.x = -1.15;
+  }
+};
+
 export const createAmbientLife = (
   scene: Scene,
   seed: number,
@@ -467,10 +506,12 @@ export const createAmbientLife = (
     createBird(0x5d6971),
     createBird(0x795d4e),
     createBird(0x66795a),
+    createBird(0x6f7890),
   ];
   const bicycles = [
     createBicycle(0x4f7f91, seed, 0),
     createBicycle(0xb45d4c, seed, 1),
+    createBicycle(0x75864f, seed, 2),
   ];
   const vehicles = [
     createVehicle(0x7189a8, seed, 0, "sedan"),
@@ -478,17 +519,49 @@ export const createAmbientLife = (
     createVehicle(0x6b7c61, seed, 2, "pickup"),
     createVehicle(0x8a796d, seed, 3, "truck"),
   ];
+  const residents = [
+    createTransportCharacter(seed ^ 0x7341, 12_000),
+    createTransportCharacter(seed ^ 0x7341, 12_001),
+    createTransportCharacter(seed ^ 0x7341, 12_002),
+  ];
+  const mailCarrier = createTransportCharacter(seed ^ 0x4d41494c, 12_100);
+  const gardener = createTransportCharacter(seed ^ 0x47415244, 12_200);
+  mailCarrier.root.userData["sceneRole"] = "ambient-mail-carrier";
+  gardener.root.userData["sceneRole"] = "ambient-gardener";
+  residents.forEach((resident, index) => {
+    resident.root.userData["sceneRole"] = "ambient-resident";
+    resident.root.userData["residentIndex"] = index;
+  });
 
-  for (const actor of [...pets, ...wildlife, ...bicycles, ...vehicles]) {
+  const mobility = createNeighborhoodMobilitySystem(seed);
+
+  for (const actor of [
+    ...pets,
+    ...wildlife,
+    ...bicycles,
+    ...vehicles,
+    ...residents.map((resident) => resident.root),
+    mailCarrier.root,
+    gardener.root,
+  ]) {
     actor.visible = false;
     scene.add(actor);
   }
 
   return Object.freeze({
-    update(weather, phase, elapsedMs, durationMs): void {
+    update(
+      weather,
+      phase,
+      elapsedMs,
+      durationMs,
+      dayNumber = 1,
+      focus = Object.freeze({ x: 0, z: 0 }),
+    ): void {
       updateNeighborhoodWind(scene, elapsedMs / 1000, weather);
       const population = ambientPopulationFor(weather, phase);
-      pets.forEach((pet, index) => {
+      const pedestrianObstacles: Array<Readonly<{ x: number; z: number }>> = [];
+
+      pets.slice(0, 2).forEach((pet, index) => {
         const owner = owners.find((candidate, ownerIndex) =>
           candidate.visible && ownerIndex >= index,
         ) ?? owners.find((candidate) => candidate.visible);
@@ -503,7 +576,56 @@ export const createAmbientLife = (
         pet.position.set(pose.x, Math.abs(gait) * 0.018, pose.z);
         pet.rotation.y = pose.yaw;
         pet.rotation.z = gait * 0.025;
+        pedestrianObstacles.push({ x: pose.x, z: pose.z });
       });
+
+      for (const owner of owners) {
+        if (!owner.visible) continue;
+        pedestrianObstacles.push({
+          x: owner.position.x,
+          z: owner.position.z,
+        });
+      }
+
+      const sample = mobility.sample({
+        weather,
+        phase,
+        elapsedMs,
+        durationMs,
+        dayNumber,
+        focus,
+        pedestrianObstacles,
+      });
+
+      const residentPet = sample.actors.find((actor) => actor.id === "resident-pet");
+      const homePet = pets[2];
+      if (homePet !== undefined) {
+        homePet.visible = residentPet?.visible === true;
+        if (residentPet?.visible === true) {
+          const gait = Math.sin(elapsedMs * 0.011 + 2.7);
+          homePet.position.set(residentPet.x, Math.abs(gait) * 0.018, residentPet.z);
+          homePet.rotation.y = -residentPet.yaw;
+          homePet.rotation.z = gait * 0.025;
+        }
+      }
+
+      const residentPoses = sample.actors.filter(
+        (actor) => actor.kind === "resident",
+      );
+      residents.forEach((resident, index) => {
+        placeRig(resident, residentPoses[index], elapsedMs);
+      });
+      placeRig(
+        mailCarrier,
+        sample.actors.find((actor) => actor.kind === "mail-carrier"),
+        elapsedMs,
+      );
+      placeRig(
+        gardener,
+        sample.actors.find((actor) => actor.kind === "gardener"),
+        elapsedMs,
+      );
+
       wildlife.forEach((bird, index) => {
         bird.visible = index < population.wildlife;
         if (!bird.visible) return;
@@ -513,13 +635,18 @@ export const createAmbientLife = (
           index * 0.39 + 0.12,
           0.62 + index * 0.08,
         );
+        const direction = index % 2 === 0 ? 1 : -1;
+        const x = direction === 1
+          ? -18 + progress * 36
+          : 18 - progress * 36;
         bird.position.set(
-          -16 + progress * 32,
-          5.8 + index * 0.8 + Math.sin(progress * Math.PI * 4) * 0.25,
-          -3 - index * 3,
+          x,
+          5.8 + index * 0.65 + Math.sin(progress * Math.PI * 4) * 0.25,
+          -3 - index * 2.4,
         );
-        bird.rotation.y = 0;
-        bird.rotation.z = Math.sin(progress * Math.PI * 12) * 0.08;
+        bird.rotation.y = xTravelYaw(direction);
+        bird.rotation.z =
+          direction * Math.sin(progress * Math.PI * 12) * 0.08;
         for (const child of bird.children) {
           if (child.userData["sceneRole"] !== "ambient-bird-wing") continue;
           const side = Math.sign(child.position.z) || 1;
@@ -527,46 +654,43 @@ export const createAmbientLife = (
             side * (0.18 + Math.sin(progress * Math.PI * 18 + index) * 0.42);
         }
       });
+
+      const bicyclePoses = sample.actors.filter(
+        (actor) => actor.kind === "bicycle" && actor.visible,
+      );
       bicycles.forEach((bike, index) => {
-        const direction = index % 2 === 0 ? -1 : 1;
-        const progress = routeProgress(
-          elapsedMs,
-          durationMs,
-          index * 0.47 + 0.18,
-          0.9 + index * 0.12,
-        );
-        bike.visible = index < population.bicycles && progress > 0.08 && progress < 0.78;
-        if (!bike.visible) return;
-        const x = direction === 1
-          ? -96 + progress * 192
-          : 96 - progress * 192;
-        bike.position.set(x, 0.02, roadLaneZ("bicycle", index));
-        bike.rotation.y = xTravelYaw(direction);
+        const pose = index < population.bicycles ? bicyclePoses[index] : undefined;
+        bike.visible = pose !== undefined;
+        if (pose === undefined) return;
+        bike.position.set(pose.x, 0.02, pose.z);
+        bike.rotation.y = -pose.yaw;
       });
-      const vehicleOffset =
-        Math.floor(
-          routeProgress(elapsedMs, durationMs, (seed & 7) * 0.11, 0.74) *
-            vehicles.length,
-        ) % vehicles.length;
+
+      const allVehiclePoses = sample.actors.filter(
+        (actor) => actor.kind === "vehicle" && actor.visible,
+      );
+      const residentVehicle = allVehiclePoses.find(
+        (actor) => actor.id === "resident-vehicle",
+      );
+      const throughTraffic = allVehiclePoses.filter(
+        (actor) => actor.id !== "resident-vehicle",
+      );
+      const vehiclePoses = [
+        ...(residentVehicle === undefined ? [] : [residentVehicle]),
+        ...throughTraffic.slice(
+          0,
+          Math.max(
+            0,
+            population.vehicles - (residentVehicle === undefined ? 0 : 1),
+          ),
+        ),
+      ];
       vehicles.forEach((vehicle, index) => {
-        const direction = index % 2 === 0 ? 1 : -1;
-        const progress = routeProgress(
-          elapsedMs,
-          durationMs,
-          index * 0.53 + 0.08,
-          0.52 + index * 0.09,
-        );
-        const activeIndex =
-          (index - vehicleOffset + vehicles.length) % vehicles.length;
-        vehicle.visible =
-          activeIndex < population.vehicles &&
-          progress > 0.04 &&
-          progress < 0.82;
-        const x = direction === 1
-          ? -110 + progress * 220
-          : 110 - progress * 220;
-        vehicle.position.set(x, 0.02, roadLaneZ("vehicle", index));
-        vehicle.rotation.y = xTravelYaw(direction);
+        const pose = vehiclePoses[index];
+        vehicle.visible = pose !== undefined;
+        if (pose === undefined) return;
+        vehicle.position.set(pose.x, 0.02, pose.z);
+        vehicle.rotation.y = -pose.yaw;
       });
     },
   });
