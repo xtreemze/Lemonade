@@ -13,6 +13,7 @@ import {
   crowdPosesAt,
   walkingBodyLift,
 } from "../src/crowd-motion.js";
+import { walkingCycleAtDistance } from "../src/gait.js";
 import { STREET_LAYOUT, roadLaneZ } from "../src/street-layout.js";
 import type { PasserbyBeat } from "../src/storyboard.js";
 
@@ -145,6 +146,24 @@ describe("crowd motion", () => {
       const travelHeading = pose.heading > 0 ? Math.PI / 2 : -Math.PI / 2;
       expect(Math.abs(pose.heading - travelHeading)).toBeLessThan(0.6);
     }
+  });
+
+  it("advances gait phase from measured world-space travel distance", () => {
+    const earlier = crowdPosesAt(beats, 1, 1_000, 6_000)[0];
+    const later = crowdPosesAt(beats, 1, 1_100, 6_000)[0];
+    expect(earlier).toBeDefined();
+    expect(later).toBeDefined();
+    if (earlier === undefined || later === undefined) return;
+
+    expect(later.travelDistance - earlier.travelDistance).toBeCloseTo(
+      earlier.worldSpeed * 0.1,
+      5,
+    );
+    expect(
+      walkingCycleAtDistance(later.travelDistance, 1, 1, 0),
+    ).toBeGreaterThan(
+      walkingCycleAtDistance(earlier.travelDistance, 1, 1, 0),
+    );
   });
 
   it("provides enough ground clearance for adult and child seeded heights", () => {
