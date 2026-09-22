@@ -1,4 +1,4 @@
-import { LOD, Scene } from "three";
+import { Scene } from "three";
 import { describe, expect, it } from "vitest";
 
 import { populateNeighborhood } from "../src/neighborhood.js";
@@ -15,7 +15,7 @@ describe("neighborhood world scale", () => {
 
     let lodCount = 0;
     scene.traverse((object) => {
-      if (object instanceof LOD) lodCount += 1;
+      if (object.userData["lodMode"] === "distance-two-level") lodCount += 1;
     });
     expect(lodCount).toBe(stats.houseLods + stats.treeLods);
   });
