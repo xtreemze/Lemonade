@@ -323,7 +323,7 @@ export class LemonadeApp {
     // Check for persistent 3D scene viewer dev mode
     if (isSceneViewerEnabled()) {
       console.log("🎥 Scene Viewer mode activated - launching persistent 3D scene");
-      createPersistentSceneViewer(root, { enableGizmo: true, weather: "hot-and-dry", phase: "forecast" });
+      createPersistentSceneViewer(root, { enableGizmo: true });
       return;
     }
 
