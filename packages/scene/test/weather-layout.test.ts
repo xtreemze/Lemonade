@@ -116,9 +116,23 @@ describe("weather backdrop staging", () => {
     expect(world(noon)[1]).toBeGreaterThan(20);
     expect(world(dawn)[1]).toBeLessThan(5);
     expect(world(sunset)[1]).toBeLessThan(5);
-    for (const position of [world(dawn), world(noon), world(sunset)]) {
+    const sunWorldPositions = [world(dawn), world(noon), world(sunset)] as const;
+    for (const position of sunWorldPositions) {
       expect(position[2]).toBeLessThan(-118);
       expect(position[2]).toBeGreaterThan(-126);
+    }
+
+    for (const [width, height] of [
+      [360, 740],
+      [844, 390],
+    ] as const) {
+      for (const shot of ["forecast", "stand"] as const) {
+        const camera = sceneCameraComposition(width, height, shot);
+        const cameraPosition = new Vector3(...camera.position);
+        for (const position of sunWorldPositions) {
+          expect(new Vector3(...position).distanceTo(cameraPosition)).toBeLessThan(180);
+        }
+      }
     }
   });
 
