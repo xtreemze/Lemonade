@@ -501,7 +501,7 @@ const trafficPose = (
   const trafficWaiting = !pedestrianWaiting && trafficBlocker !== undefined;
   const waiting = pedestrianWaiting || trafficWaiting;
   let point = sampled.point;
-  if (pedestrianWaiting && conflict !== null) {
+  if (pedestrianWaiting) {
     const dx = point.x - conflict.point.x;
     const dz = point.z - conflict.point.z;
     const magnitude = Math.max(0.001, Math.hypot(dx, dz));
@@ -997,7 +997,8 @@ export const createNeighborhoodMobilitySystem = (
           if (!hasVehicle) continue;
           const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) * allDrivewayProperties.length);
           const property = allDrivewayProperties[propertyIndex];
-          if (property?.drivewayX == null) continue;
+          if (property === undefined) continue;
+          if (property.drivewayX === null) continue;
           const access = residentialAccessLayout(property, safeSeed);
           const parkedVehicle = makePose(
             `parked-vehicle-${String(i)}`,
@@ -1053,7 +1054,8 @@ export const createNeighborhoodMobilitySystem = (
           if (!hasVehicle) continue;
           const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4500 + i) * allDrivewayProperties.length);
           const property = allDrivewayProperties[propertyIndex];
-          if (property?.drivewayX == null) continue;
+          if (property === undefined) continue;
+          if (property.drivewayX === null) continue;
           const access = residentialAccessLayout(property, safeSeed);
           const parkedVehicle = makePose(
             `parked-vehicle-night-${String(i)}`,
