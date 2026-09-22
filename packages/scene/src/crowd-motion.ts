@@ -1,10 +1,12 @@
 import type { Group, Scene } from "three";
 
 import {
-  clampToNearSidewalk,
+  clampToSidewalk,
   gardenSignPosition,
   sidewalkLaneZ,
+  sidewalkSideForLane,
 } from "./street-layout.js";
+import { STREET_LAYOUT } from "./street-layout.js";
 import type { PasserbyBeat } from "./storyboard.js";
 
 export { gardenSignPosition, sidewalkLaneZ };
@@ -60,6 +62,7 @@ const basePose = (
   const endX = -startX;
   const x = startX + (endX - startX) * progress;
 
+  const sidewalkSide = sidewalkSideForLane(beat.lane);
   const laneBase = sidewalkLaneZ(beat.lane);
   const meander = Math.sin(progress * Math.PI * 2 + actorIndex * 0.83) * 0.045;
   const attention = beat.seesAdvertisement
@@ -67,7 +70,12 @@ const basePose = (
     : 0;
   const signSide = beat.signIndex >= 0 && beat.signIndex % 2 === 0 ? -1 : 1;
   const signPull = attention * signSide * 0.22;
-  const z = clampToNearSidewalk(laneBase + meander - attention * 0.07, 0.12);
+  const attentionPull = sidewalkSide === "near" ? attention * 0.07 : -attention * 0.04;
+  const z = clampToSidewalk(
+    laneBase + meander - attentionPull,
+    sidewalkSide,
+    0.12,
+  );
 
   const worldSpeed = Math.abs(endX - startX) * routeRate / durationSeconds;
   const pace = Math.max(0.72, Math.min(1.7, worldSpeed / 1.55));
@@ -134,8 +142,10 @@ const separateCrowd = (poses: MutableCrowdPose[]): number => {
             deterministicUnit(left + right, 71) < 0.5 ? -1 : 1;
           const side = Math.abs(dz) > 0.01 ? Math.sign(dz) : deterministicSide;
           const push = (CROWD_SEPARATION - distance) * 0.52;
-          a.z = clampToNearSidewalk(a.z - push * side, 0.1);
-          b.z = clampToNearSidewalk(b.z + push * side, 0.1);
+          const aSide = a.z < STREET_LAYOUT.road.centerZ ? "near" : "far";
+          const bSide = b.z < STREET_LAYOUT.road.centerZ ? "near" : "far";
+          a.z = clampToSidewalk(a.z - push * side, aSide, 0.1);
+          b.z = clampToSidewalk(b.z + push * side, bSide, 0.1);
         }
       }
     }
