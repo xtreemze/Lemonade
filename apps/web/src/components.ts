@@ -444,18 +444,17 @@ export class LemonadeDecisionPanel extends LitElement {
         </p>
         <button
           id="sell-button"
-          class="sell-button simulation-button"
+          class="sell-button simulation-button flow-action-button"
           type="submit"
           aria-label="Sell for the day"
           ?disabled=${!model.affordable}
         >
           <img
-            class="simulation-button-art"
+            class="simulation-button-art flow-action-icon"
             src="./lemonade-simulate.svg"
             alt=""
             aria-hidden="true"
           />
-          <span>Simulate day</span>
         </button>
       </form>
     `;
@@ -516,7 +515,9 @@ export class LemonadeDayReport extends LitElement {
 
   readonly #onClick = (event: Event): void => {
     const target = event.target;
-    if (!(target instanceof HTMLButtonElement) || target.id !== "review-history-button") return;
+    if (!(target instanceof Element)) return;
+    const button = target.closest<HTMLButtonElement>("button#review-history-button");
+    if (button === null || !this.contains(button)) return;
     this.dispatchEvent(new Event("lemonade-review-history", { bubbles: true, composed: true }));
   };
 
@@ -651,8 +652,26 @@ export class LemonadeDayReport extends LitElement {
             ? `Tier ${String(report.nextState.tier)} unlocks tomorrow. New finance rules will be shown before you sell.`
             : ""}
         </p>
-        <button id="review-history-button" class="next-button" type="button">
-          Review sales history
+        <button
+          id="review-history-button"
+          class="next-button flow-action-button history-review-button"
+          type="button"
+          aria-label="Review sales history"
+        >
+          <svg
+            class="flow-action-icon history-review-icon"
+            viewBox="0 0 96 96"
+            role="img"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path class="history-review-axis" d="M20 18v58h58" />
+            <path class="history-review-line" d="M27 64l14-18 13 10 20-28" />
+            <circle class="history-review-point" cx="27" cy="64" r="4" />
+            <circle class="history-review-point" cx="41" cy="46" r="4" />
+            <circle class="history-review-point" cx="54" cy="56" r="4" />
+            <circle class="history-review-point" cx="74" cy="28" r="4" />
+          </svg>
         </button>
       </section>
     `;

@@ -18,6 +18,10 @@
   text-align: center;
 }
 
+.scene-fallback[hidden] {
+  display: none;
+}
+
 .scene-fallback strong {
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
   font-size: clamp(1.6rem, 5vw, 3.2rem);
@@ -48,28 +52,35 @@
   text-transform: uppercase;
 }
 
+.game-shell[data-view="simulation"] .stand-stage,
+.game-shell[data-view="forecast"] .stand-stage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  margin: 0;
+  overflow: hidden;
+  animation: scene-enter 260ms ease-out both;
+}
+
 .game-shell[data-view="simulation"] .scene-canvas,
 .game-shell[data-view="forecast"] .scene-canvas,
 .game-shell[data-view="simulation"] .scene-fallback,
 .game-shell[data-view="forecast"] .scene-fallback {
-  height: 100dvh;
-  min-height: 100dvh;
-}
-
-.game-shell[data-view="simulation"] .stand-stage,
-.game-shell[data-view="forecast"] .stand-stage {
-  animation: scene-enter 260ms ease-out both;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  margin: 0;
 }
 
 @keyframes scene-enter {
   from {
     opacity: 0;
-    transform: scale(1.015);
   }
 
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -84,7 +95,8 @@
   .game-shell[data-view="forecast"] .scene-canvas,
   .game-shell[data-view="simulation"] .scene-fallback,
   .game-shell[data-view="forecast"] .scene-fallback {
-    height: 100dvh;
-    min-height: 100dvh;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
   }
 }

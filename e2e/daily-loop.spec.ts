@@ -1,9 +1,15 @@
 import { readFile } from "node:fs/promises";
 
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+const openPlanningView = async (page: Page): Promise<void> => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("./");
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
+};
 
 test("plays a complete day with keyboard controls", async ({ page }) => {
-  await page.goto("./");
+  await openPlanningView(page);
 
   const sliders = page.getByRole("slider");
   await expect(sliders).toHaveCount(3);
@@ -21,12 +27,13 @@ test("plays a complete day with keyboard controls", async ({ page }) => {
   await sell.focus();
   await page.keyboard.press("Enter");
 
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "report");
   await expect(page.getByRole("heading", { name: /sold$/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
 });
 
 test("supports precise numeric entry synchronized with sliders", async ({ page }) => {
-  await page.goto("./");
+  await openPlanningView(page);
 
   const exactInputs = page.getByRole("spinbutton");
   await expect(exactInputs).toHaveCount(3);
@@ -64,7 +71,7 @@ test("supports precise numeric entry synchronized with sliders", async ({ page }
 });
 
 test("restores the level-one operating envelope independently of finance", async ({ page }) => {
-  await page.goto("./");
+  await openPlanningView(page);
 
   await expect(page.locator("#finance-tier")).toHaveText("Stand level 1 · Business tier 0");
   await expect(page.getByRole("slider", { name: /Glasses/ })).toHaveAttribute("max", "15");
@@ -77,8 +84,9 @@ test("restores the level-one operating envelope independently of finance", async
 });
 
 test("restores both report and next-day phases across reloads", async ({ page }) => {
-  await page.goto("./");
+  await openPlanningView(page);
   await page.getByRole("button", { name: "Sell for the day" }).click();
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "report");
 
   const reportHeading = page.getByRole("heading", { name: /sold$/ });
   const reportText = await reportHeading.textContent();
@@ -93,6 +101,7 @@ test("restores both report and next-day phases across reloads", async ({ page })
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "history");
   await page.getByRole("button", { name: "Plan next day" }).click();
   await expect(page.locator("#status-day")).toHaveText("2");
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
   await expect(page.locator("#run-status")).toContainText("Next day saved locally");
 
   await page.reload();
@@ -106,12 +115,13 @@ test("exports and imports a progressed run into a clean browser profile", async 
   const baseURL = "http://127.0.0.1:4173/Lemonade/";
   const source = await browser.newContext({ baseURL, acceptDownloads: true });
   const sourcePage = await source.newPage();
-  await sourcePage.goto("./");
+  await openPlanningView(sourcePage);
   await sourcePage.getByRole("button", { name: "Sell for the day" }).click();
+  await expect(sourcePage.getByRole("main")).toHaveAttribute("data-view", "report");
   await sourcePage.getByRole("button", { name: "Review sales history" }).click();
+  await expect(sourcePage.getByRole("main")).toHaveAttribute("data-view", "history");
   await sourcePage.getByRole("button", { name: "Plan next day" }).click();
   await expect(sourcePage.locator("#status-day")).toHaveText("2");
-
   await expect(sourcePage.getByRole("main")).toHaveAttribute("data-view", "planning");
   await sourcePage.locator(".run-tools-summary").click();
   const downloadPromise = sourcePage.waitForEvent("download");
@@ -122,7 +132,7 @@ test("exports and imports a progressed run into a clean browser profile", async 
 
   const target = await browser.newContext({ baseURL });
   const targetPage = await target.newPage();
-  await targetPage.goto("./");
+  await openPlanningView(targetPage);
   await expect(targetPage.locator("#status-day")).toHaveText("1");
 
   await targetPage.locator(".run-tools-summary").click();
