@@ -125,17 +125,7 @@ const mailboxXForDriveway = (
 ): number => {
   const preferred = drivewayX + drivewaySide * offset;
   if (mailboxAnchorIsClear(preferred)) return preferred;
-  const alternate = drivewayX - drivewaySide * offset;
-  if (mailboxAnchorIsClear(alternate)) return alternate;
-
-  for (let step = 1; step <= 8; step += 1) {
-    const distance = offset + step * 0.45;
-    const outer = drivewayX + drivewaySide * distance;
-    if (mailboxAnchorIsClear(outer)) return outer;
-    const inner = drivewayX - drivewaySide * distance;
-    if (mailboxAnchorIsClear(inner)) return inner;
-  }
-  return preferred;
+  return drivewayX - drivewaySide * offset;
 };
 
 const makeProperty = (
