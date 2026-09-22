@@ -552,6 +552,7 @@ export const createLemonsvilleScene = (
   canvas.dataset["crowdModel"] = "routed-separated-grounded";
   canvas.dataset["groundContact"] = "height-aware-clearance";
   canvas.dataset["ambientLife"] = "loading";
+  canvas.dataset["atmosphere"] = "weather-fog-depth";
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
   for (const lemon of lemons) scene.add(lemon);
