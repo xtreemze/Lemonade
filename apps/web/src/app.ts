@@ -435,6 +435,8 @@ export class LemonadeApp {
     const affordability = this.#affordability();
     if (!affordability.affordable) return;
 
+    this.#haptics.play("purchase:serve");
+
     const resolution = simulateDay(
       this.#game,
       Object.freeze({
