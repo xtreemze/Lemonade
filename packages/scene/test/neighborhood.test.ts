@@ -20,17 +20,17 @@ describe("neighborhood world scale", () => {
     const scene = new Scene();
     const stats = populateNeighborhood(scene);
 
-    expect(stats.worldSpan).toBeGreaterThanOrEqual(140);
-    expect(stats.houseLods).toBeGreaterThanOrEqual(24);
+    expect(stats.worldSpan).toBeGreaterThanOrEqual(220);
+    expect(stats.houseLods).toBeGreaterThanOrEqual(36);
     expect(stats.featuredHomes).toBe(1);
     expect(stats.frontProperties).toBeGreaterThanOrEqual(7);
     expect(stats.driveways).toBe(stats.frontProperties);
-    expect(stats.treeLods).toBeGreaterThanOrEqual(40);
+    expect(stats.treeLods).toBeGreaterThanOrEqual(64);
     expect(stats.yardDetails).toBeGreaterThanOrEqual(10);
     expect(stats.flowers).toBeGreaterThanOrEqual(8);
-    expect(stats.pavedRoads).toBeGreaterThanOrEqual(3);
+    expect(stats.pavedRoads).toBeGreaterThanOrEqual(7);
     expect(stats.windResponsive).toBeGreaterThanOrEqual(stats.treeLods + stats.shrubs);
-    expect(stats.roadSegments).toBeGreaterThanOrEqual(13);
+    expect(stats.roadSegments).toBeGreaterThanOrEqual(20);
 
     let lodCount = 0;
     let standHomeCount = 0;
@@ -66,6 +66,15 @@ describe("neighborhood world scale", () => {
     expect(flowerCount).toBe(stats.flowers);
     expect(treeVariants.size).toBeGreaterThan(8);
     expect(shrubVariants.size).toBeGreaterThan(4);
+
+    const residentialHomes = scene.children.filter(
+      (object) =>
+        typeof object.userData["sceneRole"] === "string" &&
+        (object.userData["sceneRole"] as string).startsWith("residential-"),
+    );
+    expect(residentialHomes.some((home) => home.position.z > 12)).toBe(true);
+    expect(residentialHomes.some((home) => home.position.z < -58)).toBe(true);
+    expect(residentialHomes.some((home) => Math.abs(home.position.x) > 65)).toBe(true);
   });
 
   it("keeps rendered static scenery and signs off roads, sidewalks, and driveways", () => {
