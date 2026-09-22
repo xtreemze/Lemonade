@@ -145,19 +145,19 @@ const parseConfig = (value: unknown): EditorConfig => {
   const base = cloneDefaults();
   if (typeof value !== "object" || value === null) return base;
   const raw = value as Partial<EditorConfig>;
-  const population =
+  const population: Partial<EditorConfig["population"]> =
     typeof raw.population === "object" && raw.population !== null
       ? raw.population
       : {};
-  const procedural =
+  const procedural: Partial<EditorConfig["procedural"]> =
     typeof raw.procedural === "object" && raw.procedural !== null
       ? raw.procedural
       : {};
-  const atmosphere =
+  const atmosphere: Partial<EditorConfig["atmosphere"]> =
     typeof raw.atmosphere === "object" && raw.atmosphere !== null
       ? raw.atmosphere
       : {};
-  const camera =
+  const camera: Partial<EditorConfig["camera"]> =
     typeof raw.camera === "object" && raw.camera !== null ? raw.camera : {};
 
   base.weather = isWeather(raw.weather) ? raw.weather : base.weather;
@@ -293,11 +293,13 @@ export const isSceneViewerEnabled = (): boolean =>
   typeof localStorage !== "undefined" && localStorage.getItem(VIEWER_FLAG) === "1";
 
 export const enableSceneViewer = (): void => {
+  if (typeof localStorage === "undefined") return;
   localStorage.setItem(VIEWER_FLAG, "1");
   console.log("Scene editor enabled. Refresh the page to activate.");
 };
 
 export const disableSceneViewer = (): void => {
+  if (typeof localStorage === "undefined") return;
   localStorage.removeItem(VIEWER_FLAG);
   console.log("Scene editor disabled. Refresh the page.");
 };
@@ -464,7 +466,7 @@ const createSelectControl = <T extends string>(
 
 const createButtonRow = (
   parent: HTMLElement,
-  buttons: readonly [string, () => void][],
+  buttons: ReadonlyArray<readonly [string, () => void]>,
 ): void => {
   const row = document.createElement("div");
   row.style.cssText = "display:flex;flex-wrap:wrap;gap:5px;";
@@ -958,8 +960,12 @@ export const createPersistentSceneViewer = (
 
   const cameraPositionInputs: HTMLInputElement[] = [];
   const cameraTargetInputs: HTMLInputElement[] = [];
-  const cameraAxes = ["X", "Y", "Z"] as const;
-  cameraAxes.forEach((axis, index) => {
+  const cameraAxes = [
+    ["X", 0],
+    ["Y", 1],
+    ["Z", 2],
+  ] as const;
+  cameraAxes.forEach(([axis, index]) => {
     cameraPositionInputs.push(
       createNumberControl(
         cameraSection,
@@ -976,7 +982,7 @@ export const createPersistentSceneViewer = (
       ),
     );
   });
-  cameraAxes.forEach((axis, index) => {
+  cameraAxes.forEach(([axis, index]) => {
     cameraTargetInputs.push(
       createNumberControl(
         cameraSection,
@@ -1008,11 +1014,15 @@ export const createPersistentSceneViewer = (
   );
 
   const syncCameraInputs = (): void => {
-    cameraPositionInputs.forEach((input, index) => {
-      input.value = config.camera.position[index].toFixed(2);
-    });
-    cameraTargetInputs.forEach((input, index) => {
-      input.value = config.camera.target[index].toFixed(2);
+    cameraAxes.forEach(([, axisIndex], controlIndex) => {
+      const positionInput = cameraPositionInputs[controlIndex];
+      const targetInput = cameraTargetInputs[controlIndex];
+      if (positionInput !== undefined) {
+        positionInput.value = config.camera.position[axisIndex].toFixed(2);
+      }
+      if (targetInput !== undefined) {
+        targetInput.value = config.camera.target[axisIndex].toFixed(2);
+      }
     });
     fovInput.value = config.camera.fov.toFixed(1);
   };
@@ -1117,7 +1127,7 @@ export const createPersistentSceneViewer = (
   };
 
   for (const property of ["position", "rotation", "scale"] as const) {
-    cameraAxes.forEach((axis, index) => {
+    cameraAxes.forEach(([axis, index]) => {
       const row = createControlRow(
         transformSection,
         (property === "rotation" ? "Rot " : property === "scale" ? "Scale " : "Pos ") +
