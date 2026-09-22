@@ -22,7 +22,7 @@ import {
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { CupInventory } from "./cup-inventory.js";
-import { STAND_LAYOUT } from "./stand-layout.js";
+import { LEMON_CENTER_Y, SELLER_Z } from "./stand-layout.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -34,7 +34,6 @@ import {
   type SceneShotKind,
   type StreetStoryboard,
 } from "./storyboard.js";
-import { WEATHER_BACKDROP_LAYOUT } from "./weather-layout.js";
 
 export type SceneWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 export type CustomerActivity = "quiet" | "light" | "steady" | "lively" | "busy";
@@ -110,19 +109,7 @@ type StandModel = Readonly<{
 
 const createStand = (): StandModel => {
   const root = new Group();
-  // Keep one shared geometry contract for the counter, vendor, and inventory.
-  addBox(root, STAND_LAYOUT.body.size, STAND_LAYOUT.body.position, 0xe7c672);
-  addBox(root, STAND_LAYOUT.counter.size, STAND_LAYOUT.counter.position, 0xf3d85d);
-  addBox(root, STAND_LAYOUT.frontPanel.size, STAND_LAYOUT.frontPanel.position, 0xffefaf);
-  for (const post of STAND_LAYOUT.posts) {
-    addBox(root, post.size, post.position, 0x5e4934);
-  }
-  addBox(root, STAND_LAYOUT.canopy.size, STAND_LAYOUT.canopy.position, 0xe6a93b);
-
-
   const shutter = new Group();
-  addBox(shutter, [3.0, 0.82, 0.1], [0, 0.96, 0.78], 0xd39b43);
-  addBox(shutter, [0.92, 0.24, 0.04], [0, 0.98, 0.84], 0xf4dc83);
   shutter.visible = false;
   root.add(shutter);
   return Object.freeze({ root, shutter });
@@ -449,7 +436,7 @@ const createLemon = (index: number): Group => {
   const row = Math.floor(index / 4);
   lemon.position.set(
     -0.75 + column * 0.5,
-    STAND_LAYOUT.lemonCenterY + row * 0.27,
+    LEMON_CENTER_Y + row * 0.27,
     0.46 + (index % 2) * 0.06,
   );
   return lemon;
@@ -540,7 +527,7 @@ export const createLemonsvilleScene = (
   seller.person.root.position.set(
     0,
     personGroundY(seller.person),
-    STAND_LAYOUT.sellerZ,
+    SELLER_Z,
   );
   seller.person.root.scale.multiplyScalar(0.98);
   scene.add(seller.person.root);
@@ -558,21 +545,13 @@ export const createLemonsvilleScene = (
     "hot-and-dry": new Group(),
     thunderstorm: new Group(),
   };
-  for (const [weather, weatherObject] of Object.entries(weatherObjects) as [
-    SceneWeather,
-    Group,
-  ][]) {
-    const layout = WEATHER_BACKDROP_LAYOUT[weather];
-    weatherObject.position.set(...layout.position);
-    weatherObject.scale.setScalar(layout.scale);
-    scene.add(weatherObject);
-  }
-  const weatherOrigins = Object.freeze({
-    sunny: WEATHER_BACKDROP_LAYOUT.sunny.position[0],
-    cloudy: WEATHER_BACKDROP_LAYOUT.cloudy.position[0],
-    "hot-and-dry": WEATHER_BACKDROP_LAYOUT["hot-and-dry"].position[0],
-    thunderstorm: WEATHER_BACKDROP_LAYOUT.thunderstorm.position[0],
-  });
+  for (const weatherObject of Object.values(weatherObjects)) scene.add(weatherObject);
+  const weatherOrigins: Record<SceneWeather, number> = {
+    sunny: 0,
+    cloudy: 0,
+    "hot-and-dry": 0,
+    thunderstorm: 0,
+  };
 
   let state = initialState;
   let crowdMotion:
@@ -680,9 +659,9 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./stand-detail.js")
-    .then(({ decorateStand }) => {
+    .then(({ populateStand }) => {
       if (disposed) return;
-      decorateStand(stand.root, STAND_LAYOUT.counterTopY);
+      populateStand(stand.root, stand.shutter);
       render();
     })
     .catch(() => undefined);
@@ -709,6 +688,9 @@ export const createLemonsvilleScene = (
     .then(({ populateWeatherObjects }) => {
       if (disposed) return;
       populateWeatherObjects(weatherObjects);
+      for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
+        weatherOrigins[weather] = weatherObjects[weather].position.x;
+      }
       render();
     })
     .catch(() => undefined);
