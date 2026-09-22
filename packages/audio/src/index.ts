@@ -69,9 +69,6 @@ type AppleWeatherMelody = Readonly<{
 const WEATHER_MELODY_METADATA: Readonly<Record<WeatherAudioCue, WeatherMelodyMetadata>> =
   Object.freeze({
     "forecast:sunny": Object.freeze({
-      title: "Ranz des Vaches (Call to tconst WEATHER_MELODY_METADATA: Readonly<Record<WeatherAudioCue, WeatherMelodyMetadata>> =
-  Object.freeze({
-    "forecast:sunny": Object.freeze({
       title: "Ranz des Vaches (Call to the Dairy Cows)",
       attribution: "Gioachino Rossini · William Tell Overture",
       historicalSource: "1979 Apple II Lemonade Stand sunny-weather excerpt",
