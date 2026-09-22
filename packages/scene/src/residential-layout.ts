@@ -1281,11 +1281,22 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       if (clearsExistingTrees) backyardTrees.push(candidate);
     }
   }
+  const frontYardTrees: ResidentialPlanting[] = generatePropertyPlantings(
+    safeSeed,
+    [...front, ...middle],
+    3_150,
+    "front",
+    partial,
+    2.8,
+    4.2,
+    3,
+  );
   const trees = Object.freeze([
     ...backyardTrees,
+    ...frontYardTrees,
     ...generatePlantings(
       safeSeed,
-      Math.max(0, 72 - backyardTrees.length),
+      Math.max(0, 96 - backyardTrees.length - frontYardTrees.length),
       3_100,
       -88,
       38,
