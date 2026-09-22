@@ -52,16 +52,23 @@ describe("unified neighborhood mobility", () => {
     const trafficVehicles = sample.actors.filter(
       (actor) => actor.id.startsWith("traffic-vehicle:"),
     );
-    expect(trafficVehicles).toHaveLength(7);
+    expect(trafficVehicles).toHaveLength(14);
     expect(new Set(trafficVehicles.map((actor) => actor.id))).toEqual(
       new Set([
-        "traffic-vehicle:main",
-        "traffic-vehicle:front-grid",
-        "traffic-vehicle:deep-grid",
-        "traffic-vehicle:middle-curve",
-        "traffic-vehicle:back-curve",
-        "traffic-vehicle:west-curve",
-        "traffic-vehicle:east-curve",
+        "traffic-vehicle:main:v0",
+        "traffic-vehicle:main:v1",
+        "traffic-vehicle:front-grid:v0",
+        "traffic-vehicle:front-grid:v1",
+        "traffic-vehicle:deep-grid:v0",
+        "traffic-vehicle:deep-grid:v1",
+        "traffic-vehicle:middle-curve:v0",
+        "traffic-vehicle:middle-curve:v1",
+        "traffic-vehicle:back-curve:v0",
+        "traffic-vehicle:back-curve:v1",
+        "traffic-vehicle:west-curve:v0",
+        "traffic-vehicle:west-curve:v1",
+        "traffic-vehicle:east-curve:v0",
+        "traffic-vehicle:east-curve:v1",
       ]),
     );
   });
@@ -298,7 +305,7 @@ describe("unified neighborhood mobility", () => {
           (actor) =>
             actor.kind === "mail-carrier" && actor.interaction !== "mailbox",
         )
-        .every((actor) => actor.speed === 1.42),
+        .every((actor) => actor.speed === 4.2),
     ).toBe(true);
     expect(
       mailDays.filter((sample) =>
