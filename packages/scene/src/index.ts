@@ -20,7 +20,7 @@ import {
   WebGLRenderer,
 } from "three";
 
-import { characterProfileFor } from "./characters.js";
+import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { CupInventory } from "./cup-inventory.js";
 import {
   buyerPhaseAt,
@@ -178,6 +178,7 @@ type PersonRig = Readonly<{
   strideOffset: number;
   walkPace: number;
   gaitAmplitude: number;
+  profile: CharacterProfile;
 }>;
 
 type SellerRig = Readonly<{
@@ -291,38 +292,6 @@ const createLemonadeCup = (scale = 1): Group => {
   return cup;
 };
 
-const addCharacterHair = (
-  head: Mesh,
-  style: 0 | 1 | 2 | 3,
-  color: number,
-  accessory: 0 | 1 | 2,
-): void => {
-  if (style === 1) {
-    const hair = new Mesh(new SphereGeometry(0.265, 11, 7), makeCharacterMaterial(color));
-    hair.scale.set(1, 0.42, 1);
-    hair.position.y = 0.16;
-    head.add(hair);
-  } else if (style === 2) {
-    const hair = new Mesh(new BoxGeometry(0.42, 0.11, 0.34), makeCharacterMaterial(color));
-    hair.position.set(0, 0.18, -0.01);
-    head.add(hair);
-  } else if (style === 3) {
-    const hair = new Mesh(new CylinderGeometry(0.22, 0.25, 0.12, 10), makeCharacterMaterial(color));
-    hair.position.y = 0.18;
-    head.add(hair);
-  }
-
-  if (accessory === 1) {
-    const brim = new Mesh(new BoxGeometry(0.46, 0.035, 0.34), makeCharacterMaterial(color));
-    brim.position.set(0, 0.23, 0.05);
-    head.add(brim);
-  } else if (accessory === 2) {
-    const bridge = new Mesh(new BoxGeometry(0.18, 0.018, 0.018), makeMaterial(0x273036));
-    bridge.position.set(0, 0.035, 0.235);
-    head.add(bridge);
-  }
-};
-
 const createPerson = (characterSeed: number, index: number): PersonRig => {
   const profile = characterProfileFor(characterSeed, index);
   const root = new Group();
@@ -340,30 +309,6 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   head.scale.set(0.94, 1.04, 0.9);
   head.position.y = 1.78;
   root.add(torso, head);
-
-  const eyeMaterial = makeCharacterMaterial(0x263238);
-  for (const x of [-0.09, 0.09]) {
-    const eye = new Mesh(new SphereGeometry(0.026, 8, 6), eyeMaterial.clone());
-    eye.position.set(x, 0.045, 0.248);
-    head.add(eye);
-  }
-
-  const nose = new Mesh(
-    new SphereGeometry(0.038, 8, 6),
-    makeCharacterMaterial(profile.skinColor),
-  );
-  nose.scale.set(0.8, 1, 1.25);
-  nose.position.set(0, -0.015, 0.258);
-  head.add(nose);
-
-  const mouth = new Mesh(
-    new BoxGeometry(0.11, 0.018, 0.016),
-    makeCharacterMaterial(0x7f4640),
-  );
-  mouth.position.set(0, -0.11, 0.246);
-  head.add(mouth);
-
-  addCharacterHair(head, profile.hairStyle, profile.hairColor, profile.accessory);
 
   const leftArm = createLimb(
     0.38,
@@ -427,6 +372,7 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
     strideOffset: profile.strideOffset,
     walkPace: profile.walkPace,
     gaitAmplitude: profile.gaitAmplitude,
+    profile,
   });
 };
 
@@ -658,6 +604,7 @@ export const createLemonsvilleScene = (
   canvas.dataset["cupVisualStyle"] = "original-svg-3d";
   canvas.dataset["cupInventory"] = "loading";
   canvas.dataset["characterRigStyle"] = "articulated-joints-face";
+  canvas.dataset["characterDetail"] = "loading";
   canvas.dataset["neighborhoodDetail"] = "loading";
   canvas.dataset["cameraMotion"] = "stand-hold-remaining-closeup";
 
@@ -789,6 +736,20 @@ export const createLemonsvilleScene = (
     })
     .catch(() => {
       if (!disposed) canvas.dataset["cupInventory"] = "unavailable";
+    });
+
+  void import("./character-detail.js")
+    .then(({ decorateCharacterHead }) => {
+      if (disposed) return;
+      for (const person of [...customers, ...buyers]) {
+        decorateCharacterHead(person.head, person.profile);
+      }
+      decorateCharacterHead(seller.person.head, seller.person.profile, false);
+      canvas.dataset["characterDetail"] = "ready";
+      render();
+    })
+    .catch(() => {
+      if (!disposed) canvas.dataset["characterDetail"] = "core";
     });
 
   const positionStaticPedestrians = (): void => {
