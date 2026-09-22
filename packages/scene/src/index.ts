@@ -25,13 +25,14 @@ import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { walkingCycleAtDistance } from "./gait.js";
 import { SELLER_Z } from "./stand-anchors.js";
+import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
 import type { WeatherDetailController } from "./weather-detail.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
+  endingCloseupProgressAt,
   endingConfidenceAt,
-  sellerGestureAt,
   remainingCameraProgressAt,
   remainingCupsAt,
   sceneCameraComposition,
@@ -504,6 +505,7 @@ export const createLemonsvilleScene = (
 
   let state = initialState;
   let crowdMotion: StreetMotion | null = null;
+  let applySellerGesture: SellerGestureApplier | null = null;
   let weatherDetail: WeatherDetailController | null = null;
   let ambientLife:
     | Readonly<{
@@ -664,8 +666,9 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./character-detail.js")
-    .then(({ decorateSceneCharacters }) => {
+    .then(({ applySellerConfidenceGesture, decorateSceneCharacters }) => {
       if (disposed) return;
+      applySellerGesture = applySellerConfidenceGesture;
       decorateSceneCharacters(
         customers,
         buyers,
@@ -885,19 +888,16 @@ export const createLemonsvilleScene = (
     applySellerExpression(seller, confidence);
 
     if (state.phase === "simulation") {
-      const gesture = sellerGestureAt(
-        storyboard,
-        elapsedMs,
-        state.confidence,
-        state.nextConfidence,
-      );
-      seller.person.torso.position.y += gesture.torsoLift;
-      seller.person.head.rotation.x += gesture.headTilt;
-      seller.person.arms[0].root.rotation.x += gesture.armLift;
-      seller.person.arms[1].root.rotation.x += gesture.armLift;
-      seller.person.arms[0].root.rotation.z = -gesture.armSpread;
-      seller.person.arms[1].root.rotation.z = gesture.armSpread;
-      canvas.dataset["sellerGestureStrength"] = gesture.strength.toFixed(3);
+      const gestureStrength =
+        applySellerGesture?.(
+          seller.person.torso,
+          seller.person.head,
+          seller.person.arms[0].root,
+          seller.person.arms[1].root,
+          endingCloseupProgressAt(storyboard, elapsedMs),
+          confidence,
+        ) ?? 0;
+      canvas.dataset["sellerGestureStrength"] = gestureStrength.toFixed(3);
     } else {
       canvas.dataset["sellerGestureStrength"] = "0.000";
     }
