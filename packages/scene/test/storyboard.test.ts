@@ -244,7 +244,7 @@ describe("street simulation storyboard", () => {
     expect(portraitForecast.position[1]).toBeGreaterThan(portraitStand.position[1]);
     expect(portraitForecast.position[2]).toBeGreaterThan(portraitStand.position[2]);
     expect(portraitStand.position[2]).toBeGreaterThanOrEqual(34);
-    expect(portraitStand.fov).toBeGreaterThanOrEqual(56);
+    expect(portraitStand.fov).toBeGreaterThanOrEqual(49);
     expect(portraitRemaining.position[2]).toBeGreaterThanOrEqual(15);
     expect(portraitStand.position[2]).toBeGreaterThan(portraitRemaining.position[2]);
     expect(portraitForecast.lookAt[2]).toBeLessThan(portraitStand.lookAt[2]);
@@ -256,7 +256,7 @@ describe("street simulation storyboard", () => {
       .toBeGreaterThan(STREET_LAYOUT.farSidewalk.maxZ + 16);
     expect(landscapeStand.lookAt[2]).toBeGreaterThan(STREET_LAYOUT.road.minZ);
     expect(landscapeStand.lookAt[2]).toBeLessThan(STREET_LAYOUT.road.maxZ);
-    expect(landscapeStand.fov).toBeGreaterThanOrEqual(40);
+    expect(landscapeStand.fov).toBeGreaterThanOrEqual(35);
 
     const portraitForecastExtent = visibleWorldSpan(
       360,

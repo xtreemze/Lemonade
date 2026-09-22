@@ -1305,7 +1305,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       if (clearsExistingTrees) backyardTrees.push(candidate);
     }
   }
-  const frontYardTrees: ResidentialPlanting[] = generatePropertyPlantings(
+  const frontYardTrees: readonly ResidentialPlanting[] = generatePropertyPlantings(
     safeSeed,
     [...front, ...middle],
     3_150,

@@ -21,6 +21,7 @@ import {
 } from "three";
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
+import { createGizmoController, type GizmoController } from "./gizmo-controller.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { walkingCycleAtDistance } from "./gait.js";
@@ -62,6 +63,10 @@ export type LemonsvilleSceneState = Readonly<{
   storyboard: StreetStoryboard;
   phase: ScenePhase;
   reducedMotion: boolean;
+}>;
+
+export type LemonsvilleSceneOptions = Readonly<{
+  enableGizmo?: boolean;
 }>;
 
 export interface LemonsvilleSceneController {
@@ -431,6 +436,7 @@ const disposeObject = (object: Object3D): void => {
 export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
+  options: LemonsvilleSceneOptions = {},
 ): LemonsvilleSceneController | null => {
   let renderer: WebGLRenderer;
   try {
@@ -453,6 +459,15 @@ export const createLemonsvilleScene = (
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
   camera.position.set(0, 6.8, 13.5);
   camera.lookAt(0, 1.7, 0);
+
+  const gizmoController: GizmoController | null =
+    options.enableGizmo === true
+      ? createGizmoController({
+          camera,
+          scene,
+          container: canvas.parentElement ?? canvas,
+        })
+      : null;
 
   const hemisphere = new HemisphereLight(0xfff2c6, 0x526b51, 1.9);
   scene.add(hemisphere);
@@ -1127,6 +1142,7 @@ export const createLemonsvilleScene = (
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
     animationFrame = null;
     signTexture?.dispose();
+    gizmoController?.dispose();
     scene.traverse(disposeObject);
     renderer.dispose();
   };
