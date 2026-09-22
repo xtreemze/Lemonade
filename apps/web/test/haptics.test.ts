@@ -6,6 +6,7 @@ const cues: readonly HapticCue[] = [
   "purchase:serve",
   "purchase:payment",
   "purchase:drink",
+  "storm:gust",
   "storm:thunder",
 ];
 
@@ -29,6 +30,8 @@ describe("haptic feedback", () => {
 
     expect(engine.play("purchase:payment")).toBe(true);
     expect(vibrate).toHaveBeenCalledWith([...hapticPattern("purchase:payment")]);
+    expect(hapticPattern("storm:gust").reduce((total, duration) => total + duration, 0))
+      .toBeLessThan(hapticPattern("storm:thunder").reduce((total, duration) => total + duration, 0));
   });
 
   it("suppresses vibration for reduced motion or inactive documents", () => {
