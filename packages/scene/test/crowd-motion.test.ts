@@ -151,7 +151,7 @@ describe("crowd motion", () => {
     expect(crowdGroundClearance(0.68)).toBeGreaterThan(0.14);
     expect(crowdGroundClearance(0.9)).toBeGreaterThan(0.2);
     expect(crowdGroundClearance(1.2)).toBeGreaterThan(0.26);
-    expect(walkingBodyLift(0.5, 1, 0)).toBeGreaterThan(0);
+    expect(walkingBodyLift(0.5, 1, 1, 0)).toBeGreaterThan(0);
   });
 
   it("reduces exposed street life in storms without changing simulation population math", () => {
