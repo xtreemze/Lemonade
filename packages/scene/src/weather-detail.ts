@@ -236,12 +236,12 @@ export const populateWeatherObjects = (
 
   const lightning = new Group();
   lightning.userData["sceneRole"] = "storm-lightning";
-  lightning.position.set(0.45, -1.0, 1.15);
+  lightning.position.set(0.45, -0.25, 1.15);
   const lightningMaterials: MeshStandardMaterial[] = [];
   for (const [x, y, length, rotation] of [
-    [0, 0, 0.82, 0.34],
-    [0.13, -0.63, 0.72, -0.28],
-    [0.02, -1.18, 0.62, 0.42],
+    [0, 0, 0.44, 0.34],
+    [0.08, -0.31, 0.38, -0.28],
+    [0.02, -0.59, 0.32, 0.42],
   ] as const) {
     const boltMaterial = weatherMaterial(0xf8ec9b, 0xffffd1, 0);
     lightningMaterials.push(boltMaterial);
@@ -261,7 +261,12 @@ export const populateWeatherObjects = (
       new CylinderGeometry(0.02, 0.02, 0.62, 8),
       weatherMaterial(0x7dc7df),
     );
-    drop.position.set(-1.05 + index * 0.35, -1.25 - (index % 2) * 0.45, 0.35);
+    drop.position.set(
+      -1.05 + index * 0.35,
+      -0.48 - (index % 2) * 0.12,
+      0.35,
+    );
+    drop.scale.y = 0.45;
     drop.rotation.z = -0.18;
     weather.thunderstorm.add(drop);
   }
@@ -283,10 +288,14 @@ export const populateWeatherObjects = (
         (activeWeather === "sunny" ? 0.08 : 0.3);
       active.position.x = origins[activeWeather] + drift;
 
+      const daylightElapsed =
+        reducedMotion && phase === "simulation"
+          ? Math.max(1, durationMs) * 0.5
+          : elapsedMs;
       const daylight = businessDayFrameAt(
         activeWeather,
         phase,
-        elapsedMs,
+        daylightElapsed,
         durationMs,
       );
       const flash =
