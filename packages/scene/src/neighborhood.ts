@@ -709,12 +709,13 @@ export const populateNeighborhood = (
   for (const property of allProperties) {
     const access = residentialAccessLayout(property, seed);
     if (property.drivewayX !== null) {
-      road(
+      accessStrip(
         scene,
+        access.drivewayLength,
         WORLD_SCALE.street.drivewayWidth,
-        access.drivewayDepth,
-        property.drivewayX,
+        access.drivewayCenterX,
         access.drivewayCenterZ,
+        access.drivewayRotationY,
         0xc9b995,
         0.019,
         "driveway",
