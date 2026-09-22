@@ -551,7 +551,8 @@ export class LemonadeDayReport extends LitElement {
           </strong>
         </header>
 
-        <div class="report-content">\n          <dl class="results-grid">
+        <div class="report-content">
+          <dl class="results-grid">
           <div><dt>Sales</dt><dd id="report-sales">${formatMoney(Number(entry.revenue))}</dd></div>
           <div><dt>Expenses</dt><dd id="report-expenses">${formatMoney(Number(entry.expenses))}</dd></div>
           <div><dt>Ending cash</dt><dd id="report-cash">${formatMoney(Number(entry.endingCash))}</dd></div>
