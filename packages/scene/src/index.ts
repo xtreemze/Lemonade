@@ -616,7 +616,9 @@ export const createLemonsvilleScene = (
     .then(({ createAtmosphereController }) => {
       if (disposed) return;
       atmosphere = createAtmosphereController({
-        setSky: (color) => renderer.setClearColor(color, 1),
+        setSky: (color) => {
+          renderer.setClearColor(color, 1);
+        },
         setHemisphere: (intensity) => {
           hemisphere.intensity = intensity;
         },
