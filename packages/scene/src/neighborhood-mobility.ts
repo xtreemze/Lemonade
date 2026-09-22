@@ -847,12 +847,14 @@ export const createNeighborhoodMobilitySystem = (
           x: mailInteraction ? nearestMailbox.point.x : x,
           z: STREET_LAYOUT.nearSidewalk.centerZ,
         });
+        const walkingYaw = 0;
+        const mailboxYaw = nearestMailbox ? Math.atan2(nearestMailbox.point.z - mailPoint.z, nearestMailbox.point.x - mailPoint.x) : 0;
         const mailCarrier = makePose(
           "mail-carrier",
           "mail-carrier",
           mailPoint,
-          0,
-          mailInteraction ? 0 : 1.55,
+          mailInteraction ? mailboxYaw : walkingYaw,
+          mailInteraction ? 0 : 0.8,
           focus,
           mailInteraction ? "mailbox" : "none",
           nearestMailbox?.propertyRole ?? null,
