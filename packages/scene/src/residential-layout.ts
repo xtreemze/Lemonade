@@ -708,7 +708,7 @@ const generateFlowers = (
     const x = -13 + unit(seed, 7_000 + attempt * 3) * 11.2;
     const z = -5.3 + unit(seed, 7_001 + attempt * 3) * 4.1;
     const candidate = { x, z };
-    if (residentialPointIsBlocked(candidate, layout, 0.16)) continue;
+    if (residentialPointIsBlocked(candidate, layout, 0.38)) continue;
     result.push(
       Object.freeze({
         x,
@@ -880,7 +880,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     3_050,
     "back",
     partial,
-    2.45,
+    3.2,
     1.45,
     7,
   );
@@ -905,7 +905,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     5_050,
     "front",
     partial,
-    0.86,
+    1.45,
     0.72,
     7,
   );
@@ -929,7 +929,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     6_900,
     "front",
     partial,
-    0.24,
+    0.38,
     0.48,
     5,
   );
