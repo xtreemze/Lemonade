@@ -34,22 +34,10 @@ export const formatPriceLabel = (priceCents: number): string => {
 };
 
 const createShots = (durationMs: number): readonly SceneShot[] => {
-  const establishingEnd = Math.round(durationMs * 0.2);
-  const purchaseStart = Math.round(durationMs * 0.48);
-  const purchaseEnd = Math.round(durationMs * 0.72);
+  const remainingStart = Math.round(durationMs * 0.86);
   return Object.freeze([
-    Object.freeze({ kind: "establishing", startAtMs: 0, endAtMs: establishingEnd }),
-    Object.freeze({
-      kind: "street",
-      startAtMs: establishingEnd,
-      endAtMs: purchaseStart,
-    }),
-    Object.freeze({
-      kind: "purchase",
-      startAtMs: purchaseStart,
-      endAtMs: purchaseEnd,
-    }),
-    Object.freeze({ kind: "street", startAtMs: purchaseEnd, endAtMs: durationMs }),
+    Object.freeze({ kind: "stand", startAtMs: 0, endAtMs: remainingStart }),
+    Object.freeze({ kind: "remaining", startAtMs: remainingStart, endAtMs: durationMs }),
   ]);
 };
 
@@ -68,8 +56,8 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
       ? 0
       : Math.min(passerbyCount, Math.max(1, Math.ceil(passerbyCount * advertisementRatio)));
 
-  const purchaseWindowStart = Math.round(durationMs * 0.16);
-  const purchaseWindowEnd = Math.round(durationMs * 0.82);
+  const purchaseWindowStart = Math.round(durationMs * 0.12);
+  const purchaseWindowEnd = Math.round(durationMs * 0.78);
   const approachTravelMs = Math.min(650, Math.max(240, durationMs * 0.09));
   const purchaseDurationMs = Math.min(220, Math.max(130, durationMs * 0.028));
   const drinkDurationMs = Math.min(430, Math.max(240, durationMs * 0.055));
@@ -78,7 +66,7 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
   const sales = Array.from({ length: sold }, (_, index): SaleBeat => {
     const purchaseAtMs =
       sold === 1
-        ? Math.round(durationMs * 0.52)
+        ? Math.round(durationMs * 0.48)
         : Math.round(
             purchaseWindowStart +
               ((purchaseWindowEnd - purchaseWindowStart) * index) / Math.max(1, sold - 1),
