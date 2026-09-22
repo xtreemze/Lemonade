@@ -50,7 +50,7 @@ import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.j
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
 const ACTIVE_SIMULATION_PRESENTATION_MS = 10_000;
-const ENDING_CLOSEUP_PRESENTATION_MS = 2_000;
+const ENDING_CLOSEUP_PRESENTATION_MS = 4_000;
 const SIMULATION_PRESENTATION_MS =
   ACTIVE_SIMULATION_PRESENTATION_MS + ENDING_CLOSEUP_PRESENTATION_MS;
 
@@ -833,6 +833,7 @@ export class LemonadeApp {
       prepared: resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses),
       priceCents: resolvedDay === null ? this.#price : Number(resolvedDay.decision.price),
       characterSeed: Number(this.#runSeed),
+      dayNumber: resolvedDay === null ? Number(this.#game.day) : Number(resolvedDay.day),
       durationMs:
         scenePhase === "simulation"
           ? SIMULATION_PRESENTATION_MS
