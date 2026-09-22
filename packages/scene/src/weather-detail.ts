@@ -223,7 +223,9 @@ export const populateWeatherObjects = (
     origins[kind] = layout.position[0];
   }
 
-  addSun(weather.sunny, 0.82);
+  const sunContainer = new Group();
+  addSun(sunContainer, 0.82);
+  weather.sunny.add(sunContainer);
 
   const partlySun = new Group();
   partlySun.position.set(0.88, 0.5, -0.25);
@@ -358,6 +360,10 @@ export const populateWeatherObjects = (
           : daylight.sunlightColor,
       );
       sunlight.position.set(...daylight.sunPosition);
+
+      const sunArc = Math.max(0, Math.sin(daylight.progress * Math.PI));
+      sunContainer.position.y = sunArc * 2.5 - 0.8;
+      sunContainer.position.z = sunArc < 0.25 ? -1.2 : sunArc < 0.8 ? 0 : -1.2;
 
       lightning.visible = flash > 0.06;
       for (const boltMaterial of lightningMaterials) {
