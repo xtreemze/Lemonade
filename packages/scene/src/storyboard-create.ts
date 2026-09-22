@@ -142,18 +142,14 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
     });
   });
 
-  const crossingDurationMs = Math.min(
-    activeDurationMs,
-    Math.max(2_200, activeDurationMs * 0.72),
-  );
   const passersBy = Array.from({ length: passerbyCount }, (_, index): PasserbyBeat => {
-    const centerAtMs = (activeDurationMs * (index + 0.5)) / passerbyCount;
     const seesAdvertisement = index < adViewerCount;
+    const staggerMs = (activeDurationMs * index) / Math.max(1, passerbyCount);
     return Object.freeze({
       pedestrianIndex: index,
-      startAtMs: Math.round(centerAtMs - crossingDurationMs / 2),
-      endAtMs: Math.round(centerAtMs + crossingDurationMs / 2),
-      direction: saleDirection(index + 1),
+      startAtMs: Math.round(staggerMs),
+      endAtMs: Math.round(activeDurationMs + staggerMs),
+      direction: index % 2 === 0 ? -1 : 1,
       lane: index % 4,
       seesAdvertisement,
       signIndex: seesAdvertisement && visibleSigns > 0 ? index % visibleSigns : -1,
