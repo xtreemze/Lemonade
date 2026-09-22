@@ -11,12 +11,32 @@ import type { Group } from "three";
 
 import { STAND_LAYOUT } from "./stand-layout.js";
 
-const MAX_PREPARED_CUPS = 400;
+export const MAX_VISIBLE_PREPARED_CUPS = 48;
 
 export type CupInventory = Readonly<{
   meshes: readonly InstancedMesh[];
-  setCount(count: number): void;
+  setStock(remaining: number, prepared: number): void;
 }>;
+
+const finiteStock = (value: number): number =>
+  Math.max(0, Number.isFinite(value) ? Math.trunc(value) : 0);
+
+export const visibleCupCountForStock = (
+  remaining: number,
+  prepared: number,
+): number => {
+  const safePrepared = finiteStock(prepared);
+  const safeRemaining = Math.min(safePrepared, finiteStock(remaining));
+  if (safeRemaining === 0 || safePrepared === 0) return 0;
+  if (safePrepared <= MAX_VISIBLE_PREPARED_CUPS) return safeRemaining;
+  return Math.min(
+    MAX_VISIBLE_PREPARED_CUPS,
+    Math.max(
+      1,
+      Math.ceil((safeRemaining / safePrepared) * MAX_VISIBLE_PREPARED_CUPS),
+    ),
+  );
+};
 
 const glassMaterial = (): MeshStandardMaterial =>
   new MeshStandardMaterial({
@@ -103,52 +123,52 @@ export const createCupInventory = (): CupInventory => {
   const shells = new InstancedMesh(
     new CylinderGeometry(0.075, 0.09, 0.19, 8, 1, true),
     glassMaterial(),
-    MAX_PREPARED_CUPS,
+    MAX_VISIBLE_PREPARED_CUPS,
   );
   const liquidBack = new InstancedMesh(
     new CylinderGeometry(0.061, 0.073, 0.118, 8),
     lemonadeBackMaterial(),
-    MAX_PREPARED_CUPS,
+    MAX_VISIBLE_PREPARED_CUPS,
   );
   const liquidFront = new InstancedMesh(
     new CylinderGeometry(0.059, 0.071, 0.108, 8),
     lemonadeFrontMaterial(),
-    MAX_PREPARED_CUPS,
+    MAX_VISIBLE_PREPARED_CUPS,
   );
   const iceA = new InstancedMesh(
     new BoxGeometry(0.046, 0.034, 0.044),
     iceMaterial(),
-    MAX_PREPARED_CUPS,
+    MAX_VISIBLE_PREPARED_CUPS,
   );
   const iceB = new InstancedMesh(
     new BoxGeometry(0.046, 0.034, 0.044),
     iceMaterial(),
-    MAX_PREPARED_CUPS,
+    MAX_VISIBLE_PREPARED_CUPS,
   );
   const iceC = new InstancedMesh(
     new BoxGeometry(0.046, 0.034, 0.044),
     iceMaterial(),
-    MAX_PREPARED_CUPS,
+    MAX_VISIBLE_PREPARED_CUPS,
   );
   const iceD = new InstancedMesh(
     new BoxGeometry(0.046, 0.034, 0.044),
     iceMaterial(),
-    MAX_PREPARED_CUPS,
+    MAX_VISIBLE_PREPARED_CUPS,
   );
   const iceE = new InstancedMesh(
     new BoxGeometry(0.046, 0.034, 0.044),
     iceMaterial(),
-    MAX_PREPARED_CUPS,
+    MAX_VISIBLE_PREPARED_CUPS,
   );
   const straws = new InstancedMesh(
     new CylinderGeometry(0.008, 0.008, 0.25, 6),
     strawMaterial(),
-    MAX_PREPARED_CUPS,
+    MAX_VISIBLE_PREPARED_CUPS,
   );
 
   const matrix = new Matrix4();
-  const columns = 16;
-  const rows = 4;
+  const columns = 6;
+  const rows = 3;
   const cupsPerLayer = columns * rows;
   const xStep =
     (STAND_LAYOUT.cupFootprint.maxX - STAND_LAYOUT.cupFootprint.minX) /
@@ -157,7 +177,7 @@ export const createCupInventory = (): CupInventory => {
     (STAND_LAYOUT.cupFootprint.maxZ - STAND_LAYOUT.cupFootprint.minZ) /
     (rows - 1);
 
-  for (let index = 0; index < MAX_PREPARED_CUPS; index += 1) {
+  for (let index = 0; index < MAX_VISIBLE_PREPARED_CUPS; index += 1) {
     const layer = Math.floor(index / cupsPerLayer);
     const layerIndex = index % cupsPerLayer;
     const column = layerIndex % columns;
@@ -204,11 +224,8 @@ export const createCupInventory = (): CupInventory => {
 
   return Object.freeze({
     meshes,
-    setCount(count: number): void {
-      const visible = Math.min(
-        MAX_PREPARED_CUPS,
-        Math.max(0, Number.isFinite(count) ? Math.trunc(count) : 0),
-      );
+    setStock(remaining: number, prepared: number): void {
+      const visible = visibleCupCountForStock(remaining, prepared);
       for (const mesh of meshes) mesh.count = visible;
     },
   });
