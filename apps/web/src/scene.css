@@ -88,3 +88,45 @@
     min-height: 100dvh;
   }
 }
+
+html:has(.game-shell[data-view="simulation"]),
+html:has(.game-shell[data-view="forecast"]),
+body:has(.game-shell[data-view="simulation"]),
+body:has(.game-shell[data-view="forecast"]) {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.game-shell[data-view="simulation"],
+.game-shell[data-view="forecast"] {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  overflow: hidden;
+}
+
+.game-shell[data-view="simulation"] .stand-stage,
+.game-shell[data-view="forecast"] .stand-stage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.game-shell[data-view="simulation"] .scene-canvas,
+.game-shell[data-view="forecast"] .scene-canvas,
+.game-shell[data-view="simulation"] .scene-fallback,
+.game-shell[data-view="forecast"] .scene-fallback {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
+}
+
