@@ -282,6 +282,18 @@ export const decorateCharacterBody = (
   hem.rotation.y = identity.garmentStyle * 0.015;
 };
 
+export const decorateCharacter = (
+  root: Group,
+  head: Mesh,
+  profile: CharacterProfile,
+  index: number,
+  includeMouth = true,
+): void => {
+  const identity = characterIdentityFor(index, profile);
+  decorateCharacterBody(root, profile, identity);
+  decorateCharacterHead(head, profile, identity, includeMouth);
+};
+
 export const decorateSellerExpression = (
   eyebrows: readonly [Group, Group],
   mouth: readonly [Group, Group],
