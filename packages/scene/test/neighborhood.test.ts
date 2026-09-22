@@ -1,11 +1,13 @@
-import { Box3, Mesh, MeshStandardMaterial, Scene, type Object3D } from "three";
+import { Box3, Group, Mesh, MeshStandardMaterial, Scene, type Object3D } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
   FRONT_PROPERTY_LAYOUT,
   populateNeighborhood,
   updateNeighborhoodActivity,
+  updateNeighborhoodWind,
   weatherWindStrength,
+  windGustMultiplierAt,
 } from "../src/neighborhood.js";
 import {
   DEFAULT_RESIDENTIAL_SEED,
@@ -243,6 +245,33 @@ describe("neighborhood world scale", () => {
     expect(weatherWindStrength("thunderstorm")).toBeGreaterThan(
       weatherWindStrength("cloudy") * 2,
     );
+  });
+
+  it("adds deterministic storm gust peaks and visibly bends flexible vegetation", () => {
+    const gustTime = 1.07;
+    expect(windGustMultiplierAt(gustTime, "thunderstorm")).toBeGreaterThan(
+      windGustMultiplierAt(gustTime, "cloudy") * 1.5,
+    );
+
+    const scene = new Scene();
+    const tree = new Group();
+    tree.userData["sceneRole"] = "procedural-tree";
+    tree.userData["windResponsive"] = true;
+    tree.userData["windPhase"] = 0;
+    tree.userData["windBaseRotationX"] = 0;
+    tree.userData["windBaseRotationZ"] = 0;
+    const flowers = new Group();
+    flowers.userData["sceneRole"] = "garden-flower";
+    flowers.userData["windResponsive"] = true;
+    flowers.userData["windPhase"] = 0;
+    flowers.userData["windBaseRotationX"] = 0;
+    flowers.userData["windBaseRotationZ"] = 0;
+    scene.add(tree, flowers);
+
+    updateNeighborhoodWind(scene, gustTime, "thunderstorm");
+    expect(Math.abs(tree.rotation.z)).toBeGreaterThan(0.08);
+    expect(Math.abs(flowers.rotation.z)).toBeGreaterThan(Math.abs(tree.rotation.z));
+    expect(Math.abs(tree.rotation.x)).toBeGreaterThan(0.01);
   });
 
   it("puts the stand in the featured garden beside its driveway and near the next property", () => {
