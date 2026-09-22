@@ -102,8 +102,6 @@ const createState = (
     weather: input.environment.weather.kind,
     visibleSigns: input.visibleSigns,
     prepared,
-    sold,
-    priceCents,
     durationMs,
     confidence: Math.max(0, Math.min(5, input.confidence)),
     characterSeed: input.characterSeed >>> 0,
@@ -115,8 +113,6 @@ const createState = (
       priceCents,
       ambientPedestrianCount: pedestrianCount[customerActivity],
     }),
-    sellThroughBasisPoints:
-      prepared > 0 ? Math.round((sold / prepared) * 10_000) : 0,
     phase: input.phase,
     reducedMotion,
   });
