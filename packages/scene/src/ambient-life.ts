@@ -323,6 +323,8 @@ export const createAmbientLife = (
         bike.position.set(x, 0.02, roadLaneZ("bicycle", index));
         bike.rotation.y = xTravelYaw(direction);
       });
+      const vehicleOffset =
+        Math.floor(routeProgress(elapsedMs, durationMs, (seed & 7) * 0.11, 0.74) * vehicles.length);
       vehicles.forEach((vehicle, index) => {
         const direction = index % 2 === 0 ? 1 : -1;
         const progress = routeProgress(
@@ -331,7 +333,10 @@ export const createAmbientLife = (
           index * 0.53 + 0.08,
           0.52 + index * 0.09,
         );
-        vehicle.visible = index < population.vehicles && progress > 0.04 && progress < 0.82;
+        const activeIndex =
+          (index - vehicleOffset + vehicles.length) % vehicles.length;
+        vehicle.visible =
+          activeIndex < population.vehicles && progress > 0.04 && progress < 0.82;
         if (!vehicle.visible) return;
         const x = direction === 1
           ? -62 + progress * 124
