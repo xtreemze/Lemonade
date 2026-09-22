@@ -127,7 +127,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   );
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-ambient-life",
-    "weather-aware-pets-bicycles-vehicles",
+    "weather-aware-pets-wildlife-bicycles-vehicles",
     { timeout: 4_000 },
   );
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
