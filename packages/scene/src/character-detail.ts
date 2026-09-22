@@ -1,7 +1,6 @@
 import {
   BoxGeometry,
   CylinderGeometry,
-  type Group,
   Mesh,
   MeshStandardMaterial,
   SphereGeometry,
