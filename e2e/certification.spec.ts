@@ -67,7 +67,7 @@ test("release artifact completes a day without uncaught runtime failures", async
 
 test("narrow viewport keeps the complete planning surface above the fold", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 740 });
-  await page.goto("./");
+  await page.goto("./", { waitUntil: "commit" });
 
   const main = page.getByRole("main");
   await expect(main).toHaveAttribute("data-view", "forecast");

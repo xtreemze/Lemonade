@@ -13,7 +13,6 @@ import type {
 
 import {
   CLOUDY_TOWN_CLOUD_LAYOUT,
-  HOT_DRY_CLOUD_LAYOUT,
   WEATHER_BACKDROP_LAYOUT,
 } from "./weather-layout.js";
 
@@ -251,7 +250,7 @@ export const populateWeatherObjects = (
     cloud.userData["driftPhase"] = layout.driftPhase;
     cloud.userData["baseX"] = layout.position[0];
     addCloud(cloud, index % 2 === 0 ? 0xcbd7d7 : 0xd5dddd);
-    cloud.position.set(...layout.position);
+    cloud.position.set(layout.position[0], layout.position[1], layout.position[2]);
     cloud.scale.setScalar(layout.scale);
     weather.cloudy.add(cloud);
     return cloud;
@@ -261,7 +260,7 @@ export const populateWeatherObjects = (
     { position: [-1.5, 1.5, -0.3] as const, scale: 1.2, driftPhase: 0 },
     { position: [0, 0.5, -0.5] as const, scale: 1, driftPhase: 1.5 },
     { position: [1.5, 1.8, -0.2] as const, scale: 1.1, driftPhase: 3 },
-  ].map((layout, index) => {
+  ].map((layout) => {
     const cloud = new Group();
     cloud.userData["turbulentCloud"] = true;
     cloud.userData["driftPhase"] = layout.driftPhase;
@@ -269,7 +268,7 @@ export const populateWeatherObjects = (
     cloud.userData["baseY"] = layout.position[1];
     cloud.userData["baseZ"] = layout.position[2];
     addCloud(cloud, 0x657786);
-    cloud.position.set(...layout.position);
+    cloud.position.set(layout.position[0], layout.position[1], layout.position[2]);
     cloud.scale.setScalar(layout.scale);
     weather.thunderstorm.add(cloud);
     return cloud;
@@ -300,8 +299,8 @@ export const populateWeatherObjects = (
   const rainGroups = thunderstormClouds.map((cloud, cloudIndex) => {
     const rainGroup = new Group();
     rainGroup.userData["rainCloudIndex"] = cloudIndex;
-    rainGroup.userData["baseCloudX"] = cloud.userData["baseX"];
-    rainGroup.userData["baseCloudY"] = cloud.userData["baseY"];
+    rainGroup.userData["baseCloudX"] = cloud.position.x;
+    rainGroup.userData["baseCloudY"] = cloud.position.y;
 
     for (let dropIndex = 0; dropIndex < 6; dropIndex += 1) {
       const drop = new Mesh(

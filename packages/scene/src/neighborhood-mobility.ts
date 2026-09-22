@@ -7,7 +7,6 @@ import {
 } from "./residential-layout.js";
 import {
   generateStreetNetwork,
-  roadLaneZ,
   STREET_LAYOUT,
   type GeneratedStreetNetwork,
   type StreetStripSpec,
@@ -308,39 +307,40 @@ const allProperties = (layout: ResidentialLayout): readonly ResidentialPropertyS
 
 const propertyDoorPoint = (
   property: ResidentialPropertySpec,
+  seed: number,
 ): ResidentialPoint => {
-  const access = residentialAccessLayout(property);
+  const access = residentialAccessLayout(property, seed);
   return Object.freeze({
-    x: property.houseX,
-    z:
-      property.houseZ +
-      access.frontDirection * Math.max(2.35, Math.abs(access.pathCenterZ - property.houseZ) * 0.72),
+    x: access.doorX,
+    z: access.doorZ,
   });
 };
 
 const propertySidewalkPoint = (
   property: ResidentialPropertySpec,
+  seed: number,
 ): ResidentialPoint => {
-  const access = residentialAccessLayout(property);
-  const nearSide =
-    access.frontDirection > 0
-      ? STREET_LAYOUT.nearSidewalk.centerZ
-      : STREET_LAYOUT.farSidewalk.centerZ;
-  return Object.freeze({ x: property.houseX, z: nearSide });
+  const access = residentialAccessLayout(property, seed);
+  return Object.freeze({
+    x: access.sidewalkX,
+    z: access.sidewalkCenterZ,
+  });
 };
 
 const residentRoute = (
   property: ResidentialPropertySpec,
   direction: -1 | 1,
+  seed: number,
 ): Route => {
-  const door = propertyDoorPoint(property);
-  const path = residentialAccessLayout(property);
-  const sidewalk = propertySidewalkPoint(property);
+  const door = propertyDoorPoint(property, seed);
+  const path = residentialAccessLayout(property, seed);
+  const sidewalk = propertySidewalkPoint(property, seed);
   return makeRoute("resident:" + property.role, [
     door,
-    { x: property.houseX, z: path.pathCenterZ },
+    { x: path.entryX, z: path.entryZ },
+    { x: path.pathCenterX, z: path.pathCenterZ },
     sidewalk,
-    { x: property.houseX + direction * 12, z: sidewalk.z },
+    { x: sidewalk.x + direction * 12, z: sidewalk.z },
   ]);
 };
 
@@ -569,7 +569,7 @@ export const createNeighborhoodMobilitySystem = (
     layout.frontProperties[5],
   ].filter((property): property is ResidentialPropertySpec => property !== undefined);
   const residentRoutes = residents.map((property, index) =>
-    residentRoute(property, index % 2 === 0 ? -1 : 1),
+    residentRoute(property, index % 2 === 0 ? -1 : 1, safeSeed),
   );
   const mailboxes = mailboxPoints(layout);
   const gardenerWeekday = Math.floor(deterministicUnit(safeSeed, 901) * 7);
@@ -682,19 +682,43 @@ export const createNeighborhoodMobilitySystem = (
           ) ??
           layout.frontProperties.find((property) => property.drivewayX !== null);
         if (drivewayProperty?.drivewayX !== null && drivewayProperty !== undefined) {
-          const access = residentialAccessLayout(drivewayProperty);
+          const access = residentialAccessLayout(drivewayProperty, safeSeed);
           const t = clamp01(input.elapsedMs / durationMs);
           const roadPoint = Object.freeze({
-            x: drivewayProperty.drivewayX,
-            z: roadLaneZ("vehicle", 0),
+            x: access.roadX,
+            z: access.roadCenterZ,
           });
           const parkPoint = Object.freeze({
             x: drivewayProperty.drivewayX,
-            z: access.drivewayCenterZ,
+            z: access.parkingZ,
           });
+          const sidewalkCrossingPoint = Object.freeze({
+            x: access.drivewaySidewalkX,
+            z: access.drivewaySidewalkZ,
+          });
+          const drivewayDistance = Math.max(
+            0.001,
+            pointDistance(roadPoint, parkPoint),
+          );
+          const crossingProgress = clamp01(
+            pointDistance(roadPoint, sidewalkCrossingPoint) / drivewayDistance,
+          );
+          const drivewayYaw = Math.atan2(
+            parkPoint.z - roadPoint.z,
+            parkPoint.x - roadPoint.x,
+          );
+          const sampleDriveway = (progress: number): ResidentialPoint =>
+            Object.freeze({
+              x: roadPoint.x + (parkPoint.x - roadPoint.x) * clamp01(progress),
+              z: roadPoint.z + (parkPoint.z - roadPoint.z) * clamp01(progress),
+            });
+          const crossingOccupied = pedestrianPoints.some(
+            (point) => pointDistance(point, sidewalkCrossingPoint) <= 2.8,
+          );
           let vehiclePoint = roadPoint;
           let vehicleYaw = 0;
           let parked = false;
+          let yieldingAtDriveway = false;
           if (t < 0.28) {
             vehiclePoint = Object.freeze({
               x: roadPoint.x - 26 + 26 * (t / 0.28),
@@ -702,22 +726,37 @@ export const createNeighborhoodMobilitySystem = (
             });
           } else if (t < 0.42) {
             const p = (t - 0.28) / 0.14;
-            vehiclePoint = Object.freeze({
-              x: roadPoint.x,
-              z: roadPoint.z + (parkPoint.z - roadPoint.z) * p,
-            });
-            vehicleYaw = Math.sign(parkPoint.z - roadPoint.z) * Math.PI / 2;
+            vehiclePoint = sampleDriveway(p);
+            vehicleYaw = drivewayYaw;
+            if (
+              crossingOccupied &&
+              p >= Math.max(0, crossingProgress - 0.18) &&
+              p <= Math.min(1, crossingProgress + 0.12)
+            ) {
+              vehiclePoint = sampleDriveway(
+                Math.max(0, crossingProgress - 0.14),
+              );
+              yieldingAtDriveway = true;
+            }
           } else if (t < 0.72) {
             vehiclePoint = parkPoint;
-            vehicleYaw = Math.sign(parkPoint.z - roadPoint.z) * Math.PI / 2;
+            vehicleYaw = drivewayYaw;
             parked = true;
           } else if (t < 0.84) {
             const p = (t - 0.72) / 0.12;
-            vehiclePoint = Object.freeze({
-              x: roadPoint.x,
-              z: parkPoint.z + (roadPoint.z - parkPoint.z) * p,
-            });
-            vehicleYaw = Math.sign(roadPoint.z - parkPoint.z) * Math.PI / 2;
+            const drivewayProgress = 1 - p;
+            vehiclePoint = sampleDriveway(drivewayProgress);
+            vehicleYaw = drivewayYaw + Math.PI;
+            if (
+              crossingOccupied &&
+              drivewayProgress <= Math.min(1, crossingProgress + 0.18) &&
+              drivewayProgress >= Math.max(0, crossingProgress - 0.12)
+            ) {
+              vehiclePoint = sampleDriveway(
+                Math.min(1, crossingProgress + 0.14),
+              );
+              yieldingAtDriveway = true;
+            }
           } else {
             vehiclePoint = Object.freeze({
               x: roadPoint.x + 30 * ((t - 0.84) / 0.16),
@@ -739,11 +778,11 @@ export const createNeighborhoodMobilitySystem = (
             "vehicle",
             vehiclePoint,
             vehicleYaw,
-            parked ? 0 : 5.2,
+            parked || yieldingAtDriveway ? 0 : 5.2,
             focus,
-            parked ? "parking" : "none",
+            parked ? "parking" : yieldingAtDriveway ? "crossing" : "none",
             drivewayProperty.role,
-            false,
+            yieldingAtDriveway,
           );
           actors.push(drivewayVehicle);
           addStatistical(counts, drivewayVehicle);
@@ -751,10 +790,10 @@ export const createNeighborhoodMobilitySystem = (
           const driverRoute = makeRoute("resident-driver", [
             parkPoint,
             Object.freeze({
-              x: drivewayProperty.houseX,
-              z: access.pathCenterZ,
+              x: access.entryX,
+              z: access.entryZ,
             }),
-            propertyDoorPoint(drivewayProperty),
+            propertyDoorPoint(drivewayProperty, safeSeed),
           ]);
           const driverReturnRoute = reverseRoute(driverRoute, ":return");
           const driverMovement = driverEntering || driverLeaving;
@@ -852,7 +891,7 @@ export const createNeighborhoodMobilitySystem = (
           "mail-carrier",
           mailPoint,
           0,
-          mailInteraction ? 0 : 1.55,
+          mailInteraction ? 0 : 1.42,
           focus,
           mailInteraction ? "mailbox" : "none",
           nearestMailbox?.propertyRole ?? null,
@@ -869,8 +908,8 @@ export const createNeighborhoodMobilitySystem = (
 
         const weekday = (dayNumber - 1) % 7;
         if (gardenerProperty !== undefined && weekday === gardenerWeekday) {
-          const access = residentialAccessLayout(gardenerProperty);
-          const sidewalk = propertySidewalkPoint(gardenerProperty);
+          const access = residentialAccessLayout(gardenerProperty, safeSeed);
+          const sidewalk = propertySidewalkPoint(gardenerProperty, safeSeed);
           const garden = Object.freeze({
             x: gardenerProperty.houseX + 1.8,
             z: access.pathCenterZ,
