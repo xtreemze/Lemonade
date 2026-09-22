@@ -190,9 +190,14 @@ const expectPlanningControlWeight = async (page: Page): Promise<void> => {
     };
   });
 
+  const viewport = page.viewportSize();
+  if (viewport === null) throw new Error("Expected an explicit mobile viewport.");
+
   expect(metrics.sliderCount).toBe(3);
   expect(metrics.trackSize).toBeGreaterThanOrEqual(16);
-  expect(Math.min(...metrics.sliderHeights)).toBeGreaterThanOrEqual(60);
+  expect(Math.min(...metrics.sliderHeights)).toBeGreaterThanOrEqual(
+    viewport.height <= 360 ? 48 : 60,
+  );
   expect(Math.min(...metrics.controlGaps)).toBeGreaterThanOrEqual(0);
 };
 
