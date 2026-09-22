@@ -42,7 +42,7 @@ describe("crowd motion", () => {
       new Set(["near", "far"]),
     );
     for (const pose of first) {
-      expect(Math.abs(pose.x)).toBeLessThanOrEqual(12.8);
+      expect(Math.abs(pose.x)).toBeLessThanOrEqual(58);
       const sidewalk =
         pose.side === "near"
           ? STREET_LAYOUT.nearSidewalk
@@ -62,7 +62,7 @@ describe("crowd motion", () => {
         const b = first[right];
         if (b === undefined) continue;
         const distance = Math.hypot(a.x - b.x, a.z - b.z);
-        expect(distance).toBeGreaterThan(0.24);
+        expect(distance).toBeGreaterThan(0.42);
       }
     }
   });
@@ -164,6 +164,21 @@ describe("crowd motion", () => {
     ).toBeGreaterThan(
       walkingCycleAtDistance(earlier.travelDistance, 1, 1, 0),
     );
+  });
+
+
+  it("keeps walkers moving through the wider neighborhood instead of looping only at the stand", () => {
+    const early = crowdPosesAt(beats, 12, 250, 6_000);
+    const late = crowdPosesAt(beats, 12, 5_750, 6_000);
+    const extent = [...early, ...late].reduce(
+      (max, pose) => Math.max(max, Math.abs(pose.x)),
+      0,
+    );
+    expect(extent).toBeGreaterThan(42);
+    for (const pose of [...early, ...late]) {
+      expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.15);
+      expect(pose.worldSpeed).toBeLessThanOrEqual(2.05);
+    }
   });
 
   it("provides enough ground clearance for adult and child seeded heights", () => {
