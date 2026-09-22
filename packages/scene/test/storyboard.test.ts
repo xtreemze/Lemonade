@@ -9,6 +9,7 @@ import {
   buyerPhaseAt,
   buyerSlotForSale,
   completedSalesAt,
+  remainingCameraProgressAt,
   remainingCupsAt,
   sceneCameraComposition,
   sceneShotAt,
@@ -146,7 +147,7 @@ describe("street simulation storyboard", () => {
     expect(storyboard.priceCents).toBe(175);
   });
 
-  it("splits the full-height presentation into deterministic sequential shots", () => {
+  it("holds one stand shot during sales and reserves only the ending for inventory", () => {
     const storyboard = createStreetStoryboard({
       durationMs: 6_000,
       prepared: 10,
@@ -157,31 +158,34 @@ describe("street simulation storyboard", () => {
     });
 
     expect(storyboard.shots.map((shot) => shot.kind)).toEqual([
-      "establishing",
-      "street",
-      "purchase",
-      "street",
+      "stand",
+      "remaining",
     ]);
     expect(storyboard.shots[0]?.startAtMs).toBe(0);
     expect(storyboard.shots.at(-1)?.endAtMs).toBe(6_000);
-    expect(sceneShotAt(storyboard, 0)).toBe("establishing");
-    expect(sceneShotAt(storyboard, 1_500)).toBe("street");
-    expect(sceneShotAt(storyboard, 3_200)).toBe("purchase");
-    expect(sceneShotAt(storyboard, 5_000)).toBe("street");
+    expect(sceneShotAt(storyboard, 0)).toBe("stand");
+    expect(sceneShotAt(storyboard, 3_200)).toBe("stand");
+    expect(sceneShotAt(storyboard, 5_000)).toBe("stand");
+    expect(sceneShotAt(storyboard, 5_500)).toBe("remaining");
+    expect(remainingCameraProgressAt(storyboard, 5_000)).toBe(0);
+    expect(remainingCameraProgressAt(storyboard, 5_500)).toBeGreaterThan(0);
+    expect(remainingCameraProgressAt(storyboard, 6_000)).toBe(1);
   });
 
-  it("chooses viewport-aware camera framing for each sequential shot", () => {
-    expect(sceneCameraComposition(360, 740, "establishing").mode).toBe("portrait");
-    expect(sceneCameraComposition(768, 740, "street").mode).toBe("balanced");
-    expect(sceneCameraComposition(844, 390, "purchase").mode).toBe("wide");
+  it("uses a distant forecast, stable stand framing, and tighter remaining-cups view", () => {
+    expect(sceneCameraComposition(360, 740, "forecast").mode).toBe("portrait");
+    expect(sceneCameraComposition(768, 740, "stand").mode).toBe("balanced");
+    expect(sceneCameraComposition(844, 390, "remaining").mode).toBe("wide");
 
-    const portraitEstablishing = sceneCameraComposition(360, 740, "establishing");
-    const portraitStreet = sceneCameraComposition(360, 740, "street");
-    const portraitPurchase = sceneCameraComposition(360, 740, "purchase");
-    expect(portraitEstablishing.position[2]).toBeGreaterThanOrEqual(20);
-    expect(portraitStreet.position[2]).toBeGreaterThanOrEqual(18);
-    expect(portraitPurchase.position[2]).toBeGreaterThanOrEqual(15);
-    expect(portraitPurchase.fov).toBeGreaterThanOrEqual(46);
+    const portraitForecast = sceneCameraComposition(360, 740, "forecast");
+    const portraitStand = sceneCameraComposition(360, 740, "stand");
+    const portraitRemaining = sceneCameraComposition(360, 740, "remaining");
+
+    expect(portraitForecast.position[1]).toBeGreaterThan(portraitStand.position[1]);
+    expect(portraitForecast.position[2]).toBeGreaterThan(portraitStand.position[2]);
+    expect(portraitStand.position[2]).toBeGreaterThan(portraitRemaining.position[2]);
+    expect(portraitForecast.lookAt[2]).toBeLessThan(portraitStand.lookAt[2]);
+    expect(portraitRemaining.lookAt[2]).toBeGreaterThanOrEqual(1);
   });
 
   it("derives stable, varied character appearance and gait from the run seed", () => {
