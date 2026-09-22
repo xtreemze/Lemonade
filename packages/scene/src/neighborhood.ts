@@ -183,11 +183,15 @@ const treeLod = (
   scale: number,
   color: number,
   phase: number,
-): Group =>
-  markWindResponsive(
+): Group => {
+  const root = markWindResponsive(
     distanceLod(detailedTree(color), distantTree(color), 28, x, z, scale),
     phase,
   );
+  root.userData["sceneRole"] = "tree";
+  root.userData["clearanceRadius"] = 2.15 * scale;
+  return root;
+};
 
 const shrub = (
   x: number,
@@ -208,6 +212,8 @@ const shrub = (
   }
   root.position.set(x, 0, z);
   root.scale.setScalar(scale);
+  root.userData["sceneRole"] = "garden-shrub";
+  root.userData["clearanceRadius"] = 1.05 * scale;
   return markWindResponsive(root, phase);
 };
 
@@ -240,6 +246,7 @@ const flower = (
   }
   root.position.set(x, 0, z);
   root.userData["sceneRole"] = "garden-flower";
+  root.userData["clearanceRadius"] = 0.16;
   return markWindResponsive(root, phase);
 };
 
@@ -262,6 +269,8 @@ const mailbox = (x: number, z: number): Group => {
   box(root, [0.48, 0.32, 0.34], [0, 1.08, 0], 0x547c85);
   box(root, [0.08, 0.42, 0.08], [0.27, 1.18, 0], 0xc95b4c);
   root.position.set(x, 0, z);
+  root.userData["sceneRole"] = "mailbox";
+  root.userData["clearanceRadius"] = 0.3;
   return root;
 };
 
@@ -524,7 +533,22 @@ const clearSceneryPosition = (
     return [candidateX, candidateZ] as const;
   }
 
-  return [x, z - 12] as const;
+  for (let step = 0; step < 30; step += 1) {
+    const column = (step % 5) - 2;
+    const row = Math.floor(step / 5);
+    const candidateX = x + column * 4.75;
+    const candidateZ = z - 12 - row * 5;
+    if (!staticSceneryPlacementAllowed(candidateX, candidateZ, radius)) continue;
+    if (
+      avoidFrontFacades &&
+      blocksFrontHouseFacade(candidateX, candidateZ, radius)
+    ) {
+      continue;
+    }
+    return [candidateX, candidateZ] as const;
+  }
+
+  throw new Error("Unable to place neighborhood scenery clear of hardscape");
 };
 
 const MID_BLOCK_HOUSES = [
