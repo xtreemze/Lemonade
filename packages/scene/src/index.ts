@@ -597,7 +597,7 @@ export const createLemonsvilleScene = (
   void import("./neighborhood.js")
     .then(({ populateNeighborhood }) => {
       if (disposed) return;
-      populateNeighborhood(scene);
+      populateNeighborhood(scene, initialState.characterSeed ^ 0x4c_45_4d_4f);
       render();
     })
     .catch(() => undefined);
