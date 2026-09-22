@@ -9,8 +9,37 @@ import type { Group, Object3D } from "three";
 
 import type { CharacterProfile } from "./characters.js";
 
+export type CharacterGender = "male" | "female";
+export type CharacterAgeGroup = "adult" | "child";
+export type CharacterExpression = "smile" | "neutral" | "focused" | "curious";
+export type CharacterIdentity = Readonly<{
+  gender: CharacterGender;
+  ageGroup: CharacterAgeGroup;
+  garmentStyle: 0 | 1 | 2 | 3;
+  expression: CharacterExpression;
+}>;
+
 const material = (color: number): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading: false, roughness: 0.88 });
+
+const expressions = ["smile", "neutral", "focused", "curious"] as const;
+
+export const characterIdentityFor = (
+  index: number,
+  profile: CharacterProfile,
+): CharacterIdentity => {
+  const actorIndex = Number.isFinite(index) ? Math.abs(Math.trunc(index)) : 0;
+  const identityIndex = (profile.hairStyle + profile.accessory + actorIndex) & 3;
+  return Object.freeze({
+    gender: actorIndex % 2 === 0 ? "male" : "female",
+    ageGroup:
+      actorIndex >= 10_000 || Math.floor(actorIndex / 2) % 3 !== 2
+        ? "adult"
+        : "child",
+    garmentStyle: identityIndex as 0 | 1 | 2 | 3,
+    expression: expressions[(identityIndex + profile.accessory) & 3] ?? "neutral",
+  });
+};
 
 const mark = <T extends Object3D>(object: T, role: string): T => {
   object.userData["sceneRole"] = role;
@@ -37,6 +66,7 @@ const addFaceBar = (
 export const decorateCharacterHead = (
   head: Mesh,
   profile: CharacterProfile,
+  identity: CharacterIdentity,
   includeMouth = true,
 ): void => {
   head.scale.x *= profile.headWidthScale;
@@ -71,11 +101,11 @@ export const decorateCharacterHead = (
 
   const expressionColor = 0x4d302d;
   const browTilt =
-    profile.expression === "curious"
+    identity.expression === "curious"
       ? 0.16
-      : profile.expression === "focused"
+      : identity.expression === "focused"
         ? -0.13
-        : profile.expression === "smile"
+        : identity.expression === "smile"
           ? 0.06
           : 0;
   addFaceBar(
@@ -95,14 +125,14 @@ export const decorateCharacterHead = (
 
   if (includeMouth) {
     const mouthTilt =
-      profile.expression === "smile"
+      identity.expression === "smile"
         ? 0.24
-        : profile.expression === "focused"
+        : identity.expression === "focused"
           ? -0.14
-          : profile.expression === "curious"
+          : identity.expression === "curious"
             ? 0.08
             : 0;
-    const mouthY = profile.expression === "focused" ? -0.098 : -0.105;
+    const mouthY = identity.expression === "focused" ? -0.098 : -0.105;
     addFaceBar(head, 0.07, [-0.035, mouthY, 0.266], -mouthTilt, 0x8b4c48);
     addFaceBar(head, 0.07, [0.035, mouthY, 0.266], mouthTilt, 0x8b4c48);
   }
@@ -133,7 +163,7 @@ export const decorateCharacterHead = (
       "hair-cover",
     );
     fringe.position.set(0, 0.13, 0.205);
-    fringe.rotation.z = profile.gender === "female" ? -0.08 : 0.04;
+    fringe.rotation.z = identity.gender === "female" ? -0.08 : 0.04;
     head.add(fringe);
   } else if (profile.hairStyle === 3) {
     const bun = mark(
@@ -141,7 +171,7 @@ export const decorateCharacterHead = (
       "hair-cover",
     );
     bun.position.set(
-      profile.gender === "female" ? 0.14 : -0.12,
+      identity.gender === "female" ? 0.14 : -0.12,
       0.255,
       -0.12,
     );
@@ -173,9 +203,10 @@ const addGarment = (
 export const decorateCharacterBody = (
   root: Group,
   profile: CharacterProfile,
+  identity: CharacterIdentity,
 ): void => {
-  root.userData["characterGender"] = profile.gender;
-  root.userData["characterAgeGroup"] = profile.ageGroup;
+  root.userData["characterGender"] = identity.gender;
+  root.userData["characterAgeGroup"] = identity.ageGroup;
 
   const cloth = material(profile.clothingColor);
   const trim = material(profile.trouserColor);
@@ -184,14 +215,14 @@ export const decorateCharacterBody = (
     new Mesh(new CylinderGeometry(0.255, 0.275, 0.075, 10), cloth.clone()),
     [0, 1.45, 0],
   );
-  collar.scale.x = profile.gender === "female" ? 0.92 : 1;
+  collar.scale.x = identity.gender === "female" ? 0.92 : 1;
 
   const hem = addGarment(
     root,
     new Mesh(
       new CylinderGeometry(
-        profile.gender === "female" ? 0.31 : 0.34,
-        profile.gender === "female" ? 0.37 : 0.35,
+        identity.gender === "female" ? 0.31 : 0.34,
+        identity.gender === "female" ? 0.37 : 0.35,
         0.09,
         10,
       ),
@@ -200,14 +231,14 @@ export const decorateCharacterBody = (
     [0, 0.61, 0],
   );
 
-  if (profile.garmentStyle === 0) {
+  if (identity.garmentStyle === 0) {
     const stripe = addGarment(
       root,
       new Mesh(new BoxGeometry(0.48, 0.1, 0.035), trim.clone()),
       [0, 1.04, 0.31],
     );
     stripe.rotation.z = 0.015;
-  } else if (profile.garmentStyle === 1) {
+  } else if (identity.garmentStyle === 1) {
     for (const direction of [-1, 1] as const) {
       const panel = addGarment(
         root,
@@ -216,13 +247,13 @@ export const decorateCharacterBody = (
       );
       panel.rotation.z = direction * 0.035;
     }
-  } else if (profile.garmentStyle === 2) {
+  } else if (identity.garmentStyle === 2) {
     const lower = addGarment(
       root,
       new Mesh(
         new CylinderGeometry(
-          profile.gender === "female" ? 0.33 : 0.31,
-          profile.gender === "female" ? 0.44 : 0.36,
+          identity.gender === "female" ? 0.33 : 0.31,
+          identity.gender === "female" ? 0.44 : 0.36,
           0.34,
           10,
         ),
@@ -248,7 +279,7 @@ export const decorateCharacterBody = (
 
   // Garment geometry stays attached to the character root so child scaling and
   // the seeded body proportions apply to clothing and anatomy together.
-  hem.rotation.y = profile.garmentStyle * 0.015;
+  hem.rotation.y = identity.garmentStyle * 0.015;
 };
 
 export const decorateSellerExpression = (
