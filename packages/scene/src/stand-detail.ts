@@ -7,6 +7,8 @@ import {
   SphereGeometry,
 } from "three";
 
+import { STAND_LAYOUT } from "./stand-layout.js";
+
 const material = (
   color: number,
   options: Readonly<{
@@ -35,7 +37,17 @@ const addBox = (
   return mesh;
 };
 
-export const decorateStand = (root: Group, counterTopY: number): void => {
+export const populateStand = (root: Group, shutter: Group): void => {
+  addBox(root, STAND_LAYOUT.body.size, STAND_LAYOUT.body.position, 0xe7c672);
+  addBox(root, STAND_LAYOUT.counter.size, STAND_LAYOUT.counter.position, 0xf3d85d);
+  addBox(root, STAND_LAYOUT.frontPanel.size, STAND_LAYOUT.frontPanel.position, 0xffefaf);
+  for (const post of STAND_LAYOUT.posts) {
+    addBox(root, post.size, post.position, 0x5e4934);
+  }
+  addBox(root, STAND_LAYOUT.canopy.size, STAND_LAYOUT.canopy.position, 0xe6a93b);
+  addBox(shutter, [3.0, 0.82, 0.1], [0, 0.96, 0.78], 0xd39b43);
+  addBox(shutter, [0.92, 0.24, 0.04], [0, 0.98, 0.84], 0xf4dc83);
+
   const detail = new Group();
   detail.userData["sceneRole"] = "stand-detail";
 
@@ -64,7 +76,7 @@ export const decorateStand = (root: Group, counterTopY: number): void => {
   addBox(
     detail,
     [0.62, 0.28, 0.48],
-    [-1.1, counterTopY + 0.14, 0.34],
+    [-1.1, STAND_LAYOUT.counterTopY + 0.14, 0.34],
     0x9b6a3c,
   );
 
@@ -76,14 +88,14 @@ export const decorateStand = (root: Group, counterTopY: number): void => {
       roughness: 0.28,
     }),
   );
-  pitcher.position.set(1.08, counterTopY + 0.25, 0.34);
+  pitcher.position.set(1.08, STAND_LAYOUT.counterTopY + 0.25, 0.34);
   detail.add(pitcher);
 
   const pitcherLemonade = new Mesh(
     new CylinderGeometry(0.17, 0.21, 0.3, 10),
     material(0xeac54b),
   );
-  pitcherLemonade.position.set(1.08, counterTopY + 0.17, 0.34);
+  pitcherLemonade.position.set(1.08, STAND_LAYOUT.counterTopY + 0.17, 0.34);
   detail.add(pitcherLemonade);
 
   root.add(detail);
