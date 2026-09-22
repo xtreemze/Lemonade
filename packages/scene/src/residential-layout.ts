@@ -159,7 +159,7 @@ const clearHouseFromBaseHardscape = (
 ): ResidentialPoint => {
   let x = point.x;
   let z = point.z;
-  for (let pass = 0; pass < 5; pass += 1) {
+  for (let pass = 0; pass < 24; pass += 1) {
     let moved = false;
     for (const rect of baseHardscape(seed)) {
       if (!footprintIntersectsHardscapeRect(rect, { x, z }, halfWidth, halfDepth)) continue;
@@ -522,9 +522,12 @@ export const residentialAccessLayout = (
       : sidewalkCenterZ >= property.houseZ
         ? sidewalk.minZ
         : sidewalk.maxZ;
-  const pathDepth = Math.max(0.72, Math.abs(sidewalkEdgeZ - entryZ) + 0.12);
+  const pathDepth = Math.max(
+    0.72,
+    Math.abs(sidewalkCenterZ - entryZ) + 0.3,
+  );
   const pathCenterX = entryX;
-  const pathCenterZ = (entryZ + sidewalkEdgeZ) / 2;
+  const pathCenterZ = (entryZ + sidewalkCenterZ) / 2;
 
   const drivewayX = property.drivewayX ?? property.houseX;
   const road = nearestAccessRect(property, drivewayX, "road", seed);
@@ -541,8 +544,11 @@ export const residentialAccessLayout = (
   const parkingZ =
     property.houseZ +
     frontDirection * Math.min(1.35, Math.max(0.82, footprint.halfDepth * 0.34));
-  const drivewayDepth = Math.max(3.2, Math.abs(roadEdgeZ - parkingZ) + 0.3);
-  const drivewayCenterZ = (parkingZ + roadEdgeZ) / 2;
+  const drivewayDepth = Math.max(
+    3.2,
+    Math.abs(roadCenterZ - parkingZ) + 0.3,
+  );
+  const drivewayCenterZ = (parkingZ + roadCenterZ) / 2;
 
   return Object.freeze({
     frontDirection,
@@ -848,8 +854,11 @@ const generatePropertyPlantings = (
             ring * 0.62 +
             unit(seed, salt + propertyIndex * 103 + attempt * 7 + 1) * 0.3);
       const scale =
-        0.84 +
-        unit(seed, salt + propertyIndex * 107 + attempt * 7 + 2) * 0.22;
+        yardZone === "back"
+          ? 0.62 +
+            unit(seed, salt + propertyIndex * 107 + attempt * 7 + 2) * 0.18
+          : 0.84 +
+            unit(seed, salt + propertyIndex * 107 + attempt * 7 + 2) * 0.22;
       const candidate = { x, z };
       const footprintClearance = clearance * scale;
 
