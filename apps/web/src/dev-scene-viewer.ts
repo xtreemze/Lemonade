@@ -37,14 +37,23 @@ export const createPersistentSceneViewer = (
   // Clear app UI
   appRoot.innerHTML = "";
 
-  // Create scene container
+  // Create main container with flexbox (scene on left, sidebar on right)
   const container = document.createElement("div");
   container.style.cssText = `
     width: 100vw;
     height: 100vh;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     background: #000;
+  `;
+
+  // Create canvas container (takes up most space)
+  const canvasContainer = document.createElement("div");
+  canvasContainer.style.cssText = `
+    flex: 1;
+    display: flex;
+    background: #000;
+    position: relative;
   `;
 
   // Create canvas
@@ -54,27 +63,34 @@ export const createPersistentSceneViewer = (
     display: block;
     background: #000;
   `;
+  canvasContainer.appendChild(canvas);
 
-  // Create control panel
-  const panel = document.createElement("div");
-  panel.style.cssText = `
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    background: rgba(0, 0, 0, 0.9);
-    border: 2px solid #ffff00;
-    border-radius: 8px;
+  // Create sidebar
+  const sidebar = document.createElement("div");
+  sidebar.style.cssText = `
+    width: 320px;
+    background: rgba(0, 0, 0, 0.95);
+    border-left: 2px solid #ffff00;
+    overflow-y: auto;
     padding: 16px;
     font-family: monospace;
     font-size: 12px;
     color: #fff;
     z-index: 2000;
-    max-width: 300px;
+  `;
+
+  // Create control panel inside sidebar
+  const panel = document.createElement("div");
+  panel.style.cssText = `
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin-bottom: 24px;
   `;
 
   const title = document.createElement("div");
   title.style.cssText = "font-weight: bold; margin-bottom: 12px; color: #ffff00; font-size: 14px;";
-  title.textContent = "🎥 3D Scene Viewer (Dev Mode)";
+  title.textContent = "🎥 Scene Viewer";
   panel.appendChild(title);
 
   const info = document.createElement("div");
@@ -83,7 +99,7 @@ export const createPersistentSceneViewer = (
     border: 1px solid #666;
     border-radius: 4px;
     padding: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     font-size: 11px;
     color: #0f0;
     line-height: 1.5;
@@ -93,14 +109,14 @@ export const createPersistentSceneViewer = (
     <div><strong>Phase:</strong> ${options.phase || "simulation"}</div>
     <div><strong>Gizmo:</strong> ${options.enableGizmo ? "✓ Enabled" : "✗ Disabled"}</div>
     <div style="margin-top: 8px; color: #aaa; font-size: 10px;">
-      Canvas ready for manipulation.<br/>
-      Use gizmo to select and move objects.
+      Click scene to select objects<br/>
+      G/R/S for move/rotate/scale
     </div>
   `;
   panel.appendChild(info);
 
   const closeBtn = document.createElement("button");
-  closeBtn.textContent = "✕ Exit Scene Viewer";
+  closeBtn.textContent = "✕ Exit";
   closeBtn.style.cssText = `
     width: 100%;
     padding: 8px;
@@ -111,6 +127,7 @@ export const createPersistentSceneViewer = (
     cursor: pointer;
     font-family: monospace;
     font-weight: bold;
+    margin-bottom: 16px;
   `;
   closeBtn.onclick = () => {
     disableSceneViewer();
@@ -118,8 +135,9 @@ export const createPersistentSceneViewer = (
   };
   panel.appendChild(closeBtn);
 
-  container.appendChild(canvas);
-  container.appendChild(panel);
+  sidebar.appendChild(panel);
+  container.appendChild(canvasContainer);
+  container.appendChild(sidebar);
   appRoot.appendChild(container);
 
   // Create scene state
@@ -164,8 +182,33 @@ export const createPersistentSceneViewer = (
       z-index: 3000;
     `;
     error.textContent = "❌ Failed to create 3D scene";
-    container.appendChild(error);
+    canvasContainer.appendChild(error);
     return null;
+  }
+
+  // Add a gizmo info section to the sidebar if gizmo is enabled
+  if (options.enableGizmo !== false) {
+    const gizmoSection = document.createElement("div");
+    gizmoSection.style.cssText = `
+      background: #1a1a1a;
+      border: 1px solid #9900ff;
+      border-radius: 4px;
+      padding: 12px;
+      font-size: 11px;
+      color: #f0f;
+    `;
+    gizmoSection.innerHTML = `
+      <div style="font-weight: bold; margin-bottom: 8px;">🎨 Gizmo Tool</div>
+      <div style="color: #aaa; line-height: 1.5;">
+        <div><strong>Click</strong> - Select object</div>
+        <div><strong>G</strong> - Move mode</div>
+        <div><strong>R</strong> - Rotate mode</div>
+        <div><strong>S</strong> - Scale mode</div>
+        <div><strong>Drag</strong> - Transform</div>
+        <div><strong>ESC</strong> - Deselect</div>
+      </div>
+    `;
+    sidebar.appendChild(gizmoSection);
   }
 
   // Handle resize
