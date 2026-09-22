@@ -152,26 +152,87 @@ const createBicycle = (color: number): Group => {
   return root;
 };
 
-const createVehicle = (color: number): Group => {
+export type VehicleVariant = "sedan" | "sports" | "pickup" | "truck";
+
+export type VehicleVariantSpec = Readonly<{
+  length: number;
+  width: number;
+  bodyHeight: number;
+  cabinHeight: number;
+  wheelRadius: number;
+}>;
+
+export const vehicleVariantSpec = (variant: VehicleVariant): VehicleVariantSpec => {
+  switch (variant) {
+    case "sports":
+      return Object.freeze({ length: 4.35, width: 1.82, bodyHeight: 0.58, cabinHeight: 0.44, wheelRadius: 0.34 });
+    case "pickup":
+      return Object.freeze({ length: 5.25, width: 1.96, bodyHeight: 0.78, cabinHeight: 0.78, wheelRadius: 0.4 });
+    case "truck":
+      return Object.freeze({ length: 5.8, width: 2.06, bodyHeight: 0.92, cabinHeight: 1.05, wheelRadius: 0.43 });
+    case "sedan":
+      return Object.freeze({ length: 4.65, width: 1.88, bodyHeight: 0.68, cabinHeight: 0.62, wheelRadius: 0.36 });
+  }
+};
+
+const createVehicle = (color: number, variant: VehicleVariant): Group => {
+  const spec = vehicleVariantSpec(variant);
   const root = new Group();
   root.userData["sceneRole"] = "ambient-vehicle";
-  const body = new Mesh(new BoxGeometry(1.65, 0.52, 0.82), material(color));
-  body.position.y = 0.48;
+  root.userData["vehicleVariant"] = variant;
+  const body = new Mesh(
+    new BoxGeometry(spec.length, spec.bodyHeight, spec.width),
+    material(color),
+  );
+  body.position.y = spec.wheelRadius + spec.bodyHeight * 0.62;
   root.add(body);
-  const cabin = new Mesh(new BoxGeometry(0.84, 0.42, 0.72), material(0xb9d2d8));
-  cabin.position.set(-0.12, 0.92, 0);
+
+  const cabinLength =
+    variant === "truck" ? spec.length * 0.34 : variant === "pickup" ? spec.length * 0.42 : spec.length * 0.48;
+  const cabin = new Mesh(
+    new BoxGeometry(cabinLength, spec.cabinHeight, spec.width * 0.86),
+    material(0xb9d2d8),
+  );
+  cabin.position.set(
+    variant === "truck" ? spec.length * 0.22 : -spec.length * 0.08,
+    spec.wheelRadius + spec.bodyHeight + spec.cabinHeight * 0.48,
+    0,
+  );
   root.add(cabin);
-  const hood = new Mesh(new BoxGeometry(0.4, 0.16, 0.7), material(color));
-  hood.position.set(0.75, 0.7, 0);
-  root.add(hood);
-  for (const x of [-0.55, 0.55]) {
-    for (const z of [-0.36, 0.36]) {
+
+  if (variant === "pickup") {
+    const bed = new Mesh(
+      new BoxGeometry(spec.length * 0.34, spec.bodyHeight * 0.46, spec.width * 0.88),
+      material(color),
+    );
+    bed.position.set(-spec.length * 0.31, spec.wheelRadius + spec.bodyHeight * 0.84, 0);
+    root.add(bed);
+  } else if (variant === "truck") {
+    const cargo = new Mesh(
+      new BoxGeometry(spec.length * 0.48, 1.7, spec.width * 0.94),
+      material(color),
+    );
+    cargo.position.set(-spec.length * 0.24, spec.wheelRadius + 1.36, 0);
+    root.add(cargo);
+  } else {
+    const hood = new Mesh(
+      new BoxGeometry(spec.length * 0.22, spec.bodyHeight * 0.34, spec.width * 0.88),
+      material(color),
+    );
+    hood.position.set(spec.length * 0.39, spec.wheelRadius + spec.bodyHeight * 1.02, 0);
+    root.add(hood);
+  }
+
+  const axleX = spec.length * 0.31;
+  const wheelZ = spec.width * 0.47;
+  for (const x of [-axleX, axleX]) {
+    for (const z of [-wheelZ, wheelZ]) {
       const wheel = new Mesh(
-        new CylinderGeometry(0.18, 0.18, 0.12, 10),
+        new CylinderGeometry(spec.wheelRadius, spec.wheelRadius, 0.16, 12),
         material(0x2c3034),
       );
       wheel.rotation.x = Math.PI / 2;
-      wheel.position.set(x, 0.24, z);
+      wheel.position.set(x, spec.wheelRadius, z);
       root.add(wheel);
     }
   }
@@ -197,7 +258,12 @@ export const createAmbientLife = (
   const pets = [createPet(0xa96f45), createPet(0x3e3a36), createPet(0xd1b48b)];
   const wildlife = [createBird(0x5d6971), createBird(0x795d4e)];
   const bicycles = [createBicycle(0x4f7f91), createBicycle(0xb45d4c)];
-  const vehicles = [createVehicle(0x7189a8), createVehicle(0xa65e52)];
+  const vehicles = [
+    createVehicle(0x7189a8, "sedan"),
+    createVehicle(0xa65e52, "sports"),
+    createVehicle(0x6b7c61, "pickup"),
+    createVehicle(0x8a796d, "truck"),
+  ];
 
   for (const actor of [...pets, ...wildlife, ...bicycles, ...vehicles]) {
     actor.visible = false;
@@ -268,8 +334,8 @@ export const createAmbientLife = (
         vehicle.visible = index < population.vehicles && progress > 0.04 && progress < 0.82;
         if (!vehicle.visible) return;
         const x = direction === 1
-          ? -20 + progress * 40
-          : 20 - progress * 40;
+          ? -62 + progress * 124
+          : 62 - progress * 124;
         vehicle.position.set(x, 0.02, roadLaneZ("vehicle", index));
         vehicle.rotation.y = xTravelYaw(direction);
       });
