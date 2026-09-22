@@ -98,7 +98,7 @@ export const populateStand = (
     material(0xf6d33b),
   );
   lemonBadge.scale.set(1.22, 0.86, 0.24);
-  lemonBadge.position.set(-0.5, STAND_SIGN_CENTER_Y, -0.28);
+  lemonBadge.position.set(-0.5, STAND_SIGN_CENTER_Y, 0.72);
   lemonBadge.rotation.z = 0.18;
   detail.add(lemonBadge);
 
@@ -107,7 +107,7 @@ export const populateStand = (
     material(0x4f8c4a),
   );
   badgeLeaf.rotation.z = Math.PI / 2.6;
-  badgeLeaf.position.set(-0.37, STAND_SIGN_CENTER_Y + 0.1, -0.28);
+  badgeLeaf.position.set(-0.37, STAND_SIGN_CENTER_Y + 0.1, 0.72);
   detail.add(badgeLeaf);
   addBox(
     detail,
@@ -124,7 +124,7 @@ export const populateStand = (
 
   const basket = new Group();
   basket.userData["sceneRole"] = "stand-basket";
-  basket.position.set(-0.91, STAND_LAYOUT.counterTopY, -0.7);
+  basket.position.set(-0.91, STAND_LAYOUT.counterTopY, 0.3);
   addBox(basket, [0.54, 0.05, 0.36], [0, 0.025, 0], 0x9b6a3c);
   addBox(basket, [0.54, 0.09, 0.04], [0, 0.09, -0.16], 0xa77745);
   addBox(basket, [0.54, 0.09, 0.04], [0, 0.09, 0.16], 0xa77745);
@@ -140,7 +140,7 @@ export const populateStand = (
       roughness: 0.28,
     }),
   );
-  pitcher.position.set(-0.57, STAND_LAYOUT.counterTopY + 0.19, -0.7);
+  pitcher.position.set(-0.57, STAND_LAYOUT.counterTopY + 0.19, 0.3);
   pitcher.userData["sceneRole"] = "stand-pitcher";
   detail.add(pitcher);
 
@@ -187,7 +187,7 @@ export const populateStand = (
     pitcherLemonade.position.set(
       -0.57,
       JUICE_BOTTOM_Y + (JUICE_FULL_HEIGHT * fraction) / 2,
-      -0.7,
+      -1.2,
     );
 
     const lemonCount = visibleLemonCountForStock(remaining, prepared);
