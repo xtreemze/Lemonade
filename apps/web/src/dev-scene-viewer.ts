@@ -164,9 +164,8 @@ export const createPersistentSceneViewer = (
     reducedMotion: false,
   });
 
-  // Create scene (gizmo disabled for now - reserved for future 3D editor tool)
   const scene = createLemonsvilleScene(canvas, sceneState, {
-    enableGizmo: false,
+    enableGizmo: options.enableGizmo === true,
   });
 
   if (!scene) {
