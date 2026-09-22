@@ -30,18 +30,35 @@ describe("neighborhood world scale", () => {
     let standNeighborCount = 0;
     let pavedRoadCount = 0;
     let flowerCount = 0;
+    const treeVariants = new Set<number>();
+    const shrubVariants = new Set<number>();
     scene.traverse((object) => {
       if (object.userData["lodMode"] === "distance-two-level") lodCount += 1;
       if (object.userData["sceneRole"] === "stand-home") standHomeCount += 1;
       if (object.userData["sceneRole"] === "stand-neighbor") standNeighborCount += 1;
       if (object.userData["sceneRole"] === "paved-road") pavedRoadCount += 1;
       if (object.userData["sceneRole"] === "garden-flower") flowerCount += 1;
+      const variant = object.userData["plantVariant"];
+      if (
+        object.userData["sceneRole"] === "procedural-tree" &&
+        typeof variant === "number"
+      ) {
+        treeVariants.add(variant);
+      }
+      if (
+        object.userData["sceneRole"] === "procedural-shrub" &&
+        typeof variant === "number"
+      ) {
+        shrubVariants.add(variant);
+      }
     });
-    expect(lodCount).toBe(stats.houseLods + stats.treeLods);
+    expect(lodCount).toBe(stats.houseLods + stats.treeLods + stats.shrubs);
     expect(standHomeCount).toBe(1);
     expect(standNeighborCount).toBe(1);
     expect(pavedRoadCount).toBe(stats.pavedRoads);
     expect(flowerCount).toBe(stats.flowers);
+    expect(treeVariants.size).toBeGreaterThan(8);
+    expect(shrubVariants.size).toBeGreaterThan(4);
   });
 
   it("makes storm wind materially stronger than ordinary weather", () => {
