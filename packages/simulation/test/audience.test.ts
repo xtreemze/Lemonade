@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertCustomerOutcomeConsistency,
+  audienceRulesForScale,
+  createNamedRandom,
   customerId,
+  dayNumber,
+  deriveCustomerTraits,
   seed,
+  selectDayAudience,
   summarizeAudience,
   type CustomerOutcome,
 } from "../src/index.js";
@@ -18,6 +23,72 @@ const outcome = (
     visualSeed: seed(id + 100),
     ...value,
   });
+
+describe("audience identity and selection", () => {
+  it("derives stable customer traits from neighborhood seed and customer id", () => {
+    const neighborhoodSeed = seed(0x1e_ad_2026);
+    const id = customerId(17);
+    const first = deriveCustomerTraits(neighborhoodSeed, id);
+
+    expect(deriveCustomerTraits(neighborhoodSeed, id)).toEqual(first);
+    expect(
+      deriveCustomerTraits(neighborhoodSeed, customerId(18)),
+    ).not.toEqual(first);
+    expect(
+      deriveCustomerTraits(seed(0x1e_ad_2027), id),
+    ).not.toEqual(first);
+  });
+
+  it("selects deterministic daily audiences from finite scale-specific pools", () => {
+    const neighborhoodSeed = seed(0x4c_45_4d_4f);
+
+    for (const level of [1, 2, 3, 4] as const) {
+      const rules = audienceRulesForScale(level);
+      const audience = selectDayAudience(
+        neighborhoodSeed,
+        dayNumber(12),
+        level,
+      );
+
+      expect(audience.neighborhoodSize).toBe(rules.neighborhoodSize);
+      expect(audience.customerIds).toHaveLength(rules.dailyAudience);
+      expect(new Set(audience.customerIds).size).toBe(rules.dailyAudience);
+      expect(
+        audience.customerIds.every(
+          (id) => Number(id) >= 0 && Number(id) < rules.neighborhoodSize,
+        ),
+      ).toBe(true);
+      expect(
+        selectDayAudience(neighborhoodSeed, dayNumber(12), level),
+      ).toEqual(audience);
+    }
+  });
+
+  it("keeps audience selection isolated from unrelated named random streams", () => {
+    const neighborhoodSeed = seed(0x0a_11_ce);
+    const baseline = selectDayAudience(
+      neighborhoodSeed,
+      dayNumber(7),
+      3,
+    );
+    const presentation = createNamedRandom(
+      neighborhoodSeed,
+      "scene-presentation",
+      7,
+    );
+
+    for (let draw = 0; draw < 1_000; draw += 1) {
+      presentation.nextUnit();
+    }
+
+    expect(
+      selectDayAudience(neighborhoodSeed, dayNumber(7), 3),
+    ).toEqual(baseline);
+    expect(
+      selectDayAudience(neighborhoodSeed, dayNumber(8), 3).customerIds,
+    ).not.toEqual(baseline.customerIds);
+  });
+});
 
 describe("audience outcome contracts", () => {
   it("summarizes an exhaustive awareness -> conversion -> fulfillment funnel", () => {
