@@ -9,6 +9,7 @@ import {
   type Scene,
 } from "three";
 
+import { updateNeighborhoodWind } from "./neighborhood.js";
 import {
   clampToNearSidewalk,
   roadLaneZ,
@@ -208,6 +209,7 @@ export const createAmbientLife = (scene: Scene, seed: number): AmbientLifeContro
 
   return Object.freeze({
     update(weather, phase, elapsedMs, durationMs, owners = []): void {
+      updateNeighborhoodWind(scene, elapsedMs / 1000, weather);
       const population = ambientPopulationFor(weather, phase);
       pets.forEach((pet, index) => {
         const owner = owners.find((candidate, ownerIndex) =>
