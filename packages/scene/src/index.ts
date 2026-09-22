@@ -589,10 +589,6 @@ export const createLemonsvilleScene = (
     void signLabelModule.then(({ createPriceSignSurface }) => {
       if (disposed || generation !== signTextureGeneration || priceLabel !== signPriceLabel) return;
       const nextTexture = new THREE.CanvasTexture(createPriceSignSurface(priceLabel));
-      if (disposed || generation !== signTextureGeneration) {
-        nextTexture.dispose();
-        return;
-      }
       const previousTexture = signTexture;
       nextTexture.colorSpace = THREE.SRGBColorSpace;
       nextTexture.minFilter = THREE.LinearFilter;
