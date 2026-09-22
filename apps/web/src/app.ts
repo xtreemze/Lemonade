@@ -49,7 +49,7 @@ import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
-const SIMULATION_PRESENTATION_MS = 10_000;
+const SIMULATION_PRESENTATION_MS = 6_000;
 
 type PresentationPhase = "planning" | "simulation" | "report" | "history" | "forecast";
 
@@ -58,6 +58,15 @@ const weatherLabel: Record<DayEnvironment["weather"]["kind"], string> = {
   cloudy: "Cloudy",
   "hot-and-dry": "Partly cloudy",
   thunderstorm: "Thunderstorm",
+};
+
+const sellerMoodLabel = (confidence: number): string => {
+  if (confidence <= 0) return "Seller looks discouraged";
+  if (confidence === 1) return "Seller looks uncertain";
+  if (confidence === 2) return "Seller looks cautious";
+  if (confidence === 3) return "Seller looks steady";
+  if (confidence === 4) return "Seller looks optimistic";
+  return "Seller looks radiant";
 };
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
@@ -146,10 +155,10 @@ const SHELL_MARKUP = `
         <p class="eyebrow" id="conditions-title">Today’s conditions</p>
         <strong id="condition-weather"></strong>
       </div>
-      <div><span>Confidence</span><strong id="condition-sentiment"></strong></div>
       <div><span>Production</span><strong id="condition-production"></strong></div>
       <div><span>Advertising</span><strong id="condition-advertising"></strong></div>
     </section>
+    <p id="condition-sentiment" class="scene-equivalent"></p>
 
     <aside class="obligation-strip" aria-label="Business finance rules">
       <strong id="finance-tier"></strong>
@@ -409,6 +418,7 @@ export class LemonadeApp {
       case "price":
         this.#price = event.detail.value;
         this.#renderDecisionState();
+        this.#renderScene();
         break;
     }
   };
@@ -702,7 +712,7 @@ export class LemonadeApp {
         break;
       case "forecast":
         this.#elements.sceneKicker.textContent = `Day ${String(Number(this.#game.day))} forecast`;
-        this.#elements.sceneTitle.textContent = `${weatherLabel[this.#environment.weather.kind]} · Confidence ${String(legacyConfidenceForState(this.#game))}/5`;
+        this.#elements.sceneTitle.textContent = weatherLabel[this.#environment.weather.kind];
         break;
     }
   }
@@ -716,7 +726,9 @@ export class LemonadeApp {
     );
 
     this.#elements.conditionWeather.textContent = weatherLabel[this.#environment.weather.kind];
-    this.#elements.conditionSentiment.textContent = `${String(legacyConfidenceForState(this.#game))} / 5`;
+    this.#elements.conditionSentiment.textContent = sellerMoodLabel(
+      legacyConfidenceForState(this.#game),
+    );
     this.#elements.conditionProduction.textContent = `${formatMoney(Number(this.#game.unitCost))} / glass`;
     this.#elements.conditionAdvertising.textContent = `${formatMoney(Number(this.#game.signCost))} / sign`;
     const scale = operatingScaleForState(this.#game);
@@ -768,6 +780,8 @@ export class LemonadeApp {
       phase: scenePhase,
       sold: resolvedDay === null ? 0 : Number(resolvedDay.sold),
       prepared: resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses),
+      priceCents: resolvedDay === null ? this.#price : Number(resolvedDay.decision.price),
+      characterSeed: Number(this.#runSeed),
       durationMs:
         scenePhase === "simulation"
           ? SIMULATION_PRESENTATION_MS

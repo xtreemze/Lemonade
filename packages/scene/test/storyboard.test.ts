@@ -1,23 +1,31 @@
 import { describe, expect, it } from "vitest";
 
+import { characterProfileFor } from "../src/characters.js";
 import {
-  completedSalesAt,
   createStreetStoryboard,
+  formatPriceLabel,
+} from "../src/storyboard-create.js";
+import {
+  buyerPhaseAt,
+  buyerSlotForSale,
+  completedSalesAt,
   remainingCupsAt,
   sceneCameraComposition,
+  sceneShotAt,
 } from "../src/storyboard.js";
 
 describe("street simulation storyboard", () => {
-  it("maps every sale to a buyer and one inventory decrement", () => {
+  it("maps every sale to a buyer lifecycle and decrements inventory on purchase completion", () => {
     const storyboard = createStreetStoryboard({
-      durationMs: 5_000,
+      durationMs: 6_000,
       prepared: 20,
       sold: 7,
       visibleSigns: 3,
+      priceCents: 150,
       ambientPedestrianCount: 10,
     });
 
-    expect(storyboard.durationMs).toBe(5_000);
+    expect(storyboard.durationMs).toBe(6_000);
     expect(storyboard.sales).toHaveLength(7);
     expect(storyboard.sales.map((sale) => sale.saleNumber)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(storyboard.sales.map((sale) => sale.remainingCups)).toEqual([
@@ -30,18 +38,67 @@ describe("street simulation storyboard", () => {
       throw new Error("expected sale beats");
     }
 
-    expect(completedSalesAt(storyboard, firstSale.purchaseAtMs - 1)).toBe(0);
-    expect(completedSalesAt(storyboard, firstSale.purchaseAtMs)).toBe(1);
-    expect(completedSalesAt(storyboard, lastSale.purchaseAtMs)).toBe(7);
-    expect(remainingCupsAt(storyboard, lastSale.purchaseAtMs)).toBe(13);
+    expect(buyerPhaseAt(firstSale, firstSale.approachAtMs)).toBe("approaching");
+    expect(buyerPhaseAt(firstSale, firstSale.purchaseAtMs)).toBe("purchasing");
+    expect(buyerPhaseAt(firstSale, firstSale.purchaseEndAtMs)).toBe("drinking");
+    expect(buyerPhaseAt(firstSale, firstSale.drinkEndAtMs)).toBe("departing");
+    expect(buyerPhaseAt(firstSale, firstSale.departAtMs + 1)).toBe("inactive");
+
+    expect(completedSalesAt(storyboard, firstSale.purchaseAtMs)).toBe(0);
+    expect(remainingCupsAt(storyboard, firstSale.purchaseAtMs)).toBe(20);
+    expect(completedSalesAt(storyboard, firstSale.purchaseEndAtMs)).toBe(1);
+    expect(remainingCupsAt(storyboard, firstSale.purchaseEndAtMs)).toBe(19);
+    expect(completedSalesAt(storyboard, lastSale.purchaseEndAtMs)).toBe(7);
+    expect(remainingCupsAt(storyboard, lastSale.purchaseEndAtMs)).toBe(13);
+  });
+
+  it("covers the complete restored level-four envelope without truncating sales or signs", () => {
+    const storyboard = createStreetStoryboard({
+      durationMs: 6_000,
+      prepared: 400,
+      sold: 400,
+      visibleSigns: 40,
+      priceCents: 999,
+      ambientPedestrianCount: 18,
+    });
+
+    expect(storyboard.prepared).toBe(400);
+    expect(storyboard.sold).toBe(400);
+    expect(storyboard.sales).toHaveLength(400);
+    expect(storyboard.visibleSigns).toBe(40);
+    expect(storyboard.sales.at(-1)?.remainingCups).toBe(0);
+    expect(completedSalesAt(storyboard, 6_000)).toBe(400);
+    expect(remainingCupsAt(storyboard, 6_000)).toBe(0);
+  });
+
+  it("keeps buyer rig slots stable and collision-free during the maximum-volume lifecycle", () => {
+    const storyboard = createStreetStoryboard({
+      durationMs: 6_000,
+      prepared: 400,
+      sold: 400,
+      visibleSigns: 40,
+      priceCents: 999,
+      ambientPedestrianCount: 18,
+    });
+    const poolSize = 192;
+
+    for (let index = 0; index < storyboard.sales.length; index += 1) {
+      const sale = storyboard.sales[index];
+      if (sale === undefined) continue;
+      const next = storyboard.sales[index + poolSize];
+      if (next === undefined) continue;
+      expect(buyerSlotForSale(sale, poolSize)).toBe(buyerSlotForSale(next, poolSize));
+      expect(sale.departAtMs).toBeLessThanOrEqual(next.approachAtMs);
+    }
   });
 
   it("keeps non-buyers more numerous and assigns ad viewers only when signs exist", () => {
     const advertised = createStreetStoryboard({
-      durationMs: 5_000,
+      durationMs: 6_000,
       prepared: 60,
       sold: 18,
       visibleSigns: 5,
+      priceCents: 175,
       ambientPedestrianCount: 12,
     });
 
@@ -57,10 +114,11 @@ describe("street simulation storyboard", () => {
     ).toBe(true);
 
     const unadvertised = createStreetStoryboard({
-      durationMs: 5_000,
+      durationMs: 6_000,
       prepared: 60,
       sold: 18,
       visibleSigns: 0,
+      priceCents: 175,
       ambientPedestrianCount: 12,
     });
 
@@ -69,21 +127,86 @@ describe("street simulation storyboard", () => {
     expect(unadvertised.passersBy.some((pedestrian) => pedestrian.seesAdvertisement)).toBe(false);
   });
 
-  it("chooses an intentional camera composition for portrait, balanced, and wide scenes", () => {
-    expect(sceneCameraComposition(360, 740).mode).toBe("portrait");
-    expect(sceneCameraComposition(768, 740).mode).toBe("balanced");
-    expect(sceneCameraComposition(844, 390).mode).toBe("wide");
-    expect(sceneCameraComposition(360, 740).position[2]).toBeGreaterThan(
-      sceneCameraComposition(844, 390).position[2],
-    );
+  it("formats the actual selected price for every advertising sign", () => {
+    expect(formatPriceLabel(0)).toBe("FREE");
+    expect(formatPriceLabel(10)).toBe("10¢");
+    expect(formatPriceLabel(99)).toBe("99¢");
+    expect(formatPriceLabel(150)).toBe("$1.50");
+    expect(formatPriceLabel(999)).toBe("$9.99");
+
+    const storyboard = createStreetStoryboard({
+      durationMs: 6_000,
+      prepared: 10,
+      sold: 4,
+      visibleSigns: 2,
+      priceCents: 175,
+      ambientPedestrianCount: 8,
+    });
+    expect(storyboard.priceLabel).toBe("$1.75");
+    expect(storyboard.priceCents).toBe(175);
+  });
+
+  it("splits the full-height presentation into deterministic sequential shots", () => {
+    const storyboard = createStreetStoryboard({
+      durationMs: 6_000,
+      prepared: 10,
+      sold: 4,
+      visibleSigns: 2,
+      priceCents: 150,
+      ambientPedestrianCount: 8,
+    });
+
+    expect(storyboard.shots.map((shot) => shot.kind)).toEqual([
+      "establishing",
+      "street",
+      "purchase",
+      "street",
+    ]);
+    expect(storyboard.shots[0]?.startAtMs).toBe(0);
+    expect(storyboard.shots.at(-1)?.endAtMs).toBe(6_000);
+    expect(sceneShotAt(storyboard, 0)).toBe("establishing");
+    expect(sceneShotAt(storyboard, 1_500)).toBe("street");
+    expect(sceneShotAt(storyboard, 3_200)).toBe("purchase");
+    expect(sceneShotAt(storyboard, 5_000)).toBe("street");
+  });
+
+  it("chooses viewport-aware camera framing for each sequential shot", () => {
+    expect(sceneCameraComposition(360, 740, "establishing").mode).toBe("portrait");
+    expect(sceneCameraComposition(768, 740, "street").mode).toBe("balanced");
+    expect(sceneCameraComposition(844, 390, "purchase").mode).toBe("wide");
+
+    const portraitEstablishing = sceneCameraComposition(360, 740, "establishing");
+    const portraitStreet = sceneCameraComposition(360, 740, "street");
+    const portraitPurchase = sceneCameraComposition(360, 740, "purchase");
+    expect(portraitEstablishing.position[2]).toBeGreaterThanOrEqual(20);
+    expect(portraitStreet.position[2]).toBeGreaterThanOrEqual(18);
+    expect(portraitPurchase.position[2]).toBeGreaterThanOrEqual(15);
+    expect(portraitPurchase.fov).toBeGreaterThanOrEqual(46);
+  });
+
+  it("derives stable, varied character appearance and gait from the run seed", () => {
+    const seed = 0x1ead2026;
+    const first = characterProfileFor(seed, 7);
+    const repeated = characterProfileFor(seed, 7);
+    const neighbor = characterProfileFor(seed, 8);
+    const otherRun = characterProfileFor(seed ^ 0x55aa55aa, 7);
+
+    expect(repeated).toEqual(first);
+    expect(neighbor).not.toEqual(first);
+    expect(otherRun).not.toEqual(first);
+    expect(first.walkPace).toBeGreaterThanOrEqual(0.88);
+    expect(first.walkPace).toBeLessThanOrEqual(1.14);
+    expect(first.gaitAmplitude).toBeGreaterThanOrEqual(0.48);
+    expect(first.gaitAmplitude).toBeLessThanOrEqual(0.68);
   });
 
   it("is deterministic and never schedules more sales than prepared cups", () => {
     const input = {
-      durationMs: 5_000,
+      durationMs: 6_000,
       prepared: 8,
       sold: 12,
       visibleSigns: 2,
+      priceCents: 150,
       ambientPedestrianCount: 6,
     } as const;
 
