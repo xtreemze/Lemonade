@@ -2,7 +2,6 @@ import { Group } from "three";
 import { describe, expect, it } from "vitest";
 
 import { populateStand } from "../src/stand-detail.js";
-import { STAND_LAYOUT } from "../src/stand-layout.js";
 
 describe("stand detail", () => {
   it("adds a handmade sign and counter dressing as one lazy detail group", () => {
