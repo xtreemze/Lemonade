@@ -1191,20 +1191,20 @@ body:has(.game-shell[data-view="forecast"]) {
   }
 
   .game-shell[data-view="planning"] .decision-panel {
-    padding-top: 0;
+    padding: 0 0 64px;
   }
 
   .game-shell[data-view="planning"] .panel-heading {
-    margin-bottom: 0;
+    display: none;
   }
 
   .game-shell[data-view="planning"] .decision-control {
     gap: 0;
-    padding: 2px 0;
+    padding: 0;
   }
 
   .game-shell[data-view="planning"] .decision-control-heading {
-    min-height: 17px;
+    min-height: 16px;
   }
 
   .game-shell[data-view="planning"] .game-slider {
