@@ -12,6 +12,9 @@ const counter = box([3.55, 0.14, 0.78], [0, 1.28, 0.32]);
 const canopy = box([3.45, 0.14, 0.82], [0, 2.72, 0.18]);
 const counterTopY = counter.position[1] + counter.size[1] / 2;
 
+export const SELLER_Z = -0.86;
+export const LEMON_CENTER_Y = counterTopY + 0.21;
+
 export const STAND_LAYOUT = Object.freeze({
   body: box([3.25, 1.18, 1.32], [0, 0.59, 0]),
   counter,
@@ -21,7 +24,7 @@ export const STAND_LAYOUT = Object.freeze({
     box([0.14, 1.72, 0.14], [1.45, 1.9, -0.02]),
   ]),
   canopy,
-  sellerZ: -0.86,
+  sellerZ: SELLER_Z,
   sellerFrontRadius: 0.42,
   counterTopY,
   cupCenterY: counterTopY + 0.095,
@@ -31,7 +34,7 @@ export const STAND_LAYOUT = Object.freeze({
     minZ: 0.06,
     maxZ: 0.58,
   }),
-  lemonCenterY: counterTopY + 0.21,
+  lemonCenterY: LEMON_CENTER_Y,
 });
 
 export const standCounterBounds = (): Readonly<{
