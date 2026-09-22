@@ -224,7 +224,9 @@ export const initializeStreetMotion = (
       cachedDurationMs = safeDurationMs;
       cachedSimulation = createCrowdSimulation(beats, safeActorCount, safeDurationMs);
     }
-    return cachedSimulation.sample(elapsedMs).poses;
+    const simulation = cachedSimulation;
+    if (simulation === null) return Object.freeze([]);
+    return simulation.sample(elapsedMs).poses;
   };
 
   return Object.freeze({
