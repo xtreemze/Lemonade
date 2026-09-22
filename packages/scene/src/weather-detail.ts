@@ -236,7 +236,7 @@ export const populateWeatherObjects = (
   for (let i = 0; i < 3; i++) {
     const partlyCloud = new Group();
     const baseLayout = i === 0 ? HOT_DRY_CLOUD_LAYOUT :
-      { position: [-2.2 + i * 2.2, 1.5 + i * 0.2, -0.8], scale: 0.9 + i * 0.1 } as const;
+      { position: [-1.5 + i * 1.5, 1.5 + i * 0.2, -0.2], scale: 0.9 + i * 0.1 } as const;
     partlyCloud.position.set(...baseLayout.position);
     partlyCloud.scale.setScalar(baseLayout.scale);
     addCloud(partlyCloud, 0xd7e0df);
@@ -259,9 +259,9 @@ export const populateWeatherObjects = (
   });
 
   const thunderstormClouds = [
-    { position: [-2, 1.5, -1] as const, scale: 1.2, driftPhase: 0 },
-    { position: [0, 0.5, -1.2] as const, scale: 1, driftPhase: 1.5 },
-    { position: [2, 1.8, -0.8] as const, scale: 1.1, driftPhase: 3 },
+    { position: [-1.5, 1.5, -0.3] as const, scale: 1.2, driftPhase: 0 },
+    { position: [0, 0.5, -0.5] as const, scale: 1, driftPhase: 1.5 },
+    { position: [1.5, 1.8, -0.2] as const, scale: 1.1, driftPhase: 3 },
   ].map((layout, index) => {
     const cloud = new Group();
     cloud.userData["turbulentCloud"] = true;
@@ -429,7 +429,7 @@ export const populateWeatherObjects = (
 
       const sunArc = Math.max(0, Math.sin(daylight.progress * Math.PI));
       sunContainer.position.y = sunArc * 2.5 - 0.8;
-      sunContainer.position.z = sunArc < 0.2 ? -1.5 : sunArc > 0.85 ? -1.5 : 0;
+      sunContainer.position.z = sunArc < 0.2 ? -3.5 : sunArc > 0.85 ? -3.5 : 1.5;
 
       lightning.visible = flash > 0.06;
       for (const boltMaterial of lightningMaterials) {
