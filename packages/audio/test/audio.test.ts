@@ -21,6 +21,7 @@ const cues: readonly AudioCue[] = [
   "purchase:payment",
   "purchase:drink",
   "storm:thunder",
+  "ambient:birdsong",
 ];
 
 const weatherMelodies: Readonly<Record<WeatherAudioCue, readonly number[]>> = {
@@ -65,6 +66,13 @@ describe("procedural cue compiler", () => {
         previousStart = tone.startSeconds;
       }
     }
+  });
+
+  it("uses a lightweight high-register motif for ambient birdsong", () => {
+    const birdsong = compileCue("ambient:birdsong");
+    expect(birdsong).toHaveLength(5);
+    expect(birdsong.every((tone) => tone.midiNote >= 91)).toBe(true);
+    expect(birdsong.every((tone) => tone.gain <= 0.022)).toBe(true);
   });
 
   it("uses frequency sweeps for drinking and thunder", () => {
