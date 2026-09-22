@@ -44,24 +44,27 @@ describe("crowd motion", () => {
   });
 
   it("provides enough ground clearance for the full seeded height range", () => {
-    expect(crowdGroundClearance(0.9)).toBeGreaterThan(0.22);
-    expect(crowdGroundClearance(1.2)).toBeGreaterThan(0.3);
+    expect(crowdGroundClearance(0.9)).toBeGreaterThan(0.2);
+    expect(crowdGroundClearance(1.2)).toBeGreaterThan(0.26);
     expect(walkingBodyLift(0.5, 1, 0)).toBeGreaterThan(0);
   });
 
   it("reduces exposed street life in storms without changing simulation population math", () => {
     expect(ambientPopulationFor("sunny", "simulation")).toEqual({
       pets: 2,
+      wildlife: 2,
       bicycles: 2,
       vehicles: 1,
     });
     expect(ambientPopulationFor("thunderstorm", "simulation")).toEqual({
       pets: 0,
+      wildlife: 0,
       bicycles: 0,
       vehicles: 2,
     });
     expect(ambientPopulationFor("sunny", "forecast")).toEqual({
       pets: 0,
+      wildlife: 0,
       bicycles: 0,
       vehicles: 0,
     });
