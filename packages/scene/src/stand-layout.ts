@@ -1,4 +1,4 @@
-import { LEMON_CENTER_Y, SELLER_Z } from "./stand-anchors.js";
+import { SELLER_Z } from "./stand-anchors.js";
 
 export type StandBoxSpec = Readonly<{
   size: readonly [number, number, number];
@@ -25,15 +25,24 @@ export const STAND_LAYOUT = Object.freeze({
   canopy,
   sellerZ: SELLER_Z,
   sellerFrontRadius: 0.42,
+  sellerSightline: Object.freeze({
+    minX: -0.32,
+    maxX: 0.32,
+  }),
   counterTopY,
   cupCenterY: counterTopY + 0.095,
   cupFootprint: Object.freeze({
-    minX: -1.52,
+    minX: 0.38,
     maxX: 1.52,
-    minZ: 0.06,
+    minZ: 0.08,
     maxZ: 0.58,
   }),
-  lemonCenterY: LEMON_CENTER_Y,
+  stockFootprint: Object.freeze({
+    minX: -1.52,
+    maxX: -0.38,
+    minZ: 0.08,
+    maxZ: 0.58,
+  }),
 });
 
 export const standCounterBounds = (): Readonly<{
