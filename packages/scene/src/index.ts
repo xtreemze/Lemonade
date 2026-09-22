@@ -432,7 +432,6 @@ export const createLemonsvilleScene = (
     renderer = new WebGLRenderer({
       canvas,
       antialias: true,
-      alpha: false,
       powerPreference: "high-performance",
     });
   } catch {
@@ -441,13 +440,10 @@ export const createLemonsvilleScene = (
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = SRGBColorSpace;
-  renderer.shadowMap.enabled = false;
   renderer.setClearColor(0x8fa7b8, 1);
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
-  camera.position.set(0, 6.8, 13.5);
-  camera.lookAt(0, 1.7, 0);
 
   const hemisphere = new HemisphereLight(0xfff2c6, 0x526b51, 1.9);
   scene.add(hemisphere);
