@@ -36,6 +36,7 @@ const road = (
   const mesh = new Mesh(new PlaneGeometry(width, depth), material(color));
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(x, y, z);
+  mesh.userData["sceneRole"] = color === 0xd5d0c4 ? "sidewalk" : "paved-road";
   scene.add(mesh);
 };
 
@@ -164,8 +165,12 @@ const distantTree = (color: number): Group => {
   return root;
 };
 
-const treeLod = (x: number, z: number, scale: number, color: number): Group =>
-  distanceLod(detailedTree(color), distantTree(color), 28, x, z, scale);
+const treeLod = (x: number, z: number, scale: number, color: number): Group => {
+  const root = distanceLod(detailedTree(color), distantTree(color), 28, x, z, scale);
+  root.userData["sceneRole"] = "wind-vegetation";
+  root.userData["windPhase"] = x * 0.17 + z * 0.11;
+  return root;
+};
 
 const shrub = (x: number, z: number, scale: number, color: number): Group => {
   const root = new Group();
@@ -180,6 +185,30 @@ const shrub = (x: number, z: number, scale: number, color: number): Group => {
   }
   root.position.set(x, 0, z);
   root.scale.setScalar(scale);
+  root.userData["sceneRole"] = "wind-vegetation";
+  root.userData["windPhase"] = x * 0.13 + z * 0.19;
+  return root;
+};
+
+const flowerPatch = (x: number, z: number, seed: number): Group => {
+  const root = new Group();
+  root.userData["sceneRole"] = "garden-flowers";
+  const petalColors = [0xe78aa7, 0xf0c95b, 0x9b82d1, 0xf08a62] as const;
+  for (let index = 0; index < 7; index += 1) {
+    const stem = new Mesh(
+      new CylinderGeometry(0.018, 0.022, 0.3 + (index % 3) * 0.04, 5),
+      material(0x547f43),
+    );
+    stem.position.set((index % 4) * 0.16 - 0.24, 0.15, Math.floor(index / 4) * 0.18);
+    const blossom = new Mesh(
+      new SphereGeometry(0.075, 7, 5),
+      material(petalColors[(index + seed) % petalColors.length] ?? petalColors[0]),
+    );
+    blossom.scale.set(1.35, 0.55, 1.05);
+    blossom.position.set(stem.position.x, 0.34 + (index % 3) * 0.04, stem.position.z);
+    root.add(stem, blossom);
+  }
+  root.position.set(x, 0, z);
   return root;
 };
 
@@ -254,10 +283,42 @@ export type NeighborhoodStats = Readonly<{
   driveways: number;
   treeLods: number;
   shrubs: number;
+  flowers: number;
   yardDetails: number;
   roadSegments: number;
   worldSpan: number;
 }>;
+
+export type NeighborhoodWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
+
+export const windStrengthForWeather = (weather: NeighborhoodWeather): number => {
+  switch (weather) {
+    case "thunderstorm":
+      return 0.085;
+    case "hot-and-dry":
+      return 0.026;
+    case "cloudy":
+      return 0.02;
+    case "sunny":
+      return 0.012;
+  }
+};
+
+export const updateNeighborhoodWind = (
+  scene: Scene,
+  seconds: number,
+  strength: number,
+): void => {
+  const vegetation = scene.userData["windVegetation"];
+  if (!Array.isArray(vegetation)) return;
+  const amplitude = Math.max(0, Math.min(0.11, strength));
+  for (const object of vegetation) {
+    if (!(object instanceof Group)) continue;
+    const phase = Number(object.userData["windPhase"] ?? 0);
+    object.rotation.z = Math.sin(seconds * 1.55 + phase) * amplitude;
+    object.rotation.x = Math.sin(seconds * 1.08 + phase * 0.7) * amplitude * 0.34;
+  }
+};
 
 type FrontPropertySpec = Readonly<{
   role: string;
@@ -401,16 +462,16 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
     roadSegments += 1;
   };
 
-  addRoad(worldSpan, 5.4, 0, 4.8, 0xa88c70);
-  addRoad(6.2, 112, -15.5, -20, 0xaa8f73);
-  addRoad(6.2, 112, 18.5, -20, 0xaa8f73);
-  addRoad(worldSpan, 4.8, 0, -15.5, 0xb19578);
-  addRoad(worldSpan, 4.4, 0, -37, 0xb59a80);
-  addRoad(worldSpan, 0.9, 0, 1.55, 0xd9cfb4, 0.018);
-  addRoad(worldSpan, 0.9, 0, 8.05, 0xd9cfb4, 0.018);
+  addRoad(worldSpan, 5.4, 0, 4.8, 0x555b60);
+  addRoad(6.2, 112, -15.5, -20, 0x5c6165);
+  addRoad(6.2, 112, 18.5, -20, 0x5c6165);
+  addRoad(worldSpan, 4.8, 0, -15.5, 0x60656a);
+  addRoad(worldSpan, 4.4, 0, -37, 0x64696d);
+  addRoad(worldSpan, 1.65, 0, 1.27, 0xd5d0c4, 0.018);
+  addRoad(worldSpan, 1.65, 0, 8.33, 0xd5d0c4, 0.018);
 
   for (const property of FRONT_PROPERTY_LAYOUT) {
-    addRoad(2.15, 6.8, property.drivewayX, -2.55, 0xc9b995, 0.019);
+    addRoad(2.35, 6.8, property.drivewayX, -2.55, 0xb8b3a8, 0.019);
     const home = houseLod(
       property.houseX,
       property.houseZ,
@@ -458,8 +519,11 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
     const scale = 0.82 + ((index * 5) % 7) * 0.045;
     treePositions.push([x, z, scale, color]);
   }
+  const windVegetation: Group[] = [];
   for (const [x, z, scale, color] of treePositions) {
-    scene.add(treeLod(x, z, scale, color));
+    const tree = treeLod(x, z, scale, color);
+    windVegetation.push(tree);
+    scene.add(tree);
   }
 
   const shrubPositions = [
@@ -480,8 +544,19 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   ] as const;
   shrubPositions.forEach(([x, z], index) => {
     const color = TREE_PALETTE[(index + 2) % TREE_PALETTE.length] ?? TREE_PALETTE[0];
-    scene.add(shrub(x, z, 0.7 + (index % 5) * 0.055, color));
+    const plant = shrub(x, z, 0.7 + (index % 5) * 0.055, color);
+    windVegetation.push(plant);
+    scene.add(plant);
   });
+  scene.userData["windVegetation"] = windVegetation;
+
+  const flowers = [
+    flowerPatch(-2.9, -2.15, 0),
+    flowerPatch(3.2, -2.6, 1),
+    flowerPatch(-10.4, -3.7, 2),
+    flowerPatch(6.1, -4.1, 3),
+  ];
+  for (const patch of flowers) scene.add(patch);
 
   distantHill(scene, -52, -76, 24, 10, 0x718967);
   distantHill(scene, -16, -82, 31, 13, 0x6b8264);
@@ -497,7 +572,8 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
     driveways: FRONT_PROPERTY_LAYOUT.length,
     treeLods: treePositions.length,
     shrubs: shrubPositions.length,
-    yardDetails: yardDetails.length,
+    flowers: flowers.length,
+    yardDetails: yardDetails.length + flowers.length,
     roadSegments,
     worldSpan,
   });
