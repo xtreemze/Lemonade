@@ -1,4 +1,4 @@
-import { Group } from "three";
+import { Group, PointLight } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -30,12 +30,11 @@ describe("storm weather detail", () => {
       (child) => child.userData["sceneRole"] === "lightning-flash",
     );
     expect(bolt?.visible).toBe(false);
-    expect("intensity" in (flash ?? {}) ? Number((flash as { intensity: number }).intensity) : 0)
-      .toBe(0);
+    expect(flash).toBeInstanceOf(PointLight);
+    expect(flash instanceof PointLight ? flash.intensity : -1).toBe(0);
 
     controller.update("thunderstorm", 4_700, 10_000);
     expect(bolt?.visible).toBe(true);
-    expect("intensity" in (flash ?? {}) ? Number((flash as { intensity: number }).intensity) : 0)
-      .toBeGreaterThan(5);
+    expect(flash instanceof PointLight ? flash.intensity : 0).toBeGreaterThan(5);
   });
 });
