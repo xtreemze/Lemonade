@@ -35,8 +35,6 @@ import type { WeatherDetailController } from "./weather-detail.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
-  endingCloseupProgressAt,
-  endingConfidenceAt,
   remainingCameraProgressAt,
   remainingCupsAt,
   sceneCameraComposition,
@@ -870,26 +868,23 @@ export const createLemonsvilleScene = (
     });
   };
 
-  const sellerConfidenceAt = (elapsedMs: number): number => {
-    if (
-      state.phase !== "simulation" ||
-      elapsedMs <= storyboard.activeDurationMs
-    ) {
-      return state.confidence;
-    }
-    return endingConfidenceAt(
-      storyboard,
-      elapsedMs,
-      state.confidence,
-      state.nextConfidence,
-    );
-  };
-
   const animateSeller = (seconds: number, elapsedMs: number): void => {
     seller.person.root.visible = state.phase !== "forecast";
     if (state.phase === "forecast") return;
 
-    const confidence = sellerConfidenceAt(elapsedMs);
+    const closeupDuration = Math.max(
+      1,
+      storyboard.durationMs - storyboard.activeDurationMs,
+    );
+    const closeupProgress =
+      state.phase === "simulation" && elapsedMs > storyboard.activeDurationMs
+        ? clamp01((elapsedMs - storyboard.activeDurationMs) / closeupDuration)
+        : 0;
+    const easedCloseup =
+      closeupProgress * closeupProgress * (3 - 2 * closeupProgress);
+    const confidence =
+      state.confidence +
+      (state.nextConfidence - state.confidence) * easedCloseup;
     applySellerExpression(seller, confidence);
 
     applySellerGesture?.(
@@ -897,7 +892,7 @@ export const createLemonsvilleScene = (
       seller.person.head,
       seller.person.arms[0].root,
       seller.person.arms[1].root,
-      endingCloseupProgressAt(storyboard, elapsedMs),
+      closeupProgress,
       confidence,
     );
 
