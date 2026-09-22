@@ -8,6 +8,14 @@ const expectNoHorizontalOverflow = async (page: Page): Promise<void> => {
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 };
 
+const expectNoVerticalOverflow = async (page: Page): Promise<void> => {
+  const dimensions = await page.evaluate(() => ({
+    clientHeight: document.documentElement.clientHeight,
+    scrollHeight: document.documentElement.scrollHeight,
+  }));
+  expect(dimensions.scrollHeight).toBeLessThanOrEqual(dimensions.clientHeight + 1);
+};
+
 test("release artifact completes a day without uncaught runtime failures", async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -96,17 +104,26 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expect(page.locator("#scene-equivalent")).toContainText("glasses prepared");
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-presentation-duration-ms",
-    "5000",
+    "6000",
   );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-price-cents", "150");
+  await expect(page.locator("#scene-equivalent")).toContainText("$1.50 per cup");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-sign-price-label",
+    "$1.50",
+    { timeout: 4_000 },
+  );
+  await expectNoVerticalOverflow(page);
   const simulationStage = await page.locator(".stand-stage").boundingBox();
   if (simulationStage === null) throw new Error("expected simulation stage bounds");
   expect(simulationStage.width).toBeGreaterThanOrEqual(359);
   expect(simulationStage.height).toBeGreaterThanOrEqual(739);
-  await expect(main).toHaveAttribute("data-view", "report");
+  await expect(main).toHaveAttribute("data-view", "report", { timeout: 7_000 });
   await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
 
   await page.getByRole("button", { name: "Plan next day" }).click();
   await expect(main).toHaveAttribute("data-view", "forecast");
+  await expectNoVerticalOverflow(page);
   await expect(page.locator("#scene-title")).not.toBeEmpty();
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-presentation-duration-ms",
