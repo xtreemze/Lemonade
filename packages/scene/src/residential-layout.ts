@@ -42,6 +42,11 @@ export type ResidentialLayout = Readonly<{
 export const DEFAULT_RESIDENTIAL_SEED = 0x4c_45_4d_4f;
 
 const HOUSE_PALETTE_SIZE = 7;
+export const HOUSE_FOOTPRINT_WIDTH = 6.4;
+export const HOUSE_FOOTPRINT_DEPTH = 6.8;
+export const DRIVEWAY_HALF_WIDTH = 2.15 / 2;
+const HOUSE_HARDSCAPE_MARGIN = 0.35;
+const MAILBOX_CLEARANCE_FROM_DRIVEWAY = 0.56;
 
 const mix32 = (seed: number, salt: number): number => {
   let value = (seed ^ Math.imul((salt + 1) >>> 0, 0x9e3779b1)) >>> 0;
@@ -53,11 +58,75 @@ const mix32 = (seed: number, salt: number): number => {
 const unit = (seed: number, salt: number): number => mix32(seed, salt) / 0xffff_ffff;
 const signed = (seed: number, salt: number): number => unit(seed, salt) * 2 - 1;
 
-const rectContains = (rect: ResidentialRect, point: ResidentialPoint, inset = 0): boolean =>
-  point.x >= rect.minX - inset &&
-  point.x <= rect.maxX + inset &&
-  point.z >= rect.minZ - inset &&
-  point.z <= rect.maxZ + inset;
+const footprintIntersectsRect = (
+  rect: ResidentialRect,
+  point: ResidentialPoint,
+  halfWidth: number,
+  halfDepth: number,
+): boolean =>
+  point.x + halfWidth >= rect.minX &&
+  point.x - halfWidth <= rect.maxX &&
+  point.z + halfDepth >= rect.minZ &&
+  point.z - halfDepth <= rect.maxZ;
+
+const baseHardscape = (): readonly ResidentialRect[] => baseExclusions();
+
+const rotatedFootprintHalfExtents = (
+  halfWidth: number,
+  halfDepth: number,
+  rotationY: number,
+): Readonly<{ halfWidth: number; halfDepth: number }> => {
+  const cosine = Math.abs(Math.cos(rotationY));
+  const sine = Math.abs(Math.sin(rotationY));
+  return Object.freeze({
+    halfWidth: halfWidth * cosine + halfDepth * sine,
+    halfDepth: halfWidth * sine + halfDepth * cosine,
+  });
+};
+
+const clearHouseFromBaseHardscape = (
+  point: ResidentialPoint,
+  halfWidth: number,
+  halfDepth: number,
+): ResidentialPoint => {
+  let x = point.x;
+  let z = point.z;
+  for (let pass = 0; pass < 5; pass += 1) {
+    let moved = false;
+    for (const rect of baseHardscape()) {
+      if (!footprintIntersectsRect(rect, { x, z }, halfWidth, halfDepth)) continue;
+      const rectWidth = rect.maxX - rect.minX;
+      const rectDepth = rect.maxZ - rect.minZ;
+      if (rectWidth <= rectDepth) {
+        const left = rect.minX - halfWidth - HOUSE_HARDSCAPE_MARGIN;
+        const right = rect.maxX + halfWidth + HOUSE_HARDSCAPE_MARGIN;
+        x = Math.abs(x - left) <= Math.abs(x - right) ? left : right;
+      } else {
+        const near = rect.minZ - halfDepth - HOUSE_HARDSCAPE_MARGIN;
+        const far = rect.maxZ + halfDepth + HOUSE_HARDSCAPE_MARGIN;
+        z = Math.abs(z - near) <= Math.abs(z - far) ? near : far;
+      }
+      moved = true;
+    }
+    if (!moved) break;
+  }
+  return Object.freeze({ x, z });
+};
+
+const mailboxAnchorIsClear = (x: number): boolean =>
+  !baseHardscape().some((rect) =>
+    footprintIntersectsRect(rect, { x, z: -0.3 }, 0.3, 0.3),
+  );
+
+const mailboxXForDriveway = (
+  drivewayX: number,
+  drivewaySide: -1 | 1,
+  offset: number,
+): number => {
+  const preferred = drivewayX + drivewaySide * offset;
+  if (mailboxAnchorIsClear(preferred)) return preferred;
+  return drivewayX - drivewaySide * offset;
+};
 
 const makeProperty = (
   seed: number,
@@ -71,22 +140,44 @@ const makeProperty = (
   drivewaySide: -1 | 0 | 1,
 ): ResidentialPropertySpec => {
   const featured = role === "stand-home" || role === "stand-neighbor";
-  const houseX = featured ? baseX : baseX + signed(seed, index * 11 + 1) * 0.82;
-  const houseZ = featured ? baseZ : baseZ + signed(seed, index * 11 + 2) * 1.05;
+  const candidateHouseX = featured ? baseX : baseX + signed(seed, index * 11 + 1) * 0.82;
+  const candidateHouseZ = featured ? baseZ : baseZ + signed(seed, index * 11 + 2) * 1.05;
   const scale = baseScale + signed(seed, index * 11 + 3) * 0.055;
   const rotationY =
     baseRotation +
     signed(seed, index * 11 + 4) * (featured ? 0.014 : 0.055) +
     (facingBack ? Math.PI : 0);
-  const drivewayOffset = 3.45 + unit(seed, index * 11 + 5) * 0.62;
+  const localHalfWidth = (HOUSE_FOOTPRINT_WIDTH * scale) / 2;
+  const localHalfDepth = (HOUSE_FOOTPRINT_DEPTH * scale) / 2;
+  const footprint = rotatedFootprintHalfExtents(
+    localHalfWidth,
+    localHalfDepth,
+    rotationY,
+  );
+  const clearHouse = clearHouseFromBaseHardscape(
+    { x: candidateHouseX, z: candidateHouseZ },
+    footprint.halfWidth,
+    footprint.halfDepth,
+  );
+  const houseX = clearHouse.x;
+  const houseZ = clearHouse.z;
+  const drivewayOffset =
+    footprint.halfWidth +
+    DRIVEWAY_HALF_WIDTH +
+    HOUSE_HARDSCAPE_MARGIN +
+    unit(seed, index * 11 + 5) * 0.24;
   const drivewayX =
     drivewaySide === 0
       ? null
       : houseX + drivewaySide * drivewayOffset;
+  const mailboxOffset =
+    DRIVEWAY_HALF_WIDTH +
+    MAILBOX_CLEARANCE_FROM_DRIVEWAY +
+    unit(seed, index * 11 + 6) * 0.18;
   const mailboxX =
-    drivewayX === null
+    drivewayX === null || drivewaySide === 0
       ? null
-      : drivewayX - drivewaySide * (1.34 + unit(seed, index * 11 + 6) * 0.22);
+      : mailboxXForDriveway(drivewayX, drivewaySide, mailboxOffset);
 
   return Object.freeze({
     role,
@@ -112,8 +203,8 @@ const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
       color: 2,
       scale: 1.06,
       rotationY: 0.045,
-      drivewayX: -8.45,
-      mailboxX: -7.05,
+      drivewayX: -9.5,
+      mailboxX: -11.15,
     }),
     Object.freeze({
       role: "stand-neighbor",
@@ -122,8 +213,8 @@ const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
       color: 4,
       scale: 0.97,
       rotationY: -0.055,
-      drivewayX: 12.1,
-      mailboxX: 10.7,
+      drivewayX: 13.55,
+      mailboxX: 11.9,
     }),
     makeProperty(seed, 5, "east-mid", 29.1, -6.8, 1.01, 0.025, false, -1),
     makeProperty(seed, 6, "east-end", 41.5, -8.3, 0.94, -0.05, false, 1),
@@ -152,7 +243,8 @@ const rowProperties = (
     ),
   );
 
-const baseExclusions = (): ResidentialRect[] => [
+function baseExclusions(): ResidentialRect[] {
+  return [
   {
     minX: -75,
     maxX: 75,
@@ -178,7 +270,8 @@ const baseExclusions = (): ResidentialRect[] => [
   { minX: 15.4, maxX: 21.6, minZ: -76, maxZ: 36, role: "road" },
   { minX: -75, maxX: 75, minZ: -17.9, maxZ: -13.1, role: "road" },
   { minX: -75, maxX: 75, minZ: -39.2, maxZ: -34.8, role: "road" },
-];
+  ];
+}
 
 const drivewayExclusions = (
   properties: readonly ResidentialPropertySpec[],
@@ -188,8 +281,8 @@ const drivewayExclusions = (
       ? []
       : [
           {
-            minX: property.drivewayX - 1.2,
-            maxX: property.drivewayX + 1.2,
+            minX: property.drivewayX - DRIVEWAY_HALF_WIDTH,
+            maxX: property.drivewayX + DRIVEWAY_HALF_WIDTH,
             minZ: -6.2,
             maxZ: 0.9,
             role: "driveway" as const,
@@ -212,12 +305,27 @@ const blockedByHouseFront = (
     );
   });
 
+export const residentialFootprintIntersectsHardscape = (
+  point: ResidentialPoint,
+  layout: Pick<ResidentialLayout, "exclusions">,
+  halfWidth = 0,
+  halfDepth = halfWidth,
+): boolean =>
+  layout.exclusions.some((rect) =>
+    footprintIntersectsRect(
+      rect,
+      point,
+      Math.max(0, halfWidth),
+      Math.max(0, halfDepth),
+    ),
+  );
+
 export const residentialPointIsBlocked = (
   point: ResidentialPoint,
   layout: Pick<ResidentialLayout, "exclusions" | "frontProperties" | "middleProperties" | "backProperties">,
   clearance = 0,
 ): boolean =>
-  layout.exclusions.some((rect) => rectContains(rect, point, clearance)) ||
+  residentialFootprintIntersectsHardscape(point, layout, clearance, clearance) ||
   blockedByHouseFront(
     point,
     [...layout.frontProperties, ...layout.middleProperties, ...layout.backProperties],
@@ -232,16 +340,21 @@ const generatePlantings = (
   zMax: number,
   layout: Pick<ResidentialLayout, "exclusions" | "frontProperties" | "middleProperties" | "backProperties">,
   clearance: number,
+  spacing: number,
 ): readonly ResidentialPlanting[] => {
   const result: ResidentialPlanting[] = [];
-  for (let attempt = 0; attempt < count * 80 && result.length < count; attempt += 1) {
+  for (let attempt = 0; attempt < count * 120 && result.length < count; attempt += 1) {
     const x = -51 + unit(seed, salt + attempt * 5) * 102;
     const z = zMin + unit(seed, salt + attempt * 5 + 1) * (zMax - zMin);
+    const scale = 0.78 + unit(seed, salt + attempt * 5 + 2) * 0.34;
+    const footprintClearance = clearance * scale;
     const candidate = { x, z };
-    if (residentialPointIsBlocked(candidate, layout, clearance)) continue;
+    if (residentialPointIsBlocked(candidate, layout, footprintClearance)) continue;
     if (
       result.some(
-        (existing) => Math.hypot(existing.x - x, existing.z - z) < clearance * 2 + 0.9,
+        (existing) =>
+          Math.hypot(existing.x - x, existing.z - z) <
+          spacing * scale + spacing * existing.scale + 0.9,
       )
     ) {
       continue;
@@ -250,7 +363,7 @@ const generatePlantings = (
       Object.freeze({
         x,
         z,
-        scale: 0.78 + unit(seed, salt + attempt * 5 + 2) * 0.34,
+        scale,
         paletteIndex: Math.floor(unit(seed, salt + attempt * 5 + 3) * 7) % 7,
       }),
     );
@@ -267,7 +380,7 @@ const generateFlowers = (
     const x = -13 + unit(seed, 7_000 + attempt * 3) * 11.2;
     const z = -5.3 + unit(seed, 7_001 + attempt * 3) * 4.1;
     const candidate = { x, z };
-    if (residentialPointIsBlocked(candidate, layout, 0.08)) continue;
+    if (residentialPointIsBlocked(candidate, layout, 0.16)) continue;
     result.push(
       Object.freeze({
         x,
@@ -305,8 +418,26 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     backProperties: back,
   } as const;
 
-  const trees = generatePlantings(safeSeed, 48, 3_100, -60, 0.2, partial, 1.15);
-  const shrubs = generatePlantings(safeSeed, 14, 5_100, -33, -1.1, partial, 0.42);
+  const trees = generatePlantings(
+    safeSeed,
+    48,
+    3_100,
+    -60,
+    0.2,
+    partial,
+    3.5,
+    1.3,
+  );
+  const shrubs = generatePlantings(
+    safeSeed,
+    14,
+    5_100,
+    -33,
+    -1.1,
+    partial,
+    1.9,
+    0.65,
+  );
   const flowers = generateFlowers(safeSeed, partial);
 
   return Object.freeze({

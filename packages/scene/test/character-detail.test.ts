@@ -22,6 +22,7 @@ describe("character geometry detail", () => {
 
       const roles = new Set(head.children.map(sceneRole));
       expect(roles.has("hair-cover")).toBe(true);
+      expect(roles.has("hair-detail")).toBe(true);
       expect(roles.has("face-expression")).toBe(true);
       expect(roles.has("eye-white")).toBe(true);
       expect(roles.has("eye-pupil")).toBe(true);
@@ -36,7 +37,26 @@ describe("character geometry detail", () => {
       const garments = root.children.filter(
         (child) => sceneRole(child) === "garment-detail",
       );
-      expect(garments.length).toBeGreaterThanOrEqual(2);
+      expect(garments.length).toBeGreaterThanOrEqual(3);
     }
+  });
+
+  it("adds deterministic bags without putting them on every adult", () => {
+    let bagged = 0;
+    let bagless = 0;
+    for (let index = 0; index < 16; index += 1) {
+      const profile = characterProfileFor(0x1ead2026, index);
+      const root = new Group();
+      const identity = characterIdentityFor(index, profile);
+      decorateCharacterBody(root, profile, identity);
+      const bags = root.children.filter(
+        (child) => sceneRole(child) === "character-bag",
+      );
+      if (bags.length > 0) bagged += 1;
+      else bagless += 1;
+      if (identity.ageGroup === "child") expect(bags.length).toBeGreaterThan(0);
+    }
+    expect(bagged).toBeGreaterThan(4);
+    expect(bagless).toBeGreaterThan(0);
   });
 });

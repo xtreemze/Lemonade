@@ -17,6 +17,7 @@ export type StreetStoryboardInput = Readonly<{
 
 export const MAX_STORYBOARD_CUPS = 400 as const;
 export const MAX_STORYBOARD_SIGNS = 40 as const;
+export const ENDING_CLOSEUP_DURATION_MS = 2_000 as const;
 const MAX_PRICE_CENTS = 99_999;
 
 const finiteInteger = (value: number, fallback: number): number =>
@@ -33,16 +34,22 @@ export const formatPriceLabel = (priceCents: number): string => {
   return cents < 100 ? String(cents) + "¢" : "$" + (cents / 100).toFixed(2);
 };
 
-const createShots = (durationMs: number): readonly SceneShot[] => {
-  const remainingStart = Math.round(durationMs * 0.86);
-  return Object.freeze([
-    Object.freeze({ kind: "stand", startAtMs: 0, endAtMs: remainingStart }),
-    Object.freeze({ kind: "remaining", startAtMs: remainingStart, endAtMs: durationMs }),
+const createShots = (
+  durationMs: number,
+  activeDurationMs: number,
+): readonly SceneShot[] =>
+  Object.freeze([
+    Object.freeze({ kind: "stand", startAtMs: 0, endAtMs: activeDurationMs }),
+    Object.freeze({ kind: "remaining", startAtMs: activeDurationMs, endAtMs: durationMs }),
   ]);
-};
 
 export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStoryboard => {
   const durationMs = Math.max(1, finiteInteger(input.durationMs, 1));
+  const closeupDurationMs = Math.min(
+    ENDING_CLOSEUP_DURATION_MS,
+    Math.max(0, durationMs - 1),
+  );
+  const activeDurationMs = durationMs - closeupDurationMs;
   const prepared = clampInteger(input.prepared, 0, MAX_STORYBOARD_CUPS);
   const sold = clampInteger(input.sold, 0, prepared);
   const visibleSigns = clampInteger(input.visibleSigns, 0, MAX_STORYBOARD_SIGNS);
@@ -56,27 +63,27 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
       ? 0
       : Math.min(passerbyCount, Math.max(1, Math.ceil(passerbyCount * advertisementRatio)));
 
-  const purchaseWindowStart = Math.round(durationMs * 0.12);
-  const purchaseWindowEnd = Math.round(durationMs * 0.78);
-  const approachTravelMs = Math.min(650, Math.max(240, durationMs * 0.09));
-  const purchaseDurationMs = Math.min(220, Math.max(130, durationMs * 0.028));
-  const drinkDurationMs = Math.min(430, Math.max(240, durationMs * 0.055));
-  const departTravelMs = Math.min(650, Math.max(240, durationMs * 0.09));
+  const purchaseWindowStart = Math.round(activeDurationMs * 0.12);
+  const purchaseWindowEnd = Math.round(activeDurationMs * 0.72);
+  const approachTravelMs = Math.min(650, Math.max(240, activeDurationMs * 0.09));
+  const purchaseDurationMs = Math.min(220, Math.max(130, activeDurationMs * 0.028));
+  const drinkDurationMs = Math.min(430, Math.max(240, activeDurationMs * 0.055));
+  const departTravelMs = Math.min(650, Math.max(240, activeDurationMs * 0.09));
 
   const sales = Array.from({ length: sold }, (_, index): SaleBeat => {
     const purchaseAtMs =
       sold === 1
-        ? Math.round(durationMs * 0.48)
+        ? Math.round(activeDurationMs * 0.48)
         : Math.round(
             purchaseWindowStart +
               ((purchaseWindowEnd - purchaseWindowStart) * index) / Math.max(1, sold - 1),
           );
     const purchaseEndAtMs = Math.min(
-      durationMs,
+      activeDurationMs,
       Math.round(purchaseAtMs + purchaseDurationMs),
     );
     const drinkEndAtMs = Math.min(
-      durationMs,
+      activeDurationMs,
       Math.round(purchaseEndAtMs + drinkDurationMs),
     );
     return Object.freeze({
@@ -86,16 +93,19 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
       purchaseAtMs,
       purchaseEndAtMs,
       drinkEndAtMs,
-      departAtMs: Math.min(durationMs, Math.round(drinkEndAtMs + departTravelMs)),
+      departAtMs: Math.min(activeDurationMs, Math.round(drinkEndAtMs + departTravelMs)),
       direction: saleDirection(index),
       lane: index % 3,
       remainingCups: prepared - index - 1,
     });
   });
 
-  const crossingDurationMs = Math.min(durationMs, Math.max(1_100, durationMs * 0.42));
+  const crossingDurationMs = Math.min(
+    activeDurationMs,
+    Math.max(1_100, activeDurationMs * 0.42),
+  );
   const passersBy = Array.from({ length: passerbyCount }, (_, index): PasserbyBeat => {
-    const centerAtMs = (durationMs * (index + 0.5)) / passerbyCount;
+    const centerAtMs = (activeDurationMs * (index + 0.5)) / passerbyCount;
     const seesAdvertisement = index < adViewerCount;
     return Object.freeze({
       pedestrianIndex: index,
@@ -110,12 +120,13 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
 
   return Object.freeze({
     durationMs,
+    activeDurationMs,
     prepared,
     sold,
     visibleSigns,
     priceCents,
     priceLabel: formatPriceLabel(priceCents),
-    shots: createShots(durationMs),
+    shots: createShots(durationMs, activeDurationMs),
     sales: Object.freeze(sales),
     passersBy: Object.freeze(passersBy),
     adViewerCount,

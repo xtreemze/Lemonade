@@ -13,6 +13,7 @@ import {
   crowdPosesAt,
   walkingBodyLift,
 } from "../src/crowd-motion.js";
+import { walkingCycleAtDistance } from "../src/gait.js";
 import { STREET_LAYOUT, roadLaneZ } from "../src/street-layout.js";
 import type { PasserbyBeat } from "../src/storyboard.js";
 
@@ -37,11 +38,21 @@ describe("crowd motion", () => {
     expect(repeated).toEqual(first);
     expect(first).toHaveLength(12);
 
+    expect(new Set(first.map((pose) => pose.side))).toEqual(
+      new Set(["near", "far"]),
+    );
     for (const pose of first) {
       expect(Math.abs(pose.x)).toBeLessThanOrEqual(12.8);
-      expect(pose.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
-      expect(pose.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
-      expect(pose.z).toBeLessThan(STREET_LAYOUT.road.minZ);
+      const sidewalk =
+        pose.side === "near"
+          ? STREET_LAYOUT.nearSidewalk
+          : STREET_LAYOUT.farSidewalk;
+      expect(pose.z).toBeGreaterThanOrEqual(sidewalk.minZ);
+      expect(pose.z).toBeLessThanOrEqual(sidewalk.maxZ);
+      expect(
+        pose.z < STREET_LAYOUT.road.minZ ||
+          pose.z > STREET_LAYOUT.road.maxZ,
+      ).toBe(true);
     }
 
     for (let left = 0; left < first.length; left += 1) {
@@ -75,6 +86,17 @@ describe("crowd motion", () => {
     expect(pet.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
     expect(pet.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
     expect(pet.yaw).toBeCloseTo(0);
+
+    const farOwner = Object.freeze({
+      x: -2,
+      z: 8.7,
+      heading: -Math.PI / 2,
+    });
+    const farPet = petFollowPose(farOwner, 1);
+    expect(farPet.x).toBeGreaterThan(farOwner.x);
+    expect(farPet.z).toBeGreaterThanOrEqual(STREET_LAYOUT.farSidewalk.minZ);
+    expect(farPet.z).toBeLessThanOrEqual(STREET_LAYOUT.farSidewalk.maxZ);
+    expect(Math.abs(farPet.yaw)).toBeCloseTo(Math.PI);
   });
 
   it("keeps pet travel aligned to the street while the owner glances at an ad", () => {
@@ -126,11 +148,29 @@ describe("crowd motion", () => {
     }
   });
 
+  it("advances gait phase from measured world-space travel distance", () => {
+    const earlier = crowdPosesAt(beats, 1, 1_000, 6_000)[0];
+    const later = crowdPosesAt(beats, 1, 1_100, 6_000)[0];
+    expect(earlier).toBeDefined();
+    expect(later).toBeDefined();
+    if (earlier === undefined || later === undefined) return;
+
+    expect(later.travelDistance - earlier.travelDistance).toBeCloseTo(
+      earlier.worldSpeed * 0.1,
+      5,
+    );
+    expect(
+      walkingCycleAtDistance(later.travelDistance, 1, 1, 0),
+    ).toBeGreaterThan(
+      walkingCycleAtDistance(earlier.travelDistance, 1, 1, 0),
+    );
+  });
+
   it("provides enough ground clearance for adult and child seeded heights", () => {
     expect(crowdGroundClearance(0.68)).toBeGreaterThan(0.14);
     expect(crowdGroundClearance(0.9)).toBeGreaterThan(0.2);
     expect(crowdGroundClearance(1.2)).toBeGreaterThan(0.26);
-    expect(walkingBodyLift(0.5, 1, 0)).toBeGreaterThan(0);
+    expect(walkingBodyLift(0.5, 1, 1, 0)).toBeGreaterThan(0);
   });
 
   it("reduces exposed street life in storms without changing simulation population math", () => {

@@ -16,6 +16,8 @@ export type CharacterIdentity = Readonly<{
   gender: CharacterGender;
   ageGroup: CharacterAgeGroup;
   garmentStyle: 0 | 1 | 2 | 3;
+  hairDetail: 0 | 1 | 2 | 3;
+  bagStyle: 0 | 1 | 2 | 3;
   expression: CharacterExpression;
 }>;
 
@@ -30,13 +32,21 @@ export const characterIdentityFor = (
 ): CharacterIdentity => {
   const actorIndex = Number.isFinite(index) ? Math.abs(Math.trunc(index)) : 0;
   const identityIndex = (profile.hairStyle + profile.accessory + actorIndex) & 3;
+  const ageGroup =
+    actorIndex >= 10_000 || Math.floor(actorIndex / 2) % 3 !== 2
+      ? "adult"
+      : "child";
+  const bagStyle = actorIndex >= 10_000
+    ? 0
+    : ageGroup === "child"
+      ? ((actorIndex % 3) + 1) as 1 | 2 | 3
+      : ((identityIndex + actorIndex) & 3) as 0 | 1 | 2 | 3;
   return Object.freeze({
     gender: actorIndex % 2 === 0 ? "male" : "female",
-    ageGroup:
-      actorIndex >= 10_000 || Math.floor(actorIndex / 2) % 3 !== 2
-        ? "adult"
-        : "child",
+    ageGroup,
     garmentStyle: identityIndex as 0 | 1 | 2 | 3,
+    hairDetail: ((identityIndex + profile.hairStyle + actorIndex) & 3) as 0 | 1 | 2 | 3,
+    bagStyle,
     expression: expressions[(identityIndex + profile.accessory) & 3] ?? "neutral",
   });
 };
@@ -178,6 +188,52 @@ export const decorateCharacterHead = (
     head.add(bun);
   }
 
+  const hairMaterial = material(profile.hairColor);
+  if (identity.hairDetail === 0) {
+    for (const offset of [-0.11, 0, 0.11]) {
+      const tuft = mark(
+        new Mesh(new SphereGeometry(0.075, 8, 6), hairMaterial.clone()),
+        "hair-detail",
+      );
+      tuft.scale.set(0.78, 1.28, 0.72);
+      tuft.position.set(offset, 0.285 - Math.abs(offset) * 0.22, 0.045);
+      head.add(tuft);
+    }
+  } else if (identity.hairDetail === 1) {
+    for (const direction of [-1, 1] as const) {
+      const lock = mark(
+        new Mesh(new CylinderGeometry(0.035, 0.05, 0.3, 7), hairMaterial.clone()),
+        "hair-detail",
+      );
+      lock.position.set(direction * 0.235, 0.015, 0.02);
+      lock.rotation.z = direction * 0.08;
+      head.add(lock);
+    }
+  } else if (identity.hairDetail === 2) {
+    const ponytail = mark(
+      new Mesh(new SphereGeometry(0.12, 9, 7), hairMaterial.clone()),
+      "hair-detail",
+    );
+    ponytail.scale.set(0.72, 1.45, 0.72);
+    ponytail.position.set(
+      identity.gender === "female" ? 0.15 : -0.13,
+      0.03,
+      -0.255,
+    );
+    ponytail.rotation.z = identity.gender === "female" ? -0.22 : 0.22;
+    head.add(ponytail);
+  } else {
+    for (const direction of [-1, 1] as const) {
+      const curl = mark(
+        new Mesh(new SphereGeometry(0.095, 9, 7), hairMaterial.clone()),
+        "hair-detail",
+      );
+      curl.scale.set(0.82, 1.12, 0.8);
+      curl.position.set(direction * 0.19, 0.18, -0.15);
+      head.add(curl);
+    }
+  }
+
   if (profile.accessory === 1) {
     const brim = new Mesh(new BoxGeometry(0.46, 0.035, 0.34), material(profile.hairColor));
     brim.position.set(0, 0.23, 0.05);
@@ -275,6 +331,83 @@ export const decorateCharacterBody = (
       [0, 1.48, -0.09],
     );
     hood.scale.set(0.92, 0.55, 0.5);
+  }
+
+  const accent = material(
+    identity.garmentStyle % 2 === 0 ? profile.trouserColor : profile.clothingColor,
+  );
+  if (identity.garmentStyle === 0 || identity.garmentStyle === 3) {
+    const belt = addGarment(
+      root,
+      new Mesh(new BoxGeometry(0.54, 0.055, 0.05), accent.clone()),
+      [0, 0.78, 0.29],
+    );
+    belt.rotation.z = -0.01;
+  }
+  if (identity.garmentStyle === 1 || identity.garmentStyle === 3) {
+    for (const direction of [-1, 1] as const) {
+      const cuff = addGarment(
+        root,
+        new Mesh(new CylinderGeometry(0.09, 0.09, 0.08, 8), accent.clone()),
+        [direction * 0.35, 1.08, 0],
+      );
+      cuff.rotation.z = Math.PI / 2;
+    }
+  }
+  if (identity.garmentStyle === 2) {
+    const scarf = addGarment(
+      root,
+      new Mesh(new CylinderGeometry(0.27, 0.29, 0.08, 10), accent.clone()),
+      [0, 1.39, 0],
+    );
+    scarf.rotation.y = 0.08;
+  }
+
+  const bagMaterial = material(profile.trouserColor);
+  if (identity.bagStyle === 1) {
+    const bag = mark(
+      new Mesh(new BoxGeometry(0.42, 0.52, 0.18), bagMaterial.clone()),
+      "character-bag",
+    );
+    bag.position.set(0, 1.02, -0.31);
+    root.add(bag);
+    for (const direction of [-1, 1] as const) {
+      const strap = mark(
+        new Mesh(new BoxGeometry(0.045, 0.72, 0.035), bagMaterial.clone()),
+        "character-bag",
+      );
+      strap.position.set(direction * 0.2, 1.14, -0.16);
+      strap.rotation.z = direction * 0.08;
+      root.add(strap);
+    }
+  } else if (identity.bagStyle === 2) {
+    const strap = mark(
+      new Mesh(new BoxGeometry(0.045, 0.92, 0.035), bagMaterial.clone()),
+      "character-bag",
+    );
+    strap.position.set(0, 1.12, 0.31);
+    strap.rotation.z = -0.42;
+    root.add(strap);
+    const satchel = mark(
+      new Mesh(new BoxGeometry(0.32, 0.28, 0.12), bagMaterial.clone()),
+      "character-bag",
+    );
+    satchel.position.set(0.28, 0.78, 0.31);
+    root.add(satchel);
+  } else if (identity.bagStyle === 3) {
+    const tote = mark(
+      new Mesh(new BoxGeometry(0.34, 0.38, 0.1), bagMaterial.clone()),
+      "character-bag",
+    );
+    tote.position.set(0.43, 0.72, 0.02);
+    root.add(tote);
+    const handle = mark(
+      new Mesh(new CylinderGeometry(0.035, 0.035, 0.34, 7), bagMaterial.clone()),
+      "character-bag",
+    );
+    handle.position.set(0.43, 1.01, 0.02);
+    handle.rotation.z = Math.PI / 2;
+    root.add(handle);
   }
 
   // Garment geometry stays attached to the character root so child scaling and

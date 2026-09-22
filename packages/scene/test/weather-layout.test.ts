@@ -2,6 +2,11 @@ import { PerspectiveCamera, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
 import { sceneCameraComposition } from "../src/storyboard.js";
+import {
+  businessDayFrameAt,
+  businessDayProgressAt,
+  lightningFlashAt,
+} from "../src/weather-detail.js";
 import { WEATHER_BACKDROP_LAYOUT } from "../src/weather-layout.js";
 
 const projectedBackdrop = (
@@ -24,11 +29,41 @@ const projectedBackdrop = (
 };
 
 describe("weather backdrop staging", () => {
-  it("places all weather behind the distant hill band", () => {
-    for (const layout of Object.values(WEATHER_BACKDROP_LAYOUT)) {
+  it("keeps ordinary weather behind the hills but brings storms forward", () => {
+    for (const kind of ["sunny", "cloudy", "hot-and-dry"] as const) {
+      const layout = WEATHER_BACKDROP_LAYOUT[kind];
       expect(layout.position[2]).toBeLessThan(-90);
       expect(layout.scale).toBeGreaterThanOrEqual(10);
     }
+
+    const storm = WEATHER_BACKDROP_LAYOUT.thunderstorm;
+    expect(storm.position[2]).toBeGreaterThan(-76);
+    expect(storm.position[2]).toBeLessThan(-45);
+    expect(storm.scale).toBeGreaterThan(6);
+  });
+
+  it("moves the business simulation from dawn through daylight into night", () => {
+    const duration = 10_000;
+    const dawn = businessDayFrameAt("sunny", "simulation", 0, duration);
+    const noon = businessDayFrameAt("sunny", "simulation", 5_000, duration);
+    const night = businessDayFrameAt("sunny", "simulation", duration, duration);
+
+    expect(businessDayProgressAt("simulation", 0, duration))
+      .toBeLessThan(businessDayProgressAt("simulation", 5_000, duration));
+    expect(businessDayProgressAt("simulation", 5_000, duration))
+      .toBeLessThan(businessDayProgressAt("simulation", duration, duration));
+    expect(noon.sunlightIntensity).toBeGreaterThan(dawn.sunlightIntensity);
+    expect(noon.sunlightIntensity).toBeGreaterThan(night.sunlightIntensity);
+    expect(dawn.skyColor).not.toBe(noon.skyColor);
+    expect(night.skyColor).not.toBe(noon.skyColor);
+    expect(dawn.sunPosition[0]).toBeLessThan(night.sunPosition[0]);
+  });
+
+  it("flashes lightning in deterministic short pulses instead of leaving a static bolt", () => {
+    const duration = 10_000;
+    expect(lightningFlashAt(2_000, duration)).toBeGreaterThan(0.9);
+    expect(lightningFlashAt(3_500, duration)).toBe(0);
+    expect(lightningFlashAt(5_700, duration)).toBeGreaterThan(0.9);
   });
 
   it("keeps backdrop centers inside portrait and landscape forecast framing", () => {
@@ -42,6 +77,9 @@ describe("weather backdrop staging", () => {
         expect(projected.y).toBeGreaterThanOrEqual(-1);
         expect(projected.y).toBeLessThanOrEqual(1);
         expect(projected.z).toBeLessThanOrEqual(1);
+        const screenY = (1 - projected.y) / 2;
+        expect(screenY).toBeGreaterThanOrEqual(0.08);
+        expect(screenY).toBeLessThanOrEqual(0.43);
       }
     }
   });

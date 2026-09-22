@@ -4,6 +4,8 @@ import {
   gardenSignPosition,
   STREET_LAYOUT,
   sidewalkLaneZ,
+  sidewalkLaneZForSide,
+  sidewalkSideForActor,
 } from "../src/street-layout.js";
 
 describe("street zoning", () => {
@@ -16,6 +18,19 @@ describe("street zoning", () => {
     }
     expect(STREET_LAYOUT.nearSidewalk.maxZ - STREET_LAYOUT.nearSidewalk.minZ)
       .toBeGreaterThanOrEqual(1.8);
+  });
+
+  it("provides deterministic lanes on both sidewalks", () => {
+    expect(sidewalkSideForActor(0)).toBe("near");
+    expect(sidewalkSideForActor(1)).toBe("far");
+    for (let lane = 0; lane < 4; lane += 1) {
+      const nearZ = sidewalkLaneZForSide("near", lane);
+      const farZ = sidewalkLaneZForSide("far", lane);
+      expect(nearZ).toBeGreaterThan(STREET_LAYOUT.nearSidewalk.minZ);
+      expect(nearZ).toBeLessThan(STREET_LAYOUT.nearSidewalk.maxZ);
+      expect(farZ).toBeGreaterThan(STREET_LAYOUT.farSidewalk.minZ);
+      expect(farZ).toBeLessThan(STREET_LAYOUT.farSidewalk.maxZ);
+    }
   });
 
   it("places advertising signs in garden bands instead of the sidewalk or road", () => {

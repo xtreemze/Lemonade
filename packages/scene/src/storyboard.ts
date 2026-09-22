@@ -40,6 +40,7 @@ export type PasserbyBeat = Readonly<{
 
 export type StreetStoryboard = Readonly<{
   durationMs: number;
+  activeDurationMs: number;
   prepared: number;
   sold: number;
   visibleSigns: number;
@@ -99,6 +100,27 @@ export const sceneShotAt = (
   return shot?.kind ?? "stand";
 };
 
+export const endingCloseupProgressAt = (
+  storyboard: StreetStoryboard,
+  elapsedMs: number,
+): number => {
+  const elapsed = boundedElapsed(storyboard, elapsedMs);
+  if (elapsed <= storyboard.activeDurationMs) return 0;
+  const duration = Math.max(1, storyboard.durationMs - storyboard.activeDurationMs);
+  return Math.min(1, (elapsed - storyboard.activeDurationMs) / duration);
+};
+
+export const endingConfidenceAt = (
+  storyboard: StreetStoryboard,
+  elapsedMs: number,
+  currentConfidence: number,
+  nextConfidence: number,
+): number => {
+  const progress = endingCloseupProgressAt(storyboard, elapsedMs);
+  const eased = progress * progress * (3 - 2 * progress);
+  return currentConfidence + (nextConfidence - currentConfidence) * eased;
+};
+
 export const remainingCameraProgressAt = (
   storyboard: StreetStoryboard,
   elapsedMs: number,
@@ -114,64 +136,81 @@ export const remainingCameraProgressAt = (
   return progress * progress * (3 - 2 * progress);
 };
 
+export type SceneViewportClass =
+  | "mobile-portrait"
+  | "mobile-landscape"
+  | "tablet"
+  | "desktop";
+
 export type SceneCameraComposition = Readonly<{
   mode: "portrait" | "balanced" | "wide";
-  shot: SceneShotKind;
   fov: number;
   position: readonly [number, number, number];
   lookAt: readonly [number, number, number];
 }>;
+
+const finiteViewportEdge = (value: number): number =>
+  Math.max(1, Number.isFinite(value) ? value : 1);
+
+const VIEWPORT_CLASSES = [
+  "mobile-portrait",
+  "mobile-landscape",
+  "tablet",
+  "desktop",
+] as const;
+
+const viewportClassIndex = (width: number, height: number): 0 | 1 | 2 | 3 => {
+  const shortEdge = Math.min(width, height);
+  if (shortEdge <= 500) return width < height ? 0 : 1;
+  return Math.max(width, height) >= 1_180 ? 3 : 2;
+};
+
+export const sceneViewportClass = (
+  width: number,
+  height: number,
+): SceneViewportClass =>
+  VIEWPORT_CLASSES[
+    viewportClassIndex(finiteViewportEdge(width), finiteViewportEdge(height))
+  ];
+
+type SceneCameraProfile = readonly [
+  fov: number,
+  positionY: number,
+  positionZ: number,
+  lookAtY: number,
+  lookAtZ: number,
+];
+
+const CAMERA_PROFILES: readonly [
+  readonly [SceneCameraProfile, SceneCameraProfile, SceneCameraProfile],
+  readonly [SceneCameraProfile, SceneCameraProfile, SceneCameraProfile],
+  readonly [SceneCameraProfile, SceneCameraProfile, SceneCameraProfile],
+  readonly [SceneCameraProfile, SceneCameraProfile, SceneCameraProfile],
+] = [
+  [[60, 19.5, 42, 7, -8], [58, 14.5, 36, 7.5, 0.8], [46, 7.2, 16, 2.8, 1]],
+  [[45, 11.5, 31, 5.3, -7], [42, 9.3, 26, 5, 3.2], [33, 5, 10, 2.35, 1]],
+  [[52, 14.5, 38, 6.2, -8], [49, 11.8, 33, 6, 1], [36, 5.7, 11.5, 2.5, 1]],
+  [[50, 16.5, 46, 6.8, -9], [47, 13, 40, 6.4, 0.5], [34, 6, 12.5, 2.55, 1]],
+];
 
 export const sceneCameraComposition = (
   width: number,
   height: number,
   shot: SceneShotKind = "stand",
 ): SceneCameraComposition => {
-  const safeWidth = Math.max(1, Number.isFinite(width) ? width : 1);
-  const safeHeight = Math.max(1, Number.isFinite(height) ? height : 1);
+  const safeWidth = finiteViewportEdge(width);
+  const safeHeight = finiteViewportEdge(height);
   const aspect = safeWidth / safeHeight;
-  const mode = aspect < 0.72 ? "portrait" : aspect > 1.65 ? "wide" : "balanced";
+  const mode =
+    aspect < 0.72 ? "portrait" : aspect > 1.65 ? "wide" : "balanced";
+  const shotIndex = shot === "forecast" ? 0 : shot === "stand" ? 1 : 2;
+  const profile =
+    CAMERA_PROFILES[viewportClassIndex(safeWidth, safeHeight)][shotIndex];
 
-  if (shot === "forecast") {
-    return Object.freeze({
-      mode,
-      shot,
-      fov: mode === "portrait" ? 57 : mode === "wide" ? 36 : 43,
-      position:
-        mode === "portrait"
-          ? ([0, 14.6, 32] as const)
-          : mode === "wide"
-            ? ([0, 9.2, 19] as const)
-            : ([0, 10.8, 23] as const),
-      lookAt: [0, 1.65, -1.8] as const,
-    });
-  }
-
-  if (shot === "remaining") {
-    return Object.freeze({
-      mode,
-      shot,
-      fov: mode === "portrait" ? 44 : mode === "wide" ? 30 : 34,
-      position:
-        mode === "portrait"
-          ? ([0, 6.4, 13.8] as const)
-          : mode === "wide"
-            ? ([0, 4.1, 7.7] as const)
-            : ([0, 4.8, 9.1] as const),
-      lookAt: [0, 1.85, 1.02] as const,
-    });
-  }
-
-  return Object.freeze({
+  return {
     mode,
-    shot,
-    fov: mode === "portrait" ? 51 : mode === "wide" ? 30 : 35,
-    position:
-      mode === "portrait"
-        ? ([0, 9.7, 22.2] as const)
-        : mode === "wide"
-          ? ([0, 5.7, 11.8] as const)
-          : ([0, 6.6, 14.2] as const),
-    lookAt: [0, 1.85, 0.72] as const,
-  });
+    fov: profile[0],
+    position: [0, profile[1], profile[2]],
+    lookAt: [0, profile[3], profile[4]],
+  };
 };

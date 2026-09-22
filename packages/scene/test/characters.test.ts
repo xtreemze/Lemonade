@@ -48,6 +48,12 @@ describe("seeded scene characters", () => {
       new Set(actors.map(({ identity }) => identity.garmentStyle)).size,
     ).toBeGreaterThanOrEqual(3);
     expect(
+      new Set(actors.map(({ identity }) => identity.hairDetail)).size,
+    ).toBeGreaterThanOrEqual(3);
+    expect(
+      new Set(actors.map(({ identity }) => identity.bagStyle)).size,
+    ).toBeGreaterThanOrEqual(3);
+    expect(
       actors
         .filter(({ identity }) => identity.ageGroup === "child")
         .every(({ profile }) => profile.heightScale < 0.88),

@@ -11,8 +11,9 @@ import {
 
 import { updateNeighborhoodWind } from "./neighborhood.js";
 import {
-  clampToNearSidewalk,
+  clampToSidewalk,
   roadLaneZ,
+  sidewalkSideForZ,
 } from "./street-layout.js";
 
 export type AmbientWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
@@ -80,9 +81,10 @@ export const petFollowPose = (
   const direction: -1 | 1 = Math.sin(owner.heading) >= 0 ? 1 : -1;
   const lateral = (index % 2 === 0 ? 1 : -1) * (0.15 + (index % 3) * 0.025);
   const trailingDistance = 0.66 + (index % 2) * 0.1;
+  const side = sidewalkSideForZ(owner.z);
   return Object.freeze({
     x: owner.x - direction * trailingDistance,
-    z: clampToNearSidewalk(owner.z + lateral, 0.12),
+    z: clampToSidewalk(owner.z + lateral, side, 0.12),
     yaw: xTravelYaw(direction),
   });
 };
