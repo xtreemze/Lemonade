@@ -964,41 +964,85 @@ body:has(.game-shell[data-view="forecast"]) {
 .game-shell[data-view="planning"] .simulation-button {
   position: absolute;
   left: 50%;
-  bottom: max(8px, env(safe-area-inset-bottom));
+  bottom: max(12px, env(safe-area-inset-bottom));
   display: grid;
   width: max-content;
   min-height: 0;
   justify-items: center;
-  gap: 2px;
+  gap: 8px;
   margin: 0;
-  padding: 0;
+  padding: 16px;
   border: 0;
   background: transparent;
   color: #211d14;
   box-shadow: none;
   letter-spacing: 0.03em;
   transform: translateX(-50%);
+  cursor: pointer;
+  transition: transform 120ms ease-out;
+  border-radius: 12px;
+}
+
+.game-shell[data-view="planning"] .simulation-button::after {
+  content: attr(aria-label);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  background: #211d14;
+  color: #fff9e4;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  margin-bottom: 8px;
+  z-index: 50;
+}
+
+.game-shell[data-view="planning"] .simulation-button:hover:not(:disabled)::after {
+  opacity: 1;
 }
 
 .game-shell[data-view="planning"] .simulation-button-art {
   display: block;
-  width: 74px;
-  height: 74px;
-  filter: drop-shadow(3px 3px 0 rgb(33 29 20 / 16%));
+  width: 88px;
+  height: 88px;
+  filter: drop-shadow(4px 4px 0 rgb(33 29 20 / 20%));
+  transition: transform 120ms ease-out, filter 120ms ease-out;
+}
+
+.game-shell[data-view="planning"] .simulation-button:hover:not(:disabled) .simulation-button-art {
+  transform: scale(1.08);
+  filter: drop-shadow(6px 6px 0 rgb(33 29 20 / 28%));
+}
+
+.game-shell[data-view="planning"] .simulation-button:focus-visible {
+  outline: 3px solid #1d6d5d;
+  outline-offset: 4px;
+  border-radius: 12px;
 }
 
 .game-shell[data-view="planning"] .simulation-button:disabled {
   color: #9a2e26;
   opacity: 1;
+  cursor: not-allowed;
 }
 
 .game-shell[data-view="planning"] .simulation-button:disabled .simulation-button-art {
   opacity: 0.72;
+  transform: none;
 }
 
 .game-shell[data-view="planning"] .simulation-button:active:not(:disabled) {
-  transform: translateX(-50%) scale(0.96);
-  box-shadow: none;
+  transform: translateX(-50%) scale(0.94);
+}
+
+.game-shell[data-view="planning"] .simulation-button:active:not(:disabled) .simulation-button-art {
+  transform: scale(1.02);
 }
 
 .game-shell[data-view="report"] .stand-stage,
