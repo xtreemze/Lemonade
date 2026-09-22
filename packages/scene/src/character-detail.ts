@@ -193,7 +193,7 @@ export const decorateCharacterHead = (
       fringe.rotation.z = rotation;
       head.add(fringe);
     }
-  } else if (profile.hairStyle === 3) {
+  } else {
     const bun = mark(
       new Mesh(new SphereGeometry(0.125, 10, 8), material(profile.hairColor)),
       "hair-detail",
