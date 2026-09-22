@@ -34,6 +34,11 @@ export type ResidentialRect = Readonly<{
   minZ: number;
   maxZ: number;
   role: "road" | "sidewalk" | "driveway" | "path";
+  x?: number;
+  z?: number;
+  length?: number;
+  width?: number;
+  rotationY?: number;
 }>;
 
 export type ResidentialLayout = Readonly<{
@@ -84,6 +89,49 @@ const footprintIntersectsRect = (
   point.z + halfDepth >= rect.minZ &&
   point.z - halfDepth <= rect.maxZ;
 
+const footprintIntersectsHardscapeRect = (
+  rect: ResidentialRect,
+  point: ResidentialPoint,
+  halfWidth: number,
+  halfDepth: number,
+): boolean => {
+  if (
+    rect.x === undefined ||
+    rect.z === undefined ||
+    rect.length === undefined ||
+    rect.width === undefined ||
+    rect.rotationY === undefined
+  ) {
+    return footprintIntersectsRect(rect, point, halfWidth, halfDepth);
+  }
+
+  const tangentX = Math.cos(rect.rotationY);
+  const tangentZ = Math.sin(rect.rotationY);
+  const normalX = -tangentZ;
+  const normalZ = tangentX;
+  const deltaX = point.x - rect.x;
+  const deltaZ = point.z - rect.z;
+  const axes = [
+    [1, 0],
+    [0, 1],
+    [tangentX, tangentZ],
+    [normalX, normalZ],
+  ] as const;
+
+  return axes.every(([axisX, axisZ]) => {
+    const centerDistance = Math.abs(deltaX * axisX + deltaZ * axisZ);
+    const footprintRadius =
+      Math.max(0, halfWidth) * Math.abs(axisX) +
+      Math.max(0, halfDepth) * Math.abs(axisZ);
+    const stripRadius =
+      (rect.length / 2) *
+        Math.abs(axisX * tangentX + axisZ * tangentZ) +
+      (rect.width / 2) *
+        Math.abs(axisX * normalX + axisZ * normalZ);
+    return centerDistance <= footprintRadius + stripRadius;
+  });
+};
+
 const baseHardscape = (seed: number): readonly ResidentialRect[] =>
   baseExclusions(seed);
 
@@ -111,7 +159,7 @@ const clearHouseFromBaseHardscape = (
   for (let pass = 0; pass < 5; pass += 1) {
     let moved = false;
     for (const rect of baseHardscape(seed)) {
-      if (!footprintIntersectsRect(rect, { x, z }, halfWidth, halfDepth)) continue;
+      if (!footprintIntersectsHardscapeRect(rect, { x, z }, halfWidth, halfDepth)) continue;
       const rectWidth = rect.maxX - rect.minX;
       const rectDepth = rect.maxZ - rect.minZ;
       if (rectWidth <= rectDepth) {
@@ -132,7 +180,7 @@ const clearHouseFromBaseHardscape = (
 
 const mailboxAnchorIsClear = (x: number, seed: number): boolean =>
   !baseHardscape(seed).some((rect) =>
-    footprintIntersectsRect(rect, { x, z: -0.3 }, 0.3, 0.3),
+    footprintIntersectsHardscapeRect(rect, { x, z: -0.3 }, 0.3, 0.3),
   );
 
 const mailboxXForDriveway = (
@@ -386,6 +434,11 @@ function baseExclusions(seed: number): ResidentialRect[] {
     minZ: rect.minZ,
     maxZ: rect.maxZ,
     role: rect.role,
+    x: rect.x,
+    z: rect.z,
+    length: rect.length,
+    width: rect.width,
+    rotationY: rect.rotationY,
   }));
 }
 
@@ -441,7 +494,7 @@ export const residentialAccessLayout = (
   const frontDirection: -1 | 1 = frontZ >= 0 ? 1 : -1;
   const footprint = propertyFootprint(property);
   const doorDistance = 2.34 * property.scale;
-  const entryDistance = 3.34 * property.scale;
+  const entryDistance = footprint.halfDepth + 0.48;
   const doorX = property.houseX + frontX * doorDistance;
   const doorZ = property.houseZ + frontZ * doorDistance;
   const entryX = property.houseX + frontX * entryDistance;
@@ -650,7 +703,7 @@ export const residentialFootprintIntersectsHardscape = (
   halfDepth = halfWidth,
 ): boolean =>
   layout.exclusions.some((rect) =>
-    footprintIntersectsRect(
+    footprintIntersectsHardscapeRect(
       rect,
       point,
       Math.max(0, halfWidth),
