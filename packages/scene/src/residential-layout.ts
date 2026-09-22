@@ -42,8 +42,8 @@ export type ResidentialLayout = Readonly<{
 export const DEFAULT_RESIDENTIAL_SEED = 0x4c_45_4d_4f;
 
 const HOUSE_PALETTE_SIZE = 7;
-export const HOUSE_FOOTPRINT_WIDTH = 5.95;
-export const HOUSE_FOOTPRINT_DEPTH = 4.62;
+export const HOUSE_FOOTPRINT_WIDTH = 6.4;
+export const HOUSE_FOOTPRINT_DEPTH = 6.8;
 export const DRIVEWAY_HALF_WIDTH = 2.15 / 2;
 const HOUSE_HARDSCAPE_MARGIN = 0.35;
 const MAILBOX_CLEARANCE_FROM_DRIVEWAY = 0.56;
@@ -188,8 +188,8 @@ const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
       color: 2,
       scale: 1.06,
       rotationY: 0.045,
-      drivewayX: -9.3,
-      mailboxX: -10.95,
+      drivewayX: -9.5,
+      mailboxX: -11.15,
     }),
     Object.freeze({
       role: "stand-neighbor",
@@ -198,8 +198,8 @@ const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
       color: 4,
       scale: 0.97,
       rotationY: -0.055,
-      drivewayX: 13.15,
-      mailboxX: 14.8,
+      drivewayX: 13.55,
+      mailboxX: 15.2,
     }),
     makeProperty(seed, 5, "east-mid", 29.1, -6.8, 1.01, 0.025, false, -1),
     makeProperty(seed, 6, "east-end", 41.5, -8.3, 0.94, -0.05, false, 1),
@@ -402,8 +402,8 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     backProperties: back,
   } as const;
 
-  const trees = generatePlantings(safeSeed, 48, 3_100, -60, 0.2, partial, 2.15);
-  const shrubs = generatePlantings(safeSeed, 14, 5_100, -33, -1.1, partial, 1.05);
+  const trees = generatePlantings(safeSeed, 48, 3_100, -60, 0.2, partial, 3.5);
+  const shrubs = generatePlantings(safeSeed, 14, 5_100, -33, -1.1, partial, 1.9);
   const flowers = generateFlowers(safeSeed, partial);
 
   return Object.freeze({
