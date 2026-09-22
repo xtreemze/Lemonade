@@ -10,7 +10,12 @@ import {
   type Scene,
 } from "three";
 
-import {\n  DEFAULT_RESIDENTIAL_SEED,\n  generateResidentialLayout,\n  type ResidentialPropertySpec,\n} from "./residential-layout.js";\nimport { STREET_LAYOUT } from "./street-layout.js";
+import {
+  DEFAULT_RESIDENTIAL_SEED,
+  generateResidentialLayout,
+  type ResidentialPropertySpec,
+} from "./residential-layout.js";
+import { STREET_LAYOUT } from "./street-layout.js";
 
 const material = (color: number, flatShading = true): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading, roughness: 0.92 });
@@ -322,7 +327,9 @@ export type NeighborhoodStats = Readonly<{
   worldSpan: number;
 }>;
 
-export type FrontPropertySpec = ResidentialPropertySpec;\n\nconst HOUSE_PALETTE = [
+export type FrontPropertySpec = ResidentialPropertySpec;
+
+const HOUSE_PALETTE = [
   0xc97d65,
   0xd56f52,
   0xd4aa61,
@@ -342,7 +349,10 @@ const TREE_PALETTE = [
 ] as const;
 const FLOWER_PALETTE = [0xe98d9e, 0xf1c75b, 0x9e83c7, 0xf4eee5, 0xd97058] as const;
 
-export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] =\n  generateResidentialLayout(DEFAULT_RESIDENTIAL_SEED).frontProperties;\n\nexport type NeighborhoodWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
+export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] =
+  generateResidentialLayout(DEFAULT_RESIDENTIAL_SEED).frontProperties;
+
+export type NeighborhoodWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 
 export const weatherWindStrength = (weather: NeighborhoodWeather): number => {
   switch (weather) {
@@ -385,8 +395,12 @@ export const updateNeighborhoodWind = (
   });
 };
 
-export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
+export const populateNeighborhood = (
+  scene: Scene,
+  seed = DEFAULT_RESIDENTIAL_SEED,
+): NeighborhoodStats => {
   const worldSpan = 150;
+  const layout = generateResidentialLayout(seed);
   let roadSegments = 0;
   let pavedRoads = 0;
 
@@ -533,13 +547,13 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   atmosphereBand(scene, -86, 12, 170, 38, 0xc8d2ca, 0.11);
 
   return Object.freeze({
-    houseLods: FRONT_PROPERTY_LAYOUT.length + housePositions.length,
+    houseLods: layout.frontProperties.length + housePositions.length,
     featuredHomes: 1,
-    frontProperties: FRONT_PROPERTY_LAYOUT.length,
-    driveways: FRONT_PROPERTY_LAYOUT.length,
-    treeLods: treePositions.length,
-    shrubs: shrubPositions.length,
-    flowers: flowerPositions.length,
+    frontProperties: layout.frontProperties.length,
+    driveways: layout.frontProperties.filter((property) => property.drivewayX !== null).length,
+    treeLods: layout.trees.length,
+    shrubs: layout.shrubs.length,
+    flowers: layout.flowers.length,
     yardDetails: yardDetails.length,
     pavedRoads,
     windResponsive:
