@@ -165,13 +165,13 @@ export const sceneCameraComposition = (
   return Object.freeze({
     mode,
     shot,
-    fov: mode === "portrait" ? 51 : mode === "wide" ? 30 : 35,
+    fov: mode === "portrait" ? 55 : mode === "wide" ? 35 : 40,
     position:
       mode === "portrait"
-        ? ([0, 9.7, 22.2] as const)
+        ? ([0, 11.4, 27.4] as const)
         : mode === "wide"
-          ? ([0, 5.7, 11.8] as const)
-          : ([0, 6.6, 14.2] as const),
-    lookAt: [0, 1.85, 0.72] as const,
+          ? ([0, 7.6, 17.2] as const)
+          : ([0, 8.7, 20.4] as const),
+    lookAt: [0, 1.72, 3.35] as const,
   });
 };
