@@ -643,6 +643,7 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .game-shell[data-view="planning"] {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto minmax(0, 1fr);
   padding:
     max(8px, env(safe-area-inset-top))
@@ -650,6 +651,14 @@ body:has(.game-shell[data-view="forecast"]) {
     max(8px, env(safe-area-inset-bottom))
     max(10px, env(safe-area-inset-left));
   overflow: hidden;
+}
+
+.game-shell[data-view="planning"] > .topline,
+.game-shell[data-view="planning"] > .conditions,
+.game-shell[data-view="planning"] > .obligation-strip,
+.game-shell[data-view="planning"] > lemonade-decision-panel {
+  width: 100%;
+  min-width: 0;
 }
 
 .game-shell[data-view="planning"] > lemonade-decision-panel {
@@ -678,7 +687,7 @@ body:has(.game-shell[data-view="forecast"]) {
 }
 
 .game-shell[data-view="planning"] h1 {
-  font-size: clamp(1.85rem, 10vw, 3rem);
+  font-size: clamp(1.55rem, 8vw, 3rem);
   line-height: 0.88;
 }
 
@@ -740,6 +749,7 @@ body:has(.game-shell[data-view="forecast"]) {
 }
 
 .game-shell[data-view="planning"] .obligation-strip span {
+  min-width: 0;
   overflow: hidden;
   font-size: 0.65rem;
   line-height: 1.1;
