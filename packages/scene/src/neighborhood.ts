@@ -703,6 +703,7 @@ export const populateNeighborhood = (
       ? property.role
       : "residential-" + property.role;
     home.userData["propertyRole"] = property.role;
+    home.name = "building-" + property.role;
     scene.add(home);
   }
 
