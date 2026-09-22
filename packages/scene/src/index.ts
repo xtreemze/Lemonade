@@ -117,14 +117,6 @@ const createStand = (): StandModel => {
 
   const shutter = new Group();
   addBox(shutter, [4.25, 1.3, 0.12], [0, 1.45, 1.02], 0xd39b43);
-  for (let index = 0; index < 5; index += 1) {
-    addBox(
-      shutter,
-      [4.0, 0.035, 0.035],
-      [0, 0.98 + index * 0.23, 1.09],
-      0x8d6538,
-    );
-  }
   addBox(shutter, [1.15, 0.36, 0.05], [0, 1.47, 1.1], 0xf4dc83);
   shutter.visible = false;
   root.add(shutter);
@@ -531,11 +523,8 @@ export const createLemonsvilleScene = (
 
   let cupInventory: CupInventory | null = null;
   canvas.dataset["cupVisualStyle"] = "original-svg-3d";
-  canvas.dataset["cupInventory"] = "loading";
   canvas.dataset["characterRigStyle"] = "articulated-joints-face";
-  canvas.dataset["characterDetail"] = "loading";
   canvas.dataset["neighborhoodDetail"] = "loading";
-  canvas.dataset["cameraMotion"] = "stand-hold-remaining-closeup";
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
   for (const lemon of lemons) scene.add(lemon);
@@ -558,7 +547,6 @@ export const createLemonsvilleScene = (
     "hot-and-dry": 3.9,
     thunderstorm: -3.6,
   });
-  canvas.dataset["weatherDetail"] = "loading";
 
   let state = initialState;
   let animationFrame: number | null = null;
@@ -638,20 +626,15 @@ export const createLemonsvilleScene = (
       canvas.dataset["neighborhoodDetail"] = "expanded-streets-houses-vegetation";
       render();
     })
-    .catch(() => {
-      if (!disposed) canvas.dataset["neighborhoodDetail"] = "core";
-    });
+    .catch(() => undefined);
 
   void import("./weather-detail.js")
     .then(({ populateWeatherObjects }) => {
       if (disposed) return;
       populateWeatherObjects(weatherObjects);
-      canvas.dataset["weatherDetail"] = "ready";
       render();
     })
-    .catch(() => {
-      if (!disposed) canvas.dataset["weatherDetail"] = "core";
-    });
+    .catch(() => undefined);
 
   void import("./cup-inventory.js")
     .then(({ createCupInventory, decorateLemonadeCup }) => {
@@ -663,12 +646,9 @@ export const createLemonsvilleScene = (
       cupInventory = nextInventory;
       for (const mesh of nextInventory.meshes) scene.add(mesh);
       nextInventory.setCount(state.phase === "forecast" ? 0 : storyboard.prepared);
-      canvas.dataset["cupInventory"] = "ready";
       render();
     })
-    .catch(() => {
-      if (!disposed) canvas.dataset["cupInventory"] = "unavailable";
-    });
+    .catch(() => undefined);
 
   void import("./character-detail.js")
     .then(({ decorateCharacterHead, decorateSellerExpression }) => {
@@ -678,12 +658,9 @@ export const createLemonsvilleScene = (
       }
       decorateCharacterHead(seller.person.head, seller.person.profile, false);
       decorateSellerExpression(seller.eyebrows, seller.mouth);
-      canvas.dataset["characterDetail"] = "ready";
       render();
     })
-    .catch(() => {
-      if (!disposed) canvas.dataset["characterDetail"] = "core";
-    });
+    .catch(() => undefined);
 
   const positionStaticPedestrians = (): void => {
     if (state.phase === "forecast") {
