@@ -236,7 +236,7 @@ export const populateWeatherObjects = (
   for (let i = 0; i < 3; i++) {
     const partlyCloud = new Group();
     const baseLayout = i === 0 ? HOT_DRY_CLOUD_LAYOUT :
-      { position: [-2 + i * 3, 0.3 + i * 0.2, -0.5], scale: 0.9 + i * 0.1 } as const;
+      { position: [-3.5 + i * 3.5, 1.5 + i * 0.2, -0.8], scale: 0.9 + i * 0.1 } as const;
     partlyCloud.position.set(...baseLayout.position);
     partlyCloud.scale.setScalar(baseLayout.scale);
     addCloud(partlyCloud, 0xd7e0df);
@@ -259,9 +259,9 @@ export const populateWeatherObjects = (
   });
 
   const thunderstormClouds = [
-    { position: [-2, 1, -0.5] as const, scale: 1.1, driftPhase: 0 },
-    { position: [0, 0.8, -0.8] as const, scale: 1, driftPhase: 1.5 },
-    { position: [2, 1.2, -0.3] as const, scale: 0.95, driftPhase: 3 },
+    { position: [-4, 1.5, -1] as const, scale: 1.2, driftPhase: 0 },
+    { position: [0.5, 0.5, -1.2] as const, scale: 1, driftPhase: 1.5 },
+    { position: [4, 1.8, -0.8] as const, scale: 1.1, driftPhase: 3 },
   ].map((layout, index) => {
     const cloud = new Group();
     cloud.userData["turbulentCloud"] = true;
