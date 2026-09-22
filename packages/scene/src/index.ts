@@ -24,6 +24,10 @@ import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { walkingCycleAtDistance } from "./gait.js";
+import {
+  characterGroundClearance,
+  WORLD_SCALE,
+} from "./world-scale.js";
 import { SELLER_Z } from "./stand-anchors.js";
 import type { StandDetailController } from "./stand-detail.js";
 import type { WeatherDetailController } from "./weather-detail.js";
@@ -155,7 +159,8 @@ type SellerRig = Readonly<{
   mouth: readonly [Group, Group];
 }>;
 
-const personGroundY = (person: PersonRig): number => 0.225 * person.profile.heightScale;
+const personGroundY = (person: PersonRig): number =>
+  characterGroundClearance(person.profile.heightScale);
 
 const createLimb = (
   upperLength: number,
@@ -272,9 +277,9 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   rightArm.lower.add(cup);
 
   root.scale.set(
-    profile.widthScale,
-    profile.heightScale,
-    profile.widthScale,
+    profile.widthScale * WORLD_SCALE.character.renderScale,
+    profile.heightScale * WORLD_SCALE.character.renderScale,
+    profile.widthScale * WORLD_SCALE.character.renderScale,
   );
 
   return Object.freeze({
