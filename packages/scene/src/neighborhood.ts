@@ -102,6 +102,8 @@ export const populateNeighborhood = (scene: Scene): void => {
 
   for (const [x, z, color, scale, rotation] of [
     [-17, -7.8, 0xc97d65, 0.92, 0.12],
+    [-7.2, -3.8, 0xd56f52, 1, 0],
+    [7, -3.8, 0xd4aa61, 0.9, 0],
     [-7.1, -13, 0xd5a66d, 0.86, Math.PI],
     [1, -13.2, 0x8da9a1, 0.9, Math.PI],
     [9.2, -12.8, 0xc27a68, 0.88, Math.PI],
@@ -112,6 +114,10 @@ export const populateNeighborhood = (scene: Scene): void => {
 
   for (const [x, z, scale, color] of [
     [-15.2, -2, 1.12, 0x668e53],
+    [-8.2, 1.4, 1, 0x5f8d56],
+    [-4.7, -2.9, 1, 0x5f8d56],
+    [4.9, -2.6, 1, 0x5f8d56],
+    [8.1, 1, 1, 0x5f8d56],
     [-13.7, -12.2, 0.95, 0x507f4b],
     [-3.2, -10.7, 0.88, 0x6d985e],
     [5.1, -9.8, 1.08, 0x58854f],
