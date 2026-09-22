@@ -38,7 +38,7 @@ const basePose = (
   const x = startX + (endX - startX) * progress;
 
   const lane = beat.lane % 4;
-  const laneBase = 3.05 + lane * 0.42;
+  const laneBase = 0.72 + lane * 0.28;
   const meander = Math.sin(progress * Math.PI * 2 + actorIndex * 0.83) * 0.075;
   const attention = beat.seesAdvertisement
     ? Math.exp(-Math.pow((progress - 0.5) / 0.13, 2))
