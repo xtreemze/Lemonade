@@ -78,7 +78,7 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
       : input.environment.weather.kind.replaceAll("-", " ");
 
   if (input.phase === "forecast") {
-    return `${weather} early-morning forecast; the lemonade stand is closed while neighborhood routines such as mail delivery, yard care, and resident activity may continue before opening.`;
+    return `${weather} early-morning forecast; the lemonade stand is closed and empty before opening while neighborhood routines such as mail delivery, yard care, and resident activity continue.`;
   }
 
   const activity =
