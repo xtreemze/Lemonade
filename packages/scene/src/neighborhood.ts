@@ -260,12 +260,12 @@ const detailedTree = (color: number, seed: number): Group => {
       new CylinderGeometry(0.06, 0.14, branchLength, 12),
       material(0x765232),
     );
-    branch.scale.y = -1;
     branch.position.set(
       direction * (0.2 + plantUnit(seed, 29 + direction) * 0.18),
       trunkHeight * (0.62 + plantUnit(seed, 31 + direction) * 0.12),
       (plantUnit(seed, 37 + direction) - 0.5) * 0.26,
     );
+    branch.rotation.x = -Math.PI / 2;
     branch.rotation.z = direction * (0.78 + plantUnit(seed, 41 + direction) * 0.28);
     root.add(branch);
   }
