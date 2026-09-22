@@ -24,6 +24,7 @@ import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { SELLER_Z } from "./stand-anchors.js";
 import type { StandDetailController } from "./stand-detail.js";
+import { signGardenPosition } from "./sign-placement.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -137,14 +138,11 @@ const createSign = (index: number): SignModel => {
   label.position.set(0, 1.05, 0.066);
   root.add(label);
 
-  const side = index % 2 === 0 ? -1 : 1;
-  const row = Math.floor(index / 2);
-  root.position.set(
-    side * (3.6 + (row % 4) * 1.15),
-    0,
-    1.9 + Math.floor(row / 4) * 1.2,
-  );
+  const position = signGardenPosition(index);
+  const side = position.x < 0 ? -1 : 1;
+  root.position.set(position.x, 0, position.z);
   root.rotation.y = side * 0.18;
+  root.userData["sceneRole"] = "advertising-sign";
   return Object.freeze({ root, labelMaterial });
 };
 
@@ -226,6 +224,8 @@ const createLimb = (
 const createPerson = (characterSeed: number, index: number): PersonRig => {
   const profile = characterProfileFor(characterSeed, index);
   const root = new Group();
+  root.userData["ageGroup"] = profile.ageGroup;
+  root.userData["genderPresentation"] = profile.genderPresentation;
 
   const torso = new Mesh(
     new CylinderGeometry(0.25, 0.34, 0.9, 10),
@@ -560,6 +560,12 @@ export const createLemonsvilleScene = (
   let animationFrame: number | null = null;
   let animationEpoch = performance.now();
   let storyboard = state.storyboard;
+  let animateNeighborhoodWind:
+    | ((scene: Scene, seconds: number, strength: number) => void)
+    | null = null;
+  let neighborhoodWindStrength:
+    | ((weather: SceneWeather) => number)
+    | null = null;
 
   let viewportWidth = 1;
   let viewportHeight = 1;
@@ -628,9 +634,11 @@ export const createLemonsvilleScene = (
   };
 
   void import("./neighborhood.js")
-    .then(({ populateNeighborhood }) => {
+    .then(({ populateNeighborhood, updateNeighborhoodWind, windStrengthForWeather }) => {
       if (disposed) return;
       populateNeighborhood(scene);
+      animateNeighborhoodWind = updateNeighborhoodWind;
+      neighborhoodWindStrength = windStrengthForWeather;
       render();
     })
     .catch(() => undefined);
@@ -699,12 +707,14 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./character-detail.js")
-    .then(({ decorateCharacterHead, decorateSellerExpression }) => {
+    .then(({ decorateCharacterClothing, decorateCharacterHead, decorateSellerExpression }) => {
       if (disposed) return;
       for (const person of [...customers, ...buyers]) {
         decorateCharacterHead(person.head, person.profile);
+        decorateCharacterClothing(person.root, person.profile);
       }
       decorateCharacterHead(seller.person.head, seller.person.profile, false);
+      decorateCharacterClothing(seller.person.root, seller.person.profile);
       decorateSellerExpression(seller.eyebrows, seller.mouth);
       render();
     })
@@ -782,6 +792,7 @@ export const createLemonsvilleScene = (
     for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
       weatherObjects[weather].position.x = weatherOrigins[weather];
     }
+    animateNeighborhoodWind?.(scene, 0, 0);
     ambientLife?.update(
       state.weather,
       state.phase,
@@ -808,7 +819,7 @@ export const createLemonsvilleScene = (
 
       const streetX = sale.direction === -1 ? -8.4 : 8.4;
       const exitX = -streetX;
-      const streetZ = 4.0 + sale.lane * 0.34;
+      const streetZ = 0.78 + sale.lane * 0.2;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
       const counterZ = 1.62;
       const drinkX = sale.direction === -1 ? -1.35 : 1.35;
@@ -955,6 +966,11 @@ export const createLemonsvilleScene = (
     activeWeather.position.x =
       weatherOrigins[state.weather] +
       Math.sin(seconds * 0.45) * (state.weather === "sunny" ? 0.08 : 0.3);
+    animateNeighborhoodWind?.(
+      scene,
+      seconds,
+      neighborhoodWindStrength?.(state.weather) ?? 0,
+    );
 
     render();
     animationFrame = window.requestAnimationFrame(animate);
