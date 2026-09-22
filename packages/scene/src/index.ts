@@ -42,13 +42,10 @@ export type LemonsvilleSceneState = Readonly<{
   weather: SceneWeather;
   visibleSigns: number;
   prepared: number;
-  sold: number;
-  priceCents: number;
   durationMs: number;
   confidence: number;
   characterSeed: number;
   storyboard: StreetStoryboard;
-  sellThroughBasisPoints: number;
   phase: ScenePhase;
   reducedMotion: boolean;
 }>;
@@ -496,16 +493,6 @@ const createCupInventory = (): CupInventory => {
     }),
     MAX_PREPARED_CUPS,
   );
-  const iceB = new InstancedMesh(
-    new BoxGeometry(0.048, 0.036, 0.048),
-    new MeshStandardMaterial({
-      color: 0xe9f4e9,
-      transparent: true,
-      opacity: 0.86,
-      roughness: 0.44,
-    }),
-    MAX_PREPARED_CUPS,
-  );
   const straws = new InstancedMesh(
     new CylinderGeometry(0.008, 0.008, 0.25, 6),
     makeMaterial(0xff551d),
@@ -530,14 +517,11 @@ const createCupInventory = (): CupInventory => {
     matrix.makeRotationY(-0.28).setPosition(x - 0.024, y + 0.025, z + 0.012);
     iceA.setMatrixAt(index, matrix);
 
-    matrix.makeRotationY(0.34).setPosition(x + 0.027, y + 0.045, z - 0.006);
-    iceB.setMatrixAt(index, matrix);
-
     matrix.makeRotationZ(-0.2).setPosition(x + 0.028, y + 0.085, z + 0.008);
     straws.setMatrixAt(index, matrix);
   }
 
-  const meshes = Object.freeze([shells, liquid, iceA, iceB, straws] as const);
+  const meshes = Object.freeze([shells, liquid, iceA, straws] as const);
   for (const mesh of meshes) {
     mesh.instanceMatrix.needsUpdate = true;
     mesh.count = 0;
@@ -1046,9 +1030,7 @@ export const createLemonsvilleScene = (
       state.phase !== nextState.phase ||
       state.durationMs !== nextState.durationMs ||
       state.prepared !== nextState.prepared ||
-      state.sold !== nextState.sold ||
       state.visibleSigns !== nextState.visibleSigns ||
-      state.priceCents !== nextState.priceCents ||
       state.confidence !== nextState.confidence;
 
     state = nextState;
