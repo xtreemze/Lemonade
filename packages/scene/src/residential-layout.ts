@@ -511,7 +511,10 @@ const drivewayRectForProperty = (
   drivewayX: number,
   seed: number,
 ): ResidentialRect => {
-  const access = residentialAccessLayout(property, seed);
+  const access = residentialAccessLayout(
+    Object.freeze({ ...property, drivewayX }),
+    seed,
+  );
   const halfDepth = access.drivewayDepth / 2;
   return Object.freeze({
     minX: drivewayX - DRIVEWAY_HALF_WIDTH,
@@ -867,22 +870,25 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     ),
     safeSeed,
   );
-  const outer = resolveGeneratedAccess([
-    ...rowProperties(
-      safeSeed,
-      2_900,
-      16.8,
-      [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
-      false,
-    ),
-    ...rowProperties(
-      safeSeed,
-      3_000,
-      -72,
-      [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
-      false,
-    ),
-  ], safeSeed);
+  const outer = resolveGeneratedAccess(
+    [
+      ...rowProperties(
+        safeSeed,
+        2_900,
+        16.8,
+        [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
+        false,
+      ),
+      ...rowProperties(
+        safeSeed,
+        3_000,
+        -72,
+        [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
+        false,
+      ),
+    ],
+    safeSeed,
+  );
   const allProperties = [...front, ...middle, ...back, ...outer];
   const exclusions = Object.freeze([
     ...baseExclusions(safeSeed),
