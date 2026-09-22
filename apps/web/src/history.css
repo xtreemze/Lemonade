@@ -30,7 +30,7 @@
   flex-direction: column;
 }
 
-@media (width >= 768px) {
+@media (width >= 48rem) {
   .chart-card {
     padding: 16px;
   }
@@ -42,7 +42,7 @@
   font-size: 0.95rem;
 }
 
-@media (width >= 640px) {
+@media (width >= 40rem) {
   .chart-card figcaption {
     margin-bottom: 10px;
     font-size: 1rem;
@@ -58,13 +58,13 @@
   max-height: 180px;
 }
 
-@media (width >= 640px) {
+@media (width >= 40rem) {
   .history-chart {
     max-height: 240px;
   }
 }
 
-@media (width >= 1024px) {
+@media (width >= 64rem) {
   .history-chart {
     max-height: 300px;
   }
@@ -110,7 +110,7 @@
   font-weight: 800;
 }
 
-@media (width >= 640px) {
+@media (width >= 40rem) {
   .chart-legend {
     gap: 14px;
     margin-top: 8px;
