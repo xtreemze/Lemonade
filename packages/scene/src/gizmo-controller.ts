@@ -207,6 +207,7 @@ export const createGizmoController = (
   let selected: Object3D | null = null;
   let mode: TransformMode = "translate";
   let orbitRequested = true;
+  const savedTransforms = new Map<string, ObjectTransform>();
 
   const cameraState = (): SceneEditorCameraState =>
     Object.freeze({
@@ -398,6 +399,25 @@ export const createGizmoController = (
     applyCameraState,
     setView,
     focusSelected,
+    saveTransform(): ObjectTransform | null {
+      if (selected === null) return null;
+      const captured = captureObjectTransform(scene, selected);
+      savedTransforms.set(captured.key, captured);
+      return captured;
+    },
+    getSavedTransforms(): readonly ObjectTransform[] {
+      return Object.freeze([...savedTransforms.values()]);
+    },
+    exportAsJSON(): string {
+      return JSON.stringify([...savedTransforms.values()], null, 2);
+    },
+    exportAsCode(): string {
+      return `export const sceneTransforms = ${JSON.stringify(
+        [...savedTransforms.values()],
+        null,
+        2,
+      )} as const;\n`;
+    },
     setFov(fov: number): void {
       setCameraFov(camera, fov);
       notifyCamera();
