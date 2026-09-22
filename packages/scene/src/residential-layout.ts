@@ -420,10 +420,14 @@ export type ResidentialAccessLayout = Readonly<{
   sidewalkCenterZ: number;
   sidewalkEdgeZ: number;
   roadEdgeZ: number;
+  doorX: number;
   doorZ: number;
+  entryX: number;
+  entryZ: number;
   parkingZ: number;
   drivewayCenterZ: number;
   drivewayDepth: number;
+  pathCenterX: number;
   pathCenterZ: number;
   pathDepth: number;
 }>;
@@ -432,12 +436,19 @@ export const residentialAccessLayout = (
   property: ResidentialPropertySpec,
   seed = DEFAULT_RESIDENTIAL_SEED,
 ): ResidentialAccessLayout => {
-  const frontDirection: -1 | 1 =
-    Math.cos(property.rotationY) >= 0 ? 1 : -1;
+  const frontX = Math.sin(property.rotationY);
+  const frontZ = Math.cos(property.rotationY);
+  const frontDirection: -1 | 1 = frontZ >= 0 ? 1 : -1;
   const footprint = propertyFootprint(property);
+  const doorDistance = 2.34 * property.scale;
+  const entryDistance = 3.34 * property.scale;
+  const doorX = property.houseX + frontX * doorDistance;
+  const doorZ = property.houseZ + frontZ * doorDistance;
+  const entryX = property.houseX + frontX * entryDistance;
+  const entryZ = property.houseZ + frontZ * entryDistance;
   const sidewalk = nearestAccessRect(
     property,
-    property.houseX,
+    entryX,
     "sidewalk",
     seed,
   );
@@ -455,10 +466,9 @@ export const residentialAccessLayout = (
       : sidewalkCenterZ >= property.houseZ
         ? sidewalk.minZ
         : sidewalk.maxZ;
-  const doorZ =
-    property.houseZ + frontDirection * (footprint.halfDepth + 0.18);
-  const pathDepth = Math.max(0.72, Math.abs(sidewalkEdgeZ - doorZ) + 0.12);
-  const pathCenterZ = (doorZ + sidewalkEdgeZ) / 2;
+  const pathDepth = Math.max(0.72, Math.abs(sidewalkEdgeZ - entryZ) + 0.12);
+  const pathCenterX = entryX;
+  const pathCenterZ = (entryZ + sidewalkEdgeZ) / 2;
 
   const drivewayX = property.drivewayX ?? property.houseX;
   const road = nearestAccessRect(property, drivewayX, "road", seed);
@@ -483,10 +493,14 @@ export const residentialAccessLayout = (
     sidewalkCenterZ,
     sidewalkEdgeZ,
     roadEdgeZ,
+    doorX,
     doorZ,
+    entryX,
+    entryZ,
     parkingZ,
     drivewayCenterZ,
     drivewayDepth,
+    pathCenterX,
     pathCenterZ,
     pathDepth,
   });
@@ -589,8 +603,8 @@ const accessExclusions = (
         role: "driveway" as const,
       },
       {
-        minX: property.houseX - 0.52,
-        maxX: property.houseX + 0.52,
+        minX: access.pathCenterX - 0.52,
+        maxX: access.pathCenterX + 0.52,
         minZ: access.pathCenterZ - pathHalfDepth,
         maxZ: access.pathCenterZ + pathHalfDepth,
         role: "path" as const,
