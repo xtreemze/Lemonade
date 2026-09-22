@@ -8,6 +8,11 @@ import {
   type Scene,
 } from "three";
 
+import {
+  clampToNearSidewalk,
+  roadLaneZ,
+} from "./street-layout.js";
+
 export type AmbientWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 export type AmbientPhase = "idle" | "simulation" | "forecast";
 
@@ -18,8 +23,26 @@ export type AmbientPopulation = Readonly<{
   vehicles: number;
 }>;
 
+export type AmbientOwnerAnchor = Readonly<{
+  x: number;
+  z: number;
+  heading: number;
+}>;
+
+export type PetFollowPose = Readonly<{
+  x: number;
+  z: number;
+  yaw: number;
+}>;
+
 export type AmbientLifeController = Readonly<{
-  update(weather: AmbientWeather, phase: AmbientPhase, elapsedMs: number, durationMs: number): void;
+  update(
+    weather: AmbientWeather,
+    phase: AmbientPhase,
+    elapsedMs: number,
+    durationMs: number,
+    owners?: readonly AmbientOwnerAnchor[],
+  ): void;
 }>;
 
 const material = (color: number): MeshStandardMaterial =>
@@ -42,6 +65,36 @@ export const ambientPopulationFor = (
     case "thunderstorm":
       return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 2 });
   }
+};
+
+export const xTravelYaw = (direction: number): number =>
+  direction >= 0 ? 0 : Math.PI;
+
+const normalizeYaw = (value: number): number => {
+  const fullTurn = Math.PI * 2;
+  let normalized = value % fullTurn;
+  if (normalized > Math.PI) normalized -= fullTurn;
+  if (normalized < -Math.PI) normalized += fullTurn;
+  return normalized;
+};
+
+export const petFollowPose = (
+  owner: AmbientOwnerAnchor,
+  index: number,
+): PetFollowPose => {
+  const forwardX = Math.sin(owner.heading);
+  const forwardZ = Math.cos(owner.heading);
+  const lateral = (index % 2 === 0 ? 1 : -1) * (0.15 + (index % 3) * 0.025);
+  const trailingDistance = 0.66 + (index % 2) * 0.1;
+  return Object.freeze({
+    x: owner.x - forwardX * trailingDistance + forwardZ * lateral,
+    z: clampToNearSidewalk(
+      owner.z - forwardZ * trailingDistance - forwardX * lateral,
+      0.12,
+    ),
+    // Pedestrians face local +Z; pets are modeled nose-first along local +X.
+    yaw: normalizeYaw(owner.heading - Math.PI / 2),
+  });
 };
 
 const createBird = (color: number): Group => {
@@ -72,6 +125,10 @@ const createPet = (color: number): Group => {
       root.add(leg);
     }
   }
+  const tail = new Mesh(new CylinderGeometry(0.022, 0.03, 0.32, 6), material(color));
+  tail.position.set(-0.3, 0.42, 0);
+  tail.rotation.z = -0.9;
+  root.add(tail);
   return root;
 };
 
@@ -109,6 +166,9 @@ const createVehicle = (color: number): Group => {
   const cabin = new Mesh(new BoxGeometry(0.84, 0.42, 0.72), material(0xb9d2d8));
   cabin.position.set(-0.12, 0.92, 0);
   root.add(cabin);
+  const hood = new Mesh(new BoxGeometry(0.4, 0.16, 0.7), material(color));
+  hood.position.set(0.75, 0.7, 0);
+  root.add(hood);
   for (const x of [-0.55, 0.55]) {
     for (const z of [-0.36, 0.36]) {
       const wheel = new Mesh(
@@ -123,7 +183,12 @@ const createVehicle = (color: number): Group => {
   return root;
 };
 
-const routeProgress = (elapsedMs: number, durationMs: number, offset: number, speed: number): number => {
+const routeProgress = (
+  elapsedMs: number,
+  durationMs: number,
+  offset: number,
+  speed: number,
+): number => {
   const duration = Math.max(1, durationMs);
   const progress = elapsedMs / duration * speed + offset;
   return progress - Math.floor(progress);
@@ -141,38 +206,66 @@ export const createAmbientLife = (scene: Scene, seed: number): AmbientLifeContro
   }
 
   return Object.freeze({
-    update(weather, phase, elapsedMs, durationMs): void {
+    update(weather, phase, elapsedMs, durationMs, owners = []): void {
       const population = ambientPopulationFor(weather, phase);
       pets.forEach((pet, index) => {
-        pet.visible = index < population.pets;
-        if (!pet.visible) return;
-        const progress = routeProgress(elapsedMs, durationMs, index * 0.31 + (seed & 7) * 0.013, 0.58 + index * 0.08);
-        pet.position.set(-10 + progress * 20, 0, 2.55 + index * 0.34);
-        pet.rotation.y = Math.PI / 2;
-        pet.position.y = Math.abs(Math.sin(progress * Math.PI * 10)) * 0.015;
+        const owner = owners[index % Math.max(1, owners.length)];
+        pet.visible = index < population.pets && owner !== undefined;
+        if (!pet.visible || owner === undefined) return;
+        const pose = petFollowPose(owner, index);
+        const gait = Math.sin(elapsedMs * 0.012 + index * 1.7);
+        pet.position.set(pose.x, Math.abs(gait) * 0.018, pose.z);
+        pet.rotation.y = pose.yaw;
+        pet.rotation.z = gait * 0.025;
       });
       wildlife.forEach((bird, index) => {
         bird.visible = index < population.wildlife;
         if (!bird.visible) return;
-        const progress = routeProgress(elapsedMs, durationMs, index * 0.39 + 0.12, 0.62 + index * 0.08);
-        bird.position.set(-16 + progress * 32, 5.8 + index * 0.8 + Math.sin(progress * Math.PI * 4) * 0.25, -3 - index * 3);
-        bird.rotation.y = Math.PI / 2;
+        const progress = routeProgress(
+          elapsedMs,
+          durationMs,
+          index * 0.39 + 0.12,
+          0.62 + index * 0.08,
+        );
+        bird.position.set(
+          -16 + progress * 32,
+          5.8 + index * 0.8 + Math.sin(progress * Math.PI * 4) * 0.25,
+          -3 - index * 3,
+        );
+        bird.rotation.y = 0;
         bird.rotation.z = Math.sin(progress * Math.PI * 12) * 0.08;
       });
       bicycles.forEach((bike, index) => {
-        const progress = routeProgress(elapsedMs, durationMs, index * 0.47 + 0.18, 0.9 + index * 0.12);
+        const direction = index % 2 === 0 ? -1 : 1;
+        const progress = routeProgress(
+          elapsedMs,
+          durationMs,
+          index * 0.47 + 0.18,
+          0.9 + index * 0.12,
+        );
         bike.visible = index < population.bicycles && progress > 0.08 && progress < 0.78;
         if (!bike.visible) return;
-        bike.position.set(12 - progress * 24, 0.02, 4.75 + index * 0.42);
-        bike.rotation.y = -Math.PI / 2;
+        const x = direction === 1
+          ? -18 + progress * 36
+          : 18 - progress * 36;
+        bike.position.set(x, 0.02, roadLaneZ("bicycle", index));
+        bike.rotation.y = xTravelYaw(direction);
       });
       vehicles.forEach((vehicle, index) => {
         const direction = index % 2 === 0 ? 1 : -1;
-        const progress = routeProgress(elapsedMs, durationMs, index * 0.53 + 0.08, 0.52 + index * 0.09);
+        const progress = routeProgress(
+          elapsedMs,
+          durationMs,
+          index * 0.53 + 0.08,
+          0.52 + index * 0.09,
+        );
         vehicle.visible = index < population.vehicles && progress > 0.04 && progress < 0.82;
         if (!vehicle.visible) return;
-        vehicle.position.set(direction * (-18 + progress * 36), 0.02, 5.7 + index * 0.72);
-        vehicle.rotation.y = direction === 1 ? Math.PI / 2 : -Math.PI / 2;
+        const x = direction === 1
+          ? -20 + progress * 40
+          : 20 - progress * 40;
+        vehicle.position.set(x, 0.02, roadLaneZ("vehicle", index));
+        vehicle.rotation.y = xTravelYaw(direction);
       });
     },
   });
