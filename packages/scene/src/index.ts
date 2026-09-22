@@ -401,16 +401,6 @@ const createSeller = (characterSeed: number): SellerRig => {
   });
 };
 
-const sellerMood = (confidence: number): string => {
-  const bounded = Math.max(0, Math.min(5, Math.round(confidence)));
-  if (bounded <= 0) return "discouraged";
-  if (bounded === 1) return "uncertain";
-  if (bounded === 2) return "cautious";
-  if (bounded === 3) return "steady";
-  if (bounded === 4) return "optimistic";
-  return "radiant";
-};
-
 const applySellerExpression = (seller: SellerRig, confidence: number): void => {
   const progress = clamp01(confidence / 5);
   const expression = progress * 2 - 1;
@@ -781,7 +771,6 @@ export const createLemonsvilleScene = (
   const cupInventory = createCupInventory();
   for (const mesh of cupInventory.meshes) scene.add(mesh);
   canvas.dataset["cupVisualStyle"] = "original-svg-3d";
-  canvas.dataset["characterSeed"] = String(initialState.characterSeed >>> 0);
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
   for (const lemon of lemons) scene.add(lemon);
@@ -1079,8 +1068,6 @@ export const createLemonsvilleScene = (
     state = nextState;
     storyboard = state.storyboard;
     updateSignPrice(storyboard.priceLabel);
-    canvas.dataset["signPriceLabel"] = storyboard.priceLabel;
-    canvas.dataset["sellerMood"] = sellerMood(state.confidence);
     applySellerExpression(seller, state.confidence);
     if (presentationChanged) {
       animationEpoch = performance.now();
