@@ -105,8 +105,11 @@ const footprintIntersectsHardscapeRect = (
     return footprintIntersectsRect(rect, point, halfWidth, halfDepth);
   }
 
-  const tangentX = Math.cos(rect.rotationY);
-  const tangentZ = Math.sin(rect.rotationY);
+  const stripLength = rect.length;
+  const stripWidth = rect.width;
+  const stripRotationY = rect.rotationY;
+  const tangentX = Math.cos(stripRotationY);
+  const tangentZ = Math.sin(stripRotationY);
   const normalX = -tangentZ;
   const normalZ = tangentX;
   const deltaX = point.x - rect.x;
@@ -124,9 +127,9 @@ const footprintIntersectsHardscapeRect = (
       Math.max(0, halfWidth) * Math.abs(axisX) +
       Math.max(0, halfDepth) * Math.abs(axisZ);
     const stripRadius =
-      (rect.length / 2) *
+      (stripLength / 2) *
         Math.abs(axisX * tangentX + axisZ * tangentZ) +
-      (rect.width / 2) *
+      (stripWidth / 2) *
         Math.abs(axisX * normalX + axisZ * normalZ);
     return centerDistance <= footprintRadius + stripRadius;
   });
