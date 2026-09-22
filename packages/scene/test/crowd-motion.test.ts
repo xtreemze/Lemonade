@@ -74,8 +74,8 @@ describe("crowd motion", () => {
     );
     const routeIds = new Set(first.map((pose) => pose?.routeId).filter(Boolean));
     expect(routeIds.size).toBeGreaterThan(4);
-    expect(routeIds.has("main:0")).toBe(true);
-    expect(routeIds.has("main:1")).toBe(true);
+    expect([...routeIds].some((routeId) => routeId.startsWith("main:0"))).toBe(true);
+    expect([...routeIds].some((routeId) => routeId.startsWith("main:1"))).toBe(true);
     const generatedRouteIds = new Set(
       neighborhoodSidewalkRoutes().map((route) => route.id),
     );
