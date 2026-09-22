@@ -5,6 +5,7 @@ import {
   FRONT_PROPERTY_LAYOUT,
   blocksFrontHouseFacade,
   populateNeighborhood,
+  staticFootprintPlacementAllowed,
   staticSceneryPlacementAllowed,
   weatherWindStrength,
 } from "../src/neighborhood.js";
@@ -55,24 +56,45 @@ describe("neighborhood world scale", () => {
       "garden-shrub",
       "garden-flower",
       "mailbox",
+      "fence",
     ]);
     let checkedScenery = 0;
 
     scene.traverse((object) => {
       const role = object.userData["sceneRole"];
       if (typeof role !== "string" || !checkedRoles.has(role)) return;
-      const clearanceRadius =
-        typeof object.userData["clearanceRadius"] === "number"
-          ? object.userData["clearanceRadius"]
-          : 0;
-      expect(
-        staticSceneryPlacementAllowed(
-          object.position.x,
-          object.position.z,
-          clearanceRadius,
-        ),
-      ).toBe(true);
+      const clearanceHalfWidth = object.userData["clearanceHalfWidth"];
+      const clearanceHalfDepth = object.userData["clearanceHalfDepth"];
+      if (
+        typeof clearanceHalfWidth === "number" &&
+        typeof clearanceHalfDepth === "number"
+      ) {
+        expect(
+          staticFootprintPlacementAllowed(
+            object.position.x,
+            object.position.z,
+            clearanceHalfWidth,
+            clearanceHalfDepth,
+          ),
+        ).toBe(true);
+      } else {
+        const clearanceRadius =
+          typeof object.userData["clearanceRadius"] === "number"
+            ? object.userData["clearanceRadius"]
+            : 0;
+        expect(
+          staticSceneryPlacementAllowed(
+            object.position.x,
+            object.position.z,
+            clearanceRadius,
+          ),
+        ).toBe(true);
+      }
       if (role === "tree") {
+        const clearanceRadius =
+          typeof object.userData["clearanceRadius"] === "number"
+            ? object.userData["clearanceRadius"]
+            : 0;
         expect(
           blocksFrontHouseFacade(
             object.position.x,
@@ -84,7 +106,7 @@ describe("neighborhood world scale", () => {
       checkedScenery += 1;
     });
 
-    expect(checkedScenery).toBeGreaterThanOrEqual(70);
+    expect(checkedScenery).toBeGreaterThanOrEqual(73);
 
     for (let index = 0; index < 40; index += 1) {
       const sign = gardenSignPosition(index);
@@ -98,6 +120,14 @@ describe("neighborhood world scale", () => {
       expect(
         staticSceneryPlacementAllowed(property.drivewayX, -2.55, 0.1),
       ).toBe(false);
+
+      const houseHalfWidth = (5.95 * property.scale) / 2;
+      expect(Math.abs(property.houseX - property.drivewayX)).toBeGreaterThan(
+        houseHalfWidth + 2.15 / 2,
+      );
+      expect(property.houseZ + (4.62 * property.scale) / 2).toBeLessThan(
+        0.45,
+      );
     }
   });
 
