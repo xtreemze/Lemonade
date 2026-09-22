@@ -37,11 +37,21 @@ describe("crowd motion", () => {
     expect(repeated).toEqual(first);
     expect(first).toHaveLength(12);
 
+    expect(new Set(first.map((pose) => pose.side))).toEqual(
+      new Set(["near", "far"]),
+    );
     for (const pose of first) {
       expect(Math.abs(pose.x)).toBeLessThanOrEqual(12.8);
-      expect(pose.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
-      expect(pose.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
-      expect(pose.z).toBeLessThan(STREET_LAYOUT.road.minZ);
+      const sidewalk =
+        pose.side === "near"
+          ? STREET_LAYOUT.nearSidewalk
+          : STREET_LAYOUT.farSidewalk;
+      expect(pose.z).toBeGreaterThanOrEqual(sidewalk.minZ);
+      expect(pose.z).toBeLessThanOrEqual(sidewalk.maxZ);
+      expect(
+        pose.z < STREET_LAYOUT.road.minZ ||
+          pose.z > STREET_LAYOUT.road.maxZ,
+      ).toBe(true);
     }
 
     for (let left = 0; left < first.length; left += 1) {
@@ -75,6 +85,17 @@ describe("crowd motion", () => {
     expect(pet.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
     expect(pet.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
     expect(pet.yaw).toBeCloseTo(0);
+
+    const farOwner = Object.freeze({
+      x: -2,
+      z: 8.7,
+      heading: -Math.PI / 2,
+    });
+    const farPet = petFollowPose(farOwner, 1);
+    expect(farPet.x).toBeGreaterThan(farOwner.x);
+    expect(farPet.z).toBeGreaterThanOrEqual(STREET_LAYOUT.farSidewalk.minZ);
+    expect(farPet.z).toBeLessThanOrEqual(STREET_LAYOUT.farSidewalk.maxZ);
+    expect(Math.abs(farPet.yaw)).toBeCloseTo(Math.PI);
   });
 
   it("keeps pet travel aligned to the street while the owner glances at an ad", () => {
