@@ -828,7 +828,7 @@ export const createLemonsvilleScene = (
       const drinkZ = STAND_WORLD_Z + 1.78;
       const approachDurationSeconds =
         Math.max(1, sale.purchaseAtMs - sale.approachAtMs) / 1_000;
-      const approachTargetDistance = 1.5 * approachDurationSeconds;
+      const approachTargetDistance = 0.75 * approachDurationSeconds;
       const approachZDistance = Math.abs(counterZ - streetZ);
       const approachXDistance = Math.sqrt(
         Math.max(
