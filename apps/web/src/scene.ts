@@ -51,7 +51,10 @@ const loadSceneRuntime = (): Promise<SceneRuntime> => {
 };
 
 const describeScene = (input: LemonsvilleSceneInput): string => {
-  const weather = input.environment.weather.kind.replaceAll("-", " ");
+  const weather =
+    input.environment.weather.kind === "hot-and-dry"
+      ? "partly cloudy"
+      : input.environment.weather.kind.replaceAll("-", " ");
   const activity =
     input.phase === "forecast"
       ? "forecast preview"
