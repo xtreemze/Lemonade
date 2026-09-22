@@ -29,6 +29,11 @@ export type StreetHardscapeRect = Readonly<{
   minZ: number;
   maxZ: number;
   role: "road" | "sidewalk";
+  x: number;
+  z: number;
+  length: number;
+  width: number;
+  rotationY: number;
 }>;
 
 export const DEFAULT_STREET_SEED = 0x4c_45_4d_4f;
@@ -320,6 +325,11 @@ const stripAabb = (strip: StreetStripSpec): StreetHardscapeRect => {
     minZ: strip.z - halfZ,
     maxZ: strip.z + halfZ,
     role: strip.role === "paved-road" ? "road" : "sidewalk",
+    x: strip.x,
+    z: strip.z,
+    length: strip.length,
+    width: strip.width,
+    rotationY: strip.rotationY,
   });
 };
 
