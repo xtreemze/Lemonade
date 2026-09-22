@@ -21,6 +21,7 @@ const cues: readonly AudioCue[] = [
   "purchase:payment",
   "purchase:drink",
   "storm:thunder",
+  "ambient:wind-gust",
   "ambient:birdsong",
 ];
 
@@ -66,6 +67,14 @@ describe("procedural cue compiler", () => {
         previousStart = tone.startSeconds;
       }
     }
+  });
+
+  it("uses low, quiet frequency sweeps for procedural wind gusts", () => {
+    const gust = compileCue("ambient:wind-gust");
+    expect(gust).toHaveLength(3);
+    expect(gust.every((tone) => tone.midiNote < 50)).toBe(true);
+    expect(gust.every((tone) => tone.endMidiNote !== undefined)).toBe(true);
+    expect(gust.every((tone) => tone.gain <= 0.016)).toBe(true);
   });
 
   it("uses a lightweight high-register motif for ambient birdsong", () => {
