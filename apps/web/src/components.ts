@@ -551,7 +551,7 @@ export class LemonadeDayReport extends LitElement {
           </strong>
         </header>
 
-        <dl class="results-grid">
+        <div class="report-content">\n          <dl class="results-grid">
           <div><dt>Sales</dt><dd id="report-sales">${formatMoney(Number(entry.revenue))}</dd></div>
           <div><dt>Expenses</dt><dd id="report-expenses">${formatMoney(Number(entry.expenses))}</dd></div>
           <div><dt>Ending cash</dt><dd id="report-cash">${formatMoney(Number(entry.endingCash))}</dd></div>
@@ -646,12 +646,15 @@ export class LemonadeDayReport extends LitElement {
               </section>
             `}
 
-        <p id="report-event" class="event-note">${eventLabel[entry.environment.event.kind]}</p>
-        <p id="report-progression" class="progression-note" ?hidden=${!progressed}>
-          ${progressed
-            ? `Tier ${String(report.nextState.tier)} unlocks tomorrow. New finance rules will be shown before you sell.`
-            : ""}
-        </p>
+          <div class="report-notes">
+            <p id="report-event" class="event-note">${eventLabel[entry.environment.event.kind]}</p>
+            <p id="report-progression" class="progression-note" ?hidden=${!progressed}>
+              ${progressed
+                ? `Tier ${String(report.nextState.tier)} unlocks tomorrow. New finance rules will be shown before you sell.`
+                : ""}
+            </p>
+          </div>
+        </div>
         <button
           id="review-history-button"
           class="next-button flow-action-button history-review-button"
