@@ -58,17 +58,23 @@ export type LemonsvilleSceneState = Readonly<{
   confidence: number;
   nextConfidence: number;
   characterSeed: number;
+  dayNumber: number;
   storyboard: StreetStoryboard;
   phase: ScenePhase;
   reducedMotion: boolean;
 }>;
 
+export type LemonsvilleSceneOptions = Readonly<{
+  enableGizmo?: boolean;
+}>;
+
 export interface LemonsvilleSceneController {
   update(state: LemonsvilleSceneState): void;
   resize(width: number, height: number): void;
+  render(): void;
   dispose(): void;
-  scene?: any; // Three.js Scene for dev tools
-  camera?: any; // Three.js Camera for dev tools
+  scene: Scene;
+  camera: PerspectiveCamera;
 }
 
 const PASSERBY_POOL_SIZE = 32;
@@ -430,6 +436,7 @@ const disposeObject = (object: Object3D): void => {
 export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
+  _options: LemonsvilleSceneOptions = {},
 ): LemonsvilleSceneController | null => {
   let renderer: WebGLRenderer;
   try {
@@ -786,8 +793,6 @@ export const createLemonsvilleScene = (
       const buyer = buyers[buyerSlotForSale(sale, buyers.length)];
       if (buyer === undefined) continue;
 
-      const streetX = sale.direction === -1 ? -8.4 : 8.4;
-      const exitX = -streetX;
       const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
       const counterZ = STAND_WORLD_Z + 1.22;
@@ -807,7 +812,7 @@ export const createLemonsvilleScene = (
       const streetX =
         counterX +
         (sale.direction === -1 ? -approachXDistance : approachXDistance);
->>>>>>> origin/master
+      const exitX = -streetX;
       const approachDistance = Math.hypot(counterX - streetX, counterZ - streetZ);
       const departDistance = Math.hypot(exitX - drinkX, streetZ - drinkZ);
       let x = counterX;
@@ -1052,7 +1057,7 @@ export const createLemonsvilleScene = (
   };
 
   update(initialState);
-  return Object.freeze({ update, resize, dispose, scene, camera });
+  return Object.freeze({ update, resize, render, dispose, scene, camera });
 };
 
 export { createGizmoController, type GizmoController } from "./gizmo-controller.js";
