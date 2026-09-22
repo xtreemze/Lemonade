@@ -97,6 +97,30 @@ The exact public API may evolve, but the important properties do not:
 - fixed-precision money;
 - no presentation dependencies.
 
+### Audience/customer contract for ruleset v4
+
+The v4 market model adds explicit renderer-neutral customer outcomes to the pure simulation boundary.
+
+```text
+run seed + business state + environment + three decisions
+  -> simulation
+  -> DayResolution
+       - accounting
+       - aggregate market funnel
+       - CustomerOutcome[]
+       - next compact MarketMemory
+  -> browser projections
+       -> report/accessibility
+       -> scene storyboard
+       -> audio cues
+```
+
+The simulation owns customer identity, awareness source, price acceptance, purchase/stockout outcome, and compact market memory. The scene owns geometry and animation only.
+
+Do not pass only `sold` and ask the renderer to synthesize a plausible crowd. If the scene shows a sign glance, price rejection, purchase, stockout, or recurring customer, that semantic event must originate in `DayResolution`.
+
+The renderer may pool or instance visual rigs, but logical customer identity must remain stable for the complete event lifecycle.
+
 ## Type model
 
 Prefer types that encode business invariants.
@@ -148,6 +172,8 @@ A seedable generator supports:
 Do not use the same random stream for presentation variation. 3D ambient motion, customer appearance, and procedural music should receive separate presentation seeds if randomness is introduced there.
 
 The ordering of random draws is part of a simulation version's deterministic contract. Prefer named substreams or precomputed typed environment events when unrelated features might otherwise perturb future results.
+
+Ruleset v4 should make this stronger by deriving named market substreams for audience selection, customer traits, awareness, and conversion. Presentation seeds for Three.js/audio must be disjoint from simulation streams. Adding an umbrella variant or animation may never change who buys lemonade.
 
 ## Simulation versioning and persistence
 

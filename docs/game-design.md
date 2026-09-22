@@ -18,7 +18,9 @@ The weather interstitial before a new business day also carries the recognizable
 
 The 1979 Apple II Lemonade Stand remains presentation and game-design inspiration: a tiny decision surface, visible weather, immediate consequences, short musical cues, and an economic loop that is easy to learn but difficult to optimize. Its exact pricing and advertising equations are **not** the balance contract for this repository.
 
-The authoritative economic implementation is the repository's 2017 browser game. Modernization may make that system deterministic, typed, inspectable, and extensible, but must preserve its operating behavior.
+The repository's 2017 browser game is the authoritative **v3 compatibility reference**. The released v3 ruleset preserves that operating behavior exactly enough to reproduce and certify it. Future rulesets may intentionally evolve the demand model only when the version boundary, migration behavior, certification, and preserved three-control operating economy are explicit.
+
+The planned v4 evolution is specified in [Audience simulation v4](audience-simulation-v4.md) and tracked by #72. It keeps the 2017 costs, three controls, operating-scale thresholds, and accounting while replacing aggregate potential demand with a finite neighborhood -> awareness -> conversion -> fulfillment model.
 
 ### 2017 operating economy
 
@@ -176,13 +178,32 @@ Use low-poly/vector geometry as an expressive dashboard for the simulation:
 - inventory/sell-through can map to pitchers/cups/stand activity;
 - progression can evolve the stand and neighborhood subtly.
 
-Do not render one customer per exact sale if that damages performance or readability. Presentation should encode magnitude, not become the source of truth.
+The simulation remains the source of truth. For v4, the renderer-neutral storyboard should preserve every authoritative customer outcome even when Three.js uses pooled rigs, instancing, or time compression for performance. The scene may simplify geometry and timing, but it must not invent or reclassify awareness, price rejection, purchases, or stockouts.
 
 ### Procedural audio
 
 The original Apple II version used short musical cues associated with conditions. The revival should preserve the idea, not copy the songs.
 
 Generate original motifs and effects from simple musical patterns with Web Audio. Weather, day resolution, profit/loss, and level-up can each have a distinct family of cues. Audio is optional and begins only after user interaction.
+
+## Ruleset evolution contract
+
+The 2017 equation remains preserved as the named v3 legacy/compatibility ruleset and as regression evidence. The planned v4 audience model is an intentional balance evolution, not a claim of 2017 equivalence.
+
+v4 must preserve:
+- three daily controls;
+- 2017 production/sign costs;
+- historical operating-scale thresholds and slider caps;
+- integer-cent accounting and finance separation;
+- seeded deterministic replay.
+
+v4 may intentionally replace:
+- the super-linear sign-demand term;
+- inverse-price aggregate demand;
+- weather population multipliers;
+- aggregate customer-count confidence contribution.
+
+See [Audience simulation v4](audience-simulation-v4.md) for the complete model and migration plan.
 
 ## 2017 economic compatibility contract
 
