@@ -157,11 +157,16 @@ const createBird = (profile: BirdFlightProfile): Group => {
   root.userData["sceneRole"] = "ambient-bird";
   root.userData["proceduralFlightProfile"] = profile;
   root.scale.setScalar(profile.scale);
-  const body = new Mesh(new SphereGeometry(0.12, 7, 5), material(profile.color));
+
+  const plumage = material(profile.color);
+  const wingGeometry = new BoxGeometry(0.34, 0.025, 0.12);
+  const tailGeometry = new BoxGeometry(0.16, 0.025, 0.07);
+
+  const body = new Mesh(new SphereGeometry(0.12, 7, 5), plumage);
   body.scale.set(1.45, 0.72, 0.72);
   root.add(body);
 
-  const head = new Mesh(new SphereGeometry(0.075, 7, 5), material(profile.color));
+  const head = new Mesh(new SphereGeometry(0.075, 7, 5), plumage);
   head.position.set(0.15, 0.035, 0);
   root.add(head);
 
@@ -174,7 +179,7 @@ const createBird = (profile: BirdFlightProfile): Group => {
   root.add(beak);
 
   for (const direction of [-1, 1] as const) {
-    const wing = new Mesh(new BoxGeometry(0.34, 0.025, 0.12), material(profile.color));
+    const wing = new Mesh(wingGeometry, plumage);
     wing.userData["sceneRole"] = "ambient-bird-wing";
     wing.position.set(0, 0.02, direction * 0.16);
     wing.rotation.x = direction * 0.26;
@@ -182,7 +187,7 @@ const createBird = (profile: BirdFlightProfile): Group => {
   }
 
   for (const direction of [-1, 1] as const) {
-    const tail = new Mesh(new BoxGeometry(0.16, 0.025, 0.07), material(profile.color));
+    const tail = new Mesh(tailGeometry, plumage);
     tail.position.set(-0.18, -0.015, direction * 0.055);
     tail.rotation.y = direction * 0.22;
     root.add(tail);
