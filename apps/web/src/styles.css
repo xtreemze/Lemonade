@@ -1003,8 +1003,10 @@ body:has(.game-shell[data-view="forecast"]) {
   z-index: 50;
 }
 
-.game-shell[data-view="planning"] .simulation-button:hover:not(:disabled)::after {
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  .game-shell[data-view="planning"] .simulation-button:hover:not(:disabled)::after {
+    opacity: 1;
+  }
 }
 
 .game-shell[data-view="planning"] .simulation-button-art {
@@ -1015,9 +1017,11 @@ body:has(.game-shell[data-view="forecast"]) {
   transition: transform 120ms ease-out, filter 120ms ease-out;
 }
 
-.game-shell[data-view="planning"] .simulation-button:hover:not(:disabled) .simulation-button-art {
-  transform: scale(1.08);
-  filter: drop-shadow(6px 6px 0 rgb(33 29 20 / 28%));
+@media (hover: hover) and (pointer: fine) {
+  .game-shell[data-view="planning"] .simulation-button:hover:not(:disabled) .simulation-button-art {
+    transform: scale(1.08);
+    filter: drop-shadow(6px 6px 0 rgb(33 29 20 / 28%));
+  }
 }
 
 .game-shell[data-view="planning"] .simulation-button:focus-visible {
