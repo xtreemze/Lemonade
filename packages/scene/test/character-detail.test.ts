@@ -1,4 +1,4 @@
-import { Group, Mesh, SphereGeometry } from "three";
+import { Group, Mesh, SphereGeometry, type Object3D } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,6 +7,11 @@ import {
 } from "../src/character-detail.js";
 import { characterProfileFor } from "../src/characters.js";
 
+const sceneRole = (object: Object3D): string => {
+  const role: unknown = object.userData["sceneRole"];
+  return typeof role === "string" ? role : "";
+};
+
 describe("character geometry detail", () => {
   it("covers the crown with hair geometry and provides readable facial expression geometry", () => {
     for (let index = 0; index < 8; index += 1) {
@@ -14,7 +19,7 @@ describe("character geometry detail", () => {
       const head = new Mesh(new SphereGeometry(0.27, 12, 8));
       decorateCharacterHead(head, profile);
 
-      const roles = new Set(head.children.map((child) => child.userData["sceneRole"]));
+      const roles = new Set(head.children.map(sceneRole));
       expect(roles.has("hair-cover")).toBe(true);
       expect(roles.has("face-expression")).toBe(true);
       expect(roles.has("eye-white")).toBe(true);
@@ -28,7 +33,7 @@ describe("character geometry detail", () => {
       const root = new Group();
       decorateCharacterBody(root, profile);
       const garments = root.children.filter(
-        (child) => child.userData["sceneRole"] === "garment-detail",
+        (child) => sceneRole(child) === "garment-detail",
       );
       expect(garments.length).toBeGreaterThanOrEqual(2);
     }
