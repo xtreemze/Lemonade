@@ -56,17 +56,17 @@ const basePose = (
   actorCount: number,
 ): CrowdPose => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
-  const durationSeconds = safeDuration / 1_000;
   const count = Math.max(1, actorCount);
-  const routeRate = 0.76 + deterministicUnit(actorIndex, 17) * 0.34;
+  const worldSpeed = 1.28 + deterministicUnit(actorIndex, 17) * 0.54;
   const phaseOffset = actorIndex / count + deterministicUnit(actorIndex, 29) * 0.11;
-  const unwrappedProgress =
-    (Math.max(0, elapsedMs) / safeDuration) * routeRate + phaseOffset;
-  const progress = fract(unwrappedProgress);
   const direction = beat.direction;
-  const startX = direction === -1 ? -12.5 : 12.5;
+  const startX = direction === -1 ? -56 : 56;
   const endX = -startX;
   const pathDistance = Math.abs(endX - startX);
+  const elapsedSeconds = Math.max(0, elapsedMs) / 1_000;
+  const unwrappedProgress =
+    phaseOffset + elapsedSeconds * worldSpeed / pathDistance;
+  const progress = fract(unwrappedProgress);
   const x = startX + (endX - startX) * progress;
 
   const side = sidewalkSideForActor(beat.pedestrianIndex);
@@ -80,8 +80,7 @@ const basePose = (
   const standwardDrift = side === "near" ? -attention * 0.07 : -attention * 0.025;
   const z = clampToSidewalk(laneBase + meander + standwardDrift, side, 0.12);
 
-  const worldSpeed = Math.abs(endX - startX) * routeRate / durationSeconds;
-  const pace = Math.max(0.72, Math.min(1.7, worldSpeed / 1.55));
+  const pace = Math.max(0.72, Math.min(1.35, worldSpeed / 1.55));
   const baseHeading = direction === -1 ? Math.PI / 2 : -Math.PI / 2;
   const attentionHeading =
     signSide * (side === "near" ? 0.48 : 0.32) * attention;
@@ -113,15 +112,16 @@ const cellKey = (x: number, z: number): string =>
   String(cellCoordinate(x)) + ":" + String(cellCoordinate(z));
 
 const separateCrowd = (poses: MutableCrowdPose[]): number => {
-  const cells = new Map<string, number[]>();
-  poses.forEach((pose, index) => {
-    const key = cellKey(pose.x, pose.z);
-    const bucket = cells.get(key);
-    if (bucket === undefined) cells.set(key, [index]);
-    else bucket.push(index);
-  });
-
   let neighborChecks = 0;
+  for (let pass = 0; pass < 3; pass += 1) {
+    const cells = new Map<string, number[]>();
+    poses.forEach((pose, index) => {
+      const key = cellKey(pose.x, pose.z);
+      const bucket = cells.get(key);
+      if (bucket === undefined) cells.set(key, [index]);
+      else bucket.push(index);
+    });
+
   for (let left = 0; left < poses.length; left += 1) {
     const a = poses[left];
     if (a === undefined) continue;
@@ -151,11 +151,23 @@ const separateCrowd = (poses: MutableCrowdPose[]): number => {
           const separationSide =
             Math.abs(dz) > 0.01 ? Math.sign(dz) : deterministicSide;
           const push = (CROWD_SEPARATION - distance) * 0.52;
+          const previousAZ = a.z;
+          const previousBZ = b.z;
           a.z = clampToSidewalk(a.z - push * separationSide, a.side, 0.1);
           b.z = clampToSidewalk(b.z + push * separationSide, b.side, 0.1);
+          const lateralResolved =
+            Math.abs(a.z - previousAZ) + Math.abs(b.z - previousBZ);
+          if (lateralResolved < push * 0.7) {
+            const travelSignA = Math.sin(a.heading) >= 0 ? 1 : -1;
+            const travelSignB = Math.sin(b.heading) >= 0 ? 1 : -1;
+            const yieldDistance = (CROWD_SEPARATION - distance) * 0.34;
+            a.x -= travelSignA * yieldDistance;
+            b.x -= travelSignB * yieldDistance;
+          }
         }
       }
     }
+  }
   }
 
   return neighborChecks;
