@@ -23,6 +23,7 @@ import {
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { LEMON_CENTER_Y, SELLER_Z } from "./stand-anchors.js";
+import { gardenSignPosition, sidewalkLaneZ } from "./street-layout.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -136,14 +137,9 @@ const createSign = (index: number): SignModel => {
   label.position.set(0, 1.05, 0.066);
   root.add(label);
 
-  const side = index % 2 === 0 ? -1 : 1;
-  const row = Math.floor(index / 2);
-  root.position.set(
-    side * (3.6 + (row % 4) * 1.15),
-    0,
-    1.9 + Math.floor(row / 4) * 1.2,
-  );
-  root.rotation.y = side * 0.18;
+  const position = gardenSignPosition(index);
+  root.position.set(position.x, position.y, position.z);
+  root.rotation.y = position.rotationY;
   return Object.freeze({ root, labelMaterial });
 };
 
@@ -577,6 +573,20 @@ export const createLemonsvilleScene = (
           phase: ScenePhase,
           elapsedMs: number,
           durationMs: number,
+          owners?: readonly Readonly<{
+            x: number;
+            z: number;
+            heading: number;
+          }>[],
+        ): void;
+      }>
+    | null = null;
+  let neighborhoodWind:
+    | Readonly<{
+        updateNeighborhoodWind(
+          scene: Scene,
+          seconds: number,
+          weather: SceneWeather,
         ): void;
       }>
     | null = null;
@@ -651,9 +661,11 @@ export const createLemonsvilleScene = (
   };
 
   void import("./neighborhood.js")
-    .then(({ populateNeighborhood }) => {
+    .then(({ populateNeighborhood, updateNeighborhoodWind }) => {
       if (disposed) return;
       populateNeighborhood(scene);
+      neighborhoodWind = Object.freeze({ updateNeighborhoodWind });
+      neighborhoodWind.updateNeighborhoodWind(scene, 0, state.weather);
       render();
     })
     .catch(() => undefined);
@@ -710,8 +722,15 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./character-detail.js")
-    .then(({ decorateCharacterHead, decorateSellerExpression }) => {
+    .then(({
+      decorateCharacterBody,
+      decorateCharacterHead,
+      decorateSellerExpression,
+    }) => {
       if (disposed) return;
+      for (const person of [...customers, ...buyers, seller.person]) {
+        decorateCharacterBody(person.root, person.profile);
+      }
       for (const person of [...customers, ...buyers]) {
         decorateCharacterHead(person.head, person.profile);
       }
@@ -763,6 +782,21 @@ export const createLemonsvilleScene = (
     }
   };
 
+  const visibleOwnerAnchors = (): readonly Readonly<{
+    x: number;
+    z: number;
+    heading: number;
+  }>[] =>
+    customers
+      .filter((customer) => customer.root.visible)
+      .map((customer) =>
+        Object.freeze({
+          x: customer.root.position.x,
+          z: customer.root.position.z,
+          heading: customer.root.rotation.y,
+        }),
+      );
+
   const applyPhaseStaging = (): void => {
     const forecast = state.phase === "forecast";
     stand.shutter.visible = forecast;
@@ -800,6 +834,14 @@ export const createLemonsvilleScene = (
     for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
       weatherObjects[weather].position.x = weatherOrigins[weather];
     }
+    neighborhoodWind?.updateNeighborhoodWind(scene, 0, state.weather);
+    ambientLife?.update(
+      state.weather,
+      state.phase,
+      0,
+      Math.max(1, storyboard.durationMs),
+      visibleOwnerAnchors(),
+    );
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
 
@@ -819,11 +861,11 @@ export const createLemonsvilleScene = (
 
       const streetX = sale.direction === -1 ? -8.4 : 8.4;
       const exitX = -streetX;
-      const streetZ = 4.0 + sale.lane * 0.34;
+      const streetZ = sidewalkLaneZ(sale.lane);
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
-      const counterZ = 1.62;
+      const counterZ = 1.22;
       const drinkX = sale.direction === -1 ? -1.35 : 1.35;
-      const drinkZ = 2.12;
+      const drinkZ = 1.78;
       let x = counterX;
       let z = counterZ;
 
@@ -942,7 +984,14 @@ export const createLemonsvilleScene = (
     const activeBuyerCount = animateBuyers(elapsedMs, seconds);
     animatePassersBy(elapsedMs, seconds, activeBuyerCount);
     animateSeller(seconds, elapsedMs);
-    ambientLife?.update(state.weather, state.phase, elapsedMs, storyboard.durationMs);
+    ambientLife?.update(
+      state.weather,
+      state.phase,
+      elapsedMs,
+      storyboard.durationMs,
+      visibleOwnerAnchors(),
+    );
+    neighborhoodWind?.updateNeighborhoodWind(scene, seconds, state.weather);
 
     cupInventory?.setCount(
       state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs),
@@ -1012,7 +1061,14 @@ export const createLemonsvilleScene = (
     }
 
     applyPhaseStaging();
-    ambientLife?.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
+    ambientLife?.update(
+      state.weather,
+      state.phase,
+      0,
+      Math.max(1, state.durationMs),
+      visibleOwnerAnchors(),
+    );
+    neighborhoodWind?.updateNeighborhoodWind(scene, 0, state.weather);
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
     render();
