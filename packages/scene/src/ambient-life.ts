@@ -43,7 +43,6 @@ export type AmbientLifeController = Readonly<{
     phase: AmbientPhase,
     elapsedMs: number,
     durationMs: number,
-    owners?: readonly Object3D[],
   ): void;
 }>;
 
@@ -196,7 +195,11 @@ const routeProgress = (
   return progress - Math.floor(progress);
 };
 
-export const createAmbientLife = (scene: Scene, seed: number): AmbientLifeController => {
+export const createAmbientLife = (
+  scene: Scene,
+  seed: number,
+  owners: readonly Object3D[] = [],
+): AmbientLifeController => {
   const pets = [createPet(0xa96f45), createPet(0x3e3a36), createPet(0xd1b48b)];
   const wildlife = [createBird(0x5d6971), createBird(0x795d4e)];
   const bicycles = [createBicycle(0x4f7f91), createBicycle(0xb45d4c)];
@@ -208,7 +211,7 @@ export const createAmbientLife = (scene: Scene, seed: number): AmbientLifeContro
   }
 
   return Object.freeze({
-    update(weather, phase, elapsedMs, durationMs, owners = []): void {
+    update(weather, phase, elapsedMs, durationMs): void {
       updateNeighborhoodWind(scene, elapsedMs / 1000, weather);
       const population = ambientPopulationFor(weather, phase);
       pets.forEach((pet, index) => {
