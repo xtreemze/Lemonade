@@ -7,7 +7,6 @@ import {
 } from "./residential-layout.js";
 import {
   generateStreetNetwork,
-  roadLaneZ,
   STREET_LAYOUT,
   type GeneratedStreetNetwork,
   type StreetStripSpec,
