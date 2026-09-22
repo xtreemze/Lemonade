@@ -59,9 +59,14 @@ export type LemonsvilleSceneState = Readonly<{
   confidence: number;
   nextConfidence: number;
   characterSeed: number;
+  dayNumber: number;
   storyboard: StreetStoryboard;
   phase: ScenePhase;
   reducedMotion: boolean;
+}>;
+
+export type LemonsvilleSceneOptions = Readonly<{
+  enableGizmo?: boolean;
 }>;
 
 export interface LemonsvilleSceneController {
@@ -431,6 +436,7 @@ const disposeObject = (object: Object3D): void => {
 export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
+  _options: LemonsvilleSceneOptions = {},
 ): LemonsvilleSceneController | null => {
   let renderer: WebGLRenderer;
   try {
@@ -536,7 +542,8 @@ export const createLemonsvilleScene = (
           phase: ScenePhase,
           elapsedMs: number,
           durationMs: number,
-        ): void;
+          dayNumber?: number,
+        ): unknown;
       }>
     | null = null;
   let animationFrame: number | null = null;
@@ -645,7 +652,13 @@ export const createLemonsvilleScene = (
         initialState.characterSeed,
         customers.map((customer) => customer.root),
       );
-      ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
+      ambientLife.update(
+        state.weather,
+        state.phase,
+        0,
+        Math.max(1, state.durationMs),
+        state.dayNumber,
+      );
       render();
     })
     .catch(() => undefined);
@@ -784,7 +797,8 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, storyboard.durationMs)
+      Math.max(1, storyboard.durationMs),
+      state.dayNumber,
     );
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
@@ -1014,7 +1028,8 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       elapsedMs,
-      storyboard.durationMs
+      storyboard.durationMs,
+      state.dayNumber,
     );
 
     const remainingStock =
@@ -1098,7 +1113,8 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, state.durationMs)
+      Math.max(1, state.durationMs),
+      state.dayNumber,
     );
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
