@@ -1,3 +1,5 @@
+import type { Group, Scene } from "three";
+
 import {
   clampToNearSidewalk,
   gardenSignPosition,
@@ -109,4 +111,23 @@ export const walkingBodyLift = (seconds: number, pace: number, strideOffset: num
   const cycle = seconds * 7.2 * pace + strideOffset;
   const stance = Math.abs(Math.sin(cycle));
   return 0.018 + stance * 0.028;
+};
+
+
+export type StreetMotion = Readonly<{
+  crowdPosesAt: typeof crowdPosesAt;
+  sidewalkLaneZ: typeof sidewalkLaneZ;
+}>;
+
+export const initializeStreetMotion = (
+  scene: Scene,
+  signs: readonly Readonly<{ root: Group }>[],
+): StreetMotion => {
+  signs.forEach((sign, index) => {
+    const position = gardenSignPosition(index);
+    sign.root.position.set(position.x, position.y, position.z);
+    sign.root.rotation.y = position.rotationY;
+    scene.add(sign.root);
+  });
+  return Object.freeze({ crowdPosesAt, sidewalkLaneZ });
 };
