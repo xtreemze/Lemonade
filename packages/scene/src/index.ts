@@ -30,6 +30,7 @@ import {
 } from "./world-scale.js";
 import { updateNeighborhoodWind } from "./neighborhood.js";
 import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
+import { STREET_LAYOUT } from "./street-layout.js";
 import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
 import type { WeatherDetailController } from "./weather-detail.js";
@@ -788,7 +789,21 @@ export const createLemonsvilleScene = (
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
 
+  const constrainToBounds = (
+    pos: { x: number; z: number },
+    minZ: number,
+    maxZ: number,
+    minX: number = -12,
+    maxX: number = 12,
+  ): { x: number; z: number } => ({
+    x: Math.max(minX, Math.min(maxX, pos.x)),
+    z: Math.max(minZ, Math.min(maxZ, pos.z)),
+  });
+
   const animateBuyers = (elapsedMs: number): number => {
+    const activeBuyerPositions: Array<{ x: number; z: number }> = [];
+    const personRadius = 0.35;
+
     for (const buyer of buyers) {
       const fade = buyerFadeState.get(buyer);
       if (fade) fade.targetOpacity = 0;
@@ -857,7 +872,28 @@ export const createLemonsvilleScene = (
         updateBuyerOpacity(buyer);
       }
       buyer.root.visible = true;
-      buyer.root.position.set(x, personGroundY(buyer), z);
+      let finalPos = { x, z };
+
+      if (phase === "approaching" || phase === "departing") {
+        const sidewalk = sale.direction === -1 ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
+        finalPos = constrainToBounds(finalPos, sidewalk.minZ, sidewalk.maxZ, -12, 12);
+      }
+
+      const pedestrianRadius = 0.4;
+      for (const otherPos of activeBuyerPositions) {
+        const dist = Math.hypot(finalPos.x - otherPos.x, finalPos.z - otherPos.z);
+        if (dist < pedestrianRadius * 2) {
+          const angle = Math.atan2(finalPos.z - otherPos.z, finalPos.x - otherPos.x);
+          const minDist = pedestrianRadius * 2.1;
+          finalPos = {
+            x: otherPos.x + Math.cos(angle) * minDist,
+            z: otherPos.z + Math.sin(angle) * minDist,
+          };
+        }
+      }
+
+      activeBuyerPositions.push(finalPos);
+      buyer.root.position.set(finalPos.x, personGroundY(buyer), finalPos.z);
       buyer.root.rotation.y =
         phase === "purchasing" || phase === "drinking"
           ? sale.direction === -1
