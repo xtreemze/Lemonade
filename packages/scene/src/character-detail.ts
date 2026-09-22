@@ -54,7 +54,7 @@ const addFaceBar = (
   color: number,
 ): Mesh => {
   const bar = mark(
-    new Mesh(new BoxGeometry(width, 0.018, 0.018), material(color)),
+    new Mesh(new BoxGeometry(width, 0.022, 0.024), material(color)),
     "face-expression",
   );
   bar.position.set(...position);
@@ -143,8 +143,8 @@ export const decorateCharacterHead = (
     new Mesh(new SphereGeometry(0.282, 12, 8), material(profile.hairColor)),
     "hair-cover",
   );
-  crown.scale.set(1.035, 0.52, 0.82);
-  crown.position.set(0, 0.145, -0.035);
+  crown.scale.set(1.06, 0.68, 0.98);
+  crown.position.set(0, 0.12, -0.012);
   head.add(crown);
 
   if (profile.hairStyle === 1) {
