@@ -9,6 +9,7 @@ import {
   generateResidentialLayout,
   residentialAccessLayout,
 } from "../src/residential-layout.js";
+import { roadLaneZ } from "../src/street-layout.js";
 
 const MOBILITY_SEED = 0x5eed1234;
 
@@ -203,6 +204,68 @@ describe("unified neighborhood mobility", () => {
     ).toBe(true);
   });
 
+  it("makes driveway traffic yield to pedestrians and pets crossing the sidewalk", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const layout = generateResidentialLayout(MOBILITY_SEED);
+    const property =
+      layout.frontProperties.find(
+        (candidate) =>
+          candidate.role === "east-mid" && candidate.drivewayX !== null,
+      ) ??
+      layout.frontProperties.find((candidate) => candidate.drivewayX !== null);
+    expect(property).toBeDefined();
+    if (property === undefined || property.drivewayX === null) return;
+
+    const access = residentialAccessLayout(property, MOBILITY_SEED);
+    const roadZ = roadLaneZ("vehicle", 0);
+    const enteringCrossingProgress = Math.min(
+      1,
+      Math.max(
+        0,
+        Math.abs(
+          (access.sidewalkCenterZ - roadZ) /
+            Math.max(0.001, access.parkingZ - roadZ),
+        ),
+      ),
+    );
+    const elapsedMs =
+      (0.28 + enteringCrossingProgress * 0.14) * 14_000;
+    const crossingObstacle = {
+      x: property.drivewayX,
+      z: access.sidewalkCenterZ,
+    };
+
+    const blocked = system.sample({
+      weather: "sunny",
+      phase: "simulation",
+      elapsedMs,
+      durationMs: 14_000,
+      dayNumber: 2,
+      focus: { x: 0, z: 0 },
+      pedestrianObstacles: [crossingObstacle],
+    });
+    const clear = system.sample({
+      weather: "sunny",
+      phase: "simulation",
+      elapsedMs,
+      durationMs: 14_000,
+      dayNumber: 2,
+      focus: { x: 0, z: 0 },
+      pedestrianObstacles: [],
+    });
+
+    const blockedVehicle = blocked.actors.find(
+      (actor) => actor.id === "resident-vehicle",
+    );
+    const clearVehicle = clear.actors.find(
+      (actor) => actor.id === "resident-vehicle",
+    );
+    expect(blockedVehicle?.waiting).toBe(true);
+    expect(blockedVehicle?.interaction).toBe("crossing");
+    expect(blockedVehicle?.speed).toBe(0);
+    expect(clearVehicle?.waiting).toBe(false);
+  });
+
   it("runs the mail route every forecast and a gardener on exactly one weekday", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const mailDays = Array.from({ length: 7 }, (_, index) =>
@@ -220,6 +283,15 @@ describe("unified neighborhood mobility", () => {
       mailDays.every((sample) =>
         sample.actors.some((actor) => actor.kind === "mail-carrier"),
       ),
+    ).toBe(true);
+    expect(
+      mailDays
+        .flatMap((sample) => sample.actors)
+        .filter(
+          (actor) =>
+            actor.kind === "mail-carrier" && actor.interaction !== "mailbox",
+        )
+        .every((actor) => actor.speed === 1.42),
     ).toBe(true);
     expect(
       mailDays.filter((sample) =>
