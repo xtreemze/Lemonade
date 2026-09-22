@@ -64,7 +64,7 @@ describe("audience outcome contracts", () => {
       fulfillment: Object.freeze({ kind: "purchased", saleIndex: 0 }),
     });
 
-    expect(() => assertCustomerOutcomeConsistency(impossible)).toThrow(
+    expect(() => {\n      assertCustomerOutcomeConsistency(impossible);\n    }).toThrow(
       "unaware customers cannot evaluate price or receive fulfillment",
     );
   });
@@ -76,7 +76,7 @@ describe("audience outcome contracts", () => {
       fulfillment: Object.freeze({ kind: "stockout" }),
     });
 
-    expect(() => assertCustomerOutcomeConsistency(impossible)).toThrow(
+    expect(() => {\n      assertCustomerOutcomeConsistency(impossible);\n    }).toThrow(
       "price-rejected customers cannot be fulfilled",
     );
   });
@@ -88,7 +88,7 @@ describe("audience outcome contracts", () => {
       fulfillment: Object.freeze({ kind: "none" }),
     });
 
-    expect(() => assertCustomerOutcomeConsistency(impossible)).toThrow(
+    expect(() => {\n      assertCustomerOutcomeConsistency(impossible);\n    }).toThrow(
       "willing customers must purchase or encounter stockout",
     );
   });
@@ -105,10 +105,10 @@ describe("audience outcome contracts", () => {
       fulfillment: Object.freeze({ kind: "purchased", saleIndex: -1 }),
     });
 
-    expect(() => assertCustomerOutcomeConsistency(invalidSign)).toThrow(
+    expect(() => {\n      assertCustomerOutcomeConsistency(invalidSign);\n    }).toThrow(
       "sign index must be a non-negative safe integer",
     );
-    expect(() => assertCustomerOutcomeConsistency(invalidSale)).toThrow(
+    expect(() => {\n      assertCustomerOutcomeConsistency(invalidSale);\n    }).toThrow(
       "sale index must be a non-negative safe integer",
     );
   });
