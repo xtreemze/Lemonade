@@ -59,12 +59,16 @@ describe("procedural residential layout", () => {
       ...layout.middleProperties,
       ...layout.backProperties,
     ]) {
+      const localHalfWidth = (HOUSE_FOOTPRINT_WIDTH * property.scale) / 2;
+      const localHalfDepth = (HOUSE_FOOTPRINT_DEPTH * property.scale) / 2;
+      const cosine = Math.abs(Math.cos(property.rotationY));
+      const sine = Math.abs(Math.sin(property.rotationY));
       expect(
         residentialFootprintIntersectsHardscape(
           { x: property.houseX, z: property.houseZ },
           layout,
-          (HOUSE_FOOTPRINT_WIDTH * property.scale) / 2,
-          (HOUSE_FOOTPRINT_DEPTH * property.scale) / 2,
+          localHalfWidth * cosine + localHalfDepth * sine,
+          localHalfWidth * sine + localHalfDepth * cosine,
         ),
       ).toBe(false);
     }
