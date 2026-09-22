@@ -40,6 +40,7 @@ describe("weather backdrop staging", () => {
     expect(storm.position[2]).toBeGreaterThan(-76);
     expect(storm.position[2]).toBeLessThan(-45);
     expect(storm.scale).toBeGreaterThan(6);
+    expect(storm.position[1]).toBeGreaterThanOrEqual(13);
   });
 
   it("moves the business simulation from dawn through daylight into night", () => {
