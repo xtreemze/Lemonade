@@ -1,9 +1,10 @@
-import { Box3, Scene } from "three";
+import { Box3, Mesh, MeshStandardMaterial, Scene } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
   FRONT_PROPERTY_LAYOUT,
   populateNeighborhood,
+  updateNeighborhoodActivity,
   weatherWindStrength,
 } from "../src/neighborhood.js";
 import {
@@ -136,6 +137,85 @@ describe("neighborhood world scale", () => {
         ),
       ).toBe(false);
     }
+  });
+
+  it("animates residence doors, windows, and sunny-yard sprinklers from shared activity state", () => {
+    const scene = new Scene();
+    populateNeighborhood(scene, DEFAULT_RESIDENTIAL_SEED);
+
+    const home = scene.children.find(
+      (object) => object.userData["sceneRole"] === "stand-home",
+    );
+    expect(home).toBeDefined();
+    if (home === undefined) return;
+
+    let door: import("three").Object3D | undefined;
+    let window: Mesh | undefined;
+    home.traverse((object) => {
+      if (object.userData["sceneRole"] === "house-door") door = object;
+      if (
+        object.userData["sceneRole"] === "house-window" &&
+        object instanceof Mesh &&
+        window === undefined
+      ) {
+        window = object;
+      }
+    });
+    expect(door).toBeDefined();
+    expect(window).toBeDefined();
+
+    const sprinkler = scene.children.find(
+      (object) => object.userData["sceneRole"] === "yard-sprinkler",
+    );
+    expect(sprinkler).toBeDefined();
+    const sprinklerRole =
+      typeof sprinkler?.userData["propertyRole"] === "string"
+        ? sprinkler.userData["propertyRole"]
+        : "stand-home";
+
+    const roles = new Set(["stand-home", sprinklerRole]);
+    updateNeighborhoodActivity(
+      scene,
+      [...roles].map((propertyRole) =>
+        Object.freeze({
+          propertyRole,
+          doorOpen: propertyRole === "stand-home",
+          windowActivity: propertyRole === "stand-home",
+          sprinklerOn: propertyRole === sprinklerRole,
+          vehicleParked: false,
+          mailServiced: false,
+          gardenerPresent: false,
+        }),
+      ),
+      1_500,
+    );
+
+    expect(door?.rotation.y).toBeLessThan(-0.9);
+    const windowMaterial =
+      window?.material instanceof MeshStandardMaterial
+        ? window.material
+        : null;
+    expect(windowMaterial?.emissiveIntensity).toBeGreaterThan(0);
+    expect(sprinkler?.visible).toBe(true);
+
+    updateNeighborhoodActivity(
+      scene,
+      [...roles].map((propertyRole) =>
+        Object.freeze({
+          propertyRole,
+          doorOpen: false,
+          windowActivity: false,
+          sprinklerOn: false,
+          vehicleParked: false,
+          mailServiced: false,
+          gardenerPresent: false,
+        }),
+      ),
+      2_000,
+    );
+    expect(door?.rotation.y).toBeCloseTo(0);
+    expect(windowMaterial?.emissiveIntensity).toBe(0);
+    expect(sprinkler?.visible).toBe(false);
   });
 
   it("makes storm wind materially stronger than ordinary weather", () => {
