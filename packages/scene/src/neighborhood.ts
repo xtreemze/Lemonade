@@ -644,7 +644,7 @@ export const populateNeighborhood = (
     detail: Group,
     halfWidth: number,
     halfDepth: number,
-  ): void => {
+  ): boolean => {
     if (
       residentialFootprintIntersectsHardscape(
         { x: detail.position.x, z: detail.position.z },
@@ -653,7 +653,7 @@ export const populateNeighborhood = (
         halfDepth,
       )
     ) {
-      return;
+      return false;
     }
     const intersectsTree = layout.trees.some((tree) => {
       const treeRadius = 2.3 * tree.scale;
@@ -662,21 +662,52 @@ export const populateNeighborhood = (
         Math.abs(tree.z - detail.position.z) <= halfDepth + treeRadius
       );
     });
-    if (intersectsTree) return;
+    if (intersectsTree) return false;
     yardDetails.push(detail);
+    return true;
   };
 
   for (const property of layout.frontProperties) {
     if (property.mailboxX === null) continue;
-    const safeX = clearYardX(property.mailboxX, -0.3, 0.3, 0.3);
+    const safeX = clearYardX(property.mailboxX, -0.3, 0.34, 0.24);
     if (safeX === null) continue;
     yardDetails.push(mailbox(safeX, -0.3));
   }
 
-  addYardDetailIfClear(fenceRun(-5.7, -0.8, 2.9), 2.9 / 2, 0.06);
-  addYardDetailIfClear(fenceRunDepth(1.9, -3.0, 5.1), 0.06, 5.1 / 2);
-  addYardDetailIfClear(fenceRun(7.8, -0.65, 2.6), 2.6 / 2, 0.06);
-  addYardDetailIfClear(fenceRun(0, -4.7, 1.4), 1.4 / 2, 0.06);
+  const fenceCandidates = [
+    [-5.7, -0.8, 2.9] as const,
+    [7.8, -0.65, 2.6] as const,
+    [-49, -0.85, 2.4] as const,
+    [-38, -0.75, 2.2] as const,
+    [-27, -0.9, 2.2] as const,
+    [24, -0.85, 2.2] as const,
+    [36, -0.7, 2.3] as const,
+    [48, -0.9, 2.4] as const,
+  ];
+  let fenceCount = 0;
+  for (const [x, z, width] of fenceCandidates) {
+    if (
+      addYardDetailIfClear(
+        fenceRun(x, z, width),
+        width / 2 + 0.07,
+        0.07,
+      )
+    ) {
+      fenceCount += 1;
+      if (fenceCount >= 5) break;
+    }
+  }
+  if (fenceCount < 5) {
+    if (
+      addYardDetailIfClear(
+        fenceRunDepth(1.9, -3.0, 5.1),
+        0.07,
+        5.1 / 2 + 0.07,
+      )
+    ) {
+      fenceCount += 1;
+    }
+  }
   for (const detail of yardDetails) scene.add(detail);
 
   layout.trees.forEach((planting, index) => {
