@@ -562,7 +562,6 @@ export const createAmbientLife = (
           activeIndex < population.vehicles &&
           progress > 0.04 &&
           progress < 0.82;
-        if (!vehicle.visible) return;
         const x = direction === 1
           ? -110 + progress * 220
           : 110 - progress * 220;
