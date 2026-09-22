@@ -5,6 +5,7 @@ import {
   CylinderGeometry,
   DirectionalLight,
   DoubleSide,
+  FogExp2,
   Group,
   HemisphereLight,
   SphereGeometry,
@@ -22,6 +23,7 @@ import {
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { CupInventory } from "./cup-inventory.js";
+import { crowdGroundClearance, crowdPosesAt } from "./crowd-motion.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -70,6 +72,13 @@ const earlyMorningSkyColor: Record<SceneWeather, number> = {
   thunderstorm: 0x485866,
 };
 
+const atmosphericFogDensity: Record<SceneWeather, number> = {
+  sunny: 0.007,
+  cloudy: 0.009,
+  "hot-and-dry": 0.008,
+  thunderstorm: 0.013,
+};
+
 const PASSERBY_POOL_SIZE = 32;
 const BUYER_POOL_SIZE = 192;
 
@@ -108,16 +117,17 @@ type StandModel = Readonly<{
 
 const createStand = (): StandModel => {
   const root = new Group();
-  addBox(root, [4.5, 1.8, 1.7], [0, 0.9, 0], 0xe7c672);
-  addBox(root, [4.9, 0.28, 2.05], [0, 2.18, 0], 0xf3d85d);
-  addBox(root, [4.2, 0.8, 0.18], [0, 1.0, 0.94], 0xffefaf);
-  addBox(root, [0.22, 2.4, 0.22], [-2.0, 2.9, 0], 0x5e4934);
-  addBox(root, [0.22, 2.4, 0.22], [2.0, 2.9, 0], 0x5e4934);
-  addBox(root, [4.8, 0.22, 2.0], [0, 4.0, 0], 0xe6a93b);
+  // A compact neighborhood kiosk rather than a house-sized pavilion.
+  addBox(root, [3.25, 1.18, 1.32], [0, 0.59, 0], 0xe7c672);
+  addBox(root, [3.55, 0.18, 1.55], [0, 1.28, 0], 0xf3d85d);
+  addBox(root, [2.95, 0.56, 0.14], [0, 0.68, 0.72], 0xffefaf);
+  addBox(root, [0.14, 1.8, 0.14], [-1.45, 1.95, 0], 0x5e4934);
+  addBox(root, [0.14, 1.8, 0.14], [1.45, 1.95, 0], 0x5e4934);
+  addBox(root, [3.45, 0.16, 1.55], [0, 2.82, 0], 0xe6a93b);
 
   const shutter = new Group();
-  addBox(shutter, [4.25, 1.3, 0.12], [0, 1.45, 1.02], 0xd39b43);
-  addBox(shutter, [1.15, 0.36, 0.05], [0, 1.47, 1.1], 0xf4dc83);
+  addBox(shutter, [3.0, 0.82, 0.1], [0, 0.96, 0.78], 0xd39b43);
+  addBox(shutter, [0.92, 0.24, 0.04], [0, 0.98, 0.84], 0xf4dc83);
   shutter.visible = false;
   root.add(shutter);
   return Object.freeze({ root, shutter });
@@ -355,6 +365,8 @@ const applySellerExpression = (seller: SellerRig, confidence: number): void => {
 const resetPersonPose = (person: PersonRig): void => {
   person.torso.rotation.set(0, 0, 0);
   person.head.rotation.set(0, 0, 0);
+  person.torso.position.y = 1.05;
+  person.head.position.y = 1.78;
   for (const limb of [...person.arms, ...person.legs]) {
     limb.root.rotation.set(0, 0, 0);
     limb.lower.rotation.set(0, 0, 0);
@@ -371,6 +383,11 @@ const applyWalkingPose = (
   const cycle = seconds * 7.2 * pace * person.walkPace + person.strideOffset;
   const stride = Math.sin(cycle) * person.gaitAmplitude;
   const oppositeStride = Math.sin(cycle + Math.PI) * person.gaitAmplitude;
+  const stance = Math.abs(Math.sin(cycle));
+
+  person.torso.position.y = 1.05 + stance * 0.026;
+  person.head.position.y = 1.78 + stance * 0.018;
+  person.torso.rotation.y = Math.sin(cycle) * 0.028;
 
   person.legs[0].root.rotation.x = stride;
   person.legs[1].root.rotation.x = oppositeStride;
@@ -382,8 +399,7 @@ const applyWalkingPose = (
   person.arms[1].root.rotation.x = carryingCup ? -0.54 : stride * 0.78;
   person.arms[1].lower.rotation.x = carryingCup ? -1.05 : -0.12 - Math.max(0, -stride) * 0.22;
 
-  person.torso.rotation.z =
-    Math.sin(cycle * 0.5) * 0.035;
+  person.torso.rotation.z = Math.sin(cycle * 0.5) * 0.035;
   person.head.rotation.z = -person.torso.rotation.z * 0.42;
   person.cup.visible = carryingCup;
 };
@@ -477,7 +493,9 @@ export const createLemonsvilleScene = (
   renderer.shadowMap.enabled = false;
 
   const scene = new Scene();
-  const camera = new PerspectiveCamera(34, 1, 0.1, 100);
+  const fog = new FogExp2(earlyMorningSkyColor[initialState.weather], 0.01);
+  scene.fog = fog;
+  const camera = new PerspectiveCamera(34, 1, 0.1, 180);
   camera.position.set(0, 6.8, 13.5);
   camera.lookAt(0, 1.7, 0);
 
@@ -487,9 +505,9 @@ export const createLemonsvilleScene = (
   sunlight.position.set(-5, 10, 7);
   scene.add(sunlight);
 
-  const ground = new Mesh(new PlaneGeometry(44, 36), makeMaterial(0x92ad68));
+  const ground = new Mesh(new PlaneGeometry(160, 150), makeMaterial(0x92ad68));
   ground.rotation.x = -Math.PI / 2;
-  ground.position.z = -3.5;
+  ground.position.z = -32;
   scene.add(ground);
 
   const stand = createStand();
@@ -520,8 +538,8 @@ export const createLemonsvilleScene = (
   }
 
   const seller = createSeller(initialState.characterSeed);
-  seller.person.root.position.set(0, 1.28, -0.32);
-  seller.person.root.scale.multiplyScalar(1.06);
+  seller.person.root.position.set(0, crowdGroundClearance(seller.person.profile.heightScale), -0.3);
+  seller.person.root.scale.multiplyScalar(0.98);
   scene.add(seller.person.root);
 
   let cupInventory: CupInventory | null = null;
@@ -530,6 +548,9 @@ export const createLemonsvilleScene = (
   canvas.dataset["walkCycleStyle"] = "seeded-articulated-gait";
   canvas.dataset["sellerExpressionStyle"] = "face-posture-confidence";
   canvas.dataset["neighborhoodDetail"] = "loading";
+  canvas.dataset["worldScale"] = "kiosk-houses-mature-vegetation";
+  canvas.dataset["crowdModel"] = "routed-separated-grounded";
+  canvas.dataset["ambientLife"] = "loading";
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
   for (const lemon of lemons) scene.add(lemon);
@@ -554,6 +575,16 @@ export const createLemonsvilleScene = (
   });
 
   let state = initialState;
+  let ambientLife:
+    | Readonly<{
+        update(
+          weather: SceneWeather,
+          phase: ScenePhase,
+          elapsedMs: number,
+          durationMs: number,
+        ): void;
+      }>
+    | null = null;
   let animationFrame: number | null = null;
   let animationEpoch = performance.now();
   let storyboard = state.storyboard;
@@ -627,8 +658,20 @@ export const createLemonsvilleScene = (
   void import("./neighborhood.js")
     .then(({ populateNeighborhood }) => {
       if (disposed) return;
-      populateNeighborhood(scene);
-      canvas.dataset["neighborhoodDetail"] = "expanded-streets-houses-vegetation";
+      const stats = populateNeighborhood(scene);
+      canvas.dataset["neighborhoodDetail"] = "lod-extended-streets-houses-vegetation";
+      canvas.dataset["neighborhoodLodObjects"] = String(stats.houseLods + stats.treeLods);
+      canvas.dataset["worldSpan"] = String(stats.worldSpan);
+      render();
+    })
+    .catch(() => undefined);
+
+  void import("./ambient-life.js")
+    .then(({ createAmbientLife }) => {
+      if (disposed) return;
+      ambientLife = createAmbientLife(scene, initialState.characterSeed);
+      canvas.dataset["ambientLife"] = "weather-aware-pets-bicycles-vehicles";
+      ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
       render();
     })
     .catch(() => undefined);
@@ -690,7 +733,11 @@ export const createLemonsvilleScene = (
       if (!customer.root.visible) return;
       const row = index % 2;
       const progress = visibleCount <= 1 ? 0.5 : index / (visibleCount - 1);
-      customer.root.position.set(-7.2 + progress * 14.4, 0, 3.65 + row * 0.7);
+      customer.root.position.set(
+        -7.2 + progress * 14.4,
+        crowdGroundClearance(customer.profile.heightScale),
+        3.65 + row * 0.7,
+      );
       customer.root.rotation.y = index % 2 === 0 ? Math.PI / 2 : -Math.PI / 2;
     });
     for (const buyer of buyers) {
@@ -782,7 +829,7 @@ export const createLemonsvilleScene = (
       }
 
       buyer.root.visible = true;
-      buyer.root.position.set(x, 0, z);
+      buyer.root.position.set(x, crowdGroundClearance(buyer.profile.heightScale), z);
       buyer.root.rotation.y =
         phase === "purchasing" || phase === "drinking"
           ? sale.direction === -1
@@ -809,43 +856,28 @@ export const createLemonsvilleScene = (
 
     const targetCount = Math.min(
       customers.length,
-      Math.max(activeBuyerCount + 1, storyboard.passersBy.length),
+      Math.max(activeBuyerCount + 1, Math.min(18, storyboard.passersBy.length)),
     );
-    const durationMs = Math.max(1, storyboard.durationMs);
-    const globalProgress = clamp01(elapsedMs / durationMs);
+    const poses = crowdPosesAt(
+      storyboard.passersBy,
+      targetCount,
+      elapsedMs,
+      Math.max(1, storyboard.durationMs),
+    );
 
     customers.forEach((customer, index) => {
-      customer.root.visible = index < targetCount;
+      const pose = poses[index];
+      customer.root.visible = pose !== undefined;
       resetPersonPose(customer);
-      if (!customer.root.visible) return;
+      if (pose === undefined) return;
 
-      const beat = storyboard.passersBy[index % storyboard.passersBy.length];
-      if (beat === undefined) {
-        customer.root.visible = false;
-        return;
-      }
-
-      const progress = (globalProgress + index / targetCount) % 1;
-      const startX = beat.direction === -1 ? -9 : 9;
-      const endX = -startX;
-      const attention =
-        beat.seesAdvertisement
-          ? Math.exp(-Math.pow((progress - 0.5) / 0.12, 2))
-          : 0;
-      const signSide = beat.signIndex >= 0 && beat.signIndex % 2 === 0 ? -1 : 1;
-      const baseX = lerp(startX, endX, progress);
-      const x = lerp(baseX, signSide * 4.1, attention * 0.22);
-      const z = 4.0 + beat.lane * 0.28 - attention * 0.7;
-      const pace = 0.92 + (index % 5) * 0.055;
-
-      customer.root.position.set(x, 0, z);
-      customer.root.rotation.y =
-        attention > 0.55
-          ? signSide * 0.72
-          : beat.direction === -1
-            ? Math.PI / 2
-            : -Math.PI / 2;
-      applyWalkingPose(customer, seconds, pace, false);
+      customer.root.position.set(
+        pose.x,
+        crowdGroundClearance(customer.profile.heightScale),
+        pose.z,
+      );
+      customer.root.rotation.y = pose.heading;
+      applyWalkingPose(customer, seconds, pose.pace, false);
     });
   };
 
@@ -893,6 +925,7 @@ export const createLemonsvilleScene = (
     const activeBuyerCount = animateBuyers(elapsedMs, seconds);
     animatePassersBy(elapsedMs, seconds, activeBuyerCount);
     animateSeller(seconds, elapsedMs);
+    ambientLife?.update(state.weather, state.phase, elapsedMs, storyboard.durationMs);
 
     cupInventory?.setCount(
       state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs),
@@ -948,10 +981,12 @@ export const createLemonsvilleScene = (
       applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
     }
 
-    renderer.setClearColor(
-      state.phase === "forecast" ? earlyMorningSkyColor[state.weather] : skyColor[state.weather],
-      1,
-    );
+    const atmosphereColor =
+      state.phase === "forecast" ? earlyMorningSkyColor[state.weather] : skyColor[state.weather];
+    renderer.setClearColor(atmosphereColor, 1);
+    fog.color.setHex(atmosphereColor);
+    fog.density =
+      atmosphericFogDensity[state.weather] + (state.phase === "forecast" ? 0.0025 : 0);
     hemisphere.intensity = state.phase === "forecast" ? 1.35 : 1.9;
     sunlight.intensity = state.phase === "forecast" ? 1.05 : 1.8;
 
@@ -963,6 +998,7 @@ export const createLemonsvilleScene = (
     }
 
     applyPhaseStaging();
+    ambientLife?.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
     render();
