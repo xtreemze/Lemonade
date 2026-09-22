@@ -58,7 +58,7 @@ describe("procedural residential layout", () => {
 
   it("keeps complete house and planting footprints out of roads, sidewalks, driveways and house fronts", () => {
     const layout = generateResidentialLayout(0xdecafbad);
-    expect(layout.trees).toHaveLength(48);
+    expect(layout.trees).toHaveLength(72);
     expect(layout.shrubs).toHaveLength(14);
     expect(layout.flowers).toHaveLength(12);
 
@@ -66,6 +66,7 @@ describe("procedural residential layout", () => {
       ...layout.frontProperties,
       ...layout.middleProperties,
       ...layout.backProperties,
+      ...layout.outerProperties,
     ]) {
       const localHalfWidth = (HOUSE_FOOTPRINT_WIDTH * property.scale) / 2;
       const localHalfDepth = (HOUSE_FOOTPRINT_DEPTH * property.scale) / 2;
@@ -107,6 +108,10 @@ describe("procedural residential layout", () => {
     expect(layout.frontProperties).toHaveLength(7);
     expect(layout.middleProperties).toHaveLength(8);
     expect(layout.backProperties).toHaveLength(9);
+    expect(layout.outerProperties).toHaveLength(24);
+    expect(layout.outerProperties.some((property) => property.houseZ > 12)).toBe(true);
+    expect(layout.outerProperties.some((property) => property.houseZ < -58)).toBe(true);
+    expect(layout.outerProperties.some((property) => Math.abs(property.houseX) > 65)).toBe(true);
 
     const xs = layout.frontProperties.map((property) => property.houseX);
     const mirrored = xs.filter((x) => xs.some((candidate) => Math.abs(candidate + x) < 0.25));
