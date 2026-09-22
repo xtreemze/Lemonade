@@ -37,6 +37,7 @@ const pedestrianCount: Readonly<Record<CustomerActivity, number>> = Object.freez
 export type LemonsvilleSceneInput = Readonly<{
   environment: DayEnvironment;
   confidence: number;
+  nextConfidence: number;
   visibleSigns: number;
   phase: ScenePhase;
   sold: number;
@@ -107,6 +108,7 @@ const createState = (
     prepared,
     durationMs,
     confidence: Math.max(0, Math.min(5, input.confidence)),
+    nextConfidence: Math.max(0, Math.min(5, input.nextConfidence)),
     characterSeed: input.characterSeed >>> 0,
     storyboard: createStreetStoryboard({
       durationMs: Math.max(1, durationMs),
@@ -203,6 +205,7 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
     elements.canvas.dataset["priceCents"] = String(Math.max(0, input.priceCents));
     elements.canvas.dataset["characterSeed"] = String(input.characterSeed >>> 0);
     elements.canvas.dataset["sellerMood"] = sellerMoodForConfidence(input.confidence);
+    elements.canvas.dataset["nextSellerMood"] = sellerMoodForConfidence(input.nextConfidence);
     elements.equivalent.textContent = description;
     elements.fallbackDescription.textContent = description;
 
