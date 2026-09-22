@@ -77,6 +77,9 @@ describe("weather backdrop staging", () => {
         expect(projected.y).toBeGreaterThanOrEqual(-1);
         expect(projected.y).toBeLessThanOrEqual(1);
         expect(projected.z).toBeLessThanOrEqual(1);
+        const screenY = (1 - projected.y) / 2;
+        expect(screenY).toBeGreaterThanOrEqual(0.08);
+        expect(screenY).toBeLessThanOrEqual(0.43);
       }
     }
   });
