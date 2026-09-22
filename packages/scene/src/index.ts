@@ -3,12 +3,12 @@ import * as THREE from "three";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
-  createStreetStoryboard,
   remainingCupsAt,
   sceneCameraComposition,
   sceneShotAt,
   type BuyerPhase,
   type SceneShotKind,
+  type StreetStoryboard,
 } from "./storyboard.js";
 
 export type SceneWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
@@ -23,6 +23,7 @@ export type LemonsvilleSceneState = Readonly<{
   sold: number;
   priceCents: number;
   durationMs: number;
+  storyboard: StreetStoryboard;
   sellThroughBasisPoints: number;
   phase: ScenePhase;
   reducedMotion: boolean;
@@ -562,14 +563,7 @@ export const createLemonsvilleScene = (
   let state = initialState;
   let animationFrame: number | null = null;
   let animationEpoch = performance.now();
-  let storyboard = createStreetStoryboard({
-    durationMs: Math.max(1, state.durationMs),
-    prepared: state.prepared,
-    sold: state.phase === "simulation" ? state.sold : 0,
-    visibleSigns: state.visibleSigns,
-    priceCents: state.priceCents,
-    ambientPedestrianCount: customerCount[state.customerActivity],
-  });
+  let storyboard = state.storyboard;
 
   let viewportWidth = 1;
   let viewportHeight = 1;
@@ -826,14 +820,7 @@ export const createLemonsvilleScene = (
       state.priceCents !== nextState.priceCents;
 
     state = nextState;
-    storyboard = createStreetStoryboard({
-      durationMs: Math.max(1, state.durationMs),
-      prepared: state.prepared,
-      sold: state.phase === "simulation" ? state.sold : 0,
-      visibleSigns: state.visibleSigns,
-      priceCents: state.priceCents,
-      ambientPedestrianCount: customerCount[state.customerActivity],
-    });
+    storyboard = state.storyboard;
     updateSignPrice(storyboard.priceLabel);
     canvas.dataset["signPriceLabel"] = storyboard.priceLabel;
     if (presentationChanged) {
