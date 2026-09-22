@@ -258,7 +258,23 @@ export const populateWeatherObjects = (
     return cloud;
   });
 
-  addCloud(weather.thunderstorm, 0x657786);
+  const thunderstormClouds = [
+    { position: [-2, 1, -0.5] as const, scale: 1.1, driftPhase: 0 },
+    { position: [0, 0.8, -0.8] as const, scale: 1, driftPhase: 1.5 },
+    { position: [2, 1.2, -0.3] as const, scale: 0.95, driftPhase: 3 },
+  ].map((layout, index) => {
+    const cloud = new Group();
+    cloud.userData["turbulentCloud"] = true;
+    cloud.userData["driftPhase"] = layout.driftPhase;
+    cloud.userData["baseX"] = layout.position[0];
+    cloud.userData["baseY"] = layout.position[1];
+    cloud.userData["baseZ"] = layout.position[2];
+    addCloud(cloud, 0x657786);
+    cloud.position.set(...layout.position);
+    cloud.scale.setScalar(layout.scale);
+    weather.thunderstorm.add(cloud);
+    return cloud;
+  });
 
   const lightning = new Group();
   lightning.userData["sceneRole"] = "storm-lightning";
@@ -328,6 +344,29 @@ export const populateWeatherObjects = (
           : Math.sin(elapsedMs * (0.00016 + index * 0.000025) + phaseOffset) *
             (0.18 + index * 0.035);
         cloud.position.x = baseX + localDrift;
+      });
+
+      thunderstormClouds.forEach((cloud) => {
+        const baseX =
+          typeof cloud.userData["baseX"] === "number"
+            ? cloud.userData["baseX"]
+            : cloud.position.x;
+        const baseY =
+          typeof cloud.userData["baseY"] === "number"
+            ? cloud.userData["baseY"]
+            : cloud.position.y;
+        const phaseOffset =
+          typeof cloud.userData["driftPhase"] === "number"
+            ? cloud.userData["driftPhase"]
+            : 0;
+
+        if (!reducedMotion) {
+          const turbulence1 = Math.sin(elapsedMs * 0.0008 + phaseOffset) * 0.6;
+          const turbulence2 = Math.cos(elapsedMs * 0.00063 + phaseOffset * 1.5) * 0.4;
+          const turbulenceY = Math.sin(elapsedMs * 0.0005 + phaseOffset * 2) * 0.3;
+          cloud.position.x = baseX + turbulence1 + turbulence2;
+          cloud.position.y = baseY + turbulenceY;
+        }
       });
 
       const daylightElapsed =
