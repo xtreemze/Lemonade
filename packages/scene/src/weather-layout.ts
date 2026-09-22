@@ -25,7 +25,7 @@ export const WEATHER_BACKDROP_LAYOUT: Readonly<
     scale: 11,
   }),
   thunderstorm: Object.freeze({
-    position: [-10, 11, -56] as const,
+    position: [-10, 7.5, -56] as const,
     scale: 7.5,
   }),
 });
