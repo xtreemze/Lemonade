@@ -1146,6 +1146,13 @@ const generatePropertyPlantings = (
         continue;
       }
 
+      if (yardZone === "back") {
+        const behindProperty = (z - property.houseZ) * access.frontDirection < 0;
+        if (!behindProperty) {
+          continue;
+        }
+      }
+
       result.push(
         Object.freeze({
           x,
