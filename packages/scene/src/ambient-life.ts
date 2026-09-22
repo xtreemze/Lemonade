@@ -83,7 +83,11 @@ export const petFollowPose = (
   const trailingDistance = 0.66 + (index % 2) * 0.1;
   return Object.freeze({
     x: owner.x - direction * trailingDistance,
-    z: clampToNearSidewalk(owner.z + lateral, 0.12),
+    z: clampToSidewalk(
+      owner.z + lateral,
+      closestSidewalkSide(owner.z),
+      0.12,
+    ),
     yaw: xTravelYaw(direction),
   });
 };
