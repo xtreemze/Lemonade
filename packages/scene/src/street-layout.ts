@@ -90,14 +90,12 @@ export type GardenSignPosition = Readonly<{
 }>;
 
 const STAND_GARDEN_SIGN_COLUMNS = [
-  -12.4,
-  -11.1,
-  -7.55,
-  -6.3,
-  -5.05,
-  -3.8,
+  -7.35,
+  -6.15,
+  -4.95,
+  -3.75,
   -2.55,
-  -1.3,
+  -1.35,
 ] as const;
 
 export const gardenSignPosition = (index: number): GardenSignPosition => {
@@ -107,7 +105,7 @@ export const gardenSignPosition = (index: number): GardenSignPosition => {
   return Object.freeze({
     x: STAND_GARDEN_SIGN_COLUMNS[column] ?? -5.6,
     y: 0,
-    z: -0.85 - row * 1.05,
+    z: -0.85 - row * 0.55,
     rotationY: (safeIndex % 3 - 1) * 0.055,
   });
 };
