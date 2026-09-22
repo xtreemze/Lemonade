@@ -355,6 +355,42 @@ describe("unified neighborhood mobility", () => {
     expect(simulation.properties.some((property) => property.sprinklerOn)).toBe(false);
   });
 
+  it("keeps mobility decisions invariant when only the render LOD focus changes", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const input = {
+      weather: "sunny" as const,
+      phase: "simulation" as const,
+      elapsedMs: 6_300,
+      durationMs: 14_000,
+      dayNumber: 3,
+    };
+    const near = system.sample({
+      ...input,
+      focus: { x: 0, z: 0 },
+    });
+    const far = system.sample({
+      ...input,
+      focus: { x: 10_000, z: 10_000 },
+    });
+    const behavior = (sample: typeof near) =>
+      sample.actors.map((actor) => ({
+        id: actor.id,
+        kind: actor.kind,
+        x: actor.x,
+        z: actor.z,
+        yaw: actor.yaw,
+        speed: actor.speed,
+        waiting: actor.waiting,
+        interaction: actor.interaction,
+        propertyRole: actor.propertyRole,
+      }));
+
+    expect(behavior(far)).toEqual(behavior(near));
+    expect(far.actors.every((actor) => actor.detail === "statistical")).toBe(
+      true,
+    );
+  });
+
   it("uses independent simulation LOD and collapses distant actors statistically", () => {
     expect(mobilityDetailForDistance(12)).toBe("full");
     expect(mobilityDetailForDistance(50)).toBe("reduced");
