@@ -599,6 +599,30 @@ export const populateNeighborhood = (
   }
 
   const yardDetails: Group[] = [];
+  const clearYardX = (
+    preferredX: number,
+    z: number,
+    halfWidth: number,
+    halfDepth: number,
+  ): number | null => {
+    const step = 0.45;
+    for (let attempt = 0; attempt <= 18; attempt += 1) {
+      const magnitude = Math.ceil(attempt / 2) * step;
+      const direction = attempt === 0 ? 0 : attempt % 2 === 1 ? 1 : -1;
+      const x = preferredX + magnitude * direction;
+      if (
+        !residentialFootprintIntersectsHardscape(
+          { x, z },
+          layout,
+          halfWidth,
+          halfDepth,
+        )
+      ) {
+        return x;
+      }
+    }
+    return null;
+  };
   const addYardDetailIfClear = (
     detail: Group,
     halfWidth: number,
@@ -619,13 +643,15 @@ export const populateNeighborhood = (
 
   for (const property of layout.frontProperties) {
     if (property.mailboxX === null) continue;
-    const detail = mailbox(property.mailboxX, -0.3);
-    addYardDetailIfClear(detail, 0.3, 0.3);
+    const safeX = clearYardX(property.mailboxX, -0.3, 0.3, 0.3);
+    if (safeX === null) continue;
+    yardDetails.push(mailbox(safeX, -0.3));
   }
 
   addYardDetailIfClear(fenceRun(-5.7, -0.8, 2.9), 2.9 / 2, 0.06);
   addYardDetailIfClear(fenceRunDepth(1.9, -3.0, 5.1), 0.06, 5.1 / 2);
   addYardDetailIfClear(fenceRun(7.8, -0.65, 2.6), 2.6 / 2, 0.06);
+  addYardDetailIfClear(fenceRun(0, -4.7, 1.4), 1.4 / 2, 0.06);
   for (const detail of yardDetails) scene.add(detail);
 
   layout.trees.forEach((planting, index) => {
