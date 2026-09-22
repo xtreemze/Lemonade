@@ -30,13 +30,6 @@ const weatherMelodies: Readonly<Record<WeatherAudioCue, readonly number[]>> = {
   "forecast:thunderstorm": [55, 67, 64, 62, 60, 57, 55, 60, 60, 62, 64, 67],
 };
 
-const weatherPhraseCompletions: Readonly<Record<WeatherAudioCue, readonly number[]>> = {
-  "forecast:sunny": [72, 74, 67, 72, 76, 67, 72],
-  "forecast:cloudy": [67, 67, 67, 67, 69, 67, 65, 64, 64, 65, 62, 60, 59, 57],
-  "forecast:hot-and-dry": [69, 65, 67, 67, 65, 62, 65, 62, 65, 64],
-  "forecast:thunderstorm": [55, 57, 60, 62, 64, 67, 64, 67, 67, 64, 62, 60],
-};
-
 describe("procedural cue compiler", () => {
   it("is deterministic without an audio device", () => {
     for (const cue of cues) {
@@ -92,43 +85,22 @@ describe("procedural cue compiler", () => {
     }
   });
 
-  it("continues each identified tune with a recognizable source phrase", () => {
+  it("does not append unverified notes after the Apple II weather excerpt", () => {
     expect(WEATHER_FORECAST_DURATION_MS).toBe(6_000);
 
-    for (const cue of Object.keys(weatherMelodies) as WeatherAudioCue[]) {
+    for (const [cue, notes] of Object.entries(weatherMelodies) as readonly [
+      WeatherAudioCue,
+      readonly number[],
+    ][]) {
       const tones = compileCue(cue);
-      const historical = tones.filter(
-        (tone) => tone.source === "historical-weather-excerpt",
-      );
-      const completion = tones.filter(
-        (tone) => tone.source === "source-phrase-completion",
-      );
-      const lastHistoricalTone = historical.at(-1);
-      const firstCompletionTone = completion[0];
+      expect(tones.map((tone) => tone.midiNote)).toEqual(notes);
+      expect(tones.every((tone) => tone.source === "historical-weather-excerpt")).toBe(true);
+
       const lastTone = tones.at(-1);
-
-      expect(completion.map((tone) => tone.midiNote)).toEqual(
-        weatherPhraseCompletions[cue],
-      );
-      expect(completion.every((tone) => tone.waveform === "square")).toBe(true);
-      expect(lastHistoricalTone).toBeDefined();
-      expect(firstCompletionTone).toBeDefined();
       expect(lastTone).toBeDefined();
-      if (
-        lastHistoricalTone === undefined ||
-        firstCompletionTone === undefined ||
-        lastTone === undefined
-      ) {
-        throw new Error("expected complete weather phrase");
-      }
+      if (lastTone === undefined) throw new Error("expected weather melody tone");
 
-      expect(firstCompletionTone.startSeconds).toBeGreaterThan(
-        lastHistoricalTone.startSeconds + lastHistoricalTone.durationSeconds,
-      );
-
-      const phraseEnd = lastTone.startSeconds + lastTone.durationSeconds;
-      expect(phraseEnd).toBeGreaterThanOrEqual(4.5);
-      expect(phraseEnd).toBeLessThanOrEqual(WEATHER_FORECAST_DURATION_MS / 1_000);
+      expect(lastTone.startSeconds + lastTone.durationSeconds).toBeLessThan(3);
     }
   });
 
@@ -159,7 +131,8 @@ describe("procedural cue compiler", () => {
     for (const cue of Object.keys(weatherMelodies) as WeatherAudioCue[]) {
       const metadata = weatherMelodyMetadata(cue);
       expect(metadata.historicalSource).toContain("1979 Apple II Lemonade Stand");
-      expect(metadata.continuation).toBe("source-phrase-completion");
+      expect(metadata.referenceMidi).toMatch(/^https:\/\//);
+      expect(metadata.phraseBoundary.length).toBeGreaterThan(0);
     }
   });
 
