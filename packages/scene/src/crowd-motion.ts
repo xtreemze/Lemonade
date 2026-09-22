@@ -41,8 +41,8 @@ const NEIGHBORHOOD_SIDEWALK_BANDS = Object.freeze([
   Object.freeze({ minZ: -56, maxZ: -54 }),
   Object.freeze({ minZ: -41.4, maxZ: -39.4 }),
   Object.freeze({ minZ: -34.6, maxZ: -32.6 }),
-  Object.freeze({ minZ: -20.1, maxZ: -18.1 }),
-  Object.freeze({ minZ: -12.9, maxZ: -10.9 }),
+  Object.freeze({ minZ: -21.6, maxZ: -19.6 }),
+  Object.freeze({ minZ: -14.4, maxZ: -12.4 }),
   Object.freeze({ minZ: 20.4, maxZ: 22.4 }),
   Object.freeze({ minZ: 27.6, maxZ: 29.6 }),
 ] as const);
