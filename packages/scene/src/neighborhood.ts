@@ -184,7 +184,7 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   addRoad(worldSpan, 0.9, 0, 1.55, 0xd9cfb4, 0.018);
   addRoad(worldSpan, 0.9, 0, 8.05, 0xd9cfb4, 0.018);
 
-  const housePositions: Array<readonly [number, number, number, number]> = [];
+  const housePositions: (readonly [number, number, number, number])[] = [];
   for (const z of [-5.5, -25.5, -47.5]) {
     for (const x of [-42, -31, -7, 5.5, 31, 43]) {
       if (Math.abs(x) < 10 && z > -10) continue;
@@ -199,7 +199,7 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
     scene.add(houseLod(x, z, color, scale, rotation));
   }
 
-  const treePositions: Array<readonly [number, number, number, number]> = [];
+  const treePositions: (readonly [number, number, number, number])[] = [];
   for (let index = 0; index < 44; index += 1) {
     const side = index % 2 === 0 ? -1 : 1;
     const ring = Math.floor(index / 2);
