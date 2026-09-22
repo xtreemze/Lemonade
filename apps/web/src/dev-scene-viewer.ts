@@ -1294,7 +1294,7 @@ export const createPersistentSceneViewer = (
     dispose(): void {
       disposed = true;
       resizeObserver.disconnect();
-      if (objectRefreshTimer !== null) window.clearInterval(objectRefreshTimer);
+      window.clearInterval(objectRefreshTimer);
       if (enforcementFrame !== null) window.cancelAnimationFrame(enforcementFrame);
       gizmo?.dispose();
       sceneController?.dispose();
