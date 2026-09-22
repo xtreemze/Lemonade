@@ -358,6 +358,9 @@ export class LemonadeApp {
 
     if (this.#phase.kind === "deciding") {
       this.#playWeatherForecastCue(this.#environment.weather.kind);
+      if (this.#environment.weather.kind === "thunderstorm") {
+        this.#scheduleStormFeedback(160);
+      }
       this.#schedulePresentation("planning", WEATHER_FORECAST_DURATION_MS);
     }
   }
@@ -450,7 +453,7 @@ export class LemonadeApp {
     });
     this.#schedulePurchaseFeedback(resolution);
     if (this.#environment.weather.kind === "thunderstorm") {
-      this.#scheduleFeedback(180, "storm:thunder", "storm:thunder");
+      this.#scheduleStormFeedback(180);
     }
 
     this.#schedulePresentation("report", SIMULATION_PRESENTATION_MS, () => {
@@ -483,7 +486,7 @@ export class LemonadeApp {
 
     this.#playWeatherForecastCue(nextEnvironment.weather.kind);
     if (nextEnvironment.weather.kind === "thunderstorm") {
-      this.#scheduleFeedback(160, "storm:thunder", "storm:thunder");
+      this.#scheduleStormFeedback(160);
     }
 
     this.#schedulePresentation("planning", WEATHER_FORECAST_DURATION_MS);
@@ -614,6 +617,20 @@ export class LemonadeApp {
       this.#emitFeedback(audioCue, hapticCue);
     }, Math.max(0, delayMs));
     this.#feedbackTimers.push(timer);
+  }
+
+  #scheduleHaptic(delayMs: number, hapticCue: HapticCue): void {
+    const timer = window.setTimeout(() => {
+      this.#feedbackTimers = this.#feedbackTimers.filter((candidate) => candidate !== timer);
+      if (!this.#disposed) this.#haptics.play(hapticCue);
+    }, Math.max(0, delayMs));
+    this.#feedbackTimers.push(timer);
+  }
+
+  #scheduleStormFeedback(thunderDelayMs: number): void {
+    this.#scheduleFeedback(thunderDelayMs, "storm:thunder", "storm:thunder");
+    this.#scheduleHaptic(thunderDelayMs + 760, "storm:gust");
+    this.#scheduleHaptic(thunderDelayMs + 2_650, "storm:gust");
   }
 
   #playWeatherForecastCue(weather: DayEnvironment["weather"]["kind"]): void {
