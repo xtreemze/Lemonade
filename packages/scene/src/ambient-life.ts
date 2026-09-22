@@ -62,11 +62,11 @@ export const ambientPopulationFor = (
   }
   switch (weather) {
     case "sunny":
-      return Object.freeze({ pets: 2, wildlife: 3, bicycles: 2, vehicles: 1 });
+      return Object.freeze({ pets: 2, wildlife: 4, bicycles: 2, vehicles: 1 });
     case "hot-and-dry":
-      return Object.freeze({ pets: 1, wildlife: 1, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 1, vehicles: 1 });
     case "cloudy":
-      return Object.freeze({ pets: 1, wildlife: 1, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 1, vehicles: 1 });
     case "thunderstorm":
       return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 2 });
   }
@@ -358,6 +358,7 @@ export const createAmbientLife = (
     createBird(0x5d6971),
     createBird(0x795d4e),
     createBird(0x66795a),
+    createBird(0x6f7890),
   ];
   const bicycles = [
     createBicycle(0x4f7f91, seed, 0),
@@ -402,13 +403,18 @@ export const createAmbientLife = (
           index * 0.39 + 0.12,
           0.62 + index * 0.08,
         );
+        const direction = index % 2 === 0 ? 1 : -1;
+        const x = direction === 1
+          ? -18 + progress * 36
+          : 18 - progress * 36;
         bird.position.set(
-          -16 + progress * 32,
-          5.8 + index * 0.8 + Math.sin(progress * Math.PI * 4) * 0.25,
-          -3 - index * 3,
+          x,
+          5.8 + index * 0.65 + Math.sin(progress * Math.PI * 4) * 0.25,
+          -3 - index * 2.4,
         );
-        bird.rotation.y = 0;
-        bird.rotation.z = Math.sin(progress * Math.PI * 12) * 0.08;
+        bird.rotation.y = xTravelYaw(direction);
+        bird.rotation.z =
+          direction * Math.sin(progress * Math.PI * 12) * 0.08;
         for (const child of bird.children) {
           if (child.userData["sceneRole"] !== "ambient-bird-wing") continue;
           const side = Math.sign(child.position.z) || 1;

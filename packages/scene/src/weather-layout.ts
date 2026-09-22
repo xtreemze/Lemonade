@@ -39,9 +39,14 @@ export type TownCloudLayout = Readonly<{
 
 export const CLOUDY_TOWN_CLOUD_LAYOUT: readonly TownCloudLayout[] = Object.freeze([
   Object.freeze({
-    position: [-2.1, 0.72, 4.25] as const,
+    position: [-2.8, 0.82, 4.4] as const,
     scale: 0.3,
     driftPhase: 0.25,
+  }),
+  Object.freeze({
+    position: [-1.35, 1.18, 5.95] as const,
+    scale: 0.22,
+    driftPhase: 0.92,
   }),
   Object.freeze({
     position: [0.35, 0.95, 5.65] as const,
@@ -49,8 +54,18 @@ export const CLOUDY_TOWN_CLOUD_LAYOUT: readonly TownCloudLayout[] = Object.freez
     driftPhase: 1.7,
   }),
   Object.freeze({
-    position: [2.15, 0.56, 3.75] as const,
+    position: [1.55, 1.32, 6.45] as const,
+    scale: 0.2,
+    driftPhase: 2.38,
+  }),
+  Object.freeze({
+    position: [2.65, 0.7, 4.05] as const,
     scale: 0.34,
     driftPhase: 3.05,
+  }),
+  Object.freeze({
+    position: [3.8, 1.08, 5.35] as const,
+    scale: 0.25,
+    driftPhase: 4.12,
   }),
 ] as const);

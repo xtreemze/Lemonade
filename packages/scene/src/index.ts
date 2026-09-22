@@ -35,8 +35,6 @@ import type { WeatherDetailController } from "./weather-detail.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
-  endingCloseupProgressAt,
-  endingConfidenceAt,
   remainingCameraProgressAt,
   remainingCupsAt,
   sceneCameraComposition,
@@ -434,7 +432,6 @@ export const createLemonsvilleScene = (
     renderer = new WebGLRenderer({
       canvas,
       antialias: true,
-      alpha: false,
       powerPreference: "high-performance",
     });
   } catch {
@@ -443,13 +440,9 @@ export const createLemonsvilleScene = (
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = SRGBColorSpace;
-  renderer.shadowMap.enabled = false;
-  renderer.setClearColor(0x8fa7b8, 1);
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
-  camera.position.set(0, 6.8, 13.5);
-  camera.lookAt(0, 1.7, 0);
 
   const hemisphere = new HemisphereLight(0xfff2c6, 0x526b51, 1.9);
   scene.add(hemisphere);
@@ -870,26 +863,23 @@ export const createLemonsvilleScene = (
     });
   };
 
-  const sellerConfidenceAt = (elapsedMs: number): number => {
-    if (
-      state.phase !== "simulation" ||
-      elapsedMs <= storyboard.activeDurationMs
-    ) {
-      return state.confidence;
-    }
-    return endingConfidenceAt(
-      storyboard,
-      elapsedMs,
-      state.confidence,
-      state.nextConfidence,
-    );
-  };
-
   const animateSeller = (seconds: number, elapsedMs: number): void => {
     seller.person.root.visible = state.phase !== "forecast";
     if (state.phase === "forecast") return;
 
-    const confidence = sellerConfidenceAt(elapsedMs);
+    const closeupDuration = Math.max(
+      1,
+      storyboard.durationMs - storyboard.activeDurationMs,
+    );
+    const closeupProgress =
+      state.phase === "simulation" && elapsedMs > storyboard.activeDurationMs
+        ? clamp01((elapsedMs - storyboard.activeDurationMs) / closeupDuration)
+        : 0;
+    const easedCloseup =
+      closeupProgress * closeupProgress * (3 - 2 * closeupProgress);
+    const confidence =
+      state.confidence +
+      (state.nextConfidence - state.confidence) * easedCloseup;
     applySellerExpression(seller, confidence);
 
     applySellerGesture?.(
@@ -897,7 +887,7 @@ export const createLemonsvilleScene = (
       seller.person.head,
       seller.person.arms[0].root,
       seller.person.arms[1].root,
-      endingCloseupProgressAt(storyboard, elapsedMs),
+      closeupProgress,
       confidence,
     );
 
