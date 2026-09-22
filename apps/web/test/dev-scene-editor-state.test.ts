@@ -14,9 +14,9 @@ describe("3d scene editor state", () => {
     const transform = Object.freeze({
       key: "name:building-stand-home",
       name: "building-stand-home",
-      position: Object.freeze([1, 2, 3]),
-      rotation: Object.freeze([0.1, 0.2, 0.3]),
-      scale: Object.freeze([1.1, 1.2, 1.3]),
+      position: Object.freeze([1, 2, 3] as const),
+      rotation: Object.freeze([0.1, 0.2, 0.3] as const),
+      scale: Object.freeze([1.1, 1.2, 1.3] as const),
     });
     const edited = withTransform(
       parseDevSceneEditorState({
@@ -120,13 +120,13 @@ describe("3d scene editor state", () => {
     const first = Object.freeze({
       key: "name:seller",
       name: "seller",
-      position: Object.freeze([0, 0, 0]),
-      rotation: Object.freeze([0, 0, 0]),
-      scale: Object.freeze([1, 1, 1]),
+      position: Object.freeze([0, 0, 0] as const),
+      rotation: Object.freeze([0, 0, 0] as const),
+      scale: Object.freeze([1, 1, 1] as const),
     });
     const second = Object.freeze({
       ...first,
-      position: Object.freeze([2, 0, 0]),
+      position: Object.freeze([2, 0, 0] as const),
     });
 
     const replaced = withTransform(
