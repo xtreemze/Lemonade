@@ -33,6 +33,7 @@ import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
 import type { WeatherDetailController } from "./weather-detail.js";
 import {
+  BUYER_POOL_SIZE,
   buyerPhaseAt,
   buyerSlotForSale,
   endingCloseupProgressAt,
@@ -70,7 +71,6 @@ export interface LemonsvilleSceneController {
 }
 
 const PASSERBY_POOL_SIZE = 32;
-const BUYER_POOL_SIZE = 192;
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
@@ -782,14 +782,40 @@ export const createLemonsvilleScene = (
       const buyer = buyers[buyerSlotForSale(sale, buyers.length)];
       if (buyer === undefined) continue;
 
-      const streetX = sale.direction === -1 ? -8.4 : 8.4;
-      const exitX = -streetX;
       const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
       const counterZ = 1.22;
       const drinkX = sale.direction === -1 ? -1.35 : 1.35;
       const drinkZ = 1.78;
+      const approachDurationSeconds =
+        Math.max(1, sale.purchaseAtMs - sale.approachAtMs) / 1_000;
+      const approachTargetDistance = 1.5 * approachDurationSeconds;
+      const approachZDistance = Math.abs(counterZ - streetZ);
+      const approachXDistance = Math.sqrt(
+        Math.max(
+          0.04,
+          approachTargetDistance * approachTargetDistance -
+            approachZDistance * approachZDistance,
+        ),
+      );
+      const streetX =
+        counterX +
+        (sale.direction === -1 ? -approachXDistance : approachXDistance);
       const approachDistance = Math.hypot(counterX - streetX, counterZ - streetZ);
+      const departDurationSeconds =
+        Math.max(1, sale.departAtMs - sale.drinkEndAtMs) / 1_000;
+      const departTargetDistance = 1.5 * departDurationSeconds;
+      const departZDistance = Math.abs(streetZ - drinkZ);
+      const departXDistance = Math.sqrt(
+        Math.max(
+          0.04,
+          departTargetDistance * departTargetDistance -
+            departZDistance * departZDistance,
+        ),
+      );
+      const exitX =
+        drinkX +
+        (sale.direction === -1 ? departXDistance : -departXDistance);
       const departDistance = Math.hypot(exitX - drinkX, streetZ - drinkZ);
       let x = counterX;
       let z = counterZ;
