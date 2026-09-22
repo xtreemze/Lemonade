@@ -100,7 +100,6 @@ const createState = (
   const durationMs = Math.max(0, input.durationMs);
   return Object.freeze({
     weather: input.environment.weather.kind,
-    customerActivity,
     visibleSigns: input.visibleSigns,
     prepared,
     sold,
