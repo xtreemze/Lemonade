@@ -24,11 +24,17 @@ const projectedBackdrop = (
 };
 
 describe("weather backdrop staging", () => {
-  it("places all weather behind the distant hill band", () => {
-    for (const layout of Object.values(WEATHER_BACKDROP_LAYOUT)) {
+  it("keeps ordinary weather distant while staging thunderclouds in front of hills", () => {
+    for (const kind of ["sunny", "cloudy", "hot-and-dry"] as const) {
+      const layout = WEATHER_BACKDROP_LAYOUT[kind];
       expect(layout.position[2]).toBeLessThan(-90);
       expect(layout.scale).toBeGreaterThanOrEqual(10);
     }
+
+    const storm = WEATHER_BACKDROP_LAYOUT.thunderstorm;
+    expect(storm.position[2]).toBeGreaterThan(-76);
+    expect(storm.position[2]).toBeLessThan(-30);
+    expect(storm.scale).toBeGreaterThanOrEqual(7);
   });
 
   it("keeps backdrop centers inside portrait and landscape forecast framing", () => {
