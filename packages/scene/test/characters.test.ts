@@ -1,6 +1,10 @@
+import { Mesh, MeshBasicMaterial, SphereGeometry } from "three";
 import { describe, expect, it } from "vitest";
 
-import { characterIdentityFor } from "../src/character-detail.js";
+import {
+  characterIdentityFor,
+  decorateCharacterHead,
+} from "../src/character-detail.js";
 import { characterProfileFor } from "../src/characters.js";
 
 describe("seeded scene characters", () => {
@@ -50,6 +54,29 @@ describe("seeded scene characters", () => {
     ).toBe(true);
     const seller = characterProfileFor(0x1ead2026, 10_001);
     expect(characterIdentityFor(10_001, seller).ageGroup).toBe("adult");
+  });
+
+  it("covers the scalp crown with overlapping hair geometry", () => {
+    const profile = characterProfileFor(0x1ead2026, 3);
+    const identity = characterIdentityFor(3, profile);
+    const head = new Mesh(
+      new SphereGeometry(0.27, 12, 8),
+      new MeshBasicMaterial(),
+    );
+
+    decorateCharacterHead(head, profile, identity);
+    const crown = head.children.find(
+      (object) => object.userData["sceneRole"] === "hair-cover",
+    );
+    expect(crown).toBeInstanceOf(Mesh);
+    if (!(crown instanceof Mesh)) return;
+
+    crown.geometry.computeBoundingBox();
+    const bounds = crown.geometry.boundingBox;
+    expect(bounds).not.toBeNull();
+    if (bounds === null) return;
+    const crownTop = crown.position.y + bounds.max.y * crown.scale.y;
+    expect(crownTop).toBeGreaterThan(0.3);
   });
 
   it("changes character identity when the run seed changes", () => {
