@@ -454,7 +454,7 @@ const resolveGeneratedAccess = (
     const baseDistance = Math.abs(property.drivewayX - property.houseX);
     let drivewayX: number | null = null;
 
-    for (let step = 0; step <= 16 && drivewayX === null; step += 1) {
+    for (let step = 0; step <= 48 && drivewayX === null; step += 1) {
       const distance = baseDistance + step * 0.42;
       for (const side of [preferredSide, -preferredSide] as const) {
         const candidateX = property.houseX + side * distance;
