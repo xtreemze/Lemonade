@@ -71,14 +71,6 @@ export const ambientPopulationFor = (
 export const xTravelYaw = (direction: number): number =>
   direction >= 0 ? 0 : Math.PI;
 
-const normalizeYaw = (value: number): number => {
-  const fullTurn = Math.PI * 2;
-  let normalized = value % fullTurn;
-  if (normalized > Math.PI) normalized -= fullTurn;
-  if (normalized < -Math.PI) normalized += fullTurn;
-  return normalized;
-};
-
 export const petFollowPose = (
   owner: AmbientOwnerAnchor,
   index: number,
