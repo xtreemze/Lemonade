@@ -240,6 +240,7 @@ const plantUnit = (seed: number, salt: number): number => {
 
 const detailedTree = (color: number, seed: number): Group => {
   const root = new Group();
+  const woodMaterial = material(0x765232);
   const trunkHeight = 2.35 + plantUnit(seed, 11) * 0.75;
   const trunk = new Mesh(
     new CylinderGeometry(
@@ -248,18 +249,17 @@ const detailedTree = (color: number, seed: number): Group => {
       trunkHeight,
       7,
     ),
-    material(0x765232),
+    woodMaterial,
   );
   trunk.position.y = trunkHeight / 2;
   trunk.rotation.z = (plantUnit(seed, 19) - 0.5) * 0.1;
   root.add(trunk);
 
+  const branchGeometry = new CylinderGeometry(0.06, 0.14, 1, 12);
   for (const direction of [-1, 1] as const) {
     const branchLength = 0.82 + plantUnit(seed, 23 + direction) * 0.52;
-    const branch = new Mesh(
-      new CylinderGeometry(0.06, 0.14, branchLength, 12),
-      material(0x765232),
-    );
+    const branch = new Mesh(branchGeometry, woodMaterial);
+    branch.scale.y = branchLength;
     branch.position.set(
       direction * (0.2 + plantUnit(seed, 29 + direction) * 0.18),
       trunkHeight * (0.62 + plantUnit(seed, 31 + direction) * 0.12),
@@ -270,19 +270,18 @@ const detailedTree = (color: number, seed: number): Group => {
     root.add(branch);
   }
 
+  const crownGeometry = new SphereGeometry(1.25, 10, 7);
+  const foliageMaterial = material(color);
   const crownCount = 3 + Math.floor(plantUnit(seed, 47) * 3);
   for (let index = 0; index < crownCount; index += 1) {
     const angle = plantUnit(seed, 53 + index * 7) * Math.PI * 2;
     const radius = index === 0 ? 0 : 0.35 + plantUnit(seed, 59 + index * 5) * 0.65;
     const size = 0.88 + plantUnit(seed, 61 + index * 11) * 0.72;
-    const crown = new Mesh(
-      new SphereGeometry(1.25 * size, 10, 7),
-      material(color),
-    );
+    const crown = new Mesh(crownGeometry, foliageMaterial);
     crown.scale.set(
-      0.84 + plantUnit(seed, 67 + index) * 0.36,
-      0.9 + plantUnit(seed, 71 + index) * 0.34,
-      0.82 + plantUnit(seed, 73 + index) * 0.32,
+      size * (0.84 + plantUnit(seed, 67 + index) * 0.36),
+      size * (0.9 + plantUnit(seed, 71 + index) * 0.34),
+      size * (0.82 + plantUnit(seed, 73 + index) * 0.32),
     );
     crown.position.set(
       Math.cos(angle) * radius,
@@ -331,21 +330,25 @@ const treeLod = (
   );
   root.userData["sceneRole"] = "procedural-tree";
   root.userData["plantVariant"] = variant;
+  root.userData["proceduralSeed"] = seed >>> 0;
+  root.userData["proceduralTechnique"] = "seeded-distance-lod";
   return markWindResponsive(root, phase);
 };
 
 const detailedShrub = (color: number, seed: number): Group => {
   const root = new Group();
+  const crownGeometry = new SphereGeometry(1, 8, 6);
+  const crownMaterial = material(color);
   const lobeCount = 3 + Math.floor(plantUnit(seed, 107) * 3);
   for (let index = 0; index < lobeCount; index += 1) {
     const angle = plantUnit(seed, 109 + index * 7) * Math.PI * 2;
     const radius = 0.16 + plantUnit(seed, 113 + index * 5) * 0.48;
     const size = 0.52 + plantUnit(seed, 127 + index * 11) * 0.48;
-    const crown = new Mesh(new SphereGeometry(size, 8, 6), material(color));
+    const crown = new Mesh(crownGeometry, crownMaterial);
     crown.scale.set(
-      0.9 + plantUnit(seed, 131 + index) * 0.32,
-      0.82 + plantUnit(seed, 137 + index) * 0.3,
-      0.88 + plantUnit(seed, 139 + index) * 0.28,
+      size * (0.9 + plantUnit(seed, 131 + index) * 0.32),
+      size * (0.82 + plantUnit(seed, 137 + index) * 0.3),
+      size * (0.88 + plantUnit(seed, 139 + index) * 0.28),
     );
     crown.position.set(
       Math.cos(angle) * radius,
@@ -385,6 +388,8 @@ const shrubLod = (
   );
   root.userData["sceneRole"] = "procedural-shrub";
   root.userData["plantVariant"] = Math.floor(plantUnit(seed, 151) * 1_000);
+  root.userData["proceduralSeed"] = seed >>> 0;
+  root.userData["proceduralTechnique"] = "seeded-distance-lod";
   return markWindResponsive(root, phase);
 };
 
@@ -393,55 +398,52 @@ const flower = (
   z: number,
   color: number,
   phase: number,
+  seed: number,
 ): Group => {
   const root = new Group();
-  const offsets = [
-    [0, 0],
-    [-0.22, 0.06],
-    [0.21, -0.05],
-    [-0.11, 0.2],
-    [0.13, 0.19],
-  ] as const;
+  const stemGeometry = new CylinderGeometry(0.018, 0.025, 1, 5);
+  const blossomGeometry = new SphereGeometry(0.055, 7, 5);
+  const stemMaterial = material(0x4f8246);
+  const centerMaterial = material(0xe1ad35);
+  const petalMaterial = material(color);
+  const flowerCount = 5;
 
-  offsets.forEach(([offsetX, offsetZ], flowerIndex) => {
+  for (let flowerIndex = 0; flowerIndex < flowerCount; flowerIndex += 1) {
     const cluster = new Group();
-    const height = 0.34 + (flowerIndex % 3) * 0.035;
-    const stem = new Mesh(
-      new CylinderGeometry(0.018, 0.025, height, 5),
-      material(0x4f8246),
-    );
+    const radius =
+      flowerIndex === 0 ? 0 : 0.12 + plantUnit(seed, 157 + flowerIndex * 11) * 0.18;
+    const angle = plantUnit(seed, 163 + flowerIndex * 13) * Math.PI * 2;
+    const height = 0.32 + plantUnit(seed, 167 + flowerIndex * 17) * 0.11;
+    const stem = new Mesh(stemGeometry, stemMaterial);
+    stem.scale.y = height;
     stem.position.y = height / 2;
     cluster.add(stem);
 
     const centerY = height + 0.035;
-    const center = new Mesh(
-      new SphereGeometry(0.055, 7, 5),
-      material(0xe1ad35),
-    );
+    const center = new Mesh(blossomGeometry, centerMaterial);
     center.position.y = centerY;
     cluster.add(center);
 
+    const petalPhase = plantUnit(seed, 173 + flowerIndex * 19) * Math.PI * 2;
     for (let petalIndex = 0; petalIndex < 5; petalIndex += 1) {
-      const angle = (petalIndex / 5) * Math.PI * 2;
-      const petal = new Mesh(
-        new SphereGeometry(0.055, 7, 5),
-        material(color),
-      );
+      const petalAngle = petalPhase + (petalIndex / 5) * Math.PI * 2;
+      const petal = new Mesh(blossomGeometry, petalMaterial);
       petal.scale.set(1.3, 0.7, 0.55);
       petal.position.set(
-        Math.cos(angle) * 0.075,
-        centerY + Math.sin(angle) * 0.075,
+        Math.cos(petalAngle) * 0.075,
+        centerY + Math.sin(petalAngle) * 0.075,
         0.012,
       );
       cluster.add(petal);
     }
-    cluster.position.set(offsetX, 0, offsetZ);
+    cluster.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
     root.add(cluster);
-  });
+  }
 
   root.position.set(x, 0, z);
   root.userData["sceneRole"] = "garden-flower";
-  root.userData["flowerCount"] = offsets.length;
+  root.userData["flowerCount"] = flowerCount;
+  root.userData["proceduralSeed"] = seed >>> 0;
   return markWindResponsive(root, phase);
 };
 
@@ -930,6 +932,7 @@ export const populateNeighborhood = (
       planting.z,
       color,
       40 + index * 0.91,
+      seed ^ Math.imul(index + 1, 0x165667b1),
     );
     bed.userData["propertyRole"] = planting.propertyRole;
     bed.userData["yardZone"] = planting.yardZone;
