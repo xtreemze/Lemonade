@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const FORECAST_PRESENTATION_MS = 6_000;
-const SIMULATION_PRESENTATION_MS = 10_000;
+const SIMULATION_PRESENTATION_MS = 6_000;
 const PHASE_SETTLE_MARGIN_MS = 2_000;
 
 const expectPlanningReady = async (page: Page): Promise<void> => {
@@ -75,6 +75,22 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "data-presentation-duration-ms",
     String(FORECAST_PRESENTATION_MS),
   );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-cup-visual-style",
+    "original-svg-3d",
+    { timeout: 4_000 },
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-character-seed",
+    /\d+/u,
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-seller-mood",
+    /discouraged|uncertain|cautious|steady|optimistic|radiant/u,
+  );
+  await expect(page.locator("#scene-title")).not.toContainText("Confidence");
+  await expect(page.getByText("Confidence", { exact: true })).toHaveCount(0);
+  await expect(page.locator("#condition-sentiment")).not.toContainText(/\/\s*5/u);
   await expectNoHorizontalOverflow(page);
   await expectNoVerticalOverflow(page);
   await expectPlanningReady(page);
@@ -141,6 +157,23 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   expect(artContract.pours).toBe(true);
   expect((await simulationButton.textContent())?.trim()).toBe("");
 
+  await page.locator("#scene-canvas").evaluate((element) => {
+    if (!(element instanceof HTMLCanvasElement)) throw new TypeError("expected scene canvas");
+    element.dataset["shotHistory"] = "";
+    const recordShot = (): void => {
+      const shot = element.dataset["sceneShot"];
+      if (shot === undefined) return;
+      const history = element.dataset["shotHistory"]?.split(",").filter(Boolean) ?? [];
+      if (history.at(-1) !== shot) {
+        history.push(shot);
+        element.dataset["shotHistory"] = history.join(",");
+      }
+    };
+    const observer = new MutationObserver(recordShot);
+    observer.observe(element, { attributes: true, attributeFilter: ["data-scene-shot"] });
+    recordShot();
+  });
+
   await simulationButton.click();
   await expect(main).toHaveAttribute("data-view", "simulation");
   await expect(page.locator(".stand-stage")).toBeVisible();
@@ -149,6 +182,13 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "data-presentation-duration-ms",
     String(SIMULATION_PRESENTATION_MS),
   );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-price-cents", "150");
+  await expect(page.locator("#scene-equivalent")).toContainText("$1.50 per cup");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-sign-price-label",
+    "$1.50",
+    { timeout: 4_000 },
+  );
   const simulationStage = await page.locator(".stand-stage").boundingBox();
   if (simulationStage === null) throw new Error("expected simulation stage bounds");
   expect(simulationStage.width).toBeGreaterThanOrEqual(359);
@@ -156,6 +196,10 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expect(main).toHaveAttribute("data-view", "report", {
     timeout: SIMULATION_PRESENTATION_MS + PHASE_SETTLE_MARGIN_MS,
   });
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-shot-history",
+    /^establishing,street,purchase,street(?:,establishing)?$/u,
+  );
   await expectNoHorizontalOverflow(page);
   await expectNoVerticalOverflow(page);
   await expect(page.getByRole("region", { name: "Sales history" })).toBeHidden();
