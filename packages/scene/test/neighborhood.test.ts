@@ -9,14 +9,19 @@ describe("neighborhood world scale", () => {
     const stats = populateNeighborhood(scene);
 
     expect(stats.worldSpan).toBeGreaterThanOrEqual(140);
-    expect(stats.houseLods).toBeGreaterThanOrEqual(16);
+    expect(stats.houseLods).toBeGreaterThanOrEqual(17);
+    expect(stats.featuredHomes).toBe(1);
     expect(stats.treeLods).toBeGreaterThanOrEqual(40);
-    expect(stats.roadSegments).toBeGreaterThanOrEqual(6);
+    expect(stats.yardDetails).toBeGreaterThanOrEqual(3);
+    expect(stats.roadSegments).toBeGreaterThanOrEqual(7);
 
     let lodCount = 0;
+    let standHomeCount = 0;
     scene.traverse((object) => {
       if (object.userData["lodMode"] === "distance-two-level") lodCount += 1;
+      if (object.userData["sceneRole"] === "stand-home") standHomeCount += 1;
     });
     expect(lodCount).toBe(stats.houseLods + stats.treeLods);
+    expect(standHomeCount).toBe(1);
   });
 });
