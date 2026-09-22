@@ -182,7 +182,9 @@ export const createAmbientLife = (scene: Scene, seed: number): AmbientLifeContro
     update(weather, phase, elapsedMs, durationMs, owners = []): void {
       const population = ambientPopulationFor(weather, phase);
       pets.forEach((pet, index) => {
-        const owner = owners[(index * 3) % owners.length];
+        const owner = owners.length === 0
+          ? undefined
+          : owners[(index * 3 + (seed & 3)) % owners.length];
         pet.visible = index < population.pets && owner !== undefined;
         if (!pet.visible || owner === undefined) return;
         const pose = petFollowerPose(owner, index);
