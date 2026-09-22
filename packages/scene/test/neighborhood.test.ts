@@ -1,4 +1,4 @@
-import { Box3, Mesh, MeshStandardMaterial, Scene } from "three";
+import { Box3, Mesh, MeshStandardMaterial, Scene, type Object3D } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -149,7 +149,7 @@ describe("neighborhood world scale", () => {
     expect(home).toBeDefined();
     if (home === undefined) return;
 
-    let door: import("three").Object3D | undefined;
+    let door: Object3D | undefined;
     let window: Mesh | undefined;
     home.traverse((object) => {
       if (object.userData["sceneRole"] === "house-door") door = object;
