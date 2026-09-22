@@ -759,10 +759,12 @@ const drivewayRectForProperty = (
     Object.freeze({ ...property, drivewayX }),
     seed,
   );
+  // Driveway pavement/exclusion ends at the sidewalk crossing. The separate
+  // mobility route may continue across the curb transition to the road.
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.roadX, z: access.roadCenterZ },
+    { x: access.drivewaySidewalkX, z: access.drivewaySidewalkZ },
     WORLD_SCALE.vehicle.width,
   );
 };
@@ -846,10 +848,7 @@ const resolveGeneratedAccess = (
         const reachesSidewalk = hardscape.some(
           (rect) => rect.role === "sidewalk" && rectsOverlap(candidateRect, rect),
         );
-        const reachesRoad = hardscape.some(
-          (rect) => rect.role === "road" && rectsOverlap(candidateRect, rect),
-        );
-        if (!reachesSidewalk || !reachesRoad) continue;
+        if (!reachesSidewalk) continue;
 
         const clearsHouses = properties.every((other) => {
           const footprint = propertyFootprint(other);
