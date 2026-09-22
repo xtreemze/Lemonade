@@ -17,7 +17,7 @@ export type StreetStoryboardInput = Readonly<{
 
 export const MAX_STORYBOARD_CUPS = 400 as const;
 export const MAX_STORYBOARD_SIGNS = 40 as const;
-export const ENDING_CLOSEUP_DURATION_MS = 2_000 as const;
+export const ENDING_CLOSEUP_DURATION_MS = 4_000 as const;
 const MAX_PRICE_CENTS = 99_999;
 
 const finiteInteger = (value: number, fallback: number): number =>
