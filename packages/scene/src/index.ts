@@ -30,7 +30,7 @@ import type { WeatherDetailController } from "./weather-detail.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
-  endingCloseupProgressAt,
+  endingConfidenceAt,
   remainingCameraProgressAt,
   remainingCupsAt,
   sceneCameraComposition,
@@ -868,10 +868,12 @@ export const createLemonsvilleScene = (
     ) {
       return state.confidence;
     }
-    const progress = smoothStep(
-      endingCloseupProgressAt(storyboard, elapsedMs),
+    return endingConfidenceAt(
+      storyboard,
+      elapsedMs,
+      state.confidence,
+      state.nextConfidence,
     );
-    return lerp(state.confidence, state.nextConfidence, progress);
   };
 
   const animateSeller = (seconds: number, elapsedMs: number): void => {
