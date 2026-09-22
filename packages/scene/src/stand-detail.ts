@@ -140,7 +140,7 @@ export const populateStand = (
       roughness: 0.28,
     }),
   );
-  pitcher.position.set(-0.57, STAND_LAYOUT.counterTopY + 0.19, -1.2);
+  pitcher.position.set(-0.57, STAND_LAYOUT.counterTopY + 0.19, -1.7);
   pitcher.userData["sceneRole"] = "stand-pitcher";
   detail.add(pitcher);
 
