@@ -46,7 +46,6 @@ const STAND_GARDEN_SIGN_COLUMNS = [
   -1,
   -11.8,
   -10.6,
-  -10.1,
   -6.8,
   -5.6,
   -4.4,
