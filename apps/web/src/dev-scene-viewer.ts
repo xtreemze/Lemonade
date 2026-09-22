@@ -8,8 +8,10 @@
  */
 
 import type { SceneWeather, ScenePhase, LemonsvilleSceneState } from "@lemonade/scene";
-import { createLemonsvilleScene, createGizmoController } from "@lemonade/scene";
+import { createLemonsvilleScene } from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
+// TODO: Fix gizmo controller export
+// import { createGizmoController } from "@lemonade/scene";
 
 export const isSceneViewerEnabled = (): boolean => {
   if (typeof localStorage === "undefined") return false;
@@ -186,29 +188,11 @@ export const createPersistentSceneViewer = (
     return null;
   }
 
-  // Initialize gizmo controller if enabled
-  let gizmoController: ReturnType<typeof createGizmoController> | null = null;
-  if (options.enableGizmo !== false && scene.scene && scene.camera) {
-    gizmoController = createGizmoController({
-      scene: scene.scene,
-      camera: scene.camera,
-      container: canvas,
-    });
-
-    // Handle keyboard shortcuts for gizmo modes
-    const handleKeydown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === 'g') {
-        gizmoController?.setMode('translate');
-      } else if (event.key.toLowerCase() === 'r') {
-        gizmoController?.setMode('rotate');
-      } else if (event.key.toLowerCase() === 's') {
-        gizmoController?.setMode('scale');
-      } else if (event.key === 'Escape') {
-        gizmoController?.deselectObject();
-      }
-    };
-    window.addEventListener('keydown', handleKeydown);
-  }
+  // TODO: Initialize gizmo controller once module export is fixed
+  // let gizmoController: ReturnType<typeof createGizmoController> | null = null;
+  // if (options.enableGizmo !== false && scene.scene && scene.camera) {
+  //   gizmoController = createGizmoController({...})
+  // }
 
   // Add a gizmo info section to the sidebar if gizmo is enabled
   if (options.enableGizmo !== false) {
