@@ -5,7 +5,6 @@ import {
   Mesh,
   MeshStandardMaterial,
   SphereGeometry,
-  TorusGeometry,
   type Scene,
 } from "three";
 
@@ -80,8 +79,11 @@ const createBicycle = (color: number): Group => {
   const root = new Group();
   const wheelMaterial = material(0x2f3438);
   for (const x of [-0.42, 0.42]) {
-    const wheel = new Mesh(new TorusGeometry(0.28, 0.035, 6, 14), wheelMaterial);
-    wheel.rotation.y = Math.PI / 2;
+    const wheel = new Mesh(
+      new CylinderGeometry(0.28, 0.28, 0.045, 12),
+      wheelMaterial,
+    );
+    wheel.rotation.x = Math.PI / 2;
     wheel.position.set(x, 0.3, 0);
     root.add(wheel);
   }
