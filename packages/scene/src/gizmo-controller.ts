@@ -18,6 +18,8 @@ import {
   ConeGeometry,
   MeshBasicMaterial,
   Mesh,
+  BoxGeometry,
+  TubeGeometry,
 } from "three";
 // @ts-ignore - TransformControls not in @types/three, but exists in three/examples
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
@@ -94,71 +96,116 @@ export const createGizmoController = (options: GizmoOptions) => {
     return objects;
   };
 
-  const createAxisVisuals = (): Group => {
-    const axisGroup = new Group();
-    axisGroup.name = "GizmoAxisVisuals";
-
+  const createMoveGizmo = (): Group => {
+    const gizmo = new Group();
+    gizmo.name = "GizmoVisuals";
     const axisLength = 3;
     const coneRadius = 0.15;
     const coneHeight = 0.5;
 
-    // X axis (red cone)
-    const xCone = new Mesh(
-      new ConeGeometry(coneRadius, coneHeight, 8),
-      new MeshBasicMaterial({ color: 0xff0000 }),
-    );
+    // X axis (red)
+    const xCone = new Mesh(new ConeGeometry(coneRadius, coneHeight, 8), new MeshBasicMaterial({ color: 0xff0000 }));
     xCone.position.x = axisLength;
     xCone.rotation.z = Math.PI / 2;
-    axisGroup.add(xCone);
+    gizmo.add(xCone);
 
-    // Y axis (green cone)
-    const yCone = new Mesh(
-      new ConeGeometry(coneRadius, coneHeight, 8),
-      new MeshBasicMaterial({ color: 0x00ff00 }),
-    );
+    const xLineGeom = new BufferGeometry();
+    xLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, axisLength - coneHeight / 2, 0, 0]), 3));
+    gizmo.add(new Line(xLineGeom, new LineBasicMaterial({ color: 0xff0000, linewidth: 3 })));
+
+    // Y axis (green)
+    const yCone = new Mesh(new ConeGeometry(coneRadius, coneHeight, 8), new MeshBasicMaterial({ color: 0x00ff00 }));
     yCone.position.y = axisLength;
-    axisGroup.add(yCone);
+    gizmo.add(yCone);
 
-    // Z axis (blue cone)
-    const zCone = new Mesh(
-      new ConeGeometry(coneRadius, coneHeight, 8),
-      new MeshBasicMaterial({ color: 0x0000ff }),
-    );
+    const yLineGeom = new BufferGeometry();
+    yLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, axisLength - coneHeight / 2, 0]), 3));
+    gizmo.add(new Line(yLineGeom, new LineBasicMaterial({ color: 0x00ff00, linewidth: 3 })));
+
+    // Z axis (blue)
+    const zCone = new Mesh(new ConeGeometry(coneRadius, coneHeight, 8), new MeshBasicMaterial({ color: 0x0000ff }));
     zCone.position.z = axisLength;
     zCone.rotation.x = Math.PI / 2;
-    axisGroup.add(zCone);
+    gizmo.add(zCone);
 
-    // Add lines connecting to the cones
-    const lineLength = axisLength - coneHeight / 2;
-
-    // X line
-    const xLineGeom = new BufferGeometry();
-    xLineGeom.setAttribute("position", new BufferAttribute(
-      new Float32Array([0, 0, 0, lineLength, 0, 0]),
-      3,
-    ));
-    const xLine = new Line(xLineGeom, new LineBasicMaterial({ color: 0xff0000 }));
-    axisGroup.add(xLine);
-
-    // Y line
-    const yLineGeom = new BufferGeometry();
-    yLineGeom.setAttribute("position", new BufferAttribute(
-      new Float32Array([0, 0, 0, 0, lineLength, 0]),
-      3,
-    ));
-    const yLine = new Line(yLineGeom, new LineBasicMaterial({ color: 0x00ff00 }));
-    axisGroup.add(yLine);
-
-    // Z line
     const zLineGeom = new BufferGeometry();
-    zLineGeom.setAttribute("position", new BufferAttribute(
-      new Float32Array([0, 0, 0, 0, 0, lineLength]),
-      3,
-    ));
-    const zLine = new Line(zLineGeom, new LineBasicMaterial({ color: 0x0000ff }));
-    axisGroup.add(zLine);
+    zLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, 0, axisLength - coneHeight / 2]), 3));
+    gizmo.add(new Line(zLineGeom, new LineBasicMaterial({ color: 0x0000ff, linewidth: 3 })));
 
-    return axisGroup;
+    return gizmo;
+  };
+
+  const createRotateGizmo = (): Group => {
+    const gizmo = new Group();
+    gizmo.name = "GizmoVisuals";
+    const radius = 2.5;
+
+    const createArc = (color: number, axis: 'x' | 'y' | 'z') => {
+      const points = [];
+      const segments = 16;
+      const range = Math.PI * 1.5;
+      for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * range - range / 2;
+        if (axis === 'x') {
+          points.push(new Vector3(0, Math.cos(angle) * radius, Math.sin(angle) * radius));
+        } else if (axis === 'y') {
+          points.push(new Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius));
+        } else {
+          points.push(new Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius, 0));
+        }
+      }
+      const arcGeom = new BufferGeometry().setFromPoints(points);
+      return new Line(arcGeom, new LineBasicMaterial({ color, linewidth: 2 }));
+    };
+
+    gizmo.add(createArc(0xff0000, 'x'));
+    gizmo.add(createArc(0x00ff00, 'y'));
+    gizmo.add(createArc(0x0000ff, 'z'));
+
+    return gizmo;
+  };
+
+  const createScaleGizmo = (): Group => {
+    const gizmo = new Group();
+    gizmo.name = "GizmoVisuals";
+    const axisLength = 3;
+    const boxSize = 0.3;
+
+    // X axis (red box)
+    const xBox = new Mesh(new BoxGeometry(boxSize, boxSize, boxSize), new MeshBasicMaterial({ color: 0xff0000 }));
+    xBox.position.x = axisLength;
+    gizmo.add(xBox);
+
+    const xLineGeom = new BufferGeometry();
+    xLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, axisLength - boxSize / 2, 0, 0]), 3));
+    gizmo.add(new Line(xLineGeom, new LineBasicMaterial({ color: 0xff0000, linewidth: 2 })));
+
+    // Y axis (green box)
+    const yBox = new Mesh(new BoxGeometry(boxSize, boxSize, boxSize), new MeshBasicMaterial({ color: 0x00ff00 }));
+    yBox.position.y = axisLength;
+    gizmo.add(yBox);
+
+    const yLineGeom = new BufferGeometry();
+    yLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, axisLength - boxSize / 2, 0]), 3));
+    gizmo.add(new Line(yLineGeom, new LineBasicMaterial({ color: 0x00ff00, linewidth: 2 })));
+
+    // Z axis (blue box)
+    const zBox = new Mesh(new BoxGeometry(boxSize, boxSize, boxSize), new MeshBasicMaterial({ color: 0x0000ff }));
+    zBox.position.z = axisLength;
+    gizmo.add(zBox);
+
+    const zLineGeom = new BufferGeometry();
+    zLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, 0, axisLength - boxSize / 2]), 3));
+    gizmo.add(new Line(zLineGeom, new LineBasicMaterial({ color: 0x0000ff, linewidth: 2 })));
+
+    return gizmo;
+  };
+
+  const createGizmoForMode = (mode: TransformMode): Group => {
+    if (mode === "translate") return createMoveGizmo();
+    if (mode === "rotate") return createRotateGizmo();
+    if (mode === "scale") return createScaleGizmo();
+    return createMoveGizmo();
   };
 
   const onMouseMove = (event: MouseEvent) => {
@@ -224,17 +271,29 @@ export const createGizmoController = (options: GizmoOptions) => {
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
+    const updateMode = (mode: TransformMode) => {
+      currentMode = mode;
+      transformControls.setMode(mode);
+
+      // Update gizmo visuals if an object is selected
+      if (selectedObject) {
+        const oldGizmo = selectedObject.getObjectByName("GizmoVisuals");
+        if (oldGizmo) {
+          selectedObject.remove(oldGizmo);
+        }
+        const newGizmo = createGizmoForMode(mode);
+        selectedObject.add(newGizmo);
+      }
+    };
+
     if (event.key === "g" || event.key === "G") {
-      currentMode = "translate";
-      transformControls.setMode("translate");
+      updateMode("translate");
       event.preventDefault();
     } else if (event.key === "r" || event.key === "R") {
-      currentMode = "rotate";
-      transformControls.setMode("rotate");
+      updateMode("rotate");
       event.preventDefault();
     } else if (event.key === "s" || event.key === "S") {
-      currentMode = "scale";
-      transformControls.setMode("scale");
+      updateMode("scale");
       event.preventDefault();
     } else if (event.key === "Escape") {
       deselectObject();
@@ -252,9 +311,9 @@ export const createGizmoController = (options: GizmoOptions) => {
     selectedHelper.name = "GizmoHelper";
     scene.add(selectedHelper);
 
-    // Add visual axes to the selected object
-    const axes = createAxisVisuals();
-    obj.add(axes);
+    // Add mode-specific gizmo to the selected object
+    const gizmo = createGizmoForMode(currentMode);
+    obj.add(gizmo);
 
     // Attach TransformControls to the selected object
     transformControls.attach(obj);
@@ -263,10 +322,10 @@ export const createGizmoController = (options: GizmoOptions) => {
 
   const deselectObject = () => {
     if (selectedObject) {
-      // Remove axis visuals
-      const axes = selectedObject.getObjectByName("GizmoAxisVisuals");
-      if (axes) {
-        selectedObject.remove(axes);
+      // Remove gizmo visuals
+      const gizmo = selectedObject.getObjectByName("GizmoVisuals");
+      if (gizmo) {
+        selectedObject.remove(gizmo);
       }
     }
     if (selectedHelper) {
@@ -341,6 +400,16 @@ export const createGizmoController = (options: GizmoOptions) => {
     setMode: (mode: TransformMode) => {
       currentMode = mode;
       transformControls.setMode(mode);
+
+      // Update gizmo visuals if an object is selected
+      if (selectedObject) {
+        const oldGizmo = selectedObject.getObjectByName("GizmoVisuals");
+        if (oldGizmo) {
+          selectedObject.remove(oldGizmo);
+        }
+        const newGizmo = createGizmoForMode(mode);
+        selectedObject.add(newGizmo);
+      }
     },
     getMode: () => currentMode,
     getSelectedObject: () => selectedObject,
