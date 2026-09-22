@@ -976,7 +976,7 @@ export const createLemonsvilleScene = (
     });
   };
 
-  const animateSeller = (seconds: number): void => {
+  const animateSeller = (seconds: number, elapsedMs: number): void => {
     applySellerExpression(seller, state.confidence);
     if (state.reducedMotion || state.phase === "idle") return;
     const breathing = Math.sin(seconds * 2.1) * 0.025;
@@ -984,6 +984,14 @@ export const createLemonsvilleScene = (
     seller.person.head.position.y = 1.73 + breathing * 0.7;
     seller.person.arms[0].rotation.x += Math.sin(seconds * 1.7) * 0.035;
     seller.person.arms[1].rotation.x += Math.sin(seconds * 1.7 + 0.8) * 0.035;
+
+    const serving =
+      state.phase === "simulation" &&
+      storyboard.sales.some((sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing");
+    if (serving) {
+      seller.person.arms[1].rotation.x = -1.2;
+      seller.person.torso.rotation.x -= 0.06;
+    }
   };
 
   const animate = (timestamp: number): void => {
@@ -1005,7 +1013,7 @@ export const createLemonsvilleScene = (
 
     const activeBuyerCount = animateBuyers(elapsedMs, seconds);
     animatePassersBy(elapsedMs, seconds, activeBuyerCount);
-    animateSeller(seconds);
+    animateSeller(seconds, elapsedMs);
 
     cupInventory.setCount(
       state.phase === "simulation"
