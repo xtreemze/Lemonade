@@ -1,4 +1,4 @@
-import { Box3, Group, Vector3 } from "three";
+import { Box3, Group } from "three";
 import type { Mesh } from "three";
 import { describe, expect, it } from "vitest";
 
@@ -64,22 +64,24 @@ describe("stand detail", () => {
     expect(lemons).toHaveLength(8);
     if (basket === undefined) return;
 
-    const basketBounds = new Box3().setFromObject(basket);
     for (const lemon of lemons) {
       expect(lemon.parent).toBe(basket);
-      const world = new Vector3();
-      lemon.getWorldPosition(world);
-      expect(world.x).toBeGreaterThan(basketBounds.min.x);
-      expect(world.x).toBeLessThan(basketBounds.max.x);
-      expect(world.z).toBeGreaterThan(basketBounds.min.z);
-      expect(world.z).toBeLessThan(basketBounds.max.z);
+      expect(lemon.position.x).toBeGreaterThan(-0.22);
+      expect(lemon.position.x).toBeLessThan(0.22);
+      expect(lemon.position.z).toBeGreaterThan(-0.13);
+      expect(lemon.position.z).toBeLessThan(0.13);
+      expect(lemon.position.y).toBeGreaterThan(0.08);
+      expect(lemon.position.y).toBeLessThan(0.2);
       expect(lemon.rotation.x).toBe(0);
       expect(lemon.rotation.y).toBe(0);
       expect(lemon.rotation.z).toBe(0);
 
-      const lemonBounds = new Box3().setFromObject(lemon);
-      expect(lemonBounds.max.x - lemonBounds.min.x)
-        .toBeLessThanOrEqual(WORLD_SCALE.produce.lemonDiameter * 1.25);
+      const fruit = lemon.children[0];
+      expect(fruit).toBeDefined();
+      if (fruit === undefined) continue;
+      const fruitBounds = new Box3().setFromObject(fruit);
+      expect(fruitBounds.max.x - fruitBounds.min.x)
+        .toBeLessThanOrEqual(WORLD_SCALE.produce.lemonDiameter * 1.2);
     }
   });
 
