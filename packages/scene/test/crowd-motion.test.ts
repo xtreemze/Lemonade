@@ -131,6 +131,34 @@ describe("crowd motion", () => {
     expect(vehicle?.position.z).toBeGreaterThan(STREET_LAYOUT.road.minZ);
   });
 
+  it("gives cyclists and drivers the same facial hair and clothing detail system", () => {
+    const scene = new Scene();
+    const ambient = createAmbientLife(scene, 0x1ead2026, []);
+    ambient.update("sunny", "simulation", 2_000, 6_000);
+
+    for (const role of ["ambient-rider", "ambient-driver"] as const) {
+      let actor: Group | undefined;
+      scene.traverse((object) => {
+        if (object.userData["sceneRole"] === role && object instanceof Group) {
+          actor = object;
+        }
+      });
+      expect(actor).toBeDefined();
+      if (actor === undefined) continue;
+
+      const roles = new Set<string>();
+      actor.traverse((object) => {
+        const sceneRole: unknown = object.userData["sceneRole"];
+        if (typeof sceneRole === "string") roles.add(sceneRole);
+      });
+      expect(roles.has("eye-white")).toBe(true);
+      expect(roles.has("eye-pupil")).toBe(true);
+      expect(roles.has("hair-cover")).toBe(true);
+      expect(roles.has("hair-detail")).toBe(true);
+      expect(roles.has("garment-detail")).toBe(true);
+    }
+  });
+
   it("uses a reusable spatial crowd sampler with travel-aligned gait speed", () => {
     const simulation = createCrowdSimulation(beats, 12, 6_000);
     const sample = simulation.sample(2_750);
@@ -176,7 +204,7 @@ describe("crowd motion", () => {
   it("reduces exposed street life in storms without changing simulation population math", () => {
     expect(ambientPopulationFor("sunny", "simulation")).toEqual({
       pets: 2,
-      wildlife: 2,
+      wildlife: 3,
       bicycles: 2,
       vehicles: 1,
     });
