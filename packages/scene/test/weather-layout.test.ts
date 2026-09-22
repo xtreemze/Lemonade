@@ -46,7 +46,7 @@ describe("weather backdrop staging", () => {
   });
 
   it("adds multiple local cloudy-day layers above the town", () => {
-    expect(CLOUDY_TOWN_CLOUD_LAYOUT.length).toBeGreaterThanOrEqual(3);
+    expect(CLOUDY_TOWN_CLOUD_LAYOUT.length).toBeGreaterThanOrEqual(6);
     const cloudy = WEATHER_BACKDROP_LAYOUT.cloudy;
     for (const cloud of CLOUDY_TOWN_CLOUD_LAYOUT) {
       const worldY = cloudy.position[1] + cloud.position[1] * cloudy.scale;
@@ -56,6 +56,12 @@ describe("weather backdrop staging", () => {
       expect(worldZ).toBeLessThan(-25);
       expect(cloud.scale).toBeLessThan(0.4);
     }
+    expect(
+      CLOUDY_TOWN_CLOUD_LAYOUT.filter((cloud) => {
+        const worldZ = cloudy.position[2] + cloud.position[2] * cloudy.scale;
+        return worldZ > -40;
+      }).length,
+    ).toBeGreaterThanOrEqual(3);
     expect(new Set(CLOUDY_TOWN_CLOUD_LAYOUT.map((cloud) => cloud.driftPhase)).size)
       .toBe(CLOUDY_TOWN_CLOUD_LAYOUT.length);
   });
