@@ -7,6 +7,7 @@ import {
   DoubleSide,
   Group,
   HemisphereLight,
+  IcosahedronGeometry,
   InstancedMesh,
   LinearFilter,
   type Material,
