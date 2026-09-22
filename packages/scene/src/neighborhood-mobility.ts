@@ -884,28 +884,30 @@ export const createNeighborhoodMobilitySystem = (
           }
         });
 
-        [main, routes.find((route) => route.id === "front-grid") ?? main].forEach(
-          (route, index) => {
-            const directed =
-              index % 2 === 0 ? reverseRoute(route, ":reverse") : route;
-            const bicycle = trafficPose(
-              "traffic-bicycle:" + String(index),
-              "bicycle",
-              directed,
-              input.elapsedMs,
-              durationMs,
-              0.31 + index * 0.41,
-              0.86 + index * 0.11,
-              focus,
-              conflicts,
-              pedestrianPoints,
-              trafficActors,
-            );
-            actors.push(bicycle);
-            trafficActors.push(bicycle);
-            addStatistical(counts, bicycle);
-          },
-        );
+        [
+          main,
+          routes.find((route) => route.id === "front-grid") ?? main,
+          routes.find((route) => route.id === "deep-grid") ?? main,
+        ].forEach((route, index) => {
+          const directed =
+            index % 2 === 0 ? reverseRoute(route, ":reverse") : route;
+          const bicycle = trafficPose(
+            "traffic-bicycle:" + route.id,
+            "bicycle",
+            directed,
+            input.elapsedMs,
+            durationMs,
+            0.31 + index * 0.29,
+            0.86 + index * 0.11,
+            focus,
+            conflicts,
+            pedestrianPoints,
+            trafficActors,
+          );
+          actors.push(bicycle);
+          trafficActors.push(bicycle);
+          addStatistical(counts, bicycle);
+        });
       }
 
       if (phase === "forecast") {
@@ -996,13 +998,13 @@ export const createNeighborhoodMobilitySystem = (
           const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) * allDrivewayProperties.length);
           const property = allDrivewayProperties[propertyIndex];
           if (property === undefined || property.drivewayX === null) continue;
-          const access = residentialAccessLayout(property);
+          const access = residentialAccessLayout(property, safeSeed);
           const parkedVehicle = makePose(
             `parked-vehicle-${i}`,
             "vehicle",
             {
               x: property.drivewayX,
-              z: access.drivewayCenterZ,
+              z: access.parkingZ,
             },
             Math.PI / 2,
             0,
@@ -1052,13 +1054,13 @@ export const createNeighborhoodMobilitySystem = (
           const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4500 + i) * allDrivewayProperties.length);
           const property = allDrivewayProperties[propertyIndex];
           if (property === undefined || property.drivewayX === null) continue;
-          const access = residentialAccessLayout(property);
+          const access = residentialAccessLayout(property, safeSeed);
           const parkedVehicle = makePose(
             `parked-vehicle-night-${i}`,
             "vehicle",
             {
               x: property.drivewayX,
-              z: access.drivewayCenterZ,
+              z: access.parkingZ,
             },
             Math.PI / 2,
             0,
