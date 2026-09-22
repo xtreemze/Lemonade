@@ -113,8 +113,8 @@ export const decorateCharacterHead = (
     new Mesh(new SphereGeometry(0.282, 12, 8), material(profile.hairColor)),
     "hair-cover",
   );
-  crown.scale.set(1.035, 0.52, 1.025);
-  crown.position.y = 0.145;
+  crown.scale.set(1.035, 0.52, 0.82);
+  crown.position.set(0, 0.145, -0.035);
   head.add(crown);
 
   if (profile.hairStyle === 1) {
