@@ -846,11 +846,17 @@ export const createNeighborhoodMobilitySystem = (
             ? candidate
             : best;
         }, null);
-        const mailInteraction =
+        let mailInteraction = false;
+        let mailX = x;
+        if (
           nearestMailbox !== null &&
-          Math.abs(nearestMailbox.point.x - x) < 1.7;
+          Math.abs(nearestMailbox.point.x - x) < 1.7
+        ) {
+          mailInteraction = true;
+          mailX = nearestMailbox.point.x;
+        }
         const mailPoint = Object.freeze({
-          x: mailInteraction ? (nearestMailbox?.point.x ?? x) : x,
+          x: mailX,
           z: STREET_LAYOUT.nearSidewalk.centerZ,
         });
         const mailCarrier = makePose(
