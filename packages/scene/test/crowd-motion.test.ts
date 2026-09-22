@@ -5,6 +5,7 @@ import {
   ambientPopulationFor,
   createAmbientLife,
   petFollowPose,
+  vehicleVariantSpec,
   xTravelYaw,
 } from "../src/ambient-life.js";
 import {
@@ -43,12 +44,8 @@ describe("crowd motion", () => {
     );
     for (const pose of first) {
       expect(Math.abs(pose.x)).toBeLessThanOrEqual(58);
-      const sidewalk =
-        pose.side === "near"
-          ? STREET_LAYOUT.nearSidewalk
-          : STREET_LAYOUT.farSidewalk;
-      expect(pose.z).toBeGreaterThanOrEqual(sidewalk.minZ);
-      expect(pose.z).toBeLessThanOrEqual(sidewalk.maxZ);
+      expect(pose.z).toBeGreaterThanOrEqual(pose.routeMinZ);
+      expect(pose.z).toBeLessThanOrEqual(pose.routeMaxZ);
       expect(
         pose.z < STREET_LAYOUT.road.minZ ||
           pose.z > STREET_LAYOUT.road.maxZ,
@@ -77,6 +74,24 @@ describe("crowd motion", () => {
     }
     expect(xTravelYaw(1)).toBeCloseTo(0);
     expect(Math.abs(xTravelYaw(-1))).toBeCloseTo(Math.PI);
+  });
+
+
+  it("uses road-scale dimensions for distinct sedan, sports, pickup, and truck bodies", () => {
+    const sedan = vehicleVariantSpec("sedan");
+    const sports = vehicleVariantSpec("sports");
+    const pickup = vehicleVariantSpec("pickup");
+    const truck = vehicleVariantSpec("truck");
+
+    for (const spec of [sedan, sports, pickup, truck]) {
+      expect(spec.length).toBeGreaterThan(4);
+      expect(spec.width).toBeGreaterThan(1.7);
+      expect(spec.wheelRadius).toBeGreaterThan(0.3);
+    }
+    expect(sports.bodyHeight).toBeLessThan(sedan.bodyHeight);
+    expect(pickup.length).toBeGreaterThan(sedan.length);
+    expect(truck.length).toBeGreaterThan(pickup.length);
+    expect(truck.cabinHeight).toBeGreaterThan(sedan.cabinHeight);
   });
 
   it("keeps pets behind their pedestrian owner on the same sidewalk", () => {
