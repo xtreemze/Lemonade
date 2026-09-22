@@ -139,6 +139,23 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   expect(artContract.pours).toBe(true);
   expect((await simulationButton.textContent())?.trim()).toBe("");
 
+  await page.locator("#scene-canvas").evaluate((element) => {
+    if (!(element instanceof HTMLCanvasElement)) throw new TypeError("expected scene canvas");
+    element.dataset["shotHistory"] = "";
+    const recordShot = (): void => {
+      const shot = element.dataset["sceneShot"];
+      if (shot === undefined) return;
+      const history = element.dataset["shotHistory"]?.split(",").filter(Boolean) ?? [];
+      if (history.at(-1) !== shot) {
+        history.push(shot);
+        element.dataset["shotHistory"] = history.join(",");
+      }
+    };
+    const observer = new MutationObserver(recordShot);
+    observer.observe(element, { attributes: true, attributeFilter: ["data-scene-shot"] });
+    recordShot();
+  });
+
   await simulationButton.click();
   await expect(main).toHaveAttribute("data-view", "simulation");
   await expect(page.locator(".stand-stage")).toBeVisible();
@@ -161,6 +178,10 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expect(main).toHaveAttribute("data-view", "report", {
     timeout: SIMULATION_PRESENTATION_MS + PHASE_SETTLE_MARGIN_MS,
   });
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-shot-history",
+    "establishing,street,purchase,street",
+  );
   await expectNoHorizontalOverflow(page);
   await expectNoVerticalOverflow(page);
   await expect(page.getByRole("region", { name: "Sales history" })).toBeHidden();
