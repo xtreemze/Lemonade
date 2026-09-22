@@ -362,7 +362,7 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     scale: 0.96,
     rotationY: 0.035,
     drivewayX: -40.8,
-    mailboxX: -40.0,
+    mailboxX: -42.25,
   }),
   Object.freeze({
     role: "west-mid",
@@ -372,7 +372,7 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     scale: 1.02,
     rotationY: -0.045,
     drivewayX: -29.8,
-    mailboxX: -30.7,
+    mailboxX: -31.25,
   }),
   Object.freeze({
     role: "west-near",
@@ -382,7 +382,7 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     scale: 0.92,
     rotationY: 0.06,
     drivewayX: -20.7,
-    mailboxX: -21.5,
+    mailboxX: -22.15,
   }),
   Object.freeze({
     role: "stand-home",
@@ -392,7 +392,7 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     scale: 1.06,
     rotationY: 0.045,
     drivewayX: -8.45,
-    mailboxX: -7.65,
+    mailboxX: -7.0,
   }),
   Object.freeze({
     role: "stand-neighbor",
@@ -402,7 +402,7 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     scale: 0.97,
     rotationY: -0.055,
     drivewayX: 12.1,
-    mailboxX: 11.25,
+    mailboxX: 10.65,
   }),
   Object.freeze({
     role: "east-mid",
@@ -412,7 +412,7 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     scale: 1.01,
     rotationY: 0.025,
     drivewayX: 25.7,
-    mailboxX: 26.45,
+    mailboxX: 27.15,
   }),
   Object.freeze({
     role: "east-end",
@@ -422,9 +422,110 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     scale: 0.94,
     rotationY: -0.05,
     drivewayX: 45.0,
-    mailboxX: 44.1,
+    mailboxX: 43.55,
   }),
 ]);
+
+const FRONT_DRIVEWAY_CENTER_Z = -2.55;
+const FRONT_DRIVEWAY_HALF_WIDTH = 2.15 / 2;
+const FRONT_DRIVEWAY_HALF_DEPTH = 6.8 / 2;
+
+const overlapsBand = (
+  value: number,
+  radius: number,
+  minimum: number,
+  maximum: number,
+): boolean => value + radius >= minimum && value - radius <= maximum;
+
+export const staticSceneryPlacementAllowed = (
+  x: number,
+  z: number,
+  radius = 0,
+): boolean => {
+  const safeRadius = Math.max(0, Number.isFinite(radius) ? radius : 0);
+
+  if (
+    overlapsBand(
+      z,
+      safeRadius,
+      STREET_LAYOUT.nearSidewalk.minZ,
+      STREET_LAYOUT.farSidewalk.maxZ,
+    )
+  ) {
+    return false;
+  }
+
+  if (overlapsBand(z, safeRadius, -17.9, -13.1)) return false;
+  if (overlapsBand(z, safeRadius, -39.2, -34.8)) return false;
+
+  if (
+    overlapsBand(x, safeRadius, -18.6, -12.4) ||
+    overlapsBand(x, safeRadius, 15.4, 21.6)
+  ) {
+    return false;
+  }
+
+  for (const property of FRONT_PROPERTY_LAYOUT) {
+    if (
+      Math.abs(x - property.drivewayX) <=
+        FRONT_DRIVEWAY_HALF_WIDTH + safeRadius &&
+      Math.abs(z - FRONT_DRIVEWAY_CENTER_Z) <=
+        FRONT_DRIVEWAY_HALF_DEPTH + safeRadius
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+export const blocksFrontHouseFacade = (
+  x: number,
+  z: number,
+  radius = 0,
+): boolean => {
+  const safeRadius = Math.max(0, Number.isFinite(radius) ? radius : 0);
+  if (z + safeRadius < -11.3 || z - safeRadius > -3.5) return false;
+  return FRONT_PROPERTY_LAYOUT.some(
+    (property) => Math.abs(x - property.houseX) < 3.65 + safeRadius,
+  );
+};
+
+const clearSceneryPosition = (
+  x: number,
+  z: number,
+  radius: number,
+  avoidFrontFacades = false,
+): readonly [number, number] => {
+  const offsets = [
+    [0, 0],
+    [4.5, 0],
+    [-4.5, 0],
+    [0, -4.5],
+    [0, 4.5],
+    [6.5, -4.5],
+    [-6.5, -4.5],
+    [8.5, -9.5],
+    [-8.5, -9.5],
+    [12, -10.5],
+    [-12, -10.5],
+  ] as const;
+
+  for (const [dx, dz] of offsets) {
+    const candidateX = x + dx;
+    const candidateZ = z + dz;
+    if (!staticSceneryPlacementAllowed(candidateX, candidateZ, radius)) continue;
+    if (
+      avoidFrontFacades &&
+      blocksFrontHouseFacade(candidateX, candidateZ, radius)
+    ) {
+      continue;
+    }
+    return [candidateX, candidateZ] as const;
+  }
+
+  return [x, z - 12] as const;
+};
 
 const MID_BLOCK_HOUSES = [
   [-45.8, -26.2, 0xc97d65, 0.92, Math.PI + 0.035],
@@ -576,7 +677,7 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
 
   const yardDetails: Group[] = [];
   for (const property of FRONT_PROPERTY_LAYOUT) {
-    const detail = mailbox(property.mailboxX, 0.25);
+    const detail = mailbox(property.mailboxX, -0.3);
     detail.rotation.y = property.rotationY * 0.35;
     yardDetails.push(detail);
   }
@@ -606,7 +707,14 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
     treePositions.push([x, z, scale, color]);
   }
   treePositions.forEach(([x, z, scale, color], index) => {
-    scene.add(treeLod(x, z, scale, color, index * 0.71));
+    const crownRadius = 2.15 * scale;
+    const [clearX, clearZ] = clearSceneryPosition(
+      x,
+      z,
+      crownRadius,
+      true,
+    );
+    scene.add(treeLod(clearX, clearZ, scale, color, index * 0.71));
   });
 
   const shrubPositions = [
@@ -627,8 +735,10 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   ] as const;
   shrubPositions.forEach(([x, z], index) => {
     const color = TREE_PALETTE[(index + 2) % TREE_PALETTE.length] ?? TREE_PALETTE[0];
+    const scale = 0.7 + (index % 5) * 0.055;
+    const [clearX, clearZ] = clearSceneryPosition(x, z, 1.05 * scale);
     scene.add(
-      shrub(x, z, 0.7 + (index % 5) * 0.055, color, 18 + index * 0.83),
+      shrub(clearX, clearZ, scale, color, 18 + index * 0.83),
     );
   });
 
@@ -649,7 +759,8 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   flowerPositions.forEach(([x, z], index) => {
     const color =
       FLOWER_PALETTE[index % FLOWER_PALETTE.length] ?? FLOWER_PALETTE[0];
-    scene.add(flower(x, z, color, 40 + index * 0.91));
+    const [clearX, clearZ] = clearSceneryPosition(x, z, 0.16);
+    scene.add(flower(clearX, clearZ, color, 40 + index * 0.91));
   });
 
   distantHill(scene, -52, -76, 24, 10, 0x718967);
