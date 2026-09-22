@@ -104,7 +104,8 @@ describe("neighborhood world scale", () => {
     ).toBe(true);
     for (const mailbox of mailboxes) {
       expect(mailbox.rotation.y).toBeCloseTo(0);
-      expect(mailbox.userData["streetFacingYaw"]).toBe(0);
+      const streetFacingYaw: unknown = mailbox.userData["streetFacingYaw"];
+      expect(streetFacingYaw).toBe(0);
     }
   });
 
