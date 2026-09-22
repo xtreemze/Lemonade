@@ -174,7 +174,7 @@ const CAMERA_PROFILES: Readonly<
     remaining: Object.freeze({
       fov: 46,
       position: [0, 7.2, 16] as const,
-      lookAt: [0, 2.8, 0.95] as const,
+      lookAt: [0, 2.8, 1] as const,
     }),
   }),
   "mobile-landscape": Object.freeze({
@@ -186,7 +186,7 @@ const CAMERA_PROFILES: Readonly<
     stand: Object.freeze({
       fov: 42,
       position: [0, 9.3, 26] as const,
-      lookAt: [0, 5, 1.5] as const,
+      lookAt: [0, 5, 3.2] as const,
     }),
     remaining: Object.freeze({
       fov: 33,
