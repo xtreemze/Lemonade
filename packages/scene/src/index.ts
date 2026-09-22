@@ -22,6 +22,7 @@ import {
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { CupInventory } from "./cup-inventory.js";
+import { LEMON_CENTER_Y, SELLER_Z } from "./stand-anchors.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -108,17 +109,7 @@ type StandModel = Readonly<{
 
 const createStand = (): StandModel => {
   const root = new Group();
-  // A compact neighborhood kiosk rather than a house-sized pavilion.
-  addBox(root, [3.25, 1.18, 1.32], [0, 0.59, 0], 0xe7c672);
-  addBox(root, [3.55, 0.18, 1.55], [0, 1.28, 0], 0xf3d85d);
-  addBox(root, [2.95, 0.56, 0.14], [0, 0.68, 0.72], 0xffefaf);
-  addBox(root, [0.14, 1.8, 0.14], [-1.45, 1.95, 0], 0x5e4934);
-  addBox(root, [0.14, 1.8, 0.14], [1.45, 1.95, 0], 0x5e4934);
-  addBox(root, [3.45, 0.16, 1.55], [0, 2.82, 0], 0xe6a93b);
-
   const shutter = new Group();
-  addBox(shutter, [3.0, 0.82, 0.1], [0, 0.96, 0.78], 0xd39b43);
-  addBox(shutter, [0.92, 0.24, 0.04], [0, 0.98, 0.84], 0xf4dc83);
   shutter.visible = false;
   root.add(shutter);
   return Object.freeze({ root, shutter });
@@ -443,7 +434,11 @@ const createLemon = (index: number): Group => {
 
   const column = index % 4;
   const row = Math.floor(index / 4);
-  lemon.position.set(-0.75 + column * 0.5, 1.5 + row * 0.32, 0.58);
+  lemon.position.set(
+    -0.75 + column * 0.5,
+    LEMON_CENTER_Y + row * 0.27,
+    0.46 + (index % 2) * 0.06,
+  );
   return lemon;
 };
 
@@ -529,7 +524,11 @@ export const createLemonsvilleScene = (
   }
 
   const seller = createSeller(initialState.characterSeed);
-  seller.person.root.position.set(0, personGroundY(seller.person), -0.3);
+  seller.person.root.position.set(
+    0,
+    personGroundY(seller.person),
+    SELLER_Z,
+  );
   seller.person.root.scale.multiplyScalar(0.98);
   scene.add(seller.person.root);
 
@@ -546,17 +545,13 @@ export const createLemonsvilleScene = (
     "hot-and-dry": new Group(),
     thunderstorm: new Group(),
   };
-  weatherObjects.sunny.position.set(5.1, 6.7, -1.8);
-  weatherObjects["hot-and-dry"].position.set(3.9, 6.25, -1.8);
-  weatherObjects.cloudy.position.set(-4.1, 6.4, -1.8);
-  weatherObjects.thunderstorm.position.set(-3.6, 6.25, -1.4);
   for (const weatherObject of Object.values(weatherObjects)) scene.add(weatherObject);
-  const weatherOrigins = Object.freeze({
-    sunny: 5.1,
-    cloudy: -4.1,
-    "hot-and-dry": 3.9,
-    thunderstorm: -3.6,
-  });
+  const weatherOrigins: Record<SceneWeather, number> = {
+    sunny: 0,
+    cloudy: 0,
+    "hot-and-dry": 0,
+    thunderstorm: 0,
+  };
 
   let state = initialState;
   let crowdMotion:
@@ -663,6 +658,14 @@ export const createLemonsvilleScene = (
     })
     .catch(() => undefined);
 
+  void import("./stand-detail.js")
+    .then(({ populateStand }) => {
+      if (disposed) return;
+      populateStand(stand.root, stand.shutter);
+      render();
+    })
+    .catch(() => undefined);
+
   void import("./crowd-motion.js")
     .then(({ crowdPosesAt }) => {
       if (disposed) return;
@@ -685,6 +688,9 @@ export const createLemonsvilleScene = (
     .then(({ populateWeatherObjects }) => {
       if (disposed) return;
       populateWeatherObjects(weatherObjects);
+      for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
+        weatherOrigins[weather] = weatherObjects[weather].position.x;
+      }
       render();
     })
     .catch(() => undefined);
