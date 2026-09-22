@@ -232,15 +232,21 @@ export const populateWeatherObjects = (
   addSun(partlySun, 0.62);
   weather["hot-and-dry"].add(partlySun);
 
-  const partlyCloud = new Group();
-  partlyCloud.position.set(...HOT_DRY_CLOUD_LAYOUT.position);
-  partlyCloud.scale.setScalar(HOT_DRY_CLOUD_LAYOUT.scale);
-  addCloud(partlyCloud, 0xd7e0df);
-  weather["hot-and-dry"].add(partlyCloud);
+  const partlyCloudGroup = new Group();
+  for (let i = 0; i < 3; i++) {
+    const partlyCloud = new Group();
+    const baseLayout = i === 0 ? HOT_DRY_CLOUD_LAYOUT :
+      { position: [-2 + i * 3, 0.3 + i * 0.2, -0.5], scale: 0.9 + i * 0.1 } as const;
+    partlyCloud.position.set(...baseLayout.position);
+    partlyCloud.scale.setScalar(baseLayout.scale);
+    addCloud(partlyCloud, 0xd7e0df);
+    partlyCloudGroup.add(partlyCloud);
+  }
+  weather["hot-and-dry"].add(partlyCloudGroup);
 
   addCloud(weather.cloudy, 0xd7e0df);
 
-  const cloudyTownClouds = CLOUDY_TOWN_CLOUD_LAYOUT.map((layout, index) => {
+  const cloudyTownClouds = CLOUDY_TOWN_CLOUD_LAYOUT.slice(0, 4).map((layout, index) => {
     const cloud = new Group();
     cloud.userData["sceneRole"] = "town-cloud";
     cloud.userData["driftPhase"] = layout.driftPhase;
