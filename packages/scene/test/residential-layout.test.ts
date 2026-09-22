@@ -33,6 +33,15 @@ describe("procedural residential layout", () => {
     expect(sharedBoundaryX - standRightEdge).toBeLessThan(0.75);
   });
 
+  it("keeps mailbox anchors outside their driveway footprints", () => {
+    const layout = generateResidentialLayout(4321);
+
+    for (const property of layout.frontProperties) {
+      if (property.drivewayX === null || property.mailboxX === null) continue;
+      expect(Math.abs(property.mailboxX - property.drivewayX)).toBeGreaterThan(1.2);
+    }
+  });
+
   it("keeps all generated planting anchors out of roads, sidewalks, driveways and house fronts", () => {
     const layout = generateResidentialLayout(0xdecafbad);
     expect(layout.trees).toHaveLength(48);
