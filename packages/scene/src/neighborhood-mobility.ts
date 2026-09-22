@@ -980,18 +980,26 @@ export const createNeighborhoodMobilitySystem = (
           addStatistical(counts, gardener);
         }
 
-        const frontProperties = layout.frontProperties.filter((p) => p.drivewayX !== null);
-        for (let i = 0; i < Math.min(2, frontProperties.length); i++) {
-          const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) * frontProperties.length);
+        const frontProperties = layout.frontProperties.filter(
+          (property) => property.drivewayX !== null,
+        );
+        for (let index = 0; index < Math.min(2, frontProperties.length); index += 1) {
+          const propertyIndex = Math.floor(
+            deterministicUnit(
+              safeSeed ^ dayNumber ^ index,
+              4_000 + index,
+            ) * frontProperties.length,
+          );
           const property = frontProperties[propertyIndex];
-          if (property === undefined || property.drivewayX === null) continue;
-          const access = residentialAccessLayout(property);
+          const drivewayX = property?.drivewayX;
+          if (typeof drivewayX !== "number" || property === undefined) continue;
+          const access = residentialAccessLayout(property, safeSeed);
           const parkedVehicle = makePose(
-            `parked-vehicle-${i}`,
+            `parked-vehicle-${String(index)}`,
             "vehicle",
             {
-              x: property.drivewayX,
-              z: access.drivewayCenterZ,
+              x: drivewayX,
+              z: access.parkingZ,
             },
             Math.PI / 2,
             0,
