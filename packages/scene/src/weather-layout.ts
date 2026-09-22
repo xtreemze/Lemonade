@@ -30,16 +30,6 @@ export const WEATHER_BACKDROP_LAYOUT: Readonly<
   }),
 });
 
-export type CloudLayerLayout = Readonly<{
-  position: readonly [number, number, number];
-  scale: number;
-}>;
-
-export const HOT_DRY_CLOUD_LAYOUT: CloudLayerLayout = Object.freeze({
-  position: [-1.1, 1, 7.23] as const,
-  scale: 0.29,
-});
-
 export type TownCloudLayout = Readonly<{
   position: readonly [number, number, number];
   scale: number;
