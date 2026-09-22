@@ -40,6 +40,7 @@ export type PasserbyBeat = Readonly<{
 
 export type StreetStoryboard = Readonly<{
   durationMs: number;
+  activeDurationMs: number;
   prepared: number;
   sold: number;
   visibleSigns: number;
