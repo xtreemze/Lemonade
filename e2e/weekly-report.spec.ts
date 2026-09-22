@@ -64,7 +64,7 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
       const columnCount = (element: HTMLElement): number =>
         getComputedStyle(element).gridTemplateColumns
           .trim()
-          .split(/\\s+/u)
+          .split(/\s+/u)
           .filter(Boolean).length;
 
       const bounds = (element: HTMLElement) => {
