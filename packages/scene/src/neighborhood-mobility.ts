@@ -826,22 +826,24 @@ export const createNeighborhoodMobilitySystem = (
         }
 
         routes.forEach((route, index) => {
-          const directed =
-            index % 2 === 0 ? route : reverseRoute(route, ":reverse");
-          const vehicle = trafficPose(
-            "traffic-vehicle:" + route.id,
-            "vehicle",
-            directed,
-            input.elapsedMs,
-            durationMs,
-            index * 0.23 + deterministicUnit(safeSeed, 1100 + index) * 0.2,
-            0.54 + index * 0.07,
-            focus,
-            conflicts,
-            pedestrianPoints,
-          );
-          actors.push(vehicle);
-          addStatistical(counts, vehicle);
+          for (let vehicleNum = 0; vehicleNum < 2; vehicleNum += 1) {
+            const directed =
+              index % 2 === 0 ? route : reverseRoute(route, ":reverse");
+            const vehicle = trafficPose(
+              "traffic-vehicle:" + route.id + ":v" + vehicleNum,
+              "vehicle",
+              directed,
+              input.elapsedMs,
+              durationMs,
+              index * 0.23 + vehicleNum * 0.5 + deterministicUnit(safeSeed, 1100 + index + vehicleNum) * 0.2,
+              0.54 + index * 0.07 + vehicleNum * 0.03,
+              focus,
+              conflicts,
+              pedestrianPoints,
+            );
+            actors.push(vehicle);
+            addStatistical(counts, vehicle);
+          }
         });
 
         [main, routes.find((route) => route.id === "front-grid") ?? main].forEach(
