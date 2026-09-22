@@ -259,7 +259,7 @@ const resolveFrontAccess = (
   properties: readonly ResidentialPropertySpec[],
 ): readonly ResidentialPropertySpec[] => {
   const occupiedDriveways: ResidentialRect[] = [];
-  const resolvedDriveways = properties.map((property, index) => {
+  const resolvedDriveways = properties.map((property) => {
     if (property.drivewayX === null) return property;
 
     const preferredSide: -1 | 1 =
@@ -293,12 +293,6 @@ const resolveFrontAccess = (
       ...property,
       drivewayX,
       mailboxX: null,
-      role: property.role,
-      color: property.color,
-      scale: property.scale,
-      rotationY: property.rotationY,
-      houseX: property.houseX,
-      houseZ: property.houseZ,
     });
   });
 
@@ -337,13 +331,6 @@ const resolveFrontAccess = (
       return Object.freeze({
         ...property,
         mailboxX,
-        role: property.role,
-        color: property.color,
-        scale: property.scale,
-        rotationY: property.rotationY,
-        houseX: property.houseX,
-        houseZ: property.houseZ,
-        drivewayX: property.drivewayX,
       });
     }),
   );
