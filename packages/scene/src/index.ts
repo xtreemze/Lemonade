@@ -23,6 +23,7 @@ import {
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
+import { walkingCycleAtDistance } from "./gait.js";
 import { SELLER_Z } from "./stand-anchors.js";
 import type { StandDetailController } from "./stand-detail.js";
 import type { WeatherDetailController } from "./weather-detail.js";
@@ -48,6 +49,7 @@ export type LemonsvilleSceneState = Readonly<{
   prepared: number;
   durationMs: number;
   confidence: number;
+  nextConfidence: number;
   characterSeed: number;
   storyboard: StreetStoryboard;
   phase: ScenePhase;
@@ -341,11 +343,15 @@ const resetPersonPose = (person: PersonRig): void => {
 
 const applyWalkingPose = (
   person: PersonRig,
-  seconds: number,
-  pace: number,
+  travelDistance: number,
   carryingCup: boolean,
 ): void => {
-  const cycle = seconds * 7.2 * pace * person.walkPace + person.strideOffset;
+  const cycle = walkingCycleAtDistance(
+    travelDistance,
+    person.profile.heightScale,
+    person.walkPace,
+    person.strideOffset,
+  );
   const stride = Math.sin(cycle) * person.gaitAmplitude;
   const oppositeStride = Math.sin(cycle + Math.PI) * person.gaitAmplitude;
   const stance = Math.abs(Math.sin(cycle));
@@ -372,12 +378,12 @@ const applyWalkingPose = (
 const applyBuyerPose = (
   person: PersonRig,
   phase: BuyerPhase,
-  seconds: number,
+  travelDistance: number,
   index: number,
 ): void => {
   resetPersonPose(person);
   if (phase === "approaching") {
-    applyWalkingPose(person, seconds, 1.05, false);
+    applyWalkingPose(person, travelDistance, false);
   } else if (phase === "purchasing") {
     person.arms[1].root.rotation.x = -0.88;
     person.arms[1].lower.rotation.x = -1.0;
@@ -392,7 +398,7 @@ const applyBuyerPose = (
     person.head.rotation.z = index % 2 === 0 ? -0.055 : 0.055;
     person.torso.rotation.x = -0.025;
   } else if (phase === "departing") {
-    applyWalkingPose(person, seconds, 1.1, true);
+    applyWalkingPose(person, travelDistance, true);
   }
 };
 
@@ -691,7 +697,7 @@ export const createLemonsvilleScene = (
         storyboard.passersBy,
         visibleCount,
         0,
-        Math.max(1, storyboard.durationMs),
+        Math.max(1, storyboard.activeDurationMs),
       ) ?? [];
     customers.forEach((customer, index) => {
       const pose = poses[index];
@@ -752,7 +758,7 @@ export const createLemonsvilleScene = (
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
 
-  const animateBuyers = (elapsedMs: number, seconds: number): number => {
+  const animateBuyers = (elapsedMs: number): number => {
     for (const buyer of buyers) {
       buyer.root.visible = false;
       resetPersonPose(buyer);
@@ -773,14 +779,18 @@ export const createLemonsvilleScene = (
       const counterZ = 1.22;
       const drinkX = sale.direction === -1 ? -1.35 : 1.35;
       const drinkZ = 1.78;
+      const approachDistance = Math.hypot(counterX - streetX, counterZ - streetZ);
+      const departDistance = Math.hypot(exitX - drinkX, streetZ - drinkZ);
       let x = counterX;
       let z = counterZ;
+      let travelDistance = 0;
 
       if (phase === "approaching") {
         const duration = Math.max(1, sale.purchaseAtMs - sale.approachAtMs);
         const progress = smoothStep((elapsedMs - sale.approachAtMs) / duration);
         x = lerp(streetX, counterX, progress);
         z = lerp(streetZ, counterZ, progress);
+        travelDistance = approachDistance * progress;
       } else if (phase === "drinking") {
         const duration = Math.max(1, sale.drinkEndAtMs - sale.purchaseEndAtMs);
         const progress = smoothStep((elapsedMs - sale.purchaseEndAtMs) / duration);
@@ -791,6 +801,7 @@ export const createLemonsvilleScene = (
         const progress = smoothStep((elapsedMs - sale.drinkEndAtMs) / duration);
         x = lerp(drinkX, exitX, progress);
         z = lerp(drinkZ, streetZ, progress);
+        travelDistance = approachDistance + departDistance * progress;
       }
 
       buyer.root.visible = true;
@@ -803,7 +814,7 @@ export const createLemonsvilleScene = (
           : sale.direction === -1
             ? Math.PI / 2
             : -Math.PI / 2;
-      applyBuyerPose(buyer, phase, seconds, sale.saleNumber);
+      applyBuyerPose(buyer, phase, travelDistance, sale.saleNumber);
       activeBuyerCount += 1;
     }
     return activeBuyerCount;
@@ -811,10 +822,12 @@ export const createLemonsvilleScene = (
 
   const animatePassersBy = (
     elapsedMs: number,
-    seconds: number,
     activeBuyerCount: number,
   ): void => {
-    if (state.phase !== "simulation") {
+    if (
+      state.phase !== "simulation" ||
+      elapsedMs >= storyboard.activeDurationMs
+    ) {
       for (const customer of customers) customer.root.visible = false;
       return;
     }
@@ -828,7 +841,7 @@ export const createLemonsvilleScene = (
         storyboard.passersBy,
         targetCount,
         elapsedMs,
-        Math.max(1, storyboard.durationMs),
+        Math.max(1, storyboard.activeDurationMs),
       ) ?? [];
 
     customers.forEach((customer, index) => {
@@ -843,14 +856,31 @@ export const createLemonsvilleScene = (
         pose.z,
       );
       customer.root.rotation.y = pose.heading;
-      applyWalkingPose(customer, seconds, pose.pace, false);
+      applyWalkingPose(customer, pose.travelDistance, false);
     });
+  };
+
+  const sellerConfidenceAt = (elapsedMs: number): number => {
+    if (
+      state.phase !== "simulation" ||
+      elapsedMs <= storyboard.activeDurationMs
+    ) {
+      return state.confidence;
+    }
+    const transitionDuration = Math.max(
+      1,
+      storyboard.durationMs - storyboard.activeDurationMs,
+    );
+    const progress = smoothStep(
+      (elapsedMs - storyboard.activeDurationMs) / transitionDuration,
+    );
+    return lerp(state.confidence, state.nextConfidence, progress);
   };
 
   const animateSeller = (seconds: number, elapsedMs: number): void => {
     seller.person.root.visible = state.phase !== "forecast";
     if (state.phase === "forecast") return;
-    applySellerExpression(seller, state.confidence);
+    applySellerExpression(seller, sellerConfidenceAt(elapsedMs));
     if (state.reducedMotion || state.phase === "idle") return;
     const breathing = Math.sin(seconds * 2.1) * 0.025;
     seller.person.torso.position.y = 1.05 + breathing;
@@ -888,8 +918,8 @@ export const createLemonsvilleScene = (
       applyCameraShot(nextShot);
     }
 
-    const activeBuyerCount = animateBuyers(elapsedMs, seconds);
-    animatePassersBy(elapsedMs, seconds, activeBuyerCount);
+    const activeBuyerCount = animateBuyers(elapsedMs);
+    animatePassersBy(elapsedMs, activeBuyerCount);
     animateSeller(seconds, elapsedMs);
     ambientLife?.update(
       state.weather,
@@ -938,7 +968,8 @@ export const createLemonsvilleScene = (
       state.durationMs !== nextState.durationMs ||
       state.prepared !== nextState.prepared ||
       state.visibleSigns !== nextState.visibleSigns ||
-      state.confidence !== nextState.confidence;
+      state.confidence !== nextState.confidence ||
+      state.nextConfidence !== nextState.nextConfidence;
 
     state = nextState;
     storyboard = state.storyboard;
