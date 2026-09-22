@@ -26,6 +26,7 @@ import { characterProfileFor } from "./characters.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
+  remainingCameraProgressAt,
   remainingCupsAt,
   sceneCameraComposition,
   sceneShotAt,
@@ -63,6 +64,13 @@ const skyColor: Record<SceneWeather, number> = {
   thunderstorm: 0x536471,
 };
 
+const earlyMorningSkyColor: Record<SceneWeather, number> = {
+  sunny: 0x9db9c9,
+  cloudy: 0x899ca7,
+  "hot-and-dry": 0xa8b9bd,
+  thunderstorm: 0x485866,
+};
+
 const PASSERBY_POOL_SIZE = 32;
 const BUYER_POOL_SIZE = 192;
 const MAX_PREPARED_CUPS = 400;
@@ -79,6 +87,9 @@ const lerp = (start: number, end: number, progress: number): number =>
 
 const makeMaterial = (color: number): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading: true, roughness: 0.92 });
+
+const makeCharacterMaterial = (color: number): MeshStandardMaterial =>
+  new MeshStandardMaterial({ color, flatShading: false, roughness: 0.88 });
 
 const makeWeatherMaterial = (
   color: number,
@@ -104,18 +115,43 @@ const addBox = (
   return mesh;
 };
 
-const createStand = (): Group => {
-  const stand = new Group();
-  addBox(stand, [4.5, 1.8, 1.7], [0, 0.9, 0], 0xe7c672);
-  addBox(stand, [4.9, 0.28, 2.05], [0, 2.18, 0], 0xf3d85d);
-  addBox(stand, [4.2, 0.8, 0.18], [0, 1.0, 0.94], 0xffefaf);
-  addBox(stand, [0.22, 2.4, 0.22], [-2.0, 2.9, 0], 0x5e4934);
-  addBox(stand, [0.22, 2.4, 0.22], [2.0, 2.9, 0], 0x5e4934);
-  addBox(stand, [4.8, 0.22, 2.0], [0, 4.0, 0], 0xe6a93b);
-  return stand;
+type StandModel = Readonly<{
+  root: Group;
+  shutter: Group;
+}>;
+
+const createStand = (): StandModel => {
+  const root = new Group();
+  addBox(root, [4.5, 1.8, 1.7], [0, 0.9, 0], 0xe7c672);
+  addBox(root, [4.9, 0.28, 2.05], [0, 2.18, 0], 0xf3d85d);
+  addBox(root, [4.2, 0.8, 0.18], [0, 1.0, 0.94], 0xffefaf);
+  addBox(root, [0.22, 2.4, 0.22], [-2.0, 2.9, 0], 0x5e4934);
+  addBox(root, [0.22, 2.4, 0.22], [2.0, 2.9, 0], 0x5e4934);
+  addBox(root, [4.8, 0.22, 2.0], [0, 4.0, 0], 0xe6a93b);
+
+  const shutter = new Group();
+  addBox(shutter, [4.25, 1.3, 0.12], [0, 1.45, 1.02], 0xd39b43);
+  for (let index = 0; index < 5; index += 1) {
+    addBox(
+      shutter,
+      [4.0, 0.035, 0.035],
+      [0, 0.98 + index * 0.23, 1.09],
+      0x8d6538,
+    );
+  }
+  addBox(shutter, [1.15, 0.36, 0.05], [0, 1.47, 1.1], 0xf4dc83);
+  shutter.visible = false;
+  root.add(shutter);
+  return Object.freeze({ root, shutter });
 };
 
-const createHouse = (x: number, color: number, scale: number): Group => {
+const createHouse = (
+  x: number,
+  z: number,
+  color: number,
+  scale: number,
+  rotationY = 0,
+): Group => {
   const house = new Group();
   addBox(house, [3.4, 2.6, 2.4], [0, 1.3, 0], color);
 
@@ -128,29 +164,56 @@ const createHouse = (x: number, color: number, scale: number): Group => {
   house.add(roof);
 
   addBox(house, [0.75, 1.55, 0.15], [0, 0.8, 1.28], 0x486c69);
-  house.position.x = x;
-  house.position.z = -3.8;
+  addBox(house, [0.58, 0.7, 0.12], [-0.92, 1.55, 1.3], 0xb8d9d2);
+  addBox(house, [0.58, 0.7, 0.12], [0.92, 1.55, 1.3], 0xb8d9d2);
+  house.position.set(x, 0, z);
+  house.rotation.y = rotationY;
   house.scale.setScalar(scale);
   return house;
 };
 
-const createTree = (x: number, z: number): Group => {
+const createTree = (
+  x: number,
+  z: number,
+  scale = 1,
+  crownColor = 0x5f8d56,
+): Group => {
   const tree = new Group();
   const trunk = new Mesh(
-    new CylinderGeometry(0.16, 0.24, 1.5, 6),
+    new CylinderGeometry(0.16, 0.24, 1.5, 7),
     makeMaterial(0x765232),
   );
   trunk.position.y = 0.75;
   tree.add(trunk);
 
   const crown = new Mesh(
-    new SphereGeometry(1.05, 8, 6),
-    makeMaterial(0x5f8d56),
+    new SphereGeometry(1.05, 10, 7),
+    makeMaterial(crownColor),
   );
   crown.position.y = 2.0;
   tree.add(crown);
   tree.position.set(x, 0, z);
+  tree.scale.setScalar(scale);
   return tree;
+};
+
+const createShrub = (x: number, z: number, scale: number, color: number): Group => {
+  const shrub = new Group();
+  for (const [offsetX, offsetZ, size] of [
+    [-0.32, 0.04, 0.56],
+    [0.2, 0, 0.68],
+    [0.5, 0.12, 0.48],
+  ] as const) {
+    const crown = new Mesh(
+      new SphereGeometry(size, 9, 6),
+      makeMaterial(color),
+    );
+    crown.position.set(offsetX, size * 0.72, offsetZ);
+    shrub.add(crown);
+  }
+  shrub.position.set(x, 0, z);
+  shrub.scale.setScalar(scale);
+  return shrub;
 };
 
 type SignModel = Readonly<{
@@ -185,12 +248,19 @@ const createSign = (index: number): SignModel => {
   return Object.freeze({ root, labelMaterial });
 };
 
+type LimbRig = Readonly<{
+  root: Group;
+  lower: Group;
+  joint: Mesh;
+  extremity: Mesh;
+}>;
+
 type PersonRig = Readonly<{
   root: Group;
   torso: Mesh;
   head: Mesh;
-  arms: readonly [Group, Group];
-  legs: readonly [Group, Group];
+  arms: readonly [LimbRig, LimbRig];
+  legs: readonly [LimbRig, LimbRig];
   cup: Group;
   strideOffset: number;
   walkPace: number;
@@ -203,15 +273,53 @@ type SellerRig = Readonly<{
   mouth: readonly [Mesh, Mesh];
 }>;
 
-const createLimb = (length: number, radius: number, color: number): Group => {
-  const pivot = new Group();
-  const mesh = new Mesh(
-    new CylinderGeometry(radius, radius, length, 5),
-    makeMaterial(color),
+const createLimb = (
+  upperLength: number,
+  lowerLength: number,
+  radius: number,
+  upperColor: number,
+  lowerColor: number,
+  extremityColor: number,
+  foot = false,
+): LimbRig => {
+  const root = new Group();
+  const upper = new Mesh(
+    new CylinderGeometry(radius, radius * 0.94, upperLength, 8),
+    makeCharacterMaterial(upperColor),
   );
-  mesh.position.y = -length / 2;
-  pivot.add(mesh);
-  return pivot;
+  upper.position.y = -upperLength / 2;
+  root.add(upper);
+
+  const joint = new Mesh(
+    new SphereGeometry(radius * 1.14, 9, 6),
+    makeCharacterMaterial(lowerColor),
+  );
+  joint.position.y = -upperLength;
+  root.add(joint);
+
+  const lower = new Group();
+  lower.position.y = -upperLength;
+  const lowerMesh = new Mesh(
+    new CylinderGeometry(radius * 0.92, radius * 0.82, lowerLength, 8),
+    makeCharacterMaterial(lowerColor),
+  );
+  lowerMesh.position.y = -lowerLength / 2;
+  lower.add(lowerMesh);
+
+  const extremity = foot
+    ? new Mesh(
+        new BoxGeometry(radius * 2.1, radius * 1.25, radius * 3.2),
+        makeCharacterMaterial(extremityColor),
+      )
+    : new Mesh(
+        new SphereGeometry(radius * 1.05, 9, 6),
+        makeCharacterMaterial(extremityColor),
+      );
+  extremity.position.set(0, -lowerLength, foot ? radius * 0.62 : 0);
+  lower.add(extremity);
+  root.add(lower);
+
+  return Object.freeze({ root, lower, joint, extremity });
 };
 
 const createLemonadeCup = (scale = 1): Group => {
@@ -277,22 +385,22 @@ const addCharacterHair = (
   accessory: 0 | 1 | 2,
 ): void => {
   if (style === 1) {
-    const hair = new Mesh(new SphereGeometry(0.255, 7, 4), makeMaterial(color));
+    const hair = new Mesh(new SphereGeometry(0.265, 11, 7), makeCharacterMaterial(color));
     hair.scale.set(1, 0.42, 1);
     hair.position.y = 0.16;
     head.add(hair);
   } else if (style === 2) {
-    const hair = new Mesh(new BoxGeometry(0.42, 0.11, 0.34), makeMaterial(color));
+    const hair = new Mesh(new BoxGeometry(0.42, 0.11, 0.34), makeCharacterMaterial(color));
     hair.position.set(0, 0.18, -0.01);
     head.add(hair);
   } else if (style === 3) {
-    const hair = new Mesh(new CylinderGeometry(0.22, 0.25, 0.12, 7), makeMaterial(color));
+    const hair = new Mesh(new CylinderGeometry(0.22, 0.25, 0.12, 10), makeCharacterMaterial(color));
     hair.position.y = 0.18;
     head.add(hair);
   }
 
   if (accessory === 1) {
-    const brim = new Mesh(new BoxGeometry(0.46, 0.035, 0.34), makeMaterial(color));
+    const brim = new Mesh(new BoxGeometry(0.46, 0.035, 0.34), makeCharacterMaterial(color));
     brim.position.set(0, 0.23, 0.05);
     head.add(brim);
   } else if (accessory === 2) {
@@ -307,39 +415,115 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   const root = new Group();
 
   const torso = new Mesh(
-    new CylinderGeometry(0.25, 0.34, 0.9, 6),
-    makeMaterial(profile.clothingColor),
+    new CylinderGeometry(0.25, 0.34, 0.9, 10),
+    makeCharacterMaterial(profile.clothingColor),
   );
   torso.position.y = 1.05;
-  const head = new Mesh(
-    new SphereGeometry(0.25, 7, 5),
-    makeMaterial(profile.skinColor),
-  );
-  head.position.y = 1.73;
-  root.add(torso, head);
 
-  const eyeMaterial = makeMaterial(0x263238);
-  for (const x of [-0.085, 0.085]) {
-    const eye = new Mesh(new SphereGeometry(0.024, 5, 4), eyeMaterial.clone());
-    eye.position.set(x, 0.035, 0.232);
-    head.add(eye);
+  const neck = new Mesh(
+    new CylinderGeometry(0.09, 0.1, 0.16, 9),
+    makeCharacterMaterial(profile.skinColor),
+  );
+  neck.position.y = 1.53;
+
+  const head = new Mesh(
+    new SphereGeometry(0.27, 12, 8),
+    makeCharacterMaterial(profile.skinColor),
+  );
+  head.scale.set(0.94, 1.04, 0.9);
+  head.position.y = 1.78;
+  root.add(torso, neck, head);
+
+  const eyeWhiteMaterial = makeCharacterMaterial(0xf5f1e7);
+  const eyeMaterial = makeCharacterMaterial(0x263238);
+  for (const x of [-0.09, 0.09]) {
+    const eyeWhite = new Mesh(new SphereGeometry(0.035, 8, 6), eyeWhiteMaterial.clone());
+    eyeWhite.position.set(x, 0.045, 0.232);
+    head.add(eyeWhite);
+    const iris = new Mesh(new SphereGeometry(0.018, 8, 6), eyeMaterial.clone());
+    iris.position.set(x, 0.045, 0.262);
+    head.add(iris);
   }
+
+  const nose = new Mesh(
+    new SphereGeometry(0.038, 8, 6),
+    makeCharacterMaterial(profile.skinColor),
+  );
+  nose.scale.set(0.8, 1, 1.25);
+  nose.position.set(0, -0.015, 0.258);
+  head.add(nose);
+
+  const mouth = new Mesh(
+    new BoxGeometry(0.11, 0.018, 0.016),
+    makeCharacterMaterial(0x7f4640),
+  );
+  mouth.position.set(0, -0.11, 0.246);
+  head.add(mouth);
+
+  for (const x of [-0.255, 0.255]) {
+    const ear = new Mesh(
+      new SphereGeometry(0.055, 8, 6),
+      makeCharacterMaterial(profile.skinColor),
+    );
+    ear.scale.set(0.55, 0.85, 0.55);
+    ear.position.set(x, 0, 0);
+    head.add(ear);
+  }
+
   addCharacterHair(head, profile.hairStyle, profile.hairColor, profile.accessory);
 
-  const leftArm = createLimb(0.7, 0.085, profile.clothingColor);
-  const rightArm = createLimb(0.7, 0.085, profile.clothingColor);
-  leftArm.position.set(-0.34, 1.38, 0);
-  rightArm.position.set(0.34, 1.38, 0);
-  const leftLeg = createLimb(0.8, 0.105, profile.trouserColor);
-  const rightLeg = createLimb(0.8, 0.105, profile.trouserColor);
-  leftLeg.position.set(-0.14, 0.72, 0);
-  rightLeg.position.set(0.14, 0.72, 0);
-  root.add(leftArm, rightArm, leftLeg, rightLeg);
+  const shoulderMaterial = makeCharacterMaterial(profile.clothingColor);
+  for (const x of [-0.35, 0.35]) {
+    const shoulder = new Mesh(new SphereGeometry(0.105, 9, 6), shoulderMaterial.clone());
+    shoulder.position.set(x, 1.39, 0);
+    root.add(shoulder);
+  }
+
+  const leftArm = createLimb(
+    0.38,
+    0.34,
+    0.082,
+    profile.clothingColor,
+    profile.skinColor,
+    profile.skinColor,
+  );
+  const rightArm = createLimb(
+    0.38,
+    0.34,
+    0.082,
+    profile.clothingColor,
+    profile.skinColor,
+    profile.skinColor,
+  );
+  leftArm.root.position.set(-0.35, 1.38, 0);
+  rightArm.root.position.set(0.35, 1.38, 0);
+
+  const leftLeg = createLimb(
+    0.43,
+    0.42,
+    0.105,
+    profile.trouserColor,
+    profile.trouserColor,
+    0x30383d,
+    true,
+  );
+  const rightLeg = createLimb(
+    0.43,
+    0.42,
+    0.105,
+    profile.trouserColor,
+    profile.trouserColor,
+    0x30383d,
+    true,
+  );
+  leftLeg.root.position.set(-0.14, 0.72, 0);
+  rightLeg.root.position.set(0.14, 0.72, 0);
+  root.add(leftArm.root, rightArm.root, leftLeg.root, rightLeg.root);
 
   const cup = createLemonadeCup(0.9);
-  cup.position.set(0, -0.65, 0.07);
+  cup.position.set(0, -0.35, 0.08);
   cup.visible = false;
-  rightArm.add(cup);
+  rightArm.lower.add(cup);
 
   root.scale.set(
     profile.widthScale,
@@ -403,14 +587,17 @@ const applySellerExpression = (seller: SellerRig, confidence: number): void => {
   seller.eyebrows[1].position.y = 0.125 + progress * 0.018;
   seller.mouth[0].rotation.z = -expression * 0.34;
   seller.mouth[1].rotation.z = expression * 0.34;
-  seller.person.arms[0].rotation.x = lerp(0.18, -0.12, progress);
-  seller.person.arms[1].rotation.x = lerp(0.12, -0.08, progress);
+  seller.person.arms[0].root.rotation.x = lerp(0.18, -0.12, progress);
+  seller.person.arms[1].root.rotation.x = lerp(0.12, -0.08, progress);
 };
 
 const resetPersonPose = (person: PersonRig): void => {
   person.torso.rotation.set(0, 0, 0);
   person.head.rotation.set(0, 0, 0);
-  for (const limb of [...person.arms, ...person.legs]) limb.rotation.set(0, 0, 0);
+  for (const limb of [...person.arms, ...person.legs]) {
+    limb.root.rotation.set(0, 0, 0);
+    limb.lower.rotation.set(0, 0, 0);
+  }
   person.cup.visible = false;
 };
 
@@ -420,15 +607,23 @@ const applyWalkingPose = (
   pace: number,
   carryingCup: boolean,
 ): void => {
-  const stride =
-    Math.sin(seconds * 7.2 * pace * person.walkPace + person.strideOffset) *
-    person.gaitAmplitude;
-  person.legs[0].rotation.x = stride;
-  person.legs[1].rotation.x = -stride;
-  person.arms[0].rotation.x = -stride * 0.86;
-  person.arms[1].rotation.x = carryingCup ? -0.3 : stride * 0.86;
+  const cycle = seconds * 7.2 * pace * person.walkPace + person.strideOffset;
+  const stride = Math.sin(cycle) * person.gaitAmplitude;
+  const oppositeStride = Math.sin(cycle + Math.PI) * person.gaitAmplitude;
+
+  person.legs[0].root.rotation.x = stride;
+  person.legs[1].root.rotation.x = oppositeStride;
+  person.legs[0].lower.rotation.x = Math.max(0, -Math.sin(cycle)) * 0.62;
+  person.legs[1].lower.rotation.x = Math.max(0, Math.sin(cycle)) * 0.62;
+
+  person.arms[0].root.rotation.x = -stride * 0.78;
+  person.arms[0].lower.rotation.x = -0.12 - Math.max(0, stride) * 0.22;
+  person.arms[1].root.rotation.x = carryingCup ? -0.54 : stride * 0.78;
+  person.arms[1].lower.rotation.x = carryingCup ? -1.05 : -0.12 - Math.max(0, -stride) * 0.22;
+
   person.torso.rotation.z =
-    Math.sin(seconds * 3.6 * pace * person.walkPace + person.strideOffset) * 0.04;
+    Math.sin(cycle * 0.5) * 0.035;
+  person.head.rotation.z = -person.torso.rotation.z * 0.42;
   person.cup.visible = carryingCup;
 };
 
@@ -442,13 +637,18 @@ const applyBuyerPose = (
   if (phase === "approaching") {
     applyWalkingPose(person, seconds, 1.05, false);
   } else if (phase === "purchasing") {
-    person.arms[1].rotation.x = -1.25;
-    person.torso.rotation.x = 0.08;
+    person.arms[1].root.rotation.x = -0.88;
+    person.arms[1].lower.rotation.x = -1.0;
+    person.arms[0].root.rotation.x = -0.12;
+    person.torso.rotation.x = 0.07;
+    person.head.rotation.x = -0.04;
   } else if (phase === "drinking") {
     person.cup.visible = true;
-    person.arms[1].rotation.x = -2.35;
-    person.head.rotation.x = 0.13;
-    person.head.rotation.z = index % 2 === 0 ? -0.06 : 0.06;
+    person.arms[1].root.rotation.x = -1.05;
+    person.arms[1].lower.rotation.x = -1.42;
+    person.head.rotation.x = 0.14;
+    person.head.rotation.z = index % 2 === 0 ? -0.055 : 0.055;
+    person.torso.rotation.x = -0.025;
   } else if (phase === "departing") {
     applyWalkingPose(person, seconds, 1.1, true);
   }
@@ -690,28 +890,77 @@ export const createLemonsvilleScene = (
   camera.position.set(0, 6.8, 13.5);
   camera.lookAt(0, 1.7, 0);
 
-  scene.add(new HemisphereLight(0xfff2c6, 0x526b51, 1.9));
+  const hemisphere = new HemisphereLight(0xfff2c6, 0x526b51, 1.9);
+  scene.add(hemisphere);
   const sunlight = new DirectionalLight(0xfff0c9, 1.8);
   sunlight.position.set(-5, 10, 7);
   scene.add(sunlight);
 
-  const ground = new Mesh(new PlaneGeometry(30, 24), makeMaterial(0x92ad68));
+  const ground = new Mesh(new PlaneGeometry(44, 36), makeMaterial(0x92ad68));
   ground.rotation.x = -Math.PI / 2;
-  ground.position.z = -1.5;
+  ground.position.z = -3.5;
   scene.add(ground);
 
-  const road = new Mesh(new PlaneGeometry(30, 4.0), makeMaterial(0xb2916e));
-  road.rotation.x = -Math.PI / 2;
-  road.position.set(0, 0.012, 4.1);
-  scene.add(road);
+  const mainRoad = new Mesh(new PlaneGeometry(44, 4.2), makeMaterial(0xb2916e));
+  mainRoad.rotation.x = -Math.PI / 2;
+  mainRoad.position.set(0, 0.012, 4.1);
+  scene.add(mainRoad);
 
-  scene.add(createHouse(-7.2, 0xd56f52, 1.0));
-  scene.add(createHouse(7.0, 0xd4aa61, 0.9));
-  scene.add(createTree(-4.7, -2.9));
-  scene.add(createTree(4.9, -2.6));
-  scene.add(createTree(-8.2, 1.4));
-  scene.add(createTree(8.1, 1.0));
-  scene.add(createStand());
+  const crossRoad = new Mesh(new PlaneGeometry(5.2, 34), makeMaterial(0xb2916e));
+  crossRoad.rotation.x = -Math.PI / 2;
+  crossRoad.position.set(-11.5, 0.014, -3.2);
+  scene.add(crossRoad);
+
+  const backRoad = new Mesh(new PlaneGeometry(44, 3.3), makeMaterial(0xbda080));
+  backRoad.rotation.x = -Math.PI / 2;
+  backRoad.position.set(0, 0.013, -10.2);
+  scene.add(backRoad);
+
+  const sidewalk = new Mesh(new PlaneGeometry(44, 0.7), makeMaterial(0xd9cfb4));
+  sidewalk.rotation.x = -Math.PI / 2;
+  sidewalk.position.set(0, 0.02, 1.68);
+  scene.add(sidewalk);
+
+  for (const [x, z, color, scale, rotation] of [
+    [-7.2, -3.8, 0xd56f52, 1.0, 0],
+    [7.0, -3.8, 0xd4aa61, 0.9, 0],
+    [-17.0, -7.8, 0xc97d65, 0.92, 0.12],
+    [-7.1, -13.0, 0xd5a66d, 0.86, Math.PI],
+    [1.0, -13.2, 0x8da9a1, 0.9, Math.PI],
+    [9.2, -12.8, 0xc27a68, 0.88, Math.PI],
+    [16.5, -6.9, 0xdfb76f, 0.82, -0.1],
+  ] as const) {
+    scene.add(createHouse(x, z, color, scale, rotation));
+  }
+
+  for (const [x, z, scale, color] of [
+    [-4.7, -2.9, 1.0, 0x5f8d56],
+    [4.9, -2.6, 1.05, 0x54874f],
+    [-8.2, 1.4, 0.9, 0x6a965d],
+    [8.1, 1.0, 1.05, 0x527e4b],
+    [-15.2, -2.0, 1.12, 0x668e53],
+    [-13.7, -12.2, 0.95, 0x507f4b],
+    [-3.2, -10.7, 0.88, 0x6d985e],
+    [5.1, -9.8, 1.08, 0x58854f],
+    [13.7, -11.3, 1.0, 0x678f52],
+    [17.5, 0.7, 1.06, 0x4f814c],
+  ] as const) {
+    scene.add(createTree(x, z, scale, color));
+  }
+
+  for (const [x, z, scale, color] of [
+    [-5.8, -0.8, 0.72, 0x678f52],
+    [5.9, -0.7, 0.68, 0x5f8b55],
+    [-9.0, -6.2, 0.8, 0x759d61],
+    [11.4, -5.8, 0.78, 0x698f58],
+    [-1.8, -8.8, 0.66, 0x6f985f],
+    [7.2, -9.0, 0.72, 0x618a54],
+  ] as const) {
+    scene.add(createShrub(x, z, scale, color));
+  }
+
+  const stand = createStand();
+  scene.add(stand.root);
 
   const signs = Array.from({ length: 40 }, (_, index) => createSign(index));
   let signTexture: CanvasTexture | null = null;
@@ -766,10 +1015,12 @@ export const createLemonsvilleScene = (
 
   let viewportWidth = 1;
   let viewportHeight = 1;
-  let currentShot: SceneShotKind = "establishing";
+  let currentShot: SceneShotKind = state.phase === "forecast" ? "forecast" : "stand";
+  let currentCameraProgress = 0;
 
   const applyCameraShot = (shot: SceneShotKind): void => {
     currentShot = shot;
+    currentCameraProgress = shot === "remaining" ? 1 : 0;
     const composition = sceneCameraComposition(viewportWidth, viewportHeight, shot);
     camera.aspect = viewportWidth / viewportHeight;
     camera.fov = composition.fov;
@@ -777,6 +1028,28 @@ export const createLemonsvilleScene = (
     camera.lookAt(...composition.lookAt);
     camera.updateProjectionMatrix();
     canvas.dataset["sceneShot"] = shot;
+  };
+
+  const applyRemainingCameraTransition = (progress: number): void => {
+    const from = sceneCameraComposition(viewportWidth, viewportHeight, "stand");
+    const to = sceneCameraComposition(viewportWidth, viewportHeight, "remaining");
+    const eased = clamp01(progress);
+    currentShot = "remaining";
+    currentCameraProgress = eased;
+    camera.aspect = viewportWidth / viewportHeight;
+    camera.fov = lerp(from.fov, to.fov, eased);
+    camera.position.set(
+      lerp(from.position[0], to.position[0], eased),
+      lerp(from.position[1], to.position[1], eased),
+      lerp(from.position[2], to.position[2], eased),
+    );
+    camera.lookAt(
+      lerp(from.lookAt[0], to.lookAt[0], eased),
+      lerp(from.lookAt[1], to.lookAt[1], eased),
+      lerp(from.lookAt[2], to.lookAt[2], eased),
+    );
+    camera.updateProjectionMatrix();
+    canvas.dataset["sceneShot"] = "remaining";
   };
 
   const updateSignPrice = (priceLabel: string): void => {
@@ -807,6 +1080,18 @@ export const createLemonsvilleScene = (
   };
 
   const positionStaticPedestrians = (): void => {
+    if (state.phase === "forecast") {
+      for (const customer of customers) {
+        resetPersonPose(customer);
+        customer.root.visible = false;
+      }
+      for (const buyer of buyers) {
+        resetPersonPose(buyer);
+        buyer.root.visible = false;
+      }
+      return;
+    }
+
     const visibleCount = Math.min(
       customers.length,
       Math.max(6, storyboard.passersBy.length),
@@ -826,13 +1111,37 @@ export const createLemonsvilleScene = (
     }
   };
 
+  const applyPhaseStaging = (): void => {
+    const forecast = state.phase === "forecast";
+    stand.shutter.visible = forecast;
+    seller.person.root.visible = !forecast;
+    canvas.dataset["standState"] = forecast ? "closed" : "open";
+    canvas.dataset["scenePopulation"] = forecast ? "empty" : "active";
+
+    const signLimit = forecast
+      ? 0
+      : Math.max(0, Math.min(signs.length, Math.trunc(state.visibleSigns)));
+    signs.forEach((sign, index) => {
+      sign.root.visible = index < signLimit;
+    });
+
+    const lemonLimit = forecast
+      ? 0
+      : visibleInventoryCount(state.prepared, lemons.length, 12);
+    lemons.forEach((lemon, index) => {
+      lemon.visible = index < lemonLimit;
+    });
+
+    cupInventory.setCount(forecast ? 0 : storyboard.prepared);
+  };
+
   const resetAnimatedObjects = (): void => {
     positionStaticPedestrians();
     applySellerExpression(seller, state.confidence);
+    applyPhaseStaging();
     signs.forEach((sign, index) => {
       sign.root.rotation.z = signOrigins[index] ?? 0;
     });
-    cupInventory.setCount(storyboard.prepared);
     lemons.forEach((lemon, index) => {
       lemon.position.y = lemonOrigins[index] ?? lemon.position.y;
       lemon.rotation.y = 0;
@@ -840,7 +1149,7 @@ export const createLemonsvilleScene = (
     for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
       weatherObjects[weather].position.x = weatherOrigins[weather];
     }
-    applyCameraShot("establishing");
+    applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
 
   const animateBuyers = (elapsedMs: number, seconds: number): number => {
@@ -905,6 +1214,11 @@ export const createLemonsvilleScene = (
     seconds: number,
     activeBuyerCount: number,
   ): void => {
+    if (state.phase !== "simulation") {
+      for (const customer of customers) customer.root.visible = false;
+      return;
+    }
+
     const targetCount = Math.min(
       customers.length,
       Math.max(activeBuyerCount + 1, storyboard.passersBy.length),
@@ -948,19 +1262,21 @@ export const createLemonsvilleScene = (
   };
 
   const animateSeller = (seconds: number, elapsedMs: number): void => {
+    seller.person.root.visible = state.phase !== "forecast";
+    if (state.phase === "forecast") return;
     applySellerExpression(seller, state.confidence);
     if (state.reducedMotion || state.phase === "idle") return;
     const breathing = Math.sin(seconds * 2.1) * 0.025;
     seller.person.torso.position.y = 1.05 + breathing;
     seller.person.head.position.y = 1.73 + breathing * 0.7;
-    seller.person.arms[0].rotation.x += Math.sin(seconds * 1.7) * 0.035;
-    seller.person.arms[1].rotation.x += Math.sin(seconds * 1.7 + 0.8) * 0.035;
+    seller.person.arms[0].root.rotation.x += Math.sin(seconds * 1.7) * 0.035;
+    seller.person.arms[1].root.rotation.x += Math.sin(seconds * 1.7 + 0.8) * 0.035;
 
     const serving =
       state.phase === "simulation" &&
       storyboard.sales.some((sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing");
     if (serving) {
-      seller.person.arms[1].rotation.x = -1.2;
+      seller.person.arms[1].root.rotation.x = -1.2;
       seller.person.torso.rotation.x -= 0.06;
     }
   };
@@ -979,8 +1295,12 @@ export const createLemonsvilleScene = (
     );
     const seconds = elapsedMs / 1000;
     const nextShot =
-      state.phase === "simulation" ? sceneShotAt(storyboard, elapsedMs) : "establishing";
-    if (nextShot !== currentShot) applyCameraShot(nextShot);
+      state.phase === "simulation" ? sceneShotAt(storyboard, elapsedMs) : "forecast";
+    if (nextShot === "remaining") {
+      applyRemainingCameraTransition(remainingCameraProgressAt(storyboard, elapsedMs));
+    } else if (nextShot !== currentShot) {
+      applyCameraShot(nextShot);
+    }
 
     const activeBuyerCount = animateBuyers(elapsedMs, seconds);
     animatePassersBy(elapsedMs, seconds, activeBuyerCount);
@@ -1039,10 +1359,15 @@ export const createLemonsvilleScene = (
     applySellerExpression(seller, state.confidence);
     if (presentationChanged) {
       animationEpoch = performance.now();
-      applyCameraShot("establishing");
+      applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
     }
 
-    renderer.setClearColor(skyColor[state.weather], 1);
+    renderer.setClearColor(
+      state.phase === "forecast" ? earlyMorningSkyColor[state.weather] : skyColor[state.weather],
+      1,
+    );
+    hemisphere.intensity = state.phase === "forecast" ? 1.35 : 1.9;
+    sunlight.intensity = state.phase === "forecast" ? 1.05 : 1.8;
 
     for (const [weather, weatherObject] of Object.entries(weatherObjects) as [
       SceneWeather,
@@ -1051,17 +1376,7 @@ export const createLemonsvilleScene = (
       weatherObject.visible = weather === state.weather;
     }
 
-    const signLimit = Math.max(0, Math.min(signs.length, Math.trunc(state.visibleSigns)));
-    signs.forEach((sign, index) => {
-      sign.root.visible = index < signLimit;
-    });
-
-    const lemonLimit = visibleInventoryCount(state.prepared, lemons.length, 12);
-    lemons.forEach((lemon, index) => {
-      lemon.visible = index < lemonLimit;
-    });
-
-    cupInventory.setCount(storyboard.prepared);
+    applyPhaseStaging();
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
     render();
@@ -1072,7 +1387,11 @@ export const createLemonsvilleScene = (
     viewportWidth = Math.max(1, Math.floor(width));
     viewportHeight = Math.max(1, Math.floor(height));
     renderer.setSize(viewportWidth, viewportHeight, false);
-    applyCameraShot(currentShot);
+    if (currentShot === "remaining" && currentCameraProgress < 1) {
+      applyRemainingCameraTransition(currentCameraProgress);
+    } else {
+      applyCameraShot(currentShot);
+    }
     render();
   };
 
