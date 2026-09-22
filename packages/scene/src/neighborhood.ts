@@ -577,14 +577,26 @@ export type NeighborhoodWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunders
 export const weatherWindStrength = (weather: NeighborhoodWeather): number => {
   switch (weather) {
     case "sunny":
-      return 0.012;
+      return 0.008;
     case "cloudy":
       return 0.018;
     case "hot-and-dry":
-      return 0.026;
+      return 0.03;
     case "thunderstorm":
-      return 0.064;
+      return 0.11;
   }
+};
+
+export const windGustMultiplierAt = (
+  seconds: number,
+  weather: NeighborhoodWeather,
+): number => {
+  const time = Math.max(0, Number.isFinite(seconds) ? seconds : 0);
+  const rolling = 0.5 + Math.sin(time * 0.72 + 0.8) * 0.5;
+  const gust = rolling * rolling * rolling * rolling;
+  const flutter = 0.5 + Math.sin(time * 2.35 + 1.6) * 0.5;
+  const gustRange = weather === "thunderstorm" ? 1.15 : weather === "hot-and-dry" ? 0.3 : 0.14;
+  return 0.82 + flutter * 0.18 + gust * gustRange;
 };
 
 export const updateNeighborhoodWind = (
@@ -592,7 +604,7 @@ export const updateNeighborhoodWind = (
   seconds: number,
   weather: NeighborhoodWeather,
 ): void => {
-  const strength = weatherWindStrength(weather);
+  const strength = weatherWindStrength(weather) * windGustMultiplierAt(seconds, weather);
   scene.traverse((object) => {
     if (object.userData["windResponsive"] !== true) return;
     const phase =
@@ -607,11 +619,20 @@ export const updateNeighborhoodWind = (
       typeof object.userData["windBaseRotationZ"] === "number"
         ? object.userData["windBaseRotationZ"]
         : 0;
-    const gust =
-      Math.sin(seconds * 1.25 + phase) * 0.7 +
-      Math.sin(seconds * 2.7 + phase * 1.7) * 0.3;
-    object.rotation.x = baseX + gust * strength * 0.24;
-    object.rotation.z = baseZ + gust * strength;
+    const role: unknown = object.userData["sceneRole"];
+    const flexibility =
+      role === "garden-flower"
+        ? 1.75
+        : role === "procedural-shrub"
+          ? 1.3
+          : 1;
+    const broadSway =
+      Math.sin(seconds * 0.92 + phase) * 0.72 +
+      Math.sin(seconds * 1.86 + phase * 1.37) * 0.2;
+    const leafFlutter = Math.sin(seconds * 4.4 + phase * 2.1) * 0.08;
+    const bend = (broadSway + leafFlutter) * strength * flexibility;
+    object.rotation.x = baseX + bend * 0.28;
+    object.rotation.z = baseZ + bend;
   });
 };
 
