@@ -25,6 +25,7 @@ import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { SELLER_Z } from "./stand-anchors.js";
 import type { StandDetailController } from "./stand-detail.js";
+import type { WeatherDetailController } from "./weather-detail.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -58,20 +59,6 @@ export interface LemonsvilleSceneController {
   resize(width: number, height: number): void;
   dispose(): void;
 }
-
-const skyColor: Record<SceneWeather, number> = {
-  sunny: 0x79cbe0,
-  cloudy: 0xaabcc3,
-  "hot-and-dry": 0x9fc9d3,
-  thunderstorm: 0x536471,
-};
-
-const earlyMorningSkyColor: Record<SceneWeather, number> = {
-  sunny: 0x9db9c9,
-  cloudy: 0x899ca7,
-  "hot-and-dry": 0xa8b9bd,
-  thunderstorm: 0x485866,
-};
 
 const PASSERBY_POOL_SIZE = 32;
 const BUYER_POOL_SIZE = 192;
@@ -443,6 +430,7 @@ export const createLemonsvilleScene = (
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.shadowMap.enabled = false;
+  renderer.setClearColor(0x8fa7b8, 1);
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
@@ -505,15 +493,10 @@ export const createLemonsvilleScene = (
     thunderstorm: new Group(),
   };
   for (const weatherObject of Object.values(weatherObjects)) scene.add(weatherObject);
-  const weatherOrigins: Record<SceneWeather, number> = {
-    sunny: 0,
-    cloudy: 0,
-    "hot-and-dry": 0,
-    thunderstorm: 0,
-  };
 
   let state = initialState;
   let crowdMotion: StreetMotion | null = null;
+  let weatherDetail: WeatherDetailController | null = null;
   let ambientLife:
     | Readonly<{
         update(
@@ -638,10 +621,19 @@ export const createLemonsvilleScene = (
   void import("./weather-detail.js")
     .then(({ populateWeatherObjects }) => {
       if (disposed) return;
-      populateWeatherObjects(weatherObjects);
-      for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
-        weatherOrigins[weather] = weatherObjects[weather].position.x;
-      }
+      weatherDetail = populateWeatherObjects(
+        weatherObjects,
+        renderer,
+        hemisphere,
+        sunlight,
+      );
+      weatherDetail.update(
+        state.weather,
+        state.phase,
+        0,
+        Math.max(1, state.durationMs),
+        state.reducedMotion,
+      );
       render();
     })
     .catch(() => undefined);
@@ -744,9 +736,13 @@ export const createLemonsvilleScene = (
     signs.forEach((sign) => {
       sign.root.rotation.z = 0;
     });
-    for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
-      weatherObjects[weather].position.x = weatherOrigins[weather];
-    }
+    weatherDetail?.update(
+      state.weather,
+      state.phase,
+      0,
+      Math.max(1, storyboard.durationMs),
+      state.reducedMotion,
+    );
     ambientLife?.update(
       state.weather,
       state.phase,
@@ -912,10 +908,13 @@ export const createLemonsvilleScene = (
         sign.root.rotation.z = Math.sin(seconds * 1.7 + index * 0.55) * 0.035;
       }
     });
-    const activeWeather = weatherObjects[state.weather];
-    activeWeather.position.x =
-      weatherOrigins[state.weather] +
-      Math.sin(seconds * 0.45) * (state.weather === "sunny" ? 0.08 : 0.3);
+    weatherDetail?.update(
+      state.weather,
+      state.phase,
+      elapsedMs,
+      storyboard.durationMs,
+      state.reducedMotion,
+    );
 
     render();
     animationFrame = window.requestAnimationFrame(animate);
@@ -950,18 +949,13 @@ export const createLemonsvilleScene = (
       applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
     }
 
-    const atmosphereColor =
-      state.phase === "forecast" ? earlyMorningSkyColor[state.weather] : skyColor[state.weather];
-    renderer.setClearColor(atmosphereColor, 1);
-    hemisphere.intensity = state.phase === "forecast" ? 1.35 : 1.9;
-    sunlight.intensity = state.phase === "forecast" ? 1.05 : 1.8;
-
-    for (const [weather, weatherObject] of Object.entries(weatherObjects) as [
-      SceneWeather,
-      Group,
-    ][]) {
-      weatherObject.visible = weather === state.weather;
-    }
+    weatherDetail?.update(
+      state.weather,
+      state.phase,
+      0,
+      Math.max(1, state.durationMs),
+      state.reducedMotion,
+    );
 
     applyPhaseStaging();
     ambientLife?.update(
