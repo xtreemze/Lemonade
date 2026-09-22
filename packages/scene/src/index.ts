@@ -1102,7 +1102,7 @@ export const createLemonsvilleScene = (
     gizmo = createGizmoController({
       camera,
       scene,
-      container: canvas.parentElement || document.body,
+      container: canvas,
     });
 
     gizmoUI = createGizmoUI({

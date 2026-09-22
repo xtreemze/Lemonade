@@ -54,6 +54,7 @@ import {
   createSceneLauncherUI,
   type ScenePreset,
 } from "./dev-scene-launcher.js";
+import { isSceneViewerEnabled, createPersistentSceneViewer } from "./dev-scene-viewer.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
 const ACTIVE_SIMULATION_PRESENTATION_MS = 10_000;
@@ -319,6 +320,13 @@ export class LemonadeApp {
     initialRun: RunSnapshot = createFreshRunSnapshot(),
     options: LemonadeAppOptions = DEFAULT_OPTIONS,
   ) {
+    // Check for persistent 3D scene viewer dev mode
+    if (isSceneViewerEnabled()) {
+      console.log("🎥 Scene Viewer mode activated - launching persistent 3D scene");
+      createPersistentSceneViewer(root, { enableGizmo: true, weather: "sunny", phase: "simulation" });
+      return;
+    }
+
     this.#runSeed = initialRun.seed;
     this.#random = restoreEnvironmentRandom(initialRun);
     this.#game = initialRun.state;
