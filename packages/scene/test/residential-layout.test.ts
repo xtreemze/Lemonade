@@ -111,7 +111,18 @@ describe("procedural residential layout", () => {
     }
     for (const planting of layout.shrubs) {
       const clearance = 1.9 * planting.scale;
-      expect(residentialPointIsBlocked(planting, layout, clearance)).toBe(false);
+      if (planting.propertyRole !== null && planting.yardZone === "front") {
+        expect(
+          residentialFootprintIntersectsHardscape(
+            planting,
+            layout,
+            clearance,
+            clearance,
+          ),
+        ).toBe(false);
+      } else {
+        expect(residentialPointIsBlocked(planting, layout, clearance)).toBe(false);
+      }
     }
     for (const planting of layout.flowers) {
       expect(residentialPointIsBlocked(planting, layout, 0.38)).toBe(false);
