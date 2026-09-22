@@ -42,7 +42,7 @@ describe("ambient neighborhood mobility projection", () => {
     const ambient = createAmbientLife(scene, SEED);
 
     let observedOpenDoor = false;
-    for (let index = 0; index < 28 && !observedOpenDoor; index += 1) {
+    for (let index = 0; index < 28; index += 1) {
       const sample = ambient.update(
         "cloudy",
         "simulation",
