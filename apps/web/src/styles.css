@@ -342,6 +342,31 @@ h2 {
 
 .decision-control strong {
   font-size: 1.12rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.decision-control strong::before {
+  content: '';
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.decision-control-glasses strong::before {
+  background-image: url("./assets/cup.svg");
+}
+
+.decision-control-signs strong::before {
+  background-image: url("./assets/sign.svg");
+}
+
+.decision-control-price strong::before {
+  background-image: url("./assets/usd.svg");
 }
 
 .decision-control small {
