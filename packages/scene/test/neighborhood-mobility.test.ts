@@ -224,7 +224,7 @@ describe("unified neighborhood mobility", () => {
         0,
         Math.abs(
           (access.sidewalkCenterZ - roadZ) /
-            Math.max(0.001, access.parkingZ - roadZ),
+            Math.max(0.001, Math.abs(access.parkingZ - roadZ)),
         ),
       ),
     );
