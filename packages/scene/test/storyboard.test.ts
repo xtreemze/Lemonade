@@ -193,9 +193,9 @@ describe("street simulation storyboard", () => {
     expect(storyboard.priceCents).toBe(175);
   });
 
-  it("holds six seconds of street activity then a four-second ending closeup", () => {
+  it("holds ten seconds of street activity then a two-second ending closeup", () => {
     const storyboard = createStreetStoryboard({
-      durationMs: 10_000,
+      durationMs: 12_000,
       prepared: 10,
       sold: 4,
       visibleSigns: 2,
@@ -207,26 +207,26 @@ describe("street simulation storyboard", () => {
       "stand",
       "remaining",
     ]);
-    expect(storyboard.activeDurationMs).toBe(6_000);
+    expect(storyboard.activeDurationMs).toBe(10_000);
     expect(storyboard.shots[0]?.startAtMs).toBe(0);
-    expect(storyboard.shots.at(-1)?.endAtMs).toBe(10_000);
+    expect(storyboard.shots.at(-1)?.endAtMs).toBe(12_000);
     expect(sceneShotAt(storyboard, 0)).toBe("stand");
-    expect(sceneShotAt(storyboard, 5_999)).toBe("stand");
-    expect(sceneShotAt(storyboard, 6_000)).toBe("remaining");
-    expect(sceneShotAt(storyboard, 9_999)).toBe("remaining");
+    expect(sceneShotAt(storyboard, 9_999)).toBe("stand");
+    expect(sceneShotAt(storyboard, 10_000)).toBe("remaining");
+    expect(sceneShotAt(storyboard, 11_999)).toBe("remaining");
 
-    expect(endingCloseupProgressAt(storyboard, 6_000)).toBe(0);
-    expect(endingCloseupProgressAt(storyboard, 8_000)).toBeCloseTo(0.5);
-    expect(endingCloseupProgressAt(storyboard, 10_000)).toBe(1);
+    expect(endingCloseupProgressAt(storyboard, 10_000)).toBe(0);
+    expect(endingCloseupProgressAt(storyboard, 11_000)).toBeCloseTo(0.5);
+    expect(endingCloseupProgressAt(storyboard, 12_000)).toBe(1);
 
-    expect(endingConfidenceAt(storyboard, 6_000, 1, 5)).toBe(1);
-    expect(endingConfidenceAt(storyboard, 8_000, 1, 5)).toBeCloseTo(3);
-    expect(endingConfidenceAt(storyboard, 10_000, 1, 5)).toBe(5);
+    expect(endingConfidenceAt(storyboard, 10_000, 1, 5)).toBe(1);
+    expect(endingConfidenceAt(storyboard, 11_000, 1, 5)).toBeCloseTo(3);
+    expect(endingConfidenceAt(storyboard, 12_000, 1, 5)).toBe(5);
 
-    expect(remainingCameraProgressAt(storyboard, 6_000)).toBe(0);
-    expect(remainingCameraProgressAt(storyboard, 7_000)).toBeGreaterThan(0);
-    expect(remainingCameraProgressAt(storyboard, 8_500)).toBe(1);
-    expect(remainingCameraProgressAt(storyboard, 10_000)).toBe(1);
+    expect(remainingCameraProgressAt(storyboard, 10_000)).toBe(0);
+    expect(remainingCameraProgressAt(storyboard, 10_500)).toBeGreaterThan(0);
+    expect(remainingCameraProgressAt(storyboard, 11_250)).toBe(1);
+    expect(remainingCameraProgressAt(storyboard, 12_000)).toBe(1);
   });
 
   it("uses viewport classes for mobile-first framing that progressively reveals the neighborhood", () => {
