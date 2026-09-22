@@ -284,4 +284,3 @@ export const navigationPathPoints = (
       return Object.freeze({ x: node.x, z: node.z });
     }),
   );
-};
