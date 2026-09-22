@@ -49,7 +49,7 @@ describe("character geometry detail", () => {
     const rightArm = new Group();
     torso.position.y = 1.05;
 
-    const early = applySellerConfidenceGesture(
+    applySellerConfidenceGesture(
       torso,
       head,
       leftArm,
@@ -57,9 +57,9 @@ describe("character geometry detail", () => {
       0.2,
       5,
     );
-    expect(early).toBe(0);
+    expect(torso.position.y).toBeCloseTo(1.05);
 
-    const late = applySellerConfidenceGesture(
+    applySellerConfidenceGesture(
       torso,
       head,
       leftArm,
@@ -67,7 +67,6 @@ describe("character geometry detail", () => {
       1,
       5,
     );
-    expect(late).toBeGreaterThan(0.99);
     expect(torso.position.y).toBeGreaterThan(1.09);
     expect(head.rotation.x).toBeLessThan(0);
     expect(leftArm.rotation.x).toBeLessThan(-0.5);
