@@ -1,14 +1,20 @@
+import type {
+  BasisPoints,
+  CustomerId,
+  DayNumber,
+  MoneyCents,
+  Seed,
+} from "./primitives.js";
 import {
   basisPoints,
   customerId,
   moneyCents,
-  type BasisPoints,
-  type CustomerId,
-  type DayNumber,
-  type MoneyCents,
-  type Seed,
+  seed,
 } from "./primitives.js";
-import { createNamedRandom, deriveSeed } from "./rng.js";
+import {
+  createSeededRandom,
+  type RandomSource,
+} from "./rng.js";
 import type { OperatingScaleLevel } from "./scale.js";
 
 export type CustomerType =
@@ -77,20 +83,28 @@ export type AudienceSummary = Readonly<{
   stockout: number;
 }>;
 
-export type AudienceScaleRules = Readonly<{
+export type MarketRandomStream =
+  | "audience-selection"
+  | "awareness"
+  | "conversion"
+  | "customer-traits"
+  | "customer-visual"
+  | "market-memory";
+
+export type MarketRandomScope = Readonly<{
+  day?: DayNumber;
+  customerId?: CustomerId;
+}>;
+
+export type AudienceScaleTargets = Readonly<{
   neighborhoodSize: number;
   dailyAudience: number;
 }>;
 
-const CUSTOMER_TYPES = Object.freeze([
-  "impulse",
-  "price-sensitive",
-  "regular",
-  "destination",
-] as const);
+export const AUDIENCE_MODEL_VERSION = 4 as const;
 
-const AUDIENCE_SCALE_RULES: Readonly<
-  Record<OperatingScaleLevel, AudienceScaleRules>
+const AUDIENCE_SCALE_TARGETS: Readonly<
+  Record<OperatingScaleLevel, AudienceScaleTargets>
 > = Object.freeze({
   1: Object.freeze({ neighborhoodSize: 48, dailyAudience: 24 }),
   2: Object.freeze({ neighborhoodSize: 144, dailyAudience: 72 }),
@@ -98,70 +112,104 @@ const AUDIENCE_SCALE_RULES: Readonly<
   4: Object.freeze({ neighborhoodSize: 900, dailyAudience: 480 }),
 });
 
-export const audienceRulesForScale = (
-  level: OperatingScaleLevel,
-): AudienceScaleRules => AUDIENCE_SCALE_RULES[level];
+const hashText = (initial: number, value: string): number => {
+  let hash = initial >>> 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x0100_0193);
+  }
+  hash ^= 0xff;
+  return hash >>> 0;
+};
 
-export const deriveCustomerTraits = (
-  neighborhoodSeed: Seed,
+export const deriveMarketSeed = (
+  runSeed: Seed,
+  stream: MarketRandomStream,
+  scope: MarketRandomScope = Object.freeze({}),
+): Seed => {
+  let hash = 0x811c_9dc5;
+  hash = hashText(hash, `audience-model-${String(AUDIENCE_MODEL_VERSION)}`);
+  hash = hashText(hash, String(Number(runSeed)));
+  hash = hashText(hash, stream);
+  hash = hashText(
+    hash,
+    scope.day === undefined ? "-" : String(Number(scope.day)),
+  );
+  hash = hashText(
+    hash,
+    scope.customerId === undefined ? "-" : String(Number(scope.customerId)),
+  );
+  return seed(hash);
+};
+
+export const createMarketRandom = (
+  runSeed: Seed,
+  stream: MarketRandomStream,
+  scope: MarketRandomScope = Object.freeze({}),
+): RandomSource => createSeededRandom(deriveMarketSeed(runSeed, stream, scope));
+
+export const audienceTargetsForLevel = (
+  level: OperatingScaleLevel,
+): AudienceScaleTargets => AUDIENCE_SCALE_TARGETS[level];
+
+const customerTypeFor = (random: RandomSource): CustomerType => {
+  const roll = random.nextInt(0, 100);
+  if (roll < 35) return "impulse";
+  if (roll < 65) return "price-sensitive";
+  if (roll < 85) return "regular";
+  return "destination";
+};
+
+export const customerTraitsFor = (
+  runSeed: Seed,
   id: CustomerId,
 ): CustomerTraits => {
-  const random = createNamedRandom(
-    neighborhoodSeed,
-    "customer-traits",
-    Number(id),
-  );
-  const type = CUSTOMER_TYPES[
-    random.nextInt(0, CUSTOMER_TYPES.length)
-  ] as CustomerType;
+  const random = createMarketRandom(runSeed, "customer-traits", {
+    customerId: id,
+  });
 
   return Object.freeze({
     id,
-    type,
-    visualSeed: deriveSeed(
-      neighborhoodSeed,
-      "customer-visual-identity",
-      Number(id),
-    ),
-    intrinsicPriceTolerance: moneyCents(random.nextInt(125, 501)),
+    type: customerTypeFor(random),
+    visualSeed: deriveMarketSeed(runSeed, "customer-visual", {
+      customerId: id,
+    }),
+    intrinsicPriceTolerance: moneyCents(random.nextInt(125, 701)),
     advertisingResponsiveness: basisPoints(random.nextInt(3_500, 9_501)),
     familiarity: basisPoints(random.nextInt(1_000, 9_001)),
-    loyalty: basisPoints(random.nextInt(1_000, 9_001)),
+    loyalty: basisPoints(random.nextInt(1_500, 9_501)),
     weatherCommitment: basisPoints(random.nextInt(2_500, 10_001)),
   });
 };
 
-export const selectDayAudience = (
-  neighborhoodSeed: Seed,
+export const dayAudienceFor = (
+  runSeed: Seed,
   day: DayNumber,
   level: OperatingScaleLevel,
 ): DayAudience => {
-  const rules = audienceRulesForScale(level);
-  const ids = Array.from(
-    { length: rules.neighborhoodSize },
-    (_, index) => customerId(index),
-  );
-  const random = createNamedRandom(
-    neighborhoodSeed,
-    "audience-selection",
-    Number(day),
-    level,
+  const targets = audienceTargetsForLevel(level);
+  const ranked = Array.from(
+    { length: targets.neighborhoodSize },
+    (_, index) => {
+      const id = customerId(index);
+      const random = createMarketRandom(runSeed, "audience-selection", {
+        day,
+        customerId: id,
+      });
+      return Object.freeze({ id, score: random.nextUnit() });
+    },
   );
 
-  for (let index = ids.length - 1; index > 0; index -= 1) {
-    const targetIndex = random.nextInt(0, index + 1);
-    const current = ids[index];
-    const target = ids[targetIndex];
-    if (current === undefined || target === undefined) {
-      throw new Error("audience shuffle invariant failed");
-    }
-    ids[index] = target;
-    ids[targetIndex] = current;
-  }
+  ranked.sort(
+    (left, right) =>
+      left.score - right.score || Number(left.id) - Number(right.id),
+  );
 
   return Object.freeze({
-    neighborhoodSize: rules.neighborhoodSize,
-    customerIds: Object.freeze(ids.slice(0, rules.dailyAudience)),
+    neighborhoodSize: targets.neighborhoodSize,
+    customerIds: Object.freeze(
+      ranked.slice(0, targets.dailyAudience).map(({ id }) => id),
+    ),
   });
 };
 
