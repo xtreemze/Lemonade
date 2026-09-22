@@ -701,7 +701,7 @@ export const populateNeighborhood = (
         scene,
         1.04,
         access.pathDepth,
-        property.houseX,
+        access.pathCenterX,
         access.pathCenterZ,
         0xd8c9aa,
         0.021,
@@ -796,14 +796,14 @@ export const populateNeighborhood = (
   for (const property of fencedProperties) {
     const access = residentialAccessLayout(property, seed);
     const fenceZ =
-      access.doorZ +
+      access.entryZ +
       access.frontDirection *
         Math.min(1.15, Math.max(0.72, access.pathDepth * 0.18));
     const lotHalfWidth = Math.max(3.8, 4.45 * property.scale);
     const gaps = [
       Object.freeze({
-        minX: property.houseX - 0.86,
-        maxX: property.houseX + 0.86,
+        minX: access.pathCenterX - 0.86,
+        maxX: access.pathCenterX + 0.86,
       }),
       ...(property.drivewayX === null
         ? []
