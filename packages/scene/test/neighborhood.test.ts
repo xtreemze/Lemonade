@@ -24,7 +24,7 @@ describe("neighborhood world scale", () => {
     expect(stats.houseLods).toBeGreaterThanOrEqual(36);
     expect(stats.featuredHomes).toBe(1);
     expect(stats.frontProperties).toBeGreaterThanOrEqual(7);
-    expect(stats.driveways).toBe(stats.frontProperties);
+    expect(stats.driveways).toBe(stats.houseLods);
     expect(stats.treeLods).toBeGreaterThanOrEqual(64);
     expect(stats.yardDetails).toBeGreaterThanOrEqual(10);
     expect(stats.flowers).toBeGreaterThanOrEqual(8);
