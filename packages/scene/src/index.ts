@@ -472,12 +472,18 @@ export const createLemonsvilleScene = (
   const ground = new Mesh(new PlaneGeometry(160, 150), makeMaterial(0x92ad68));
   ground.rotation.x = -Math.PI / 2;
   ground.position.z = -32;
+  ground.name = "ground";
   scene.add(ground);
 
   const stand = createStand();
+  stand.root.name = "lemonadeStand";
   scene.add(stand.root);
 
-  const signs = Array.from({ length: 40 }, () => createSign());
+  const signs = Array.from({ length: 40 }, (_, index) => {
+    const sign = createSign();
+    sign.root.name = `advertisingSign_${index}`;
+    return sign;
+  });
   let signTexture: CanvasTexture | null = null;
   let signPriceLabel = "";
   let disposed = false;
@@ -486,20 +492,23 @@ export const createLemonsvilleScene = (
     | Promise<Readonly<{ createPriceSignSurface(priceLabel: string): HTMLCanvasElement }>>
     | null = null;
 
-  const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) =>
-    createPerson(initialState.characterSeed, index),
-  );
-  for (const customer of customers) scene.add(customer.root);
+  const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) => {
+    const customer = createPerson(initialState.characterSeed, index);
+    customer.root.name = `passerby_${index}`;
+    scene.add(customer.root);
+    return customer;
+  });
 
-  const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) =>
-    createPerson(initialState.characterSeed, index + PASSERBY_POOL_SIZE),
-  );
-  for (const buyer of buyers) {
+  const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) => {
+    const buyer = createPerson(initialState.characterSeed, index + PASSERBY_POOL_SIZE);
     buyer.root.visible = false;
+    buyer.root.name = `buyer_${index}`;
     scene.add(buyer.root);
-  }
+    return buyer;
+  });
 
   const seller = createSeller(initialState.characterSeed);
+  seller.person.root.name = "seller";
   seller.person.root.position.set(
     0,
     personGroundY(seller.person),
