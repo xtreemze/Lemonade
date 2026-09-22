@@ -851,7 +851,9 @@ export const createLemonsvilleScene = (
         const offscreenZ = streetZ - (sale.direction === -1 ? 20 : -20);
         x = lerp(streetX, counterX, progress);
         z = lerp(offscreenZ, counterZ, progress);
-        travelDistance = approachDistance * progress;
+        const actualXDist = Math.abs(counterX - streetX) * progress;
+        const actualZDist = Math.abs(counterZ - offscreenZ) * progress;
+        travelDistance = Math.hypot(actualXDist, actualZDist);
       } else if (phase === "drinking") {
         const duration = Math.max(1, sale.drinkEndAtMs - sale.purchaseEndAtMs);
         const progress = smoothStep((elapsedMs - sale.purchaseEndAtMs) / duration);
