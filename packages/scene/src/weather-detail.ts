@@ -6,6 +6,8 @@ import {
   SphereGeometry,
 } from "three";
 
+import { WEATHER_BACKDROP_LAYOUT } from "./weather-layout.js";
+
 type WeatherKind = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 type WeatherGroups = Readonly<Record<WeatherKind, Group>>;
 
@@ -59,6 +61,12 @@ const addSun = (parent: Group, radius: number): void => {
 };
 
 export const populateWeatherObjects = (weather: WeatherGroups): void => {
+  for (const [kind, group] of Object.entries(weather) as [WeatherKind, Group][]) {
+    const layout = WEATHER_BACKDROP_LAYOUT[kind];
+    group.position.set(...layout.position);
+    group.scale.setScalar(layout.scale);
+  }
+
   addSun(weather.sunny, 0.82);
 
   const partlySun = new Group();
