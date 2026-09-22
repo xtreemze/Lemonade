@@ -42,7 +42,7 @@ See [`docs/game-design.md`](docs/game-design.md) for the reverse-engineered mode
 The presentation should feel like a remembered Apple II game rather than a literal pixel-art clone.
 
 - **Vector 3D Lemonsville:** a lightweight low-poly neighborhood and lemonade stand communicate weather, customer traffic, signs, inventory, and sales activity.
-- **Procedural audio:** weather reports preserve the Apple II game's recognizable historical motifs and extend them with original six-second variations; purchase/weather effects are synthesized with Web Audio. See [`docs/weather-audio.md`](docs/weather-audio.md). Optional MIDI/SoundFont capability stays behind platform adapters.
+- **Procedural audio:** weather reports preserve the Apple II game's recognizable historical motifs, then complete the identified melodic phrase as a short synthesized cover/reinterpretation; purchase/weather effects are synthesized with Web Audio. See [`docs/weather-audio.md`](docs/weather-audio.md). Optional MIDI/SoundFont capability stays behind platform adapters.
 - **Data visualization:** accessible SVG charts show cash, debt, sell-through, and inventory history without crowding the main play surface.
 - **Progressive finance:** later tiers introduce operating costs, taxes, banking charges, savings/loan interest, and working-capital credit gradually.
 - **Accessibility by design:** keyboard play, native form controls, reduced motion, non-color state cues, and textual equivalents for scene/chart information are core requirements.
@@ -172,7 +172,7 @@ Lemonade Stand was created by Bob Jamison at MECC in 1973 and adapted for the Ap
 - Apple II Applesoft BASIC source: https://gist.github.com/badvision/16b74ade3a8b2fa2e87d
 - Background: https://en.wikipedia.org/wiki/Lemonade_Stand
 
-The revival uses original presentation and audio rather than copying the original game's artwork or musical excerpts.
+The revival uses original presentation and synthesizes the weather melodies procedurally from transcribed pitch/rhythm data; it ships no recorded music or copied artwork.
 
 ## License
 
