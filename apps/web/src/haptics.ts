@@ -2,12 +2,14 @@ export type HapticCue =
   | "purchase:serve"
   | "purchase:payment"
   | "purchase:drink"
+  | "storm:gust"
   | "storm:thunder";
 
 const HAPTIC_PATTERNS: Readonly<Record<HapticCue, readonly number[]>> = Object.freeze({
   "purchase:serve": Object.freeze([12, 18, 10]),
   "purchase:payment": Object.freeze([18, 18, 34]),
   "purchase:drink": Object.freeze([10, 14, 8]),
+  "storm:gust": Object.freeze([28, 44, 34]),
   "storm:thunder": Object.freeze([70, 32, 120, 45, 180]),
 });
 
