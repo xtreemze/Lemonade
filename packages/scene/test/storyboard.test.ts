@@ -147,9 +147,9 @@ describe("street simulation storyboard", () => {
     expect(storyboard.priceCents).toBe(175);
   });
 
-  it("holds one stand shot during sales and reserves only the ending for inventory", () => {
+  it("holds six seconds of street activity then a two-second ending closeup", () => {
     const storyboard = createStreetStoryboard({
-      durationMs: 6_000,
+      durationMs: 8_000,
       prepared: 10,
       sold: 4,
       visibleSigns: 2,
@@ -162,15 +162,17 @@ describe("street simulation storyboard", () => {
       "remaining",
     ]);
     expect(storyboard.shots[0]?.startAtMs).toBe(0);
-    expect(storyboard.shots.at(-1)?.endAtMs).toBe(6_000);
+    expect(storyboard.activeDurationMs).toBe(6_000);
+    expect(storyboard.shots.at(-1)?.endAtMs).toBe(8_000);
     expect(sceneShotAt(storyboard, 0)).toBe("stand");
     expect(sceneShotAt(storyboard, 3_200)).toBe("stand");
-    expect(sceneShotAt(storyboard, 5_000)).toBe("stand");
-    expect(sceneShotAt(storyboard, 5_500)).toBe("remaining");
-    expect(remainingCameraProgressAt(storyboard, 5_000)).toBe(0);
-    expect(remainingCameraProgressAt(storyboard, 5_500)).toBeGreaterThan(0);
-    expect(remainingCameraProgressAt(storyboard, 5_700)).toBe(1);
-    expect(remainingCameraProgressAt(storyboard, 6_000)).toBe(1);
+    expect(sceneShotAt(storyboard, 5_999)).toBe("stand");
+    expect(sceneShotAt(storyboard, 6_000)).toBe("remaining");
+    expect(sceneShotAt(storyboard, 7_999)).toBe("remaining");
+    expect(remainingCameraProgressAt(storyboard, 6_000)).toBe(0);
+    expect(remainingCameraProgressAt(storyboard, 6_500)).toBeGreaterThan(0);
+    expect(remainingCameraProgressAt(storyboard, 7_300)).toBe(1);
+    expect(remainingCameraProgressAt(storyboard, 8_000)).toBe(1);
   });
 
   it("uses a distant forecast, stable stand framing, and tighter remaining-cups view", () => {
@@ -223,6 +225,7 @@ describe("street simulation storyboard", () => {
 
     expect(second).toEqual(first);
     expect(first.sold).toBe(8);
+    expect(first.activeDurationMs).toBe(4_000);
     expect(first.sales).toHaveLength(8);
     expect(first.sales.at(-1)?.remainingCups).toBe(0);
   });
