@@ -144,112 +144,54 @@ export type SceneViewportClass =
 
 export type SceneCameraComposition = Readonly<{
   mode: "portrait" | "balanced" | "wide";
-  viewportClass: SceneViewportClass;
-  shot: SceneShotKind;
   fov: number;
   position: readonly [number, number, number];
   lookAt: readonly [number, number, number];
 }>;
-
-const MOBILE_SHORT_EDGE_MAX = 500;
-const DESKTOP_LONG_EDGE_MIN = 1_180;
 
 const finiteViewportEdge = (value: number): number =>
   Math.max(1, Number.isFinite(value) ? value : 1);
 
+const VIEWPORT_CLASSES = [
+  "mobile-portrait",
+  "mobile-landscape",
+  "tablet",
+  "desktop",
+] as const;
+
+const viewportClassIndex = (width: number, height: number): 0 | 1 | 2 | 3 => {
+  const shortEdge = Math.min(width, height);
+  if (shortEdge <= 500) return width < height ? 0 : 1;
+  return Math.max(width, height) >= 1_180 ? 3 : 2;
+};
+
 export const sceneViewportClass = (
   width: number,
   height: number,
-): SceneViewportClass => {
-  const safeWidth = finiteViewportEdge(width);
-  const safeHeight = finiteViewportEdge(height);
-  const shortEdge = Math.min(safeWidth, safeHeight);
-  const longEdge = Math.max(safeWidth, safeHeight);
+): SceneViewportClass =>
+  VIEWPORT_CLASSES[
+    viewportClassIndex(finiteViewportEdge(width), finiteViewportEdge(height))
+  ];
 
-  if (shortEdge <= MOBILE_SHORT_EDGE_MAX) {
-    return safeWidth < safeHeight ? "mobile-portrait" : "mobile-landscape";
-  }
-  return longEdge >= DESKTOP_LONG_EDGE_MIN ? "desktop" : "tablet";
-};
+type SceneCameraProfile = readonly [
+  fov: number,
+  positionY: number,
+  positionZ: number,
+  lookAtY: number,
+  lookAtZ: number,
+];
 
-type SceneCameraProfile = Readonly<{
-  fov: number;
-  position: readonly [number, number, number];
-  lookAt: readonly [number, number, number];
-}>;
-
-const CAMERA_PROFILES: Readonly<
-  Record<SceneViewportClass, Readonly<Record<SceneShotKind, SceneCameraProfile>>>
-> = Object.freeze({
-  "mobile-portrait": Object.freeze({
-    forecast: Object.freeze({
-      fov: 60,
-      position: [0, 19.5, 42] as const,
-      lookAt: [0, 7, -8] as const,
-    }),
-    stand: Object.freeze({
-      fov: 58,
-      position: [0, 14.5, 36] as const,
-      lookAt: [0, 7.5, 0.8] as const,
-    }),
-    remaining: Object.freeze({
-      fov: 46,
-      position: [0, 7.2, 16] as const,
-      lookAt: [0, 2.8, 1] as const,
-    }),
-  }),
-  "mobile-landscape": Object.freeze({
-    forecast: Object.freeze({
-      fov: 45,
-      position: [0, 11.5, 31] as const,
-      lookAt: [0, 5.3, -7] as const,
-    }),
-    stand: Object.freeze({
-      fov: 42,
-      position: [0, 9.3, 26] as const,
-      lookAt: [0, 5, 3.2] as const,
-    }),
-    remaining: Object.freeze({
-      fov: 33,
-      position: [0, 5, 10] as const,
-      lookAt: [0, 2.35, 1] as const,
-    }),
-  }),
-  tablet: Object.freeze({
-    forecast: Object.freeze({
-      fov: 52,
-      position: [0, 14.5, 38] as const,
-      lookAt: [0, 6.2, -8] as const,
-    }),
-    stand: Object.freeze({
-      fov: 49,
-      position: [0, 11.8, 33] as const,
-      lookAt: [0, 6, 1] as const,
-    }),
-    remaining: Object.freeze({
-      fov: 36,
-      position: [0, 5.7, 11.5] as const,
-      lookAt: [0, 2.5, 1] as const,
-    }),
-  }),
-  desktop: Object.freeze({
-    forecast: Object.freeze({
-      fov: 50,
-      position: [0, 16.5, 46] as const,
-      lookAt: [0, 6.8, -9] as const,
-    }),
-    stand: Object.freeze({
-      fov: 47,
-      position: [0, 13, 40] as const,
-      lookAt: [0, 6.4, 0.5] as const,
-    }),
-    remaining: Object.freeze({
-      fov: 34,
-      position: [0, 6, 12.5] as const,
-      lookAt: [0, 2.55, 1] as const,
-    }),
-  }),
-});
+const CAMERA_PROFILES: readonly [
+  readonly [SceneCameraProfile, SceneCameraProfile, SceneCameraProfile],
+  readonly [SceneCameraProfile, SceneCameraProfile, SceneCameraProfile],
+  readonly [SceneCameraProfile, SceneCameraProfile, SceneCameraProfile],
+  readonly [SceneCameraProfile, SceneCameraProfile, SceneCameraProfile],
+] = [
+  [[60, 19.5, 42, 7, -8], [58, 14.5, 36, 7.5, 0.8], [46, 7.2, 16, 2.8, 1]],
+  [[45, 11.5, 31, 5.3, -7], [42, 9.3, 26, 5, 3.2], [33, 5, 10, 2.35, 1]],
+  [[52, 14.5, 38, 6.2, -8], [49, 11.8, 33, 6, 1], [36, 5.7, 11.5, 2.5, 1]],
+  [[50, 16.5, 46, 6.8, -9], [47, 13, 40, 6.4, 0.5], [34, 6, 12.5, 2.55, 1]],
+];
 
 export const sceneCameraComposition = (
   width: number,
@@ -259,17 +201,16 @@ export const sceneCameraComposition = (
   const safeWidth = finiteViewportEdge(width);
   const safeHeight = finiteViewportEdge(height);
   const aspect = safeWidth / safeHeight;
-  const viewportClass = sceneViewportClass(safeWidth, safeHeight);
   const mode =
     aspect < 0.72 ? "portrait" : aspect > 1.65 ? "wide" : "balanced";
-  const profile = CAMERA_PROFILES[viewportClass][shot];
+  const shotIndex = shot === "forecast" ? 0 : shot === "stand" ? 1 : 2;
+  const profile =
+    CAMERA_PROFILES[viewportClassIndex(safeWidth, safeHeight)][shotIndex];
 
-  return Object.freeze({
+  return {
     mode,
-    viewportClass,
-    shot,
-    fov: profile.fov,
-    position: profile.position,
-    lookAt: profile.lookAt,
-  });
+    fov: profile[0],
+    position: [0, profile[1], profile[2]],
+    lookAt: [0, profile[3], profile[4]],
+  };
 };
