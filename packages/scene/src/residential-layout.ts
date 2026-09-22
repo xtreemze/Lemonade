@@ -141,7 +141,7 @@ const rowProperties = (
       makeProperty(
         seed ^ rowSalt,
         index + 10,
-        `row-${rowSalt}-${index}`,
+        "row-" + String(rowSalt) + "-" + String(index),
         baseX,
         z + signed(seed, rowSalt + index * 3) * 2.1,
         0.94 + unit(seed, rowSalt + index * 3 + 1) * 0.1,
