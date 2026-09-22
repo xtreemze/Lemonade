@@ -12,11 +12,18 @@ import {
 
 import {
   DEFAULT_RESIDENTIAL_SEED,
+  FRONT_DRIVEWAY_CENTER_Z,
+  FRONT_DRIVEWAY_DEPTH,
   generateResidentialLayout,
   residentialFootprintIntersectsHardscape,
   type ResidentialPropertySpec,
 } from "./residential-layout.js";
-import { STREET_LAYOUT } from "./street-layout.js";
+import {
+  generateStreetNetwork,
+  STREET_LAYOUT,
+  type StreetStripSpec,
+} from "./street-layout.js";
+import { WORLD_SCALE } from "./world-scale.js";
 
 const material = (color: number, flatShading = true): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading, roughness: 0.92 });
@@ -50,6 +57,24 @@ const road = (
   return mesh;
 };
 
+const streetStrip = (
+  scene: Scene,
+  strip: StreetStripSpec,
+  color: number,
+): Mesh => {
+  const mesh = new Mesh(
+    new BoxGeometry(strip.length, 0.022, strip.width),
+    material(color),
+  );
+  mesh.position.set(strip.x, strip.role === "sidewalk" ? 0.022 : 0.012, strip.z);
+  mesh.rotation.y = -strip.rotationY;
+  mesh.userData["sceneRole"] = strip.role;
+  mesh.userData["streetId"] = strip.streetId;
+  mesh.userData["streetSegment"] = strip.segmentIndex;
+  scene.add(mesh);
+  return mesh;
+};
+
 const markWindResponsive = (root: Group, phase: number): Group => {
   root.userData["windResponsive"] = true;
   root.userData["windPhase"] = phase;
@@ -70,12 +95,32 @@ const detailedHouse = (color: number): Group => {
   roof.position.y = 4.45;
   root.add(roof);
 
-  box(root, [1.05, 2.0, 0.18], [0, 1.05, 2.34], 0x486c69);
-  box(root, [1.22, 0.12, 0.12], [0, 2.08, 2.47], 0xf1dfbd);
-  box(root, [0.11, 2.12, 0.12], [-0.59, 1.08, 2.47], 0xf1dfbd);
-  box(root, [0.11, 2.12, 0.12], [0.59, 1.08, 2.47], 0xf1dfbd);
-  const knob = new Mesh(new SphereGeometry(0.07, 8, 6), material(0xc89a3c));
-  knob.position.set(0.33, 1.05, 2.47);
+  box(
+    root,
+    [WORLD_SCALE.house.doorWidth, WORLD_SCALE.house.doorHeight, 0.18],
+    [0, WORLD_SCALE.house.doorHeight / 2, 2.34],
+    0x486c69,
+  );
+  box(
+    root,
+    [WORLD_SCALE.house.doorWidth + 0.18, 0.12, 0.12],
+    [0, WORLD_SCALE.house.doorHeight + 0.06, 2.47],
+    0xf1dfbd,
+  );
+  box(
+    root,
+    [0.11, WORLD_SCALE.house.doorHeight + 0.12, 0.12],
+    [-(WORLD_SCALE.house.doorWidth / 2 + 0.07), WORLD_SCALE.house.doorHeight / 2, 2.47],
+    0xf1dfbd,
+  );
+  box(
+    root,
+    [0.11, WORLD_SCALE.house.doorHeight + 0.12, 0.12],
+    [WORLD_SCALE.house.doorWidth / 2 + 0.07, WORLD_SCALE.house.doorHeight / 2, 2.47],
+    0xf1dfbd,
+  );
+  const knob = new Mesh(new SphereGeometry(0.055, 8, 6), material(0xc89a3c));
+  knob.position.set(0.3, 1.02, 2.47);
   root.add(knob);
 
   for (const x of [-1.7, 1.7]) {
@@ -498,54 +543,16 @@ export const populateNeighborhood = (
 ): NeighborhoodStats => {
   const worldSpan = 150;
   const layout = generateResidentialLayout(seed);
-  let roadSegments = 0;
-  let pavedRoads = 0;
+  const streetNetwork = generateStreetNetwork(seed);
+  let roadSegments = streetNetwork.roads.length + streetNetwork.sidewalks.length;
+  let pavedRoads = streetNetwork.roads.length;
 
-  const addRoad = (
-    width: number,
-    depth: number,
-    x: number,
-    z: number,
-    color: number,
-    y?: number,
-    role?: string,
-  ): void => {
-    road(scene, width, depth, x, z, color, y, role);
-    roadSegments += 1;
-    if (role === "paved-road") pavedRoads += 1;
-  };
-
-  addRoad(
-    worldSpan,
-    STREET_LAYOUT.road.depth,
-    0,
-    STREET_LAYOUT.road.centerZ,
-    0x596065,
-    0.014,
-    "paved-road",
-  );
-  addRoad(6.2, 112, -15.5, -20, 0x5b6266, 0.014, "paved-road");
-  addRoad(6.2, 112, 18.5, -20, 0x5b6266, 0.014, "paved-road");
-  addRoad(worldSpan, 4.8, 0, -15.5, 0x62686b, 0.014, "paved-road");
-  addRoad(worldSpan, 4.4, 0, -37, 0x646a6d, 0.014, "paved-road");
-  addRoad(
-    worldSpan,
-    STREET_LAYOUT.nearSidewalk.depth,
-    0,
-    STREET_LAYOUT.nearSidewalk.centerZ,
-    0xd4d0c6,
-    0.022,
-    "sidewalk",
-  );
-  addRoad(
-    worldSpan,
-    STREET_LAYOUT.farSidewalk.depth,
-    0,
-    STREET_LAYOUT.farSidewalk.centerZ,
-    0xd4d0c6,
-    0.022,
-    "sidewalk",
-  );
+  for (const strip of streetNetwork.roads) {
+    streetStrip(scene, strip, strip.streetId === "main" ? 0x596065 : 0x62686b);
+  }
+  for (const strip of streetNetwork.sidewalks) {
+    streetStrip(scene, strip, 0xd4d0c6);
+  }
 
   for (let x = -72; x <= 72; x += 7.5) {
     road(
@@ -562,7 +569,17 @@ export const populateNeighborhood = (
 
   for (const property of layout.frontProperties) {
     if (property.drivewayX !== null) {
-      addRoad(2.15, 6.8, property.drivewayX, -2.55, 0xc9b995, 0.019, "driveway");
+      road(
+        scene,
+        WORLD_SCALE.street.drivewayWidth,
+        FRONT_DRIVEWAY_DEPTH,
+        property.drivewayX,
+        FRONT_DRIVEWAY_CENTER_Z,
+        0xc9b995,
+        0.019,
+        "driveway",
+      );
+      roadSegments += 1;
     }
     const color = HOUSE_PALETTE[property.color] ?? HOUSE_PALETTE[0];
     const home = houseLod(
