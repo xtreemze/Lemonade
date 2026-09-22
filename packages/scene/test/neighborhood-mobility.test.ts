@@ -131,6 +131,23 @@ describe("unified neighborhood mobility", () => {
     expect(
       later.properties.some((property) => property.vehicleParked),
     ).toBe(false);
+
+    const exiting = system.sample({
+      weather: "cloudy",
+      phase: "simulation",
+      elapsedMs: 6_500,
+      durationMs: 14_000,
+      dayNumber: 2,
+      focus: { x: 0, z: 0 },
+    });
+    expect(
+      exiting.actors.some(
+        (actor) =>
+          actor.id === "resident-driver" &&
+          actor.visible &&
+          actor.interaction === "door",
+      ),
+    ).toBe(true);
   });
 
   it("runs the mail route every forecast and a gardener on exactly one weekday", () => {
