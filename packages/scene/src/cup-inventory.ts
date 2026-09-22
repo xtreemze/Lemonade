@@ -9,6 +9,8 @@ import {
 } from "three";
 import type { Group } from "three";
 
+import { STAND_LAYOUT } from "./stand-layout.js";
+
 const MAX_PREPARED_CUPS = 400;
 
 export type CupInventory = Readonly<{
@@ -145,13 +147,24 @@ export const createCupInventory = (): CupInventory => {
   );
 
   const matrix = new Matrix4();
+  const columns = 16;
+  const rows = 4;
+  const cupsPerLayer = columns * rows;
+  const xStep =
+    (STAND_LAYOUT.cupFootprint.maxX - STAND_LAYOUT.cupFootprint.minX) /
+    (columns - 1);
+  const zStep =
+    (STAND_LAYOUT.cupFootprint.maxZ - STAND_LAYOUT.cupFootprint.minZ) /
+    (rows - 1);
+
   for (let index = 0; index < MAX_PREPARED_CUPS; index += 1) {
-    const column = index % 20;
-    const row = Math.floor(index / 20) % 7;
-    const depth = Math.floor(index / 140);
-    const x = -1.7 + column * 0.18;
-    const y = 1.45 + row * 0.19;
-    const z = 1.04 - depth * 0.14;
+    const layer = Math.floor(index / cupsPerLayer);
+    const layerIndex = index % cupsPerLayer;
+    const column = layerIndex % columns;
+    const row = Math.floor(layerIndex / columns);
+    const x = STAND_LAYOUT.cupFootprint.minX + column * xStep;
+    const y = STAND_LAYOUT.cupCenterY + layer * 0.17;
+    const z = STAND_LAYOUT.cupFootprint.minZ + row * zStep;
 
     matrix.makeTranslation(x, y, z);
     shells.setMatrixAt(index, matrix);
