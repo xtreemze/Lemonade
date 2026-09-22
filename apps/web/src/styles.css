@@ -131,7 +131,7 @@ h2 {
 .stand-stage {
   position: relative;
   overflow: hidden;
-  min-height: 245px;
+  min-height: max(300px, 40dvh);
   border: 2px solid #211d14;
   background: linear-gradient(180deg, #7bc6d6 0 58%, #9cb976 58% 76%, #b99a71 76%);
   box-shadow: 8px 8px 0 #211d14;
@@ -601,7 +601,7 @@ h2 {
   }
 
   .stand-stage {
-    min-height: 310px;
+    min-height: max(350px, 45dvh);
   }
 
   .house {
