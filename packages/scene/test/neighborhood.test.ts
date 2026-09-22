@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   FRONT_PROPERTY_LAYOUT,
   populateNeighborhood,
+  updateNeighborhoodWind,
+  windStrengthForWeather,
 } from "../src/neighborhood.js";
 import { STAND_LAYOUT } from "../src/stand-layout.js";
 
@@ -18,20 +20,30 @@ describe("neighborhood world scale", () => {
     expect(stats.frontProperties).toBeGreaterThanOrEqual(7);
     expect(stats.driveways).toBe(stats.frontProperties);
     expect(stats.treeLods).toBeGreaterThanOrEqual(40);
-    expect(stats.yardDetails).toBeGreaterThanOrEqual(10);
+    expect(stats.flowers).toBeGreaterThanOrEqual(4);
+    expect(stats.yardDetails).toBeGreaterThanOrEqual(14);
     expect(stats.roadSegments).toBeGreaterThanOrEqual(13);
 
     let lodCount = 0;
     let standHomeCount = 0;
     let standNeighborCount = 0;
+    let sidewalkCount = 0;
+    let pavedRoadCount = 0;
+    let flowerCount = 0;
     scene.traverse((object) => {
       if (object.userData["lodMode"] === "distance-two-level") lodCount += 1;
       if (object.userData["sceneRole"] === "stand-home") standHomeCount += 1;
       if (object.userData["sceneRole"] === "stand-neighbor") standNeighborCount += 1;
+      if (object.userData["sceneRole"] === "sidewalk") sidewalkCount += 1;
+      if (object.userData["sceneRole"] === "paved-road") pavedRoadCount += 1;
+      if (object.userData["sceneRole"] === "garden-flowers") flowerCount += 1;
     });
     expect(lodCount).toBe(stats.houseLods + stats.treeLods);
     expect(standHomeCount).toBe(1);
     expect(standNeighborCount).toBe(1);
+    expect(sidewalkCount).toBe(2);
+    expect(pavedRoadCount).toBeGreaterThanOrEqual(10);
+    expect(flowerCount).toBe(stats.flowers);
   });
 
   it("puts the stand in the featured garden beside its driveway and near the next property", () => {
@@ -52,6 +64,24 @@ describe("neighborhood world scale", () => {
     expect(standHome.drivewayX).toBeLessThan(standHome.houseX);
     expect(sharedBoundaryX).toBeGreaterThan(standRightEdge);
     expect(sharedBoundaryX - standRightEdge).toBeLessThan(0.75);
+  });
+
+  it("moves vegetation subtly with stronger storm wind", () => {
+    const scene = new Scene();
+    populateNeighborhood(scene);
+    const vegetation = scene.children.find(
+      (object) => object.userData["sceneRole"] === "wind-vegetation",
+    );
+    expect(vegetation).toBeDefined();
+
+    updateNeighborhoodWind(scene, 1.25, windStrengthForWeather("sunny"));
+    const sunnyTilt = Math.abs(vegetation?.rotation.z ?? 0);
+    updateNeighborhoodWind(scene, 1.25, windStrengthForWeather("thunderstorm"));
+    const stormTilt = Math.abs(vegetation?.rotation.z ?? 0);
+
+    expect(windStrengthForWeather("thunderstorm"))
+      .toBeGreaterThan(windStrengthForWeather("sunny"));
+    expect(stormTilt).toBeGreaterThan(sunnyTilt);
   });
 
   it("avoids mirrored front-property repetition", () => {
