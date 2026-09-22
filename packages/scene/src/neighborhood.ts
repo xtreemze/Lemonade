@@ -10,6 +10,11 @@ import {
   type Scene,
 } from "three";
 
+import {
+  DEFAULT_RESIDENTIAL_SEED,
+  generateResidentialLayout,
+  type ResidentialPropertySpec,
+} from "./residential-layout.js";
 import { STREET_LAYOUT } from "./street-layout.js";
 
 const material = (color: number, flatShading = true): MeshStandardMaterial =>
@@ -322,16 +327,7 @@ export type NeighborhoodStats = Readonly<{
   worldSpan: number;
 }>;
 
-type FrontPropertySpec = Readonly<{
-  role: string;
-  houseX: number;
-  houseZ: number;
-  color: number;
-  scale: number;
-  rotationY: number;
-  drivewayX: number;
-  mailboxX: number;
-}>;
+export type FrontPropertySpec = ResidentialPropertySpec;
 
 const HOUSE_PALETTE = [
   0xc97d65,
@@ -353,101 +349,8 @@ const TREE_PALETTE = [
 ] as const;
 const FLOWER_PALETTE = [0xe98d9e, 0xf1c75b, 0x9e83c7, 0xf4eee5, 0xd97058] as const;
 
-export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze([
-  Object.freeze({
-    role: "west-end",
-    houseX: -44.6,
-    houseZ: -7.1,
-    color: HOUSE_PALETTE[0],
-    scale: 0.96,
-    rotationY: 0.035,
-    drivewayX: -40.8,
-    mailboxX: -40.0,
-  }),
-  Object.freeze({
-    role: "west-mid",
-    houseX: -33.7,
-    houseZ: -8.4,
-    color: HOUSE_PALETTE[4],
-    scale: 1.02,
-    rotationY: -0.045,
-    drivewayX: -29.8,
-    mailboxX: -30.7,
-  }),
-  Object.freeze({
-    role: "west-near",
-    houseX: -24.0,
-    houseZ: -6.6,
-    color: HOUSE_PALETTE[2],
-    scale: 0.92,
-    rotationY: 0.06,
-    drivewayX: -20.7,
-    mailboxX: -21.5,
-  }),
-  Object.freeze({
-    role: "stand-home",
-    houseX: -4.7,
-    houseZ: -7.9,
-    color: 0xd8a766,
-    scale: 1.06,
-    rotationY: 0.045,
-    drivewayX: -8.45,
-    mailboxX: -7.65,
-  }),
-  Object.freeze({
-    role: "stand-neighbor",
-    houseX: 8.8,
-    houseZ: -8.6,
-    color: HOUSE_PALETTE[4],
-    scale: 0.97,
-    rotationY: -0.055,
-    drivewayX: 12.1,
-    mailboxX: 11.25,
-  }),
-  Object.freeze({
-    role: "east-mid",
-    houseX: 29.1,
-    houseZ: -6.8,
-    color: HOUSE_PALETTE[1],
-    scale: 1.01,
-    rotationY: 0.025,
-    drivewayX: 25.7,
-    mailboxX: 26.45,
-  }),
-  Object.freeze({
-    role: "east-end",
-    houseX: 41.5,
-    houseZ: -8.3,
-    color: HOUSE_PALETTE[5],
-    scale: 0.94,
-    rotationY: -0.05,
-    drivewayX: 45.0,
-    mailboxX: 44.1,
-  }),
-]);
-
-const MID_BLOCK_HOUSES = [
-  [-45.8, -26.2, 0xc97d65, 0.92, Math.PI + 0.035],
-  [-35.1, -24.0, 0xd5a66d, 1.05, Math.PI - 0.025],
-  [-24.5, -28.0, 0xc27a68, 0.98, Math.PI + 0.055],
-  [-9.1, -25.1, 0x8da9a1, 1.03, Math.PI - 0.045],
-  [4.0, -27.5, 0xd56f52, 0.92, Math.PI + 0.025],
-  [11.4, -24.0, 0xd4aa61, 1.0, Math.PI - 0.05],
-  [29.7, -26.7, 0xdfb76f, 0.97, Math.PI + 0.03],
-  [41.7, -24.7, 0xc97d65, 1.04, Math.PI - 0.04],
-] as const;
-
-const BACK_BLOCK_HOUSES = [
-  [-47.0, -50.2, 0x8da9a1, 1.0, Math.PI - 0.03],
-  [-36.5, -47.8, 0xd4aa61, 0.94, Math.PI + 0.05],
-  [-25.4, -51.5, 0xd56f52, 1.03, Math.PI - 0.04],
-  [-9.7, -48.5, 0xc27a68, 0.9, Math.PI + 0.025],
-  [3.5, -52.0, 0xdfb76f, 1.05, Math.PI - 0.055],
-  [12.0, -48.1, 0x8da9a1, 0.96, Math.PI + 0.045],
-  [28.5, -50.8, 0xd5a66d, 1.02, Math.PI - 0.03],
-  [39.6, -47.5, 0xc97d65, 0.93, Math.PI + 0.055],
-  [49.0, -52.4, 0xd4aa61, 0.99, Math.PI - 0.04],
-] as const;
+export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] =
+  generateResidentialLayout(DEFAULT_RESIDENTIAL_SEED).frontProperties;
 
 export type NeighborhoodWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 
@@ -492,8 +395,12 @@ export const updateNeighborhoodWind = (
   });
 };
 
-export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
+export const populateNeighborhood = (
+  scene: Scene,
+  seed = DEFAULT_RESIDENTIAL_SEED,
+): NeighborhoodStats => {
   const worldSpan = 150;
+  const layout = generateResidentialLayout(seed);
   let roadSegments = 0;
   let pavedRoads = 0;
 
@@ -556,12 +463,15 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
     );
   }
 
-  for (const property of FRONT_PROPERTY_LAYOUT) {
-    addRoad(2.15, 6.8, property.drivewayX, -2.55, 0xc9b995, 0.019, "driveway");
+  for (const property of layout.frontProperties) {
+    if (property.drivewayX !== null) {
+      addRoad(2.15, 6.8, property.drivewayX, -2.55, 0xc9b995, 0.019, "driveway");
+    }
+    const color = HOUSE_PALETTE[property.color] ?? HOUSE_PALETTE[0];
     const home = houseLod(
       property.houseX,
       property.houseZ,
-      property.color,
+      color,
       property.scale,
       property.rotationY,
     );
@@ -569,13 +479,23 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
     scene.add(home);
   }
 
-  const housePositions = [...MID_BLOCK_HOUSES, ...BACK_BLOCK_HOUSES] as const;
-  for (const [x, z, color, scale, rotation] of housePositions) {
-    scene.add(houseLod(x, z, color, scale, rotation));
+  const housePositions = [...layout.middleProperties, ...layout.backProperties];
+  for (const property of housePositions) {
+    const color = HOUSE_PALETTE[property.color] ?? HOUSE_PALETTE[0];
+    scene.add(
+      houseLod(
+        property.houseX,
+        property.houseZ,
+        color,
+        property.scale,
+        property.rotationY,
+      ),
+    );
   }
 
   const yardDetails: Group[] = [];
-  for (const property of FRONT_PROPERTY_LAYOUT) {
+  for (const property of layout.frontProperties) {
+    if (property.mailboxX === null) continue;
     const detail = mailbox(property.mailboxX, 0.25);
     detail.rotation.y = property.rotationY * 0.35;
     yardDetails.push(detail);
@@ -588,68 +508,35 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   );
   for (const detail of yardDetails) scene.add(detail);
 
-  const treePositions: (readonly [number, number, number, number])[] = [];
-  for (let index = 0; index < 48; index += 1) {
-    const row = Math.floor(index / 12);
-    const slot = index % 12;
-    const jitterX = (((index * 17) % 7) - 3) * 0.55;
-    const jitterZ = ((index * 13) % 5) * 1.15;
-    let x = -49 + slot * 8.9 + jitterX + row * 0.85;
-    const z = -1.2 - row * 15.7 - jitterZ;
-
-    if (Math.abs(x + 15.5) < 3.8) x -= 4.4;
-    if (Math.abs(x - 18.5) < 3.8) x += 4.6;
-    if (row === 0 && Math.abs(x) < 3.3) x += 4.2;
-
-    const color = TREE_PALETTE[index % TREE_PALETTE.length] ?? TREE_PALETTE[0];
-    const scale = 0.82 + ((index * 5) % 7) * 0.045;
-    treePositions.push([x, z, scale, color]);
-  }
-  treePositions.forEach(([x, z, scale, color], index) => {
-    scene.add(treeLod(x, z, scale, color, index * 0.71));
-  });
-
-  const shrubPositions = [
-    [-11.4, -2.0],
-    [-5.5, -1.6],
-    [-2.1, -2.9],
-    [4.6, -3.2],
-    [14.2, -5.5],
-    [-27.5, -4.1],
-    [24.4, -2.8],
-    [35.8, -5.1],
-    [-31.2, -20.4],
-    [-18.8, -22.7],
-    [-3.1, -30.6],
-    [9.4, -28.3],
-    [26.9, -31.7],
-    [43.5, -20.2],
-  ] as const;
-  shrubPositions.forEach(([x, z], index) => {
-    const color = TREE_PALETTE[(index + 2) % TREE_PALETTE.length] ?? TREE_PALETTE[0];
+  layout.trees.forEach((planting, index) => {
+    const color = TREE_PALETTE[planting.paletteIndex] ?? TREE_PALETTE[0];
     scene.add(
-      shrub(x, z, 0.7 + (index % 5) * 0.055, color, 18 + index * 0.83),
+      treeLod(
+        planting.x,
+        planting.z,
+        planting.scale,
+        color,
+        index * 0.71,
+      ),
     );
   });
 
-  const flowerPositions = [
-    [-12.2, -2.0],
-    [-10.8, -2.35],
-    [-7.1, -2.15],
-    [-5.8, -2.55],
-    [-3.2, -3.0],
-    [-1.9, -3.35],
-    [-11.6, -4.5],
-    [-9.9, -4.8],
-    [-7.8, -5.0],
-    [-5.6, -4.7],
-    [-3.8, -5.15],
-    [-2.2, -4.85],
-  ] as const;
-  flowerPositions.forEach(([x, z], index) => {
-    const color =
-      FLOWER_PALETTE[index % FLOWER_PALETTE.length] ?? FLOWER_PALETTE[0];
-    scene.add(flower(x, z, color, 40 + index * 0.91));
+  layout.shrubs.forEach((planting, index) => {
+    const color = TREE_PALETTE[planting.paletteIndex] ?? TREE_PALETTE[0];
+    scene.add(
+      shrub(
+        planting.x,
+        planting.z,
+        planting.scale,
+        color,
+        18 + index * 0.83,
+      ),
+    );
+  });
+
+  layout.flowers.forEach((planting, index) => {
+    const color = FLOWER_PALETTE[planting.paletteIndex] ?? FLOWER_PALETTE[0];
+    scene.add(flower(planting.x, planting.z, color, 40 + index * 0.91));
   });
 
   distantHill(scene, -52, -76, 24, 10, 0x718967);
@@ -660,17 +547,17 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   atmosphereBand(scene, -86, 12, 170, 38, 0xc8d2ca, 0.11);
 
   return Object.freeze({
-    houseLods: FRONT_PROPERTY_LAYOUT.length + housePositions.length,
+    houseLods: layout.frontProperties.length + housePositions.length,
     featuredHomes: 1,
-    frontProperties: FRONT_PROPERTY_LAYOUT.length,
-    driveways: FRONT_PROPERTY_LAYOUT.length,
-    treeLods: treePositions.length,
-    shrubs: shrubPositions.length,
-    flowers: flowerPositions.length,
+    frontProperties: layout.frontProperties.length,
+    driveways: layout.frontProperties.filter((property) => property.drivewayX !== null).length,
+    treeLods: layout.trees.length,
+    shrubs: layout.shrubs.length,
+    flowers: layout.flowers.length,
     yardDetails: yardDetails.length,
     pavedRoads,
     windResponsive:
-      treePositions.length + shrubPositions.length + flowerPositions.length,
+      layout.trees.length + layout.shrubs.length + layout.flowers.length,
     roadSegments,
     worldSpan,
   });
