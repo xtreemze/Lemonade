@@ -144,7 +144,7 @@ const STAND_GARDEN_SIGN_COLUMNS = [
   -7.4,
   -6.4,
   -5.75,
-  -3.6,
+  -3.2,
   -2.7,
   -1.8,
 ] as const;
