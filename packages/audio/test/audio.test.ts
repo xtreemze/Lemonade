@@ -30,6 +30,13 @@ const weatherMelodies: Readonly<Record<WeatherAudioCue, readonly number[]>> = {
   "forecast:thunderstorm": [55, 67, 64, 62, 60, 57, 55, 60, 60, 62, 64, 67],
 };
 
+const weatherPhraseCompletions: Readonly<Record<WeatherAudioCue, readonly number[]>> = {
+  "forecast:sunny": [72, 74, 67, 72, 76, 67, 72],
+  "forecast:cloudy": [67, 67, 67, 67, 69, 67, 65, 64, 64, 65, 62, 60, 59, 57],
+  "forecast:hot-and-dry": [69, 65, 67, 67, 65, 62, 65, 62, 65, 64],
+  "forecast:thunderstorm": [55, 57, 60, 62, 64, 67, 64, 67, 67, 64, 62, 60],
+};
+
 describe("procedural cue compiler", () => {
   it("is deterministic without an audio device", () => {
     for (const cue of cues) {
@@ -85,7 +92,7 @@ describe("procedural cue compiler", () => {
     }
   });
 
-  it("fills the six-second forecast with a resolved original continuation", () => {
+  it("continues each identified tune with a recognizable source phrase", () => {
     expect(WEATHER_FORECAST_DURATION_MS).toBe(6_000);
 
     for (const cue of Object.keys(weatherMelodies) as WeatherAudioCue[]) {
@@ -93,32 +100,52 @@ describe("procedural cue compiler", () => {
       const historical = tones.filter(
         (tone) => tone.source === "historical-weather-excerpt",
       );
-      const variation = tones.filter(
-        (tone) => tone.source === "original-weather-variation",
+      const completion = tones.filter(
+        (tone) => tone.source === "source-phrase-completion",
       );
-      const lastTone = tones.at(-1);
       const lastHistoricalTone = historical.at(-1);
-      const firstVariationTone = variation[0];
+      const firstCompletionTone = completion[0];
+      const lastTone = tones.at(-1);
 
-      expect(lastTone).toBeDefined();
+      expect(completion.map((tone) => tone.midiNote)).toEqual(
+        weatherPhraseCompletions[cue],
+      );
+      expect(completion.every((tone) => tone.waveform === "square")).toBe(true);
       expect(lastHistoricalTone).toBeDefined();
-      expect(firstVariationTone).toBeDefined();
+      expect(firstCompletionTone).toBeDefined();
+      expect(lastTone).toBeDefined();
       if (
-        lastTone === undefined ||
         lastHistoricalTone === undefined ||
-        firstVariationTone === undefined
+        firstCompletionTone === undefined ||
+        lastTone === undefined
       ) {
         throw new Error("expected complete weather phrase");
       }
 
-      const phraseEnd = lastTone.startSeconds + lastTone.durationSeconds;
-      expect(phraseEnd).toBeGreaterThanOrEqual(5.5);
-      expect(phraseEnd).toBeLessThanOrEqual(WEATHER_FORECAST_DURATION_MS / 1_000);
-      expect(firstVariationTone.startSeconds).toBeGreaterThan(
+      expect(firstCompletionTone.startSeconds).toBeGreaterThan(
         lastHistoricalTone.startSeconds + lastHistoricalTone.durationSeconds,
       );
-      expect(variation.length).toBeGreaterThanOrEqual(6);
+
+      const phraseEnd = lastTone.startSeconds + lastTone.durationSeconds;
+      expect(phraseEnd).toBeGreaterThanOrEqual(4.5);
+      expect(phraseEnd).toBeLessThanOrEqual(WEATHER_FORECAST_DURATION_MS / 1_000);
     }
+  });
+
+  it("does not stretch the historical Apple II excerpt to fill the forecast", () => {
+    const cloudy = compileCue("forecast:cloudy").filter(
+      (tone) => tone.source === "historical-weather-excerpt",
+    );
+    const first = cloudy[0];
+    const last = cloudy.at(-1);
+    expect(first).toBeDefined();
+    expect(last).toBeDefined();
+    if (first === undefined || last === undefined) {
+      throw new Error("expected cloudy historical excerpt");
+    }
+
+    expect(first.durationSeconds).toBeCloseTo(180 / 650, 6);
+    expect(last.durationSeconds).toBeCloseTo(255 / 650, 6);
   });
 
   it("documents the real tune behind every Apple II weather motif", () => {
@@ -132,7 +159,7 @@ describe("procedural cue compiler", () => {
     for (const cue of Object.keys(weatherMelodies) as WeatherAudioCue[]) {
       const metadata = weatherMelodyMetadata(cue);
       expect(metadata.historicalSource).toContain("1979 Apple II Lemonade Stand");
-      expect(metadata.continuation).toBe("original-variation");
+      expect(metadata.continuation).toBe("source-phrase-completion");
     }
   });
 
