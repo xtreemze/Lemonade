@@ -144,7 +144,7 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
 
   const crossingDurationMs = Math.min(
     activeDurationMs,
-    Math.max(1_100, activeDurationMs * 0.42),
+    Math.max(2_200, activeDurationMs * 0.72),
   );
   const passersBy = Array.from({ length: passerbyCount }, (_, index): PasserbyBeat => {
     const centerAtMs = (activeDurationMs * (index + 0.5)) / passerbyCount;
