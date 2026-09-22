@@ -15,7 +15,6 @@ import {
   type Material,
   Matrix4,
   Mesh,
-  MeshPhysicalMaterial,
   MeshStandardMaterial,
   type Object3D,
   PerspectiveCamera,
