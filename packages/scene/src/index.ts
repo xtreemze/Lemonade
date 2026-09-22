@@ -874,7 +874,7 @@ export const createLemonsvilleScene = (
       buyer.root.visible = true;
       let finalPos = { x, z };
 
-      if (phase === "approaching" || phase === "departing") {
+      if (phase === "departing") {
         const sidewalk = sale.direction === -1 ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
         finalPos = constrainToBounds(finalPos, sidewalk.minZ, sidewalk.maxZ, -12, 12);
       }
