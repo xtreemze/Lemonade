@@ -169,6 +169,45 @@ const expectCenteredBottomAction = async (
   expect((await action.textContent())?.trim()).toBe("");
 };
 
+const expectPlanningControlWeight = async (page: Page): Promise<void> => {
+  const metrics = await page.locator(".decision-panel").evaluate((panel) => {
+    const sliders = [...panel.querySelectorAll<HTMLInputElement>(".game-slider")];
+    const controls = [...panel.querySelectorAll<HTMLElement>(".decision-control")];
+    const firstSliderStyle = sliders[0] === undefined ? null : getComputedStyle(sliders[0]);
+    const controlRects = controls.map((control) => control.getBoundingClientRect());
+
+    return {
+      sliderCount: sliders.length,
+      trackSize:
+        firstSliderStyle === null
+          ? 0
+          : Number.parseFloat(firstSliderStyle.getPropertyValue("--slider-track-size")),
+      sliderHeights: sliders.map((slider) => slider.getBoundingClientRect().height),
+      controlGaps: controlRects.slice(1).map((rect, index) => rect.top - controlRects[index]!.bottom),
+    };
+  });
+
+  expect(metrics.sliderCount).toBe(3);
+  expect(metrics.trackSize).toBeGreaterThanOrEqual(16);
+  expect(Math.min(...metrics.sliderHeights)).toBeGreaterThanOrEqual(60);
+  expect(Math.min(...metrics.controlGaps)).toBeGreaterThanOrEqual(0);
+};
+
+test("simulation action art keeps the repaired transparent animated glass", async ({ request }) => {
+  const response = await request.get("./lemonade-simulate.svg");
+  expect(response.ok()).toBe(true);
+
+  const svg = await response.text();
+  expect(svg).toContain('clipPath id="glass-clip"');
+  expect(svg).toContain('clip-path="url(#glass-clip)"');
+  expect(svg).toContain('class="ice-float"');
+  expect(svg).toContain('class="straw-float"');
+  expect(svg).toContain('class="pour-stream"');
+  expect(svg).toContain("@keyframes pour");
+  expect(svg).toContain("@keyframes bob");
+  expect(svg).not.toContain("<rect width=\"128\" height=\"128\"");
+});
+
 test.describe.configure({ mode: "parallel" });
 
 for (const viewport of viewports) {
