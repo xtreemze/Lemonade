@@ -1275,9 +1275,9 @@ export const createLemonsvilleScene = (
     seller.person.arms[0].root.rotation.x += Math.sin(seconds * 1.7) * 0.035;
     seller.person.arms[1].root.rotation.x += Math.sin(seconds * 1.7 + 0.8) * 0.035;
 
-    const serving =
-      state.phase === "simulation" &&
-      storyboard.sales.some((sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing");
+    const serving = storyboard.sales.some(
+      (sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing",
+    );
     if (serving) {
       seller.person.arms[1].root.rotation.x = -1.2;
       seller.person.torso.rotation.x -= 0.06;
@@ -1310,11 +1310,7 @@ export const createLemonsvilleScene = (
     animateSeller(seconds, elapsedMs);
 
     cupInventory.setCount(
-      state.phase === "forecast"
-        ? 0
-        : state.phase === "simulation"
-          ? remainingCupsAt(storyboard, elapsedMs)
-          : storyboard.prepared,
+      state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs),
     );
 
     signs.forEach((sign, index) => {
