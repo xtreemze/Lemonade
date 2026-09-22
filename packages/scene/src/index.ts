@@ -236,62 +236,6 @@ const createLimb = (
   return Object.freeze({ root, lower });
 };
 
-const createLemonadeCup = (scale = 1): Group => {
-  const cup = new Group();
-
-  const glass = new Mesh(
-    new CylinderGeometry(0.075, 0.09, 0.19, 8, 1, true),
-    new MeshStandardMaterial({
-      color: 0xaeffff,
-      transparent: true,
-      opacity: 0.46,
-      roughness: 0.22,
-      metalness: 0,
-      side: DoubleSide,
-      depthWrite: false,
-    }),
-  );
-  cup.add(glass);
-
-  const liquid = new Mesh(
-    new CylinderGeometry(0.061, 0.073, 0.115, 8),
-    new MeshStandardMaterial({
-      color: 0xefff00,
-      transparent: true,
-      opacity: 0.68,
-      roughness: 0.75,
-    }),
-  );
-  liquid.position.y = -0.022;
-  cup.add(liquid);
-
-  const iceMaterial = new MeshStandardMaterial({
-    color: 0xf3fff3,
-    transparent: true,
-    opacity: 0.88,
-    roughness: 0.42,
-  });
-  for (const [x, y, z, rotation] of [
-    [-0.024, 0.025, 0.012, -0.28],
-    [0.027, 0.045, -0.006, 0.34],
-  ] as const) {
-    const ice = new Mesh(new BoxGeometry(0.052, 0.038, 0.05), iceMaterial.clone());
-    ice.position.set(x, y, z);
-    ice.rotation.y = rotation;
-    cup.add(ice);
-  }
-
-  const straw = new Mesh(
-    new CylinderGeometry(0.008, 0.008, 0.25, 6),
-    makeMaterial(0xff551d),
-  );
-  straw.position.set(0.028, 0.085, 0.008);
-  straw.rotation.z = -0.2;
-  cup.add(straw);
-  cup.scale.setScalar(scale);
-  return cup;
-};
-
 const createPerson = (characterSeed: number, index: number): PersonRig => {
   const profile = characterProfileFor(characterSeed, index);
   const root = new Group();
@@ -725,8 +669,11 @@ export const createLemonsvilleScene = (
     });
 
   void import("./cup-inventory.js")
-    .then(({ createCupInventory }) => {
+    .then(({ createCupInventory, decorateLemonadeCup }) => {
       if (disposed) return;
+      for (const person of [...customers, ...buyers, seller.person]) {
+        decorateLemonadeCup(person.cup);
+      }
       const nextInventory = createCupInventory();
       cupInventory = nextInventory;
       for (const mesh of nextInventory.meshes) scene.add(mesh);
