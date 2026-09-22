@@ -140,7 +140,7 @@ describe("procedural residential layout", () => {
     }
   });
 
-  it("connects every home path to a sidewalk and every driveway through the sidewalk to a road", () => {
+  it("connects every home path and driveway to a sidewalk without paving into the road", () => {
     const layout = generateResidentialLayout(0x51de);
     const allProperties = [
       ...layout.frontProperties,
@@ -194,9 +194,9 @@ describe("procedural residential layout", () => {
       ).toBe(true);
       expect(
         layout.exclusions.some(
-          (rect) => rect.role === "road" && overlaps(driveway, rect),
+          (rect) => rect.role === "road" && overlaps(driveway, rect, 0),
         ),
-      ).toBe(true);
+      ).toBe(false);
     }
   });
 
