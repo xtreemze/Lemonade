@@ -8,6 +8,7 @@ import {
   Mesh,
   MeshStandardMaterial,
 } from "three";
+import type { Group } from "three";
 
 const MAX_PREPARED_CUPS = 400;
 
