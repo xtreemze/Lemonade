@@ -1,17 +1,24 @@
 import { Group } from "three";
 import { describe, expect, it } from "vitest";
 
-import { decorateStand } from "../src/stand-detail.js";
+import { populateStand } from "../src/stand-detail.js";
 import { STAND_LAYOUT } from "../src/stand-layout.js";
 
 describe("stand detail", () => {
   it("adds a handmade sign and counter dressing as one lazy detail group", () => {
     const root = new Group();
 
-    decorateStand(root, STAND_LAYOUT.counterTopY);
+    const shutter = new Group();
+    root.add(shutter);
 
-    expect(root.children).toHaveLength(1);
-    expect(root.children[0]?.userData["sceneRole"]).toBe("stand-detail");
-    expect(root.children[0]?.children.length).toBeGreaterThanOrEqual(8);
+    populateStand(root, shutter);
+
+    expect(root.children.length).toBeGreaterThanOrEqual(7);
+    expect(shutter.children).toHaveLength(2);
+    const detail = root.children.find(
+      (child) => child.userData["sceneRole"] === "stand-detail",
+    );
+    expect(detail).toBeDefined();
+    expect(detail?.children.length).toBeGreaterThanOrEqual(8);
   });
 });
