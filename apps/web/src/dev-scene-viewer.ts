@@ -612,18 +612,6 @@ export const createPersistentSceneViewer = (
     });
   };
 
-  const rememberOriginalTransform = (
-    key: string,
-    object: ReturnType<GizmoController["getSelectedObject"]> & {},
-  ): void => {
-    if (!originalTransforms.has(key)) {
-      originalTransforms.set(
-        key,
-        captureObjectTransform(sceneController?.scene ?? object.parent!, object),
-      );
-    }
-  };
-
   const onSelection = (nextSelection: SceneObjectSelection | null): void => {
     selection = nextSelection;
     if (nextSelection === null) {
