@@ -197,9 +197,16 @@ const basePose = (
     mainRoutes.find((route) => route.side === requestedSide) ??
     mainRoutes[actorIndex % Math.max(1, mainRoutes.length)];
   const neighborhoodRoute =
-    neighborhoodRoutes[
-      actorIndex % Math.max(1, neighborhoodRoutes.length)
-    ];
+    neighborhoodRoutes.length === 0
+      ? undefined
+      : neighborhoodRoutes[
+          Math.floor(
+            deterministicUnit(
+              actorIndex,
+              173 + beat.pedestrianIndex * 37,
+            ) * neighborhoodRoutes.length,
+          )
+        ];
   const route =
     (beat.seesAdvertisement ? mainRoute : neighborhoodRoute) ??
     routes[actorIndex % Math.max(1, routes.length)];
