@@ -43,14 +43,14 @@ export type GardenSignPosition = Readonly<{
 }>;
 
 const STAND_GARDEN_SIGN_COLUMNS = [
-  -1,
   -11.8,
   -10.6,
-  -6.8,
-  -5.6,
-  -4.4,
-  -3.2,
-  -2,
+  -7.3,
+  -6.2,
+  -5.1,
+  -4,
+  -2.9,
+  -1.8,
 ] as const;
 
 export const gardenSignPosition = (index: number): GardenSignPosition => {
