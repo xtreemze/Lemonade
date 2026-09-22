@@ -11,7 +11,10 @@ import {
 
 import { characterProfileFor } from "./characters.js";
 import { decorateCharacter } from "./character-detail.js";
-import { updateNeighborhoodWind } from "./neighborhood.js";
+import {
+  updateNeighborhoodActivity,
+  updateNeighborhoodWind,
+} from "./neighborhood.js";
 import {
   createNeighborhoodMobilitySystem,
   type MobilityPose,
@@ -480,6 +483,24 @@ const applyTransportWalk = (
   rig.root.position.y = Math.abs(Math.sin(cycle)) * 0.018;
 };
 
+const REDUCED_DETAIL_ROLES = new Set([
+  "face-expression",
+  "hair-detail",
+  "garment-detail",
+]);
+
+const applyMobilityRenderDetail = (
+  root: Object3D,
+  detail: MobilityPose["detail"],
+): void => {
+  root.userData["mobilityDetail"] = detail;
+  root.traverse((child) => {
+    const role: unknown = child.userData["sceneRole"];
+    if (typeof role !== "string" || !REDUCED_DETAIL_ROLES.has(role)) return;
+    child.visible = detail === "full";
+  });
+};
+
 const placeRig = (
   rig: TransportCharacterRig,
   pose: MobilityPose | undefined,
@@ -487,6 +508,7 @@ const placeRig = (
 ): void => {
   rig.root.visible = pose?.visible === true;
   if (!pose?.visible) return;
+  applyMobilityRenderDetail(rig.root, pose.detail);
   rig.root.position.set(pose.x, 0, pose.z);
   rig.root.rotation.y = -pose.yaw;
   applyTransportWalk(rig, elapsedMs, pose.speed);
@@ -606,6 +628,8 @@ export const createAmbientLife = (
         pedestrianObstacles,
       });
 
+      updateNeighborhoodActivity(scene, sample.properties, elapsedMs);
+
       const residentPet = sample.actors.find((actor) => actor.id === "resident-pet");
       const homePet = pets[2];
       if (homePet !== undefined) {
@@ -672,6 +696,7 @@ export const createAmbientLife = (
         bike.visible = pose !== undefined;
         if (pose === undefined) return;
         bike.userData["mobilityActorId"] = pose.id;
+        applyMobilityRenderDetail(bike, pose.detail);
         bike.position.set(pose.x, 0.02, pose.z);
         bike.rotation.y = -pose.yaw;
       });
@@ -700,6 +725,7 @@ export const createAmbientLife = (
         vehicle.visible = pose !== undefined;
         if (pose === undefined) return;
         vehicle.userData["mobilityActorId"] = pose.id;
+        applyMobilityRenderDetail(vehicle, pose.detail);
         vehicle.position.set(pose.x, 0.02, pose.z);
         vehicle.rotation.y = -pose.yaw;
       });
