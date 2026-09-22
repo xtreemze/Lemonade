@@ -81,11 +81,6 @@ const BUYER_POOL_SIZE = 192;
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
-const smoothStep = (value: number): number => {
-  const progress = clamp01(value);
-  return progress * progress * (3 - 2 * progress);
-};
-
 const lerp = (start: number, end: number, progress: number): number =>
   start + (end - start) * progress;
 
@@ -437,7 +432,6 @@ export const createLemonsvilleScene = (
   initialState: LemonsvilleSceneState,
   options: LemonsvilleSceneOptions = {},
 ): LemonsvilleSceneController | null => {
-  void options;
   let renderer: WebGLRenderer;
   try {
     renderer = new WebGLRenderer({
@@ -456,6 +450,7 @@ export const createLemonsvilleScene = (
   renderer.setClearColor(0x8fa7b8, 1);
 
   const scene = new Scene();
+  scene.userData["gizmoEnabled"] = options.enableGizmo === true;
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
   camera.position.set(0, 6.8, 13.5);
   camera.lookAt(0, 1.7, 0);
@@ -833,7 +828,7 @@ export const createLemonsvilleScene = (
   };
 
   const animateBuyers = (elapsedMs: number): number => {
-    const activeBuyerPositions: Array<{ x: number; z: number }> = [];
+    const activeBuyerPositions: { x: number; z: number }[] = [];
 
     for (const buyer of buyers) {
       const fade = buyerFadeState.get(buyer);
