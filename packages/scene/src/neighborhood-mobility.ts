@@ -473,7 +473,7 @@ const trafficPose = (
   const waiting =
     conflict !== null && hasPedestrianPriority(conflict, pedestrians);
   let point = sampled.point;
-  if (waiting && conflict !== null) {
+  if (waiting) {
     const dx = point.x - conflict.point.x;
     const dz = point.z - conflict.point.z;
     const magnitude = Math.max(0.001, Math.hypot(dx, dz));
@@ -844,9 +844,7 @@ export const createNeighborhoodMobilitySystem = (
           nearestMailbox !== null &&
           Math.abs(nearestMailbox.point.x - x) < 1.7;
         const mailPoint = Object.freeze({
-          x: mailInteraction && nearestMailbox !== null
-            ? nearestMailbox.point.x
-            : x,
+          x: mailInteraction ? nearestMailbox.point.x : x,
           z: STREET_LAYOUT.nearSidewalk.centerZ,
         });
         const mailCarrier = makePose(
