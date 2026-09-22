@@ -96,6 +96,39 @@ const makePedestrianRoute = (
   });
 };
 
+const contiguousSidewalkRuns = (
+  strips: readonly StreetStripSpec[],
+): readonly (readonly StreetStripSpec[])[] => {
+  const ordered = [...strips].sort(
+    (left, right) =>
+      Math.floor(left.segmentIndex / 2) - Math.floor(right.segmentIndex / 2),
+  );
+  const runs: StreetStripSpec[][] = [];
+  for (const strip of ordered) {
+    const current = runs.at(-1);
+    const previous = current?.at(-1);
+    if (previous === undefined) {
+      runs.push([strip]);
+      continue;
+    }
+
+    const previousRoadSegment = Math.floor(previous.segmentIndex / 2);
+    const currentRoadSegment = Math.floor(strip.segmentIndex / 2);
+    const previousEnd = sidewalkEndpoint(previous, 1);
+    const currentStart = sidewalkEndpoint(strip, -1);
+    const gap = Math.hypot(
+      currentStart.x - previousEnd.x,
+      currentStart.z - previousEnd.z,
+    );
+    if (currentRoadSegment !== previousRoadSegment + 1 || gap > 0.75) {
+      runs.push([strip]);
+      continue;
+    }
+    current.push(strip);
+  }
+  return Object.freeze(runs.map((run) => Object.freeze(run)));
+};
+
 export const neighborhoodSidewalkRoutes = (
   seed = DEFAULT_STREET_SEED,
 ): readonly PedestrianRoute[] => {
@@ -111,14 +144,28 @@ export const neighborhoodSidewalkRoutes = (
 
   return Object.freeze(
     [...groups.entries()]
-      .map(([key, strips]) => {
+      .flatMap(([key, strips]) => {
         const separator = key.lastIndexOf(":");
         const streetId = key.slice(0, separator);
         const side: SidewalkSide = key.endsWith(":0") ? "near" : "far";
-        return makePedestrianRoute(key, streetId, side, strips);
+        return contiguousSidewalkRuns(strips).map((run, runIndex) =>
+          makePedestrianRoute(
+            key + ":" + String(runIndex),
+            streetId,
+            side,
+            run,
+          ),
+        );
       })
       .sort((left, right) => left.id.localeCompare(right.id)),
   );
+};
+
+const routeSupportsSideEntry = (route: PedestrianRoute): boolean => {
+  const first = route.points[0];
+  const last = route.points.at(-1);
+  if (first === undefined || last === undefined) return false;
+  return Math.abs(last.x - first.x) >= Math.abs(last.z - first.z);
 };
 
 const samplePedestrianRoute = (
@@ -160,8 +207,6 @@ const samplePedestrianRoute = (
   });
 };
 
-const fract = (value: number): number => value - Math.floor(value);
-
 const deterministicUnit = (index: number, salt: number): number => {
   let value = Math.imul((index + 1) >>> 0, 0x9e3779b1) ^ (salt >>> 0);
   value = Math.imul(value ^ (value >>> 16), 0x21f0aaad);
@@ -184,16 +229,20 @@ const basePose = (
   durationMs: number,
   actorCount: number,
   routes: readonly PedestrianRoute[],
-): MutableCrowdPose => {
+): MutableCrowdPose | undefined => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
   const count = Math.max(1, actorCount);
-  const worldSpeed = 1.28 + deterministicUnit(actorIndex, 17) * 0.54;
-  const phaseOffset = actorIndex / count + deterministicUnit(actorIndex, 29) * 0.11;
+  const worldSpeed = 1.18 + deterministicUnit(actorIndex, 17) * 0.26;
   const elapsedSeconds =
-    Math.max(0, Math.min(elapsedMs, safeDuration * 8)) / 1_000;
+    Math.max(
+      0,
+      Math.min(elapsedMs - beat.startAtMs, safeDuration * 8),
+    ) / 1_000;
 
   const mainRoutes = routes.filter((route) => route.streetId === "main");
-  const neighborhoodRoutes = routes.filter((route) => route.streetId !== "main");
+  const neighborhoodRoutes = routes.filter(
+    (route) => route.streetId !== "main" && routeSupportsSideEntry(route),
+  );
   const requestedSide: SidewalkSide = actorIndex % 2 === 0 ? "near" : "far";
   const mainRoute =
     mainRoutes.find((route) => route.side === requestedSide) ??
@@ -216,12 +265,21 @@ const basePose = (
     throw new Error("crowd motion requires generated sidewalk routes");
   }
 
-  const unwrappedProgress =
-    phaseOffset + elapsedSeconds * worldSpeed / route.total;
-  const progress = fract(unwrappedProgress);
-  const forwardDistance = progress * route.total;
+  const sideEntryOffset = Math.min(
+    route.total * 0.42,
+    10 + deterministicUnit(actorIndex, 29) * 6,
+  );
+  const spawnDistance =
+    beat.direction === -1
+      ? Math.max(0, route.total / 2 - sideEntryOffset)
+      : Math.min(route.total, route.total / 2 + sideEntryOffset);
+  const distanceTravelled = elapsedSeconds * worldSpeed;
   const routeDistance =
-    beat.direction === -1 ? forwardDistance : route.total - forwardDistance;
+    beat.direction === -1
+      ? spawnDistance + distanceTravelled
+      : spawnDistance - distanceTravelled;
+  if (routeDistance < 0 || routeDistance > route.total) return undefined;
+  const progress = routeDistance / route.total;
   const sampled = samplePedestrianRoute(route, routeDistance);
   const travelYaw =
     sampled.yaw + (beat.direction === -1 ? 0 : Math.PI);
@@ -250,9 +308,9 @@ const basePose = (
     x: sampled.x + normalX * lateralOffset + (route.streetId === "main" ? signPull : 0),
     z: sampled.z + normalZ * lateralOffset,
     heading,
-    pace: Math.max(0.72, Math.min(1.35, worldSpeed / 1.55)),
+    pace: Math.max(0.82, Math.min(1.18, worldSpeed / 1.3)),
     worldSpeed,
-    travelDistance: route.total * unwrappedProgress,
+    travelDistance: distanceTravelled,
     side: route.side,
     routeId: route.id,
     seesAdvertisement: beat.seesAdvertisement,
