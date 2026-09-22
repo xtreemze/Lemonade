@@ -13,8 +13,6 @@ const viewports: readonly MobileViewport[] = Object.freeze([
   { name: "large phone landscape", width: 932, height: 430 },
 ]);
 
-test.use({ hasTouch: true, isMobile: true });
-
 const expectViewportContract = async (
   page: Page,
   expectedView: "planning" | "simulation" | "report" | "forecast",
@@ -174,10 +172,18 @@ const expectCenteredBottomAction = async (
 test.describe.configure({ mode: "parallel" });
 
 for (const viewport of viewports) {
-  test(`mobile contract: ${viewport.name} owns the complete daily flow`, async ({ page }) => {
-    test.slow();
-    await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await page.goto("./");
+  test.describe(`mobile contract: ${viewport.name}`, () => {
+    test.use({
+      viewport: { width: viewport.width, height: viewport.height },
+      screen: { width: viewport.width, height: viewport.height },
+      deviceScaleFactor: 1,
+      hasTouch: true,
+      isMobile: true,
+    });
+
+    test("owns the complete daily flow", async ({ page }) => {
+      test.slow();
+      await page.goto("./");
 
     const main = page.getByRole("main");
     await expect(main).toBeVisible();
@@ -221,6 +227,7 @@ for (const viewport of viewports) {
     await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning", {
       timeout: 10_000,
     });
-    await expectViewportContract(page, "planning");
+      await expectViewportContract(page, "planning");
+    });
   });
 }
