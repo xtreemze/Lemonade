@@ -804,8 +804,9 @@ export const createLemonsvilleScene = (
       const buyer = buyers[buyerSlotForSale(sale, buyers.length)];
       if (buyer === undefined) continue;
 
-      const exitX = sale.direction === -1 ? 8.4 : -8.4;
+      const exitX = sale.direction === -1 ? 18 : -18;
       const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
+      const exitZ = streetZ + (sale.direction === -1 ? 16 : -16);
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
       const counterZ = STAND_WORLD_Z + 1.22;
       const drinkX = sale.direction === -1 ? -1.35 : 1.35;
@@ -825,7 +826,6 @@ export const createLemonsvilleScene = (
         counterX +
         (sale.direction === -1 ? -approachXDistance : approachXDistance);
       const approachDistance = Math.hypot(counterX - streetX, counterZ - streetZ);
-      const departDistance = Math.hypot(exitX - drinkX, streetZ - drinkZ);
       let x = counterX;
       let z = counterZ;
       let travelDistance = 0;
@@ -846,8 +846,9 @@ export const createLemonsvilleScene = (
         const duration = Math.max(1, sale.departAtMs - sale.drinkEndAtMs);
         const progress = smoothStep((elapsedMs - sale.drinkEndAtMs) / duration);
         x = lerp(drinkX, exitX, progress);
-        z = lerp(drinkZ, streetZ, progress);
-        travelDistance = approachDistance + departDistance * progress;
+        z = lerp(drinkZ, exitZ, progress);
+        const extendedDepartDistance = Math.hypot(exitX - drinkX, exitZ - drinkZ);
+        travelDistance = approachDistance + extendedDepartDistance * progress;
       }
 
       const fade = buyerFadeState.get(buyer);
