@@ -88,6 +88,26 @@ describe("neighborhood world scale", () => {
     expect(sharedBoundaryX - standRightEdge).toBeLessThan(0.75);
   });
 
+  it("faces every mailbox toward the street independent of house orientation", () => {
+    const scene = new Scene();
+    populateNeighborhood(scene, 0x5eed);
+    const mailboxes = scene.children.filter(
+      (object) => object.userData["sceneRole"] === "mailbox",
+    );
+    const expectedCount = FRONT_PROPERTY_LAYOUT.filter(
+      (property) => property.mailboxX !== null,
+    ).length;
+
+    expect(mailboxes).toHaveLength(expectedCount);
+    expect(
+      FRONT_PROPERTY_LAYOUT.some((property) => Math.abs(property.rotationY) > 0.02),
+    ).toBe(true);
+    for (const mailbox of mailboxes) {
+      expect(mailbox.rotation.y).toBeCloseTo(0);
+      expect(mailbox.userData["streetFacingYaw"]).toBe(0);
+    }
+  });
+
   it("avoids mirrored front-property repetition", () => {
     const xs = FRONT_PROPERTY_LAYOUT.map((property) => property.houseX);
     const mirrored = xs.filter((x) =>
