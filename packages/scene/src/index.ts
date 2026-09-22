@@ -461,7 +461,7 @@ export const createLemonsvilleScene = (
   scene.add(ground);
 
   const stand = createStand();
-  stand.root.position.z = -2;
+  stand.root.position.z = -1;
   scene.add(stand.root);
 
   const signs = Array.from({ length: 40 }, () => createSign());
