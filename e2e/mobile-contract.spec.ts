@@ -175,7 +175,6 @@ for (const viewport of viewports) {
   test.describe(`mobile contract: ${viewport.name}`, () => {
     test.use({
       viewport: { width: viewport.width, height: viewport.height },
-      screen: { width: viewport.width, height: viewport.height },
       deviceScaleFactor: 1,
       hasTouch: true,
       isMobile: true,
