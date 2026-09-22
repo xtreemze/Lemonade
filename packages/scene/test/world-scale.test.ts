@@ -23,6 +23,11 @@ describe("shared world scale", () => {
     );
     expect(WORLD_SCALE.street.sidewalkWidth).toBeGreaterThanOrEqual(1.4);
     expect(WORLD_SCALE.street.curbGap).toBeGreaterThan(0);
+    expect(WORLD_SCALE.vehicle.width).toBeLessThan(
+      WORLD_SCALE.street.laneWidth * 0.7,
+    );
+    expect(WORLD_SCALE.vehicle.length).toBeGreaterThan(4);
+    expect(WORLD_SCALE.bicycle.length).toBeGreaterThan(1.5);
   });
 
   it("keeps loose lemons at ordinary fruit scale", () => {
