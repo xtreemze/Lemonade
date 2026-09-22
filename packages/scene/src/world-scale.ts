@@ -21,6 +21,15 @@ export const WORLD_SCALE = Object.freeze({
     curbGap: 0.25,
     drivewayWidth: 2.7,
   }),
+  vehicle: Object.freeze({
+    length: 4.2,
+    width: 1.78,
+    bodyHeight: 0.72,
+  }),
+  bicycle: Object.freeze({
+    length: 1.72,
+    wheelDiameter: 0.68,
+  }),
   produce: Object.freeze({
     lemonDiameter: 0.09,
   }),
