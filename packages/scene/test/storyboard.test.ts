@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createStreetStoryboard,
+  formatPriceLabel,
+} from "../src/storyboard-create.js";
+import {
   buyerPhaseAt,
   buyerSlotForSale,
   completedSalesAt,
-  createStreetStoryboard,
-  formatPriceLabel,
   remainingCupsAt,
   sceneCameraComposition,
   sceneShotAt,
