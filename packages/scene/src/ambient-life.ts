@@ -524,6 +524,7 @@ export const createAmbientLife = (
     createTransportCharacter(seed ^ 0x7341, 12_000),
     createTransportCharacter(seed ^ 0x7341, 12_001),
     createTransportCharacter(seed ^ 0x7341, 12_002),
+    createTransportCharacter(seed ^ 0x7341, 12_003),
   ];
   const mailCarrier = createTransportCharacter(seed ^ 0x4d41494c, 12_100);
   const gardener = createTransportCharacter(seed ^ 0x47415244, 12_200);
