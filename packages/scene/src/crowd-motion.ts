@@ -2,10 +2,8 @@ import type { Group, Scene } from "three";
 
 import { walkingCycleAtDistance } from "./gait.js";
 import {
-  clampToSidewalk,
   gardenSignPosition,
   sidewalkLaneZ,
-  sidewalkLaneZForSide,
   sidewalkSideForActor,
   type SidewalkSide,
 } from "./street-layout.js";
