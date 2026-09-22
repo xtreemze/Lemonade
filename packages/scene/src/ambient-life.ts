@@ -69,11 +69,11 @@ export const ambientPopulationFor = (
   }
   switch (weather) {
     case "sunny":
-      return Object.freeze({ pets: 2, wildlife: 4, bicycles: 2, vehicles: 1 });
+      return Object.freeze({ pets: 2, wildlife: 4, bicycles: 3, vehicles: 4 });
     case "hot-and-dry":
-      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 2, vehicles: 3 });
     case "cloudy":
-      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 2, vehicles: 3 });
     case "thunderstorm":
       return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 3 });
   }
@@ -558,7 +558,7 @@ export const createAmbientLife = (
       durationMs,
       dayNumber = 1,
       focus = Object.freeze({ x: 0, z: 0 }),
-    ): void {
+    ): NeighborhoodMobilitySample {
       updateNeighborhoodWind(scene, elapsedMs / 1000, weather);
       const population = ambientPopulationFor(weather, phase);
       const pedestrianObstacles: Array<Readonly<{ x: number; z: number }>> = [];
