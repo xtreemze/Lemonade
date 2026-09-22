@@ -5,6 +5,7 @@ import "./finance.css";
 import "./persistence.css";
 
 import { LemonadeApp, createFreshRunSnapshot } from "./app.js";
+import { createPersistentSceneViewer, isSceneViewerEnabled } from "./dev-scene-viewer.js";
 import { RunPersistenceError, clearCurrentRun, loadCurrentRun } from "./persistence.js";
 
 const root = document.querySelector("#root");
@@ -77,4 +78,13 @@ const start = async (): Promise<void> => {
   }
 };
 
-void start();
+if (isSceneViewerEnabled()) {
+  console.log("🎥 Scene Viewer mode activated - launching persistent 3D scene");
+  createPersistentSceneViewer(root, {
+    enableGizmo: true,
+    weather: "hot-and-dry",
+    phase: "forecast",
+  });
+} else {
+  void start();
+}
