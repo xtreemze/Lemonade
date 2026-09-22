@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { characterProfileFor } from "../src/characters.js";
 import {
   createStreetStoryboard,
   formatPriceLabel,
@@ -175,9 +176,28 @@ describe("street simulation storyboard", () => {
     expect(sceneCameraComposition(844, 390, "purchase").mode).toBe("wide");
 
     const portraitEstablishing = sceneCameraComposition(360, 740, "establishing");
+    const portraitStreet = sceneCameraComposition(360, 740, "street");
     const portraitPurchase = sceneCameraComposition(360, 740, "purchase");
-    expect(portraitEstablishing.position[2]).toBeGreaterThan(portraitPurchase.position[2]);
-    expect(portraitPurchase.fov).toBeLessThan(portraitEstablishing.fov);
+    expect(portraitEstablishing.position[2]).toBeGreaterThanOrEqual(20);
+    expect(portraitStreet.position[2]).toBeGreaterThanOrEqual(18);
+    expect(portraitPurchase.position[2]).toBeGreaterThanOrEqual(15);
+    expect(portraitPurchase.fov).toBeGreaterThanOrEqual(46);
+  });
+
+  it("derives stable, varied character appearance and gait from the run seed", () => {
+    const seed = 0x1ead2026;
+    const first = characterProfileFor(seed, 7);
+    const repeated = characterProfileFor(seed, 7);
+    const neighbor = characterProfileFor(seed, 8);
+    const otherRun = characterProfileFor(seed ^ 0x55aa55aa, 7);
+
+    expect(repeated).toEqual(first);
+    expect(neighbor).not.toEqual(first);
+    expect(otherRun).not.toEqual(first);
+    expect(first.walkPace).toBeGreaterThanOrEqual(0.88);
+    expect(first.walkPace).toBeLessThanOrEqual(1.14);
+    expect(first.gaitAmplitude).toBeGreaterThanOrEqual(0.48);
+    expect(first.gaitAmplitude).toBeLessThanOrEqual(0.68);
   });
 
   it("is deterministic and never schedules more sales than prepared cups", () => {
