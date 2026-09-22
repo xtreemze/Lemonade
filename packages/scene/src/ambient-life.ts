@@ -221,8 +221,13 @@ export const createAmbientLife = (scene: Scene, seed: number): AmbientLifeContro
         bike.visible =
           index < population.bicycles && progress > 0.08 && progress < 0.78;
         if (!bike.visible) return;
-        bike.position.set(12 - progress * 24, 0.02, 4.75 + index * 0.42);
-        bike.rotation.y = streetHeadingForDirection(-1);
+        const direction: -1 | 1 = index % 2 === 0 ? -1 : 1;
+        bike.position.set(
+          direction * (-12 + progress * 24),
+          0.02,
+          4.35 + index * 0.55,
+        );
+        bike.rotation.y = streetHeadingForDirection(direction);
       });
       vehicles.forEach((vehicle, index) => {
         const direction: -1 | 1 = index % 2 === 0 ? 1 : -1;
