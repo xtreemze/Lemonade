@@ -888,18 +888,14 @@ export const createLemonsvilleScene = (
     applySellerExpression(seller, confidence);
 
     if (state.phase === "simulation") {
-      const gestureStrength =
-        applySellerGesture?.(
-          seller.person.torso,
-          seller.person.head,
-          seller.person.arms[0].root,
-          seller.person.arms[1].root,
-          endingCloseupProgressAt(storyboard, elapsedMs),
-          confidence,
-        ) ?? 0;
-      canvas.dataset["sellerGestureStrength"] = gestureStrength.toFixed(3);
-    } else {
-      canvas.dataset["sellerGestureStrength"] = "0.000";
+      applySellerGesture?.(
+        seller.person.torso,
+        seller.person.head,
+        seller.person.arms[0].root,
+        seller.person.arms[1].root,
+        endingCloseupProgressAt(storyboard, elapsedMs),
+        confidence,
+      );
     }
 
     if (state.reducedMotion || state.phase === "idle") return;
