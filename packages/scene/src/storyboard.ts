@@ -121,6 +121,52 @@ export const endingConfidenceAt = (
   return currentConfidence + (nextConfidence - currentConfidence) * eased;
 };
 
+
+export type SellerGestureFrame = Readonly<{
+  strength: number;
+  armLift: number;
+  armSpread: number;
+  torsoLift: number;
+  headTilt: number;
+}>;
+
+export const sellerGestureAt = (
+  storyboard: StreetStoryboard,
+  elapsedMs: number,
+  currentConfidence: number,
+  nextConfidence: number,
+): SellerGestureFrame => {
+  const progress = endingCloseupProgressAt(storyboard, elapsedMs);
+  const gestureProgress = Math.min(
+    1,
+    Math.max(0, (progress - 0.32) / 0.68),
+  );
+  const strength =
+    gestureProgress * gestureProgress * (3 - 2 * gestureProgress);
+  const confidence = Math.min(
+    1,
+    Math.max(
+      0,
+      endingConfidenceAt(
+        storyboard,
+        elapsedMs,
+        currentConfidence,
+        nextConfidence,
+      ) / 5,
+    ),
+  );
+  const mix = (low: number, high: number): number =>
+    low + (high - low) * confidence;
+
+  return Object.freeze({
+    strength,
+    armLift: mix(0.08, -0.62) * strength,
+    armSpread: mix(0.06, 0.5) * strength,
+    torsoLift: mix(-0.035, 0.055) * strength,
+    headTilt: mix(0.075, -0.05) * strength,
+  });
+};
+
 export const remainingCameraProgressAt = (
   storyboard: StreetStoryboard,
   elapsedMs: number,
