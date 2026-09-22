@@ -198,8 +198,7 @@ const basePose = (
     mainRoutes[actorIndex % Math.max(1, mainRoutes.length)];
   const neighborhoodRoute =
     neighborhoodRoutes[
-      Math.abs(actorIndex * 5 + beat.pedestrianIndex) %
-        Math.max(1, neighborhoodRoutes.length)
+      actorIndex % Math.max(1, neighborhoodRoutes.length)
     ];
   const route =
     (beat.seesAdvertisement ? mainRoute : neighborhoodRoute) ??
