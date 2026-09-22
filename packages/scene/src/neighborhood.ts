@@ -699,7 +699,7 @@ export const populateNeighborhood = (
       );
       road(
         scene,
-        1.04,
+        access.pathWidth,
         access.pathDepth,
         access.pathCenterX,
         access.pathCenterZ,
@@ -802,8 +802,8 @@ export const populateNeighborhood = (
     const lotHalfWidth = Math.max(3.8, 4.45 * property.scale);
     const gaps = [
       Object.freeze({
-        minX: access.pathCenterX - 0.86,
-        maxX: access.pathCenterX + 0.86,
+        minX: access.pathCenterX - Math.max(0.86, access.pathWidth / 2 + 0.34),
+        maxX: access.pathCenterX + Math.max(0.86, access.pathWidth / 2 + 0.34),
       }),
       ...(property.drivewayX === null
         ? []
