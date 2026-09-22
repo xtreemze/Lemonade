@@ -67,11 +67,10 @@ describe("neighborhood world scale", () => {
     expect(treeVariants.size).toBeGreaterThan(8);
     expect(shrubVariants.size).toBeGreaterThan(4);
 
-    const residentialHomes = scene.children.filter(
-      (object) =>
-        typeof object.userData["sceneRole"] === "string" &&
-        (object.userData["sceneRole"] as string).startsWith("residential-"),
-    );
+    const residentialHomes = scene.children.filter((object) => {
+      const role: unknown = object.userData["sceneRole"];
+      return typeof role === "string" && role.startsWith("residential-");
+    });
     expect(residentialHomes.some((home) => home.position.z > 12)).toBe(true);
     expect(residentialHomes.some((home) => home.position.z < -58)).toBe(true);
     expect(residentialHomes.some((home) => Math.abs(home.position.x) > 65)).toBe(true);
