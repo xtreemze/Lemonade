@@ -187,7 +187,7 @@ export const populateStand = (
     pitcherLemonade.position.set(
       -0.57,
       JUICE_BOTTOM_Y + (JUICE_FULL_HEIGHT * fraction) / 2,
-      0.3,
+      -1.7,
     );
 
     const lemonCount = visibleLemonCountForStock(remaining, prepared);
