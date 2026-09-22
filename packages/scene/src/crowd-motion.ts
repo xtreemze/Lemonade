@@ -27,7 +27,7 @@ export type CrowdPose = Readonly<{
 }>;
 
 export type CrowdSample = Readonly<{
-  poses: readonly CrowdPose[];
+  poses: readonly (CrowdPose | undefined)[];
   neighborChecks: number;
 }>;
 
@@ -283,11 +283,12 @@ const cellCoordinate = (value: number): number => Math.floor(value / CROWD_CELL_
 const cellKey = (x: number, z: number): string =>
   String(cellCoordinate(x)) + ":" + String(cellCoordinate(z));
 
-const separateCrowd = (poses: MutableCrowdPose[]): number => {
+const separateCrowd = (poses: (MutableCrowdPose | undefined)[]): number => {
   let neighborChecks = 0;
   for (let pass = 0; pass < 3; pass += 1) {
     const cells = new Map<string, number[]>();
     poses.forEach((pose, index) => {
+      if (pose === undefined) return;
       const key = cellKey(pose.x, pose.z);
       const bucket = cells.get(key);
       if (bucket === undefined) cells.set(key, [index]);
@@ -383,9 +384,10 @@ export const createCrowdSimulation = (
         return Object.freeze({ poses: Object.freeze([]), neighborChecks: 0 });
       }
 
-      const poses: MutableCrowdPose[] = Array.from({ length: count }, (_, index) => {
+      const poses: (MutableCrowdPose | undefined)[] = Array.from({ length: count }, (_, index) => {
         const beat = beats[(index * 7) % beats.length];
         if (beat === undefined) throw new Error("crowd beat invariant failed");
+        if (elapsedMs < beat.startAtMs || elapsedMs >= beat.endAtMs) return undefined;
         return basePose(beat, index, elapsedMs, safeDuration, count, routes);
       });
 
@@ -393,17 +395,19 @@ export const createCrowdSimulation = (
       return Object.freeze({
         poses: Object.freeze(
           poses.map((pose) =>
-            Object.freeze({
-              x: pose.x,
-              z: pose.z,
-              heading: pose.heading,
-              pace: pose.pace,
-              worldSpeed: pose.worldSpeed,
-              travelDistance: pose.travelDistance,
-              side: pose.side,
-              routeId: pose.routeId,
-              seesAdvertisement: pose.seesAdvertisement,
-            }),
+            pose === undefined
+              ? undefined
+              : Object.freeze({
+                  x: pose.x,
+                  z: pose.z,
+                  heading: pose.heading,
+                  pace: pose.pace,
+                  worldSpeed: pose.worldSpeed,
+                  travelDistance: pose.travelDistance,
+                  side: pose.side,
+                  routeId: pose.routeId,
+                  seesAdvertisement: pose.seesAdvertisement,
+                }),
           ),
         ),
         neighborChecks,
@@ -418,7 +422,7 @@ export const crowdPosesAt = (
   elapsedMs: number,
   durationMs: number,
   seed = DEFAULT_STREET_SEED,
-): readonly CrowdPose[] =>
+): readonly (CrowdPose | undefined)[] =>
   createCrowdSimulation(beats, actorCount, durationMs, seed).sample(elapsedMs).poses;
 
 export const walkingBodyLift = (

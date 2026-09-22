@@ -40,10 +40,10 @@ describe("crowd motion", () => {
     expect(repeated).toEqual(first);
     expect(first).toHaveLength(12);
 
-    expect(new Set(first.map((pose) => pose.side))).toEqual(
+    expect(new Set(first.map((pose) => pose?.side).filter(Boolean))).toEqual(
       new Set(["near", "far"]),
     );
-    const routeIds = new Set(first.map((pose) => pose.routeId));
+    const routeIds = new Set(first.map((pose) => pose?.routeId).filter(Boolean));
     expect(routeIds.size).toBeGreaterThan(4);
     expect(routeIds.has("main:0")).toBe(true);
     expect(routeIds.has("main:1")).toBe(true);
@@ -51,6 +51,7 @@ describe("crowd motion", () => {
       neighborhoodSidewalkRoutes().map((route) => route.id),
     );
     for (const pose of first) {
+      if (pose === undefined) continue;
       expect(Number.isFinite(pose.x)).toBe(true);
       expect(Number.isFinite(pose.z)).toBe(true);
       expect(generatedRouteIds.has(pose.routeId)).toBe(true);
@@ -205,6 +206,7 @@ describe("crowd motion", () => {
     expect(sample.neighborChecks).toBeLessThan(12 * 11 / 2);
 
     for (const pose of sample.poses) {
+      if (pose === undefined) continue;
       expect(pose.worldSpeed).toBeGreaterThan(0);
       expect(pose.pace).toBeGreaterThan(0);
       expect(Number.isFinite(pose.heading)).toBe(true);
@@ -233,12 +235,13 @@ describe("crowd motion", () => {
   it("keeps walkers moving through the wider neighborhood at normal walking speed", () => {
     const early = crowdPosesAt(beats, 12, 250, 6_000);
     const late = crowdPosesAt(beats, 12, 5_750, 6_000);
-    const extent = [...early, ...late].reduce(
+    const allPoses = [...early, ...late].filter((pose) => pose !== undefined);
+    const extent = allPoses.reduce(
       (max, pose) => Math.max(max, Math.abs(pose.x)),
       0,
     );
     expect(extent).toBeGreaterThan(42);
-    for (const pose of [...early, ...late]) {
+    for (const pose of allPoses) {
       expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.15);
       expect(pose.worldSpeed).toBeLessThanOrEqual(2.05);
     }
