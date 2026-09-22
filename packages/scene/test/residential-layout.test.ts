@@ -125,7 +125,18 @@ describe("procedural residential layout", () => {
       }
     }
     for (const planting of layout.flowers) {
-      expect(residentialPointIsBlocked(planting, layout, 0.38)).toBe(false);
+      if (planting.propertyRole !== null && planting.yardZone === "front") {
+        expect(
+          residentialFootprintIntersectsHardscape(
+            planting,
+            layout,
+            0.38,
+            0.38,
+          ),
+        ).toBe(false);
+      } else {
+        expect(residentialPointIsBlocked(planting, layout, 0.38)).toBe(false);
+      }
     }
   });
 
