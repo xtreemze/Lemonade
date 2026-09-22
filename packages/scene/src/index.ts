@@ -272,7 +272,7 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
 
   const cup = new Group();
   cup.scale.setScalar(0.9);
-  cup.position.set(0, -0.35, 0.08);
+  cup.position.set(0, -0.35, -0.72);
   cup.visible = false;
   rightArm.lower.add(cup);
 

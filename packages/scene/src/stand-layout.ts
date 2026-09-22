@@ -45,8 +45,8 @@ export const STAND_LAYOUT = Object.freeze({
   cupFootprint: Object.freeze({
     minX: 0.38,
     maxX: 1.18,
-    minZ: 0.02,
-    maxZ: 0.5,
+    minZ: -0.72,
+    maxZ: -0.72,
   }),
   stockFootprint: Object.freeze({
     minX: -1.18,
