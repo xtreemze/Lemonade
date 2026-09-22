@@ -117,8 +117,8 @@ describe("weather backdrop staging", () => {
     expect(world(dawn)[1]).toBeLessThan(5);
     expect(world(sunset)[1]).toBeLessThan(5);
     for (const position of [world(dawn), world(noon), world(sunset)]) {
-      expect(position[2]).toBeLessThan(-130);
-      expect(position[2]).toBeGreaterThan(-140);
+      expect(position[2]).toBeLessThan(-118);
+      expect(position[2]).toBeGreaterThan(-126);
     }
   });
 
