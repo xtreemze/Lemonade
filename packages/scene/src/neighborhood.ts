@@ -205,6 +205,13 @@ const mailbox = (x: number, z: number): Group => {
   return root;
 };
 
+const fenceRunDepth = (x: number, z: number, depth: number): Group => {
+  const root = fenceRun(0, 0, depth);
+  root.position.set(x, 0, z);
+  root.rotation.y = Math.PI / 2;
+  return root;
+};
+
 const distantHill = (
   scene: Scene,
   x: number,
@@ -243,6 +250,8 @@ const atmosphereBand = (
 export type NeighborhoodStats = Readonly<{
   houseLods: number;
   featuredHomes: number;
+  frontProperties: number;
+  driveways: number;
   treeLods: number;
   shrubs: number;
   yardDetails: number;
@@ -250,14 +259,144 @@ export type NeighborhoodStats = Readonly<{
   worldSpan: number;
 }>;
 
-const HOUSE_PALETTE = [0xc97d65, 0xd56f52, 0xd4aa61, 0xd5a66d, 0x8da9a1, 0xc27a68, 0xdfb76f] as const;
-const TREE_PALETTE = [0x668e53, 0x5f8d56, 0x507f4b, 0x6d985e, 0x58854f, 0x678f52, 0x4f814c] as const;
+type FrontPropertySpec = Readonly<{
+  role: string;
+  houseX: number;
+  houseZ: number;
+  color: number;
+  scale: number;
+  rotationY: number;
+  drivewayX: number;
+  mailboxX: number;
+}>;
+
+const HOUSE_PALETTE = [
+  0xc97d65,
+  0xd56f52,
+  0xd4aa61,
+  0xd5a66d,
+  0x8da9a1,
+  0xc27a68,
+  0xdfb76f,
+] as const;
+const TREE_PALETTE = [
+  0x668e53,
+  0x5f8d56,
+  0x507f4b,
+  0x6d985e,
+  0x58854f,
+  0x678f52,
+  0x4f814c,
+] as const;
+
+export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze([
+  Object.freeze({
+    role: "west-end",
+    houseX: -44.6,
+    houseZ: -7.1,
+    color: HOUSE_PALETTE[0],
+    scale: 0.96,
+    rotationY: 0.035,
+    drivewayX: -40.8,
+    mailboxX: -40.0,
+  }),
+  Object.freeze({
+    role: "west-mid",
+    houseX: -33.7,
+    houseZ: -8.4,
+    color: HOUSE_PALETTE[4],
+    scale: 1.02,
+    rotationY: -0.045,
+    drivewayX: -29.8,
+    mailboxX: -30.7,
+  }),
+  Object.freeze({
+    role: "west-near",
+    houseX: -24.0,
+    houseZ: -6.6,
+    color: HOUSE_PALETTE[2],
+    scale: 0.92,
+    rotationY: 0.06,
+    drivewayX: -20.7,
+    mailboxX: -21.5,
+  }),
+  Object.freeze({
+    role: "stand-home",
+    houseX: -4.7,
+    houseZ: -7.9,
+    color: 0xd8a766,
+    scale: 1.06,
+    rotationY: 0.045,
+    drivewayX: -8.45,
+    mailboxX: -7.65,
+  }),
+  Object.freeze({
+    role: "stand-neighbor",
+    houseX: 8.8,
+    houseZ: -8.6,
+    color: HOUSE_PALETTE[4],
+    scale: 0.97,
+    rotationY: -0.055,
+    drivewayX: 12.1,
+    mailboxX: 11.25,
+  }),
+  Object.freeze({
+    role: "east-mid",
+    houseX: 29.1,
+    houseZ: -6.8,
+    color: HOUSE_PALETTE[1],
+    scale: 1.01,
+    rotationY: 0.025,
+    drivewayX: 25.7,
+    mailboxX: 26.45,
+  }),
+  Object.freeze({
+    role: "east-end",
+    houseX: 41.5,
+    houseZ: -8.3,
+    color: HOUSE_PALETTE[5],
+    scale: 0.94,
+    rotationY: -0.05,
+    drivewayX: 45.0,
+    mailboxX: 44.1,
+  }),
+]);
+
+const MID_BLOCK_HOUSES = [
+  [-45.8, -26.2, 0xc97d65, 0.92, Math.PI + 0.035],
+  [-35.1, -24.0, 0xd5a66d, 1.05, Math.PI - 0.025],
+  [-24.5, -28.0, 0xc27a68, 0.98, Math.PI + 0.055],
+  [-9.1, -25.1, 0x8da9a1, 1.03, Math.PI - 0.045],
+  [4.0, -27.5, 0xd56f52, 0.92, Math.PI + 0.025],
+  [11.4, -24.0, 0xd4aa61, 1.0, Math.PI - 0.05],
+  [29.7, -26.7, 0xdfb76f, 0.97, Math.PI + 0.03],
+  [41.7, -24.7, 0xc97d65, 1.04, Math.PI - 0.04],
+] as const;
+
+const BACK_BLOCK_HOUSES = [
+  [-47.0, -50.2, 0x8da9a1, 1.0, Math.PI - 0.03],
+  [-36.5, -47.8, 0xd4aa61, 0.94, Math.PI + 0.05],
+  [-25.4, -51.5, 0xd56f52, 1.03, Math.PI - 0.04],
+  [-9.7, -48.5, 0xc27a68, 0.9, Math.PI + 0.025],
+  [3.5, -52.0, 0xdfb76f, 1.05, Math.PI - 0.055],
+  [12.0, -48.1, 0x8da9a1, 0.96, Math.PI + 0.045],
+  [28.5, -50.8, 0xd5a66d, 1.02, Math.PI - 0.03],
+  [39.6, -47.5, 0xc97d65, 0.93, Math.PI + 0.055],
+  [49.0, -52.4, 0xd4aa61, 0.99, Math.PI - 0.04],
+] as const;
 
 export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   const worldSpan = 150;
   let roadSegments = 0;
 
-  const addRoad = (width: number, depth: number, x: number, z: number, color: number, y?: number): void => {
+  const addRoad = (
+    width: number,
+    depth: number,
+    x: number,
+    z: number,
+    color: number,
+    y?: number,
+  ): void => {
     road(scene, width, depth, x, z, color, y);
     roadSegments += 1;
   };
@@ -269,42 +408,54 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   addRoad(worldSpan, 4.4, 0, -37, 0xb59a80);
   addRoad(worldSpan, 0.9, 0, 1.55, 0xd9cfb4, 0.018);
   addRoad(worldSpan, 0.9, 0, 8.05, 0xd9cfb4, 0.018);
-  addRoad(2.1, 6.4, 0, -2.5, 0xc9b995, 0.019);
 
-  const standHome = houseLod(0, -7.1, 0xd8a766, 1.08, 0);
-  standHome.userData["sceneRole"] = "stand-home";
-  scene.add(standHome);
-
-  const yardDetails = [
-    fenceRun(-5.5, -3.55, 4.2),
-    fenceRun(5.5, -3.55, 4.2),
-    mailbox(3.25, -1.15),
-  ] as const;
-  for (const detail of yardDetails) scene.add(detail);
-
-  const housePositions: (readonly [number, number, number, number])[] = [];
-  for (const z of [-5.5, -25.5, -47.5]) {
-    for (const x of [-42, -31, -7, 5.5, 31, 43]) {
-      if (Math.abs(x) < 10 && z > -10) continue;
-      const colorIndex = Math.abs(Math.round(x + z)) % HOUSE_PALETTE.length;
-      const color = HOUSE_PALETTE[colorIndex] ?? HOUSE_PALETTE[0];
-      const scale = 0.92 + (Math.abs(Math.round(x * 3 + z)) % 7) * 0.025;
-      housePositions.push([x, z, color, scale]);
-    }
+  for (const property of FRONT_PROPERTY_LAYOUT) {
+    addRoad(2.15, 6.8, property.drivewayX, -2.55, 0xc9b995, 0.019);
+    const home = houseLod(
+      property.houseX,
+      property.houseZ,
+      property.color,
+      property.scale,
+      property.rotationY,
+    );
+    home.userData["sceneRole"] = property.role;
+    scene.add(home);
   }
-  for (const [x, z, color, scale] of housePositions) {
-    const rotation = z < -10 ? Math.PI : 0;
+
+  const housePositions = [...MID_BLOCK_HOUSES, ...BACK_BLOCK_HOUSES] as const;
+  for (const [x, z, color, scale, rotation] of housePositions) {
     scene.add(houseLod(x, z, color, scale, rotation));
   }
 
+  const yardDetails: Group[] = [];
+  for (const property of FRONT_PROPERTY_LAYOUT) {
+    const detail = mailbox(property.mailboxX, 0.25);
+    detail.rotation.y = property.rotationY * 0.35;
+    yardDetails.push(detail);
+  }
+
+  yardDetails.push(
+    fenceRun(-5.7, -0.8, 2.9),
+    fenceRunDepth(1.9, -3.0, 5.1),
+    fenceRun(7.8, -0.65, 2.6),
+  );
+  for (const detail of yardDetails) scene.add(detail);
+
   const treePositions: (readonly [number, number, number, number])[] = [];
-  for (let index = 0; index < 44; index += 1) {
-    const side = index % 2 === 0 ? -1 : 1;
-    const ring = Math.floor(index / 2);
-    const x = side * (9.5 + (ring % 7) * 5.3);
-    const z = 0.4 - Math.floor(ring / 7) * 12.5 - (ring % 3) * 2.1;
+  for (let index = 0; index < 48; index += 1) {
+    const row = Math.floor(index / 12);
+    const slot = index % 12;
+    const jitterX = (((index * 17) % 7) - 3) * 0.55;
+    const jitterZ = ((index * 13) % 5) * 1.15;
+    let x = -49 + slot * 8.9 + jitterX + row * 0.85;
+    const z = -1.2 - row * 15.7 - jitterZ;
+
+    if (Math.abs(x + 15.5) < 3.8) x -= 4.4;
+    if (Math.abs(x - 18.5) < 3.8) x += 4.6;
+    if (row === 0 && Math.abs(x) < 3.3) x += 4.2;
+
     const color = TREE_PALETTE[index % TREE_PALETTE.length] ?? TREE_PALETTE[0];
-    const scale = 0.84 + (index % 6) * 0.055;
+    const scale = 0.82 + ((index * 5) % 7) * 0.045;
     treePositions.push([x, z, scale, color]);
   }
   for (const [x, z, scale, color] of treePositions) {
@@ -312,13 +463,24 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   }
 
   const shrubPositions = [
-    [-6.8, -1.1], [6.9, -1], [-10.2, -7.2], [11.6, -6.8],
-    [-2.8, -10.4], [7.7, -10.6], [-23, -3.2], [25, -3.6],
-    [-28, -19], [27, -20], [-4, -31], [8, -32],
+    [-11.4, -2.0],
+    [-5.5, -1.6],
+    [-2.1, -2.9],
+    [4.6, -3.2],
+    [14.2, -5.5],
+    [-27.5, -4.1],
+    [24.4, -2.8],
+    [35.8, -5.1],
+    [-31.2, -20.4],
+    [-18.8, -22.7],
+    [-3.1, -30.6],
+    [9.4, -28.3],
+    [26.9, -31.7],
+    [43.5, -20.2],
   ] as const;
   shrubPositions.forEach(([x, z], index) => {
     const color = TREE_PALETTE[(index + 2) % TREE_PALETTE.length] ?? TREE_PALETTE[0];
-    scene.add(shrub(x, z, 0.72 + (index % 4) * 0.06, color));
+    scene.add(shrub(x, z, 0.7 + (index % 5) * 0.055, color));
   });
 
   distantHill(scene, -52, -76, 24, 10, 0x718967);
@@ -329,8 +491,10 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   atmosphereBand(scene, -86, 12, 170, 38, 0xc8d2ca, 0.11);
 
   return Object.freeze({
-    houseLods: housePositions.length + 1,
+    houseLods: FRONT_PROPERTY_LAYOUT.length + housePositions.length,
     featuredHomes: 1,
+    frontProperties: FRONT_PROPERTY_LAYOUT.length,
+    driveways: FRONT_PROPERTY_LAYOUT.length,
     treeLods: treePositions.length,
     shrubs: shrubPositions.length,
     yardDetails: yardDetails.length,
