@@ -905,6 +905,10 @@ body:has(.game-shell[data-view="forecast"]) {
   display: none;
 }
 
+.history-next-button {
+  display: none;
+}
+
 .flow-action-button {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
