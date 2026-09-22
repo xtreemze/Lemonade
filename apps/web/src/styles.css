@@ -876,7 +876,7 @@ body:has(.game-shell[data-view="forecast"]) {
   height: 100%;
   min-height: 0;
   margin-top: 0;
-  padding: 4px 0 88px;
+  padding: 2px 0 112px;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -912,10 +912,11 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .game-shell[data-view="planning"] .decision-control {
   flex: 1;
-  gap: 12px;
-  padding: 20px 0;
+  min-height: 0;
+  gap: 2px;
+  padding: 2px 0;
   border-top-width: 2px;
-  justify-content: space-between;
+  justify-content: center;
 }
 
 .game-shell[data-view="planning"] .decision-control:first-of-type {
@@ -971,7 +972,7 @@ body:has(.game-shell[data-view="forecast"]) {
   justify-items: center;
   gap: 8px;
   margin: 0;
-  padding: 16px;
+  padding: 8px;
   border: 0;
   background: transparent;
   color: #211d14;
@@ -1652,6 +1653,15 @@ body:has(.game-shell[data-view="forecast"]) {
   .game-shell[data-view="planning"] .simulation-button:hover:not(:disabled) {
     transform: translateX(-50%) scale(1.035);
     box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-shell[data-view="planning"] .simulation-button,
+  .game-shell[data-view="planning"] .simulation-button::after,
+  .game-shell[data-view="planning"] .simulation-button-art {
+    transition: none;
+    animation: none;
   }
 }
 
