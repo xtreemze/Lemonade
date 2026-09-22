@@ -96,8 +96,7 @@ describe("procedural residential layout", () => {
     expect(blockedHouses).toEqual([]);
 
     for (const planting of layout.trees) {
-      const clearance =
-        3.5 * planting.scale;
+      const clearance = 3.5 * planting.scale;
       expect(residentialPointIsBlocked(planting, layout, clearance)).toBe(false);
       expect(
         residentialFootprintIntersectsHardscape(
@@ -109,8 +108,7 @@ describe("procedural residential layout", () => {
       ).toBe(false);
     }
     for (const planting of layout.shrubs) {
-      const clearance =
-        1.9 * planting.scale;
+      const clearance = 1.9 * planting.scale;
       expect(residentialPointIsBlocked(planting, layout, clearance)).toBe(false);
     }
     for (const planting of layout.flowers) {
