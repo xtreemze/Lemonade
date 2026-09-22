@@ -855,8 +855,8 @@ export const createLemonsvilleScene = (
       } else if (phase === "drinking") {
         const duration = Math.max(1, sale.drinkEndAtMs - sale.purchaseEndAtMs);
         const progress = smoothStep((elapsedMs - sale.purchaseEndAtMs) / duration);
-        x = lerp(counterX, drinkX, Math.min(1, progress * 1.8));
-        z = lerp(counterZ, drinkZ, Math.min(1, progress * 1.8));
+        x = lerp(counterX, drinkX, progress);
+        z = lerp(counterZ, drinkZ, progress);
       } else if (phase === "departing") {
         const duration = Math.max(1, sale.departAtMs - sale.drinkEndAtMs);
         const progress = smoothStep((elapsedMs - sale.drinkEndAtMs) / duration);
@@ -887,7 +887,7 @@ export const createLemonsvilleScene = (
           const minDist = pedestrianRadius * 2.1;
           const targetX = otherPos.x + Math.cos(angle) * minDist;
           const targetZ = otherPos.z + Math.sin(angle) * minDist;
-          const maxAdjust = 0.15;
+          const maxAdjust = 0.05;
           finalPos = {
             x: Math.sign(targetX - finalPos.x) * Math.min(maxAdjust, Math.abs(targetX - finalPos.x)) + finalPos.x,
             z: Math.sign(targetZ - finalPos.z) * Math.min(maxAdjust, Math.abs(targetZ - finalPos.z)) + finalPos.z,
