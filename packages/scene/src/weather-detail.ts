@@ -235,9 +235,9 @@ export const populateWeatherObjects = (
 
   const partlyCloudGroup = new Group();
   const cloudPositions = [
-    { position: [-2.0, 1.8, -0.2] as const, scale: 0.85 },
-    { position: [0, 1.2, -0.2] as const, scale: 0.95 },
-    { position: [2.2, 1.6, -0.2] as const, scale: 0.88 },
+    { position: [-3.5, 1.8, -0.2] as const, scale: 0.85 },
+    { position: [-0.5, 1.2, -0.2] as const, scale: 0.95 },
+    { position: [1.8, 1.6, -0.2] as const, scale: 0.88 },
   ] as const;
   for (let i = 0; i < 3; i++) {
     const partlyCloud = new Group();

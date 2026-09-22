@@ -418,9 +418,9 @@ const mailbox = (x: number, z: number): Group => {
   box(root, [0.42, 0.25, 0.035], [0, 1.08, 0.19], 0x456b73);
   box(root, [0.08, 0.42, 0.08], [0.27, 1.18, 0], 0xc95b4c);
   root.position.set(x, 0, z);
-  root.rotation.y = 0;
+  root.rotation.y = Math.PI / 2;
   root.userData["sceneRole"] = "mailbox";
-  root.userData["streetFacingYaw"] = 0;
+  root.userData["streetFacingYaw"] = Math.PI / 2;
   return root;
 };
 
