@@ -136,22 +136,6 @@ h2 {
   background: linear-gradient(180deg, #7bc6d6 0 58%, #9cb976 58% 76%, #b99a71 76%);
   box-shadow: 8px 8px 0 #211d14;
   isolation: isolate;
-  --sun-top: 200px;
-  --sun-right: 8%;
-}
-
-.weather-orb {
-  position: absolute;
-  top: var(--sun-top);
-  right: var(--sun-right);
-  width: 68px;
-  height: 68px;
-  border: 3px solid #211d14;
-  border-radius: 50%;
-  background: #f9cc3b;
-  box-shadow: 8px 8px 0 rgb(33 29 20 / 18%);
-  z-index: 2;
-  transition: top 2s ease-in-out, right 2s ease-in-out;
 }
 
 .weather-cloudy,
