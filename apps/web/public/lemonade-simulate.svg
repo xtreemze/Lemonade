@@ -26,14 +26,6 @@
       .glass-side { fill: #267391; opacity: .09; }
       .glass-highlight { fill: #fff; opacity: .15; }
 
-      .pour-stream {
-        fill: #efff00;
-        opacity: .53;
-        transform-box: fill-box;
-        transform-origin: center bottom;
-        animation: pour 2.8s ease-in-out infinite;
-      }
-
       .liquid-surface {
         transform-box: fill-box;
         transform-origin: center;
@@ -63,12 +55,6 @@
         animation: lemon-float 2.5s ease-in-out infinite alternate;
       }
 
-      @keyframes pour {
-        0%, 12% { opacity: 0; transform: translateY(-8px) scaleY(.08); }
-        23%, 68% { opacity: .53; transform: translateY(0) scaleY(1); }
-        82%, 100% { opacity: 0; transform: translateY(7px) scaleY(.22); }
-      }
-
       @keyframes slosh {
         from { transform: translateY(-1px) rotate(-.55deg); }
         to { transform: translateY(1px) rotate(.55deg); }
@@ -90,7 +76,6 @@
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .pour-stream,
         .liquid-surface,
         .ice-float,
         .straw-float,
@@ -100,8 +85,6 @@
       }
     </style>
   </defs>
-
-  <path class="pour-stream" d="M60.8 -7h7v62h-7z"/>
 
   <g id="lemon" class="lemon-float">
     <circle class="lemon-rind" cx="97.11377" cy="29.5" r="29.5"/>
