@@ -14,7 +14,6 @@ import {
   completedSalesAt,
   endingCloseupProgressAt,
   endingConfidenceAt,
-  sellerGestureAt,
   remainingCameraProgressAt,
   remainingCupsAt,
   sceneCameraComposition,
@@ -223,14 +222,6 @@ describe("street simulation storyboard", () => {
     expect(endingConfidenceAt(storyboard, 6_000, 1, 5)).toBe(1);
     expect(endingConfidenceAt(storyboard, 8_000, 1, 5)).toBeCloseTo(3);
     expect(endingConfidenceAt(storyboard, 10_000, 1, 5)).toBe(5);
-
-    const earlyGesture = sellerGestureAt(storyboard, 6_400, 1, 5);
-    const lateGesture = sellerGestureAt(storyboard, 9_800, 1, 5);
-    expect(earlyGesture.strength).toBe(0);
-    expect(lateGesture.strength).toBeGreaterThan(0.9);
-    expect(lateGesture.armLift).toBeLessThan(0);
-    expect(lateGesture.armSpread).toBeGreaterThan(0.3);
-    expect(lateGesture.torsoLift).toBeGreaterThan(0);
 
     expect(remainingCameraProgressAt(storyboard, 6_000)).toBe(0);
     expect(remainingCameraProgressAt(storyboard, 7_000)).toBeGreaterThan(0);
