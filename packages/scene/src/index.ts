@@ -774,14 +774,21 @@ export const createLemonsvilleScene = (
       if (buyer === undefined) continue;
 
       const streetX = sale.direction === -1 ? -2.6 : 2.6;
-      const exitX = sale.direction === -1 ? 1.9 : -1.9;
       const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
       const counterZ = 1.22;
       const drinkX = sale.direction === -1 ? -1.35 : 1.35;
       const drinkZ = 1.78;
       const approachDistance = Math.hypot(counterX - streetX, counterZ - streetZ);
-      const departDistance = Math.hypot(exitX - drinkX, streetZ - drinkZ);
+      const departDurationSeconds =
+        Math.max(1, sale.departAtMs - sale.drinkEndAtMs) / 1_000;
+      const departDistance = 1.5 * departDurationSeconds;
+      const departZDistance = Math.abs(streetZ - drinkZ);
+      const departXDistance = Math.sqrt(
+        Math.max(0.04, departDistance * departDistance - departZDistance * departZDistance),
+      );
+      const exitX =
+        drinkX + (sale.direction === -1 ? departXDistance : -departXDistance);
       let x = counterX;
       let z = counterZ;
       let travelDistance = 0;
