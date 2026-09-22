@@ -20,7 +20,6 @@ import {
 import { WORLD_SCALE } from "./world-scale.js";
 import {
   clampToSidewalk,
-  roadLaneZ,
   sidewalkSideForZ,
 } from "./street-layout.js";
 
@@ -69,13 +68,13 @@ export const ambientPopulationFor = (
   }
   switch (weather) {
     case "sunny":
-      return Object.freeze({ pets: 2, wildlife: 4, bicycles: 2, vehicles: 1 });
+      return Object.freeze({ pets: 2, wildlife: 4, bicycles: 3, vehicles: 8 });
     case "hot-and-dry":
-      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 2, vehicles: 8 });
     case "cloudy":
-      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 0, bicycles: 2, vehicles: 8 });
     case "thunderstorm":
-      return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 3 });
+      return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 4 });
   }
 };
 
@@ -484,7 +483,7 @@ const placeRig = (
   elapsedMs: number,
 ): void => {
   rig.root.visible = pose?.visible === true;
-  if (pose === undefined || !pose.visible) return;
+  if (!pose?.visible) return;
   rig.root.position.set(pose.x, 0, pose.z);
   rig.root.rotation.y = -pose.yaw;
   applyTransportWalk(rig, elapsedMs, pose.speed);
@@ -501,6 +500,7 @@ export const createAmbientLife = (
   scene: Scene,
   seed: number,
   owners: readonly Object3D[] = [],
+  mobilitySeed = seed,
 ): AmbientLifeController => {
   const pets = [createPet(0xa96f45), createPet(0x3e3a36), createPet(0xd1b48b)];
   const wildlife = [
@@ -519,6 +519,10 @@ export const createAmbientLife = (
     createVehicle(0xa65e52, seed, 1, "sports"),
     createVehicle(0x6b7c61, seed, 2, "pickup"),
     createVehicle(0x8a796d, seed, 3, "truck"),
+    createVehicle(0x526f86, seed, 4, "sedan"),
+    createVehicle(0xb17b45, seed, 5, "sports"),
+    createVehicle(0x63745f, seed, 6, "pickup"),
+    createVehicle(0x7d7270, seed, 7, "sedan"),
   ];
   const residents = [
     createTransportCharacter(seed ^ 0x7341, 12_000),
@@ -535,7 +539,7 @@ export const createAmbientLife = (
     resident.root.userData["residentIndex"] = index;
   });
 
-  const mobility = createNeighborhoodMobilitySystem(seed);
+  const mobility = createNeighborhoodMobilitySystem(mobilitySeed);
 
   for (const actor of [
     ...pets,
@@ -558,10 +562,10 @@ export const createAmbientLife = (
       durationMs,
       dayNumber = 1,
       focus = Object.freeze({ x: 0, z: 0 }),
-    ): void {
+    ): NeighborhoodMobilitySample {
       updateNeighborhoodWind(scene, elapsedMs / 1000, weather);
       const population = ambientPopulationFor(weather, phase);
-      const pedestrianObstacles: Array<Readonly<{ x: number; z: number }>> = [];
+      const pedestrianObstacles: Readonly<{ x: number; z: number }>[] = [];
 
       pets.slice(0, 2).forEach((pet, index) => {
         const owner = owners.find((candidate, ownerIndex) =>

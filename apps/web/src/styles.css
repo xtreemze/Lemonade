@@ -1302,7 +1302,7 @@ body:has(.game-shell[data-view="forecast"]) {
   box-shadow: none;
 }
 
-@media (width >= 640px) {
+@media (width >= 40rem) {
   .game-shell[data-view="report"] .report-panel {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
     grid-template-rows: auto minmax(0, 1fr);

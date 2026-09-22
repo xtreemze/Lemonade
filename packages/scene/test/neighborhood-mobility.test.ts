@@ -41,6 +41,25 @@ describe("unified neighborhood mobility", () => {
     expect(new Set(roadZs).size).toBeGreaterThan(1);
   });
 
+  it("routes through-traffic across every generated neighborhood street", () => {
+    const sample = sampleDay(3, 5_000);
+    const trafficVehicles = sample.actors.filter(
+      (actor) => actor.id.startsWith("traffic-vehicle:"),
+    );
+    expect(trafficVehicles).toHaveLength(7);
+    expect(new Set(trafficVehicles.map((actor) => actor.id))).toEqual(
+      new Set([
+        "traffic-vehicle:main",
+        "traffic-vehicle:front-grid",
+        "traffic-vehicle:deep-grid",
+        "traffic-vehicle:middle-curve",
+        "traffic-vehicle:back-curve",
+        "traffic-vehicle:west-curve",
+        "traffic-vehicle:east-curve",
+      ]),
+    );
+  });
+
   it("gives pedestrians crossing priority over nearby vehicles and bicycles", () => {
     const system = createNeighborhoodMobilitySystem(0x5eed1234);
     const samples = Array.from({ length: 20 }, (_, index) =>

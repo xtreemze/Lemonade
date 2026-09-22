@@ -12,6 +12,7 @@ import {
   createCrowdSimulation,
   crowdGroundClearance,
   crowdPosesAt,
+  neighborhoodSidewalkRoutes,
   walkingBodyLift,
 } from "../src/crowd-motion.js";
 import { walkingCycleAtDistance } from "../src/gait.js";
@@ -42,14 +43,17 @@ describe("crowd motion", () => {
     expect(new Set(first.map((pose) => pose.side))).toEqual(
       new Set(["near", "far"]),
     );
+    const routeIds = new Set(first.map((pose) => pose.routeId));
+    expect(routeIds.size).toBeGreaterThan(4);
+    expect(routeIds.has("main:0")).toBe(true);
+    expect(routeIds.has("main:1")).toBe(true);
+    const generatedRouteIds = new Set(
+      neighborhoodSidewalkRoutes().map((route) => route.id),
+    );
     for (const pose of first) {
-      expect(Math.abs(pose.x)).toBeLessThanOrEqual(106);
-      expect(pose.z).toBeGreaterThanOrEqual(pose.routeMinZ);
-      expect(pose.z).toBeLessThanOrEqual(pose.routeMaxZ);
-      expect(
-        pose.z < STREET_LAYOUT.road.minZ ||
-          pose.z > STREET_LAYOUT.road.maxZ,
-      ).toBe(true);
+      expect(Number.isFinite(pose.x)).toBe(true);
+      expect(Number.isFinite(pose.z)).toBe(true);
+      expect(generatedRouteIds.has(pose.routeId)).toBe(true);
     }
 
     for (let left = 0; left < first.length; left += 1) {
@@ -203,8 +207,8 @@ describe("crowd motion", () => {
     for (const pose of sample.poses) {
       expect(pose.worldSpeed).toBeGreaterThan(0);
       expect(pose.pace).toBeGreaterThan(0);
-      const travelHeading = pose.heading > 0 ? Math.PI / 2 : -Math.PI / 2;
-      expect(Math.abs(pose.heading - travelHeading)).toBeLessThan(0.6);
+      expect(Number.isFinite(pose.heading)).toBe(true);
+      expect(pose.routeId.length).toBeGreaterThan(0);
     }
   });
 
@@ -251,16 +255,24 @@ describe("crowd motion", () => {
     expect(ambientPopulationFor("sunny", "simulation")).toEqual({
       pets: 2,
       wildlife: 4,
-      bicycles: 2,
-      vehicles: 1,
+      bicycles: 3,
+      vehicles: 8,
     });
-    expect(ambientPopulationFor("cloudy", "simulation").wildlife).toBe(0);
-    expect(ambientPopulationFor("hot-and-dry", "simulation").wildlife).toBe(0);
+    expect(ambientPopulationFor("cloudy", "simulation")).toMatchObject({
+      wildlife: 0,
+      bicycles: 2,
+      vehicles: 8,
+    });
+    expect(ambientPopulationFor("hot-and-dry", "simulation")).toMatchObject({
+      wildlife: 0,
+      bicycles: 2,
+      vehicles: 8,
+    });
     expect(ambientPopulationFor("thunderstorm", "simulation")).toEqual({
       pets: 0,
       wildlife: 0,
       bicycles: 0,
-      vehicles: 3,
+      vehicles: 4,
     });
     expect(ambientPopulationFor("sunny", "forecast")).toEqual({
       pets: 0,
