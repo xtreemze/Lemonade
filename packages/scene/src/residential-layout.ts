@@ -293,7 +293,7 @@ const accessExclusions = (
     if (property.drivewayX === null) return [];
     const frontDirection = Math.cos(property.rotationY) >= 0 ? 1 : -1;
     const drivewayCenterZ = property.houseZ + frontDirection * 4.15;
-    const pathCenterZ = property.houseZ + frontDirection * 3.55;
+    const pathCenterZ = property.houseZ + frontDirection * 6;
     return [
       {
         minX: property.drivewayX - DRIVEWAY_HALF_WIDTH,
@@ -305,8 +305,8 @@ const accessExclusions = (
       {
         minX: property.houseX - 0.52,
         maxX: property.houseX + 0.52,
-        minZ: pathCenterZ - 2.9,
-        maxZ: pathCenterZ + 2.9,
+        minZ: pathCenterZ - 2,
+        maxZ: pathCenterZ + 2,
         role: "path" as const,
       },
     ];
