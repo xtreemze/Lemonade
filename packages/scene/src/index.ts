@@ -394,6 +394,8 @@ const applySellerExpression = (seller: SellerRig, confidence: number): void => {
   const progress = clamp01(confidence / 5);
   const expression = progress * 2 - 1;
   resetPersonPose(seller.person);
+  seller.person.torso.position.y = 1.05;
+  seller.person.head.position.y = 1.73;
 
   seller.person.head.rotation.x = lerp(0.14, -0.045, progress);
   seller.person.torso.rotation.x = lerp(0.13, -0.015, progress);
