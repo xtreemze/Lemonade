@@ -830,7 +830,7 @@ export const createNeighborhoodMobilitySystem = (
             const directed =
               index % 2 === 0 ? route : reverseRoute(route, ":reverse");
             const vehicle = trafficPose(
-              "traffic-vehicle:" + route.id + ":v" + vehicleNum,
+              `traffic-vehicle:${route.id}:v${String(vehicleNum)}`,
               "vehicle",
               directed,
               input.elapsedMs,
@@ -955,10 +955,10 @@ export const createNeighborhoodMobilitySystem = (
           if (!hasVehicle) continue;
           const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) * allDrivewayProperties.length);
           const property = allDrivewayProperties[propertyIndex];
-          if (property === undefined || property.drivewayX === null) continue;
+          if (property?.drivewayX === null || property === undefined) continue;
           const access = residentialAccessLayout(property);
           const parkedVehicle = makePose(
-            `parked-vehicle-${i}`,
+            `parked-vehicle-${String(i)}`,
             "vehicle",
             {
               x: property.drivewayX,
@@ -1011,10 +1011,10 @@ export const createNeighborhoodMobilitySystem = (
           if (!hasVehicle) continue;
           const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4500 + i) * allDrivewayProperties.length);
           const property = allDrivewayProperties[propertyIndex];
-          if (property === undefined || property.drivewayX === null) continue;
+          if (property?.drivewayX === null || property === undefined) continue;
           const access = residentialAccessLayout(property);
           const parkedVehicle = makePose(
-            `parked-vehicle-night-${i}`,
+            `parked-vehicle-night-${String(i)}`,
             "vehicle",
             {
               x: property.drivewayX,
