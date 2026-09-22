@@ -5,7 +5,12 @@ import {
   petFollowPose,
   xTravelYaw,
 } from "../src/ambient-life.js";
-import { crowdGroundClearance, crowdPosesAt, walkingBodyLift } from "../src/crowd-motion.js";
+import {
+  crowdGroundClearance,
+  crowdPosesAt,
+  walkingBodyLift,
+  walkingCycleAtDistance,
+} from "../src/crowd-motion.js";
 import { STREET_LAYOUT, roadLaneZ } from "../src/street-layout.js";
 import type { PasserbyBeat } from "../src/storyboard.js";
 
@@ -74,7 +79,25 @@ describe("crowd motion", () => {
     expect(crowdGroundClearance(0.68)).toBeGreaterThan(0.14);
     expect(crowdGroundClearance(0.9)).toBeGreaterThan(0.2);
     expect(crowdGroundClearance(1.2)).toBeGreaterThan(0.26);
-    expect(walkingBodyLift(0.5, 1, 0)).toBeGreaterThan(0);
+    expect(walkingBodyLift(0.5, 0.9, 1, 0)).toBeGreaterThan(0);
+  });
+
+  it("advances gait from actual distance travelled rather than presentation time", () => {
+    const earlier = crowdPosesAt(beats, 1, 1_000, 6_000)[0];
+    const later = crowdPosesAt(beats, 1, 1_100, 6_000)[0];
+    expect(earlier).toBeDefined();
+    expect(later).toBeDefined();
+    if (earlier === undefined || later === undefined) return;
+
+    expect(later.travelDistance - earlier.travelDistance).toBeCloseTo(
+      earlier.pace * 0.1,
+      5,
+    );
+    expect(
+      walkingCycleAtDistance(later.travelDistance, 1, 1, 0),
+    ).toBeGreaterThan(
+      walkingCycleAtDistance(earlier.travelDistance, 1, 1, 0),
+    );
   });
 
   it("reduces exposed street life in storms without changing simulation population math", () => {
