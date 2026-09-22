@@ -12,7 +12,7 @@ export type AudioCue =
   | "purchase:drink"
   | "storm:thunder";
 
-export type WeatherToneSource = "historical-weather-excerpt" | "original-weather-variation";
+export type WeatherToneSource = "historical-weather-excerpt" | "source-phrase-completion";
 
 export type ScheduledTone = Readonly<{
   midiNote: number;
@@ -28,7 +28,7 @@ export type WeatherMelodyMetadata = Readonly<{
   title: string;
   attribution: string;
   historicalSource: string;
-  continuation: "original-variation";
+  continuation: "source-phrase-completion";
 }>;
 
 export const WEATHER_FORECAST_DURATION_MS = 6_000;
@@ -65,11 +65,15 @@ type AppleWeatherMelody = Readonly<{
   steps: readonly AppleSpeakerStep[];
 }>;
 
-type WeatherVariationNote = Readonly<{
+type WeatherPhraseNote = Readonly<{
   note: number;
   beats: number;
-  waveform: OscillatorType;
   gain?: number;
+}>;
+
+type WeatherPhraseCompletion = Readonly<{
+  secondsPerBeat: number;
+  notes: readonly WeatherPhraseNote[];
 }>;
 
 const WEATHER_MELODY_METADATA: Readonly<Record<WeatherAudioCue, WeatherMelodyMetadata>> =
@@ -78,70 +82,97 @@ const WEATHER_MELODY_METADATA: Readonly<Record<WeatherAudioCue, WeatherMelodyMet
       title: "Ranz des Vaches (Call to the Dairy Cows)",
       attribution: "Gioachino Rossini · William Tell Overture",
       historicalSource: "1979 Apple II Lemonade Stand sunny-weather excerpt",
-      continuation: "original-variation",
+      continuation: "source-phrase-completion",
     }),
     "forecast:cloudy": Object.freeze({
       title: "Raindrops Keep Fallin’ on My Head",
       attribution: "Burt Bacharach / Hal David",
       historicalSource: "1979 Apple II Lemonade Stand cloudy-weather excerpt",
-      continuation: "original-variation",
+      continuation: "source-phrase-completion",
     }),
     "forecast:hot-and-dry": Object.freeze({
       title: "Summertime",
       attribution: "George Gershwin / DuBose Heyward",
       historicalSource: "1979 Apple II Lemonade Stand hot-weather excerpt",
-      continuation: "original-variation",
+      continuation: "source-phrase-completion",
     }),
     "forecast:thunderstorm": Object.freeze({
       title: "Singin’ in the Rain",
       attribution: "Nacio Herb Brown / Arthur Freed",
       historicalSource: "1979 Apple II Lemonade Stand thunderstorm excerpt",
-      continuation: "original-variation",
+      continuation: "source-phrase-completion",
     }),
   });
 
-const WEATHER_VARIATIONS = Object.freeze({
-    "forecast:sunny": Object.freeze([
-      { note: 67, beats: 0.7, waveform: "triangle", gain: 0.038 },
-      { note: 72, beats: 0.7, waveform: "triangle", gain: 0.04 },
-      { note: 76, beats: 0.85, waveform: "triangle", gain: 0.042 },
-      { note: 74, beats: 0.55, waveform: "square", gain: 0.032 },
-      { note: 71, beats: 0.55, waveform: "square", gain: 0.032 },
-      { note: 69, beats: 0.7, waveform: "triangle", gain: 0.038 },
-      { note: 67, beats: 0.7, waveform: "triangle", gain: 0.036 },
-      { note: 72, beats: 1.35, waveform: "triangle", gain: 0.045 },
+const WEATHER_PHRASE_COMPLETIONS = Object.freeze({
+  // The sunny Apple II cue already forms a compact cow-call. Reprise its
+  // historical contour as the answering phrase instead of inventing a new tune.
+  "forecast:sunny": Object.freeze({
+    secondsPerBeat: 0.46,
+    notes: Object.freeze([
+      { note: 72, beats: 1.5 },
+      { note: 74, beats: 0.5 },
+      { note: 67, beats: 0.5 },
+      { note: 72, beats: 0.5 },
+      { note: 76, beats: 0.5 },
+      { note: 67, beats: 0.5 },
+      { note: 72, beats: 1.5 },
     ]),
-    "forecast:cloudy": Object.freeze([
-      { note: 60, beats: 0.45, waveform: "sine", gain: 0.032 },
-      { note: 64, beats: 0.45, waveform: "triangle", gain: 0.034 },
-      { note: 62, beats: 0.6, waveform: "sine", gain: 0.032 },
-      { note: 59, beats: 0.45, waveform: "triangle", gain: 0.03 },
-      { note: 57, beats: 0.75, waveform: "sine", gain: 0.03 },
-      { note: 60, beats: 0.55, waveform: "triangle", gain: 0.032 },
-      { note: 62, beats: 0.55, waveform: "triangle", gain: 0.032 },
-      { note: 60, beats: 1.3, waveform: "sine", gain: 0.038 },
+  }),
+  // The remaining cues continue the next recognizable clause of the identified
+  // tune, transposed to meet the Apple II excerpt at its existing pitch center.
+  "forecast:cloudy": Object.freeze({
+    secondsPerBeat: 0.44,
+    notes: Object.freeze([
+      { note: 67, beats: 0.5 },
+      { note: 67, beats: 0.5 },
+      { note: 67, beats: 0.5 },
+      { note: 67, beats: 0.5 },
+      { note: 69, beats: 1 },
+      { note: 67, beats: 0.5 },
+      { note: 65, beats: 0.5 },
+      { note: 64, beats: 0.75 },
+      { note: 64, beats: 0.5 },
+      { note: 65, beats: 0.5 },
+      { note: 62, beats: 0.5 },
+      { note: 60, beats: 0.5 },
+      { note: 59, beats: 0.5 },
+      { note: 57, beats: 1.25 },
     ]),
-    "forecast:hot-and-dry": Object.freeze([
-      { note: 62, beats: 0.65, waveform: "sine", gain: 0.034 },
-      { note: 65, beats: 0.7, waveform: "triangle", gain: 0.036 },
-      { note: 69, beats: 0.9, waveform: "sine", gain: 0.038 },
-      { note: 67, beats: 0.5, waveform: "triangle", gain: 0.032 },
-      { note: 64, beats: 0.6, waveform: "sine", gain: 0.032 },
-      { note: 60, beats: 0.7, waveform: "triangle", gain: 0.03 },
-      { note: 57, beats: 0.9, waveform: "sine", gain: 0.03 },
-      { note: 62, beats: 1.2, waveform: "sine", gain: 0.04 },
+  }),
+  "forecast:hot-and-dry": Object.freeze({
+    secondsPerBeat: 0.44,
+    notes: Object.freeze([
+      { note: 69, beats: 0.75 },
+      { note: 65, beats: 0.5 },
+      { note: 67, beats: 0.5 },
+      { note: 67, beats: 1 },
+      { note: 65, beats: 0.5 },
+      { note: 62, beats: 0.5 },
+      { note: 65, beats: 0.5 },
+      { note: 62, beats: 0.5 },
+      { note: 65, beats: 0.5 },
+      { note: 64, beats: 1.25 },
     ]),
-    "forecast:thunderstorm": Object.freeze([
-      { note: 55, beats: 0.45, waveform: "square", gain: 0.034 },
-      { note: 58, beats: 0.45, waveform: "triangle", gain: 0.034 },
-      { note: 63, beats: 0.65, waveform: "square", gain: 0.036 },
-      { note: 60, beats: 0.5, waveform: "triangle", gain: 0.032 },
-      { note: 55, beats: 0.65, waveform: "square", gain: 0.032 },
-      { note: 51, beats: 0.75, waveform: "sine", gain: 0.03 },
-      { note: 58, beats: 0.6, waveform: "triangle", gain: 0.034 },
-      { note: 55, beats: 1.35, waveform: "sine", gain: 0.04 },
+  }),
+  "forecast:thunderstorm": Object.freeze({
+    secondsPerBeat: 0.32,
+    notes: Object.freeze([
+      { note: 55, beats: 0.5 },
+      { note: 57, beats: 0.5 },
+      { note: 60, beats: 0.5 },
+      { note: 62, beats: 0.5 },
+      { note: 64, beats: 0.5 },
+      { note: 67, beats: 1 },
+      { note: 64, beats: 1 },
+      { note: 67, beats: 0.75 },
+      { note: 67, beats: 0.75 },
+      { note: 64, beats: 0.5 },
+      { note: 62, beats: 0.5 },
+      { note: 60, beats: 1.25 },
     ]),
-  } satisfies Record<WeatherAudioCue, readonly WeatherVariationNote[]>);
+  }),
+} satisfies Record<WeatherAudioCue, WeatherPhraseCompletion>);
 
 const MOTIFS: Record<Exclude<AudioCue, WeatherAudioCue>, readonly MotifNote[]> = {
   "day:submit": [
@@ -268,9 +299,8 @@ const BEAT_SECONDS = 0.12;
 const GAP_SECONDS = 0.018;
 const APPLE_SPEAKER_GAIN = 0.042;
 const APPLE_SPEAKER_GAP_SECONDS = 0.012;
-const WEATHER_VARIATION_GAP_SECONDS = 0.035;
-const WEATHER_VARIATION_LEAD_SECONDS = 0.065;
-const WEATHER_PHRASE_END_SECONDS = 5.88;
+const WEATHER_PHRASE_GAP_SECONDS = 0.02;
+const WEATHER_PHRASE_LEAD_SECONDS = 0.065;
 
 const isWeatherCue = (cue: AudioCue): cue is WeatherAudioCue => cue.startsWith("forecast:");
 
@@ -306,35 +336,28 @@ const compileAppleWeatherExcerpt = (
   return Object.freeze({ tones: Object.freeze(tones), durationSeconds: cursor });
 };
 
-const compileWeatherVariation = (
+const compileWeatherPhraseCompletion = (
   cue: WeatherAudioCue,
   startSeconds: number,
 ): readonly ScheduledTone[] => {
-  const notes = WEATHER_VARIATIONS[cue];
-  const totalBeats = notes.reduce((sum, note) => sum + note.beats, 0);
-  const totalGaps = WEATHER_VARIATION_GAP_SECONDS * Math.max(0, notes.length - 1);
-  const availableSeconds = Math.max(
-    0.2,
-    WEATHER_PHRASE_END_SECONDS - startSeconds - totalGaps,
-  );
-  const secondsPerBeat = availableSeconds / totalBeats;
+  const completion = WEATHER_PHRASE_COMPLETIONS[cue];
   const tones: ScheduledTone[] = [];
   let cursor = startSeconds;
 
-  notes.forEach((note, index) => {
-    const durationSeconds = note.beats * secondsPerBeat;
+  completion.notes.forEach((note, index) => {
+    const durationSeconds = note.beats * completion.secondsPerBeat;
     tones.push(
       Object.freeze({
         midiNote: note.note,
         startSeconds: cursor,
         durationSeconds,
-        gain: note.gain,
-        waveform: note.waveform,
-        source: "original-weather-variation",
+        gain: note.gain ?? APPLE_SPEAKER_GAIN,
+        waveform: "square",
+        source: "source-phrase-completion",
       }),
     );
     cursor += durationSeconds;
-    if (index < notes.length - 1) cursor += WEATHER_VARIATION_GAP_SECONDS;
+    if (index < completion.notes.length - 1) cursor += WEATHER_PHRASE_GAP_SECONDS;
   });
 
   return Object.freeze(tones);
@@ -342,10 +365,10 @@ const compileWeatherVariation = (
 
 const compileWeatherCue = (cue: WeatherAudioCue): readonly ScheduledTone[] => {
   const excerpt = compileAppleWeatherExcerpt(cue);
-  const variationStart = excerpt.durationSeconds + WEATHER_VARIATION_LEAD_SECONDS;
+  const completionStart = excerpt.durationSeconds + WEATHER_PHRASE_LEAD_SECONDS;
   return Object.freeze([
     ...excerpt.tones,
-    ...compileWeatherVariation(cue, variationStart),
+    ...compileWeatherPhraseCompletion(cue, completionStart),
   ]);
 };
 
