@@ -83,16 +83,22 @@ export const decorateCharacterHead = (
     eye.add(pupil);
     head.add(eye);
 
-    const brow = new Mesh(
-      new BoxGeometry(0.09, 0.015, 0.018),
-      material(profile.hairColor),
-    );
-    brow.position.set(direction * profile.eyeSpacing, 0.118, 0.255);
-    const curve = expressionCurve(profile);
-    brow.rotation.z =
-      direction *
-      (profile.expression === "curious" ? (direction === -1 ? 0.18 : -0.02) : -curve * 0.34);
-    head.add(brow);
+    if (includeMouth) {
+      const brow = new Mesh(
+        new BoxGeometry(0.09, 0.015, 0.018),
+        material(profile.hairColor),
+      );
+      brow.position.set(direction * profile.eyeSpacing, 0.118, 0.255);
+      const curve = expressionCurve(profile);
+      brow.rotation.z =
+        direction *
+        (profile.expression === "curious"
+          ? direction === -1
+            ? 0.18
+            : -0.02
+          : -curve * 0.34);
+      head.add(brow);
+    }
   }
 
   const nose = new Mesh(
