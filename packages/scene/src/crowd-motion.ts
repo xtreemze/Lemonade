@@ -160,8 +160,6 @@ const samplePedestrianRoute = (
   });
 };
 
-const fract = (value: number): number => value - Math.floor(value);
-
 const deterministicUnit = (index: number, salt: number): number => {
   let value = Math.imul((index + 1) >>> 0, 0x9e3779b1) ^ (salt >>> 0);
   value = Math.imul(value ^ (value >>> 16), 0x21f0aaad);
@@ -184,10 +182,10 @@ const basePose = (
   durationMs: number,
   actorCount: number,
   routes: readonly PedestrianRoute[],
-): MutableCrowdPose => {
+): MutableCrowdPose | undefined => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
   const count = Math.max(1, actorCount);
-  const worldSpeed = 1.28 + deterministicUnit(actorIndex, 17) * 0.54;
+  const worldSpeed = 1.12 + deterministicUnit(actorIndex, 17) * 0.32;
   const phaseOffset = actorIndex / count + deterministicUnit(actorIndex, 29) * 0.11;
   const elapsedSeconds =
     Math.max(0, Math.min(elapsedMs, safeDuration * 8)) / 1_000;
@@ -218,7 +216,10 @@ const basePose = (
 
   const unwrappedProgress =
     phaseOffset + elapsedSeconds * worldSpeed / route.total;
-  const progress = fract(unwrappedProgress);
+  if (unwrappedProgress < 0 || unwrappedProgress >= 1) {
+    return undefined;
+  }
+  const progress = unwrappedProgress;
   const forwardDistance = progress * route.total;
   const routeDistance =
     beat.direction === -1 ? forwardDistance : route.total - forwardDistance;
@@ -250,7 +251,7 @@ const basePose = (
     x: sampled.x + normalX * lateralOffset + (route.streetId === "main" ? signPull : 0),
     z: sampled.z + normalZ * lateralOffset,
     heading,
-    pace: Math.max(0.72, Math.min(1.35, worldSpeed / 1.55)),
+    pace: Math.max(0.78, Math.min(1.12, worldSpeed / 1.32)),
     worldSpeed,
     travelDistance: route.total * unwrappedProgress,
     side: route.side,
