@@ -22,6 +22,7 @@ import {
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { CupInventory } from "./cup-inventory.js";
+import { STAND_LAYOUT } from "./stand-layout.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -33,6 +34,7 @@ import {
   type SceneShotKind,
   type StreetStoryboard,
 } from "./storyboard.js";
+import { WEATHER_BACKDROP_LAYOUT } from "./weather-layout.js";
 
 export type SceneWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 export type CustomerActivity = "quiet" | "light" | "steady" | "lively" | "busy";
@@ -108,13 +110,60 @@ type StandModel = Readonly<{
 
 const createStand = (): StandModel => {
   const root = new Group();
-  // A compact neighborhood kiosk rather than a house-sized pavilion.
-  addBox(root, [3.25, 1.18, 1.32], [0, 0.59, 0], 0xe7c672);
-  addBox(root, [3.55, 0.18, 1.55], [0, 1.28, 0], 0xf3d85d);
-  addBox(root, [2.95, 0.56, 0.14], [0, 0.68, 0.72], 0xffefaf);
-  addBox(root, [0.14, 1.8, 0.14], [-1.45, 1.95, 0], 0x5e4934);
-  addBox(root, [0.14, 1.8, 0.14], [1.45, 1.95, 0], 0x5e4934);
-  addBox(root, [3.45, 0.16, 1.55], [0, 2.82, 0], 0xe6a93b);
+  // Keep one shared geometry contract for the counter, vendor, and inventory.
+  addBox(root, STAND_LAYOUT.body.size, STAND_LAYOUT.body.position, 0xe7c672);
+  addBox(root, STAND_LAYOUT.counter.size, STAND_LAYOUT.counter.position, 0xf3d85d);
+  addBox(root, STAND_LAYOUT.frontPanel.size, STAND_LAYOUT.frontPanel.position, 0xffefaf);
+  for (const post of STAND_LAYOUT.posts) {
+    addBox(root, post.size, post.position, 0x5e4934);
+  }
+  addBox(root, STAND_LAYOUT.canopy.size, STAND_LAYOUT.canopy.position, 0xe6a93b);
+
+  // A slightly crooked lemon badge gives the stand a handmade neighborhood identity.
+  const signBoard = addBox(root, [1.58, 0.56, 0.1], [0, 2.43, 0.65], 0xffe36a);
+  signBoard.rotation.z = -0.055;
+  const lemonBadge = new Mesh(
+    new SphereGeometry(0.2, 10, 8),
+    makeMaterial(0xf6d33b),
+  );
+  lemonBadge.scale.set(1.22, 0.86, 0.24);
+  lemonBadge.position.set(-0.48, 2.43, 0.72);
+  lemonBadge.rotation.z = 0.18;
+  root.add(lemonBadge);
+  const badgeLeaf = new Mesh(
+    new CylinderGeometry(0, 0.07, 0.2, 5),
+    makeMaterial(0x4f8c4a),
+  );
+  badgeLeaf.rotation.z = Math.PI / 2.6;
+  badgeLeaf.position.set(-0.27, 2.58, 0.72);
+  root.add(badgeLeaf);
+  addBox(root, [0.62, 0.07, 0.04], [0.33, 2.5, 0.72], 0x6b573d);
+  addBox(root, [0.76, 0.06, 0.04], [0.25, 2.36, 0.72], 0x6b573d);
+
+  // Counter dressing keeps the kiosk from reading as an empty prop.
+  addBox(
+    root,
+    [0.62, 0.28, 0.48],
+    [-1.1, STAND_LAYOUT.counterTopY + 0.14, 0.34],
+    0x9b6a3c,
+  );
+  const pitcher = new Mesh(
+    new CylinderGeometry(0.2, 0.25, 0.5, 10),
+    new MeshStandardMaterial({
+      color: 0xf0ebd3,
+      transparent: true,
+      opacity: 0.72,
+      roughness: 0.28,
+    }),
+  );
+  pitcher.position.set(1.08, STAND_LAYOUT.counterTopY + 0.25, 0.34);
+  root.add(pitcher);
+  const pitcherLemonade = new Mesh(
+    new CylinderGeometry(0.17, 0.21, 0.3, 10),
+    makeMaterial(0xeac54b),
+  );
+  pitcherLemonade.position.set(1.08, STAND_LAYOUT.counterTopY + 0.17, 0.34);
+  root.add(pitcherLemonade);
 
   const shutter = new Group();
   addBox(shutter, [3.0, 0.82, 0.1], [0, 0.96, 0.78], 0xd39b43);
@@ -443,7 +492,11 @@ const createLemon = (index: number): Group => {
 
   const column = index % 4;
   const row = Math.floor(index / 4);
-  lemon.position.set(-0.75 + column * 0.5, 1.5 + row * 0.32, 0.58);
+  lemon.position.set(
+    -0.75 + column * 0.5,
+    STAND_LAYOUT.lemonCenterY + row * 0.27,
+    0.46 + (index % 2) * 0.06,
+  );
   return lemon;
 };
 
@@ -529,7 +582,11 @@ export const createLemonsvilleScene = (
   }
 
   const seller = createSeller(initialState.characterSeed);
-  seller.person.root.position.set(0, personGroundY(seller.person), -0.3);
+  seller.person.root.position.set(
+    0,
+    personGroundY(seller.person),
+    STAND_LAYOUT.sellerZ,
+  );
   seller.person.root.scale.multiplyScalar(0.98);
   scene.add(seller.person.root);
 
@@ -546,16 +603,20 @@ export const createLemonsvilleScene = (
     "hot-and-dry": new Group(),
     thunderstorm: new Group(),
   };
-  weatherObjects.sunny.position.set(5.1, 6.7, -1.8);
-  weatherObjects["hot-and-dry"].position.set(3.9, 6.25, -1.8);
-  weatherObjects.cloudy.position.set(-4.1, 6.4, -1.8);
-  weatherObjects.thunderstorm.position.set(-3.6, 6.25, -1.4);
-  for (const weatherObject of Object.values(weatherObjects)) scene.add(weatherObject);
+  for (const [weather, weatherObject] of Object.entries(weatherObjects) as [
+    SceneWeather,
+    Group,
+  ][]) {
+    const layout = WEATHER_BACKDROP_LAYOUT[weather];
+    weatherObject.position.set(...layout.position);
+    weatherObject.scale.setScalar(layout.scale);
+    scene.add(weatherObject);
+  }
   const weatherOrigins = Object.freeze({
-    sunny: 5.1,
-    cloudy: -4.1,
-    "hot-and-dry": 3.9,
-    thunderstorm: -3.6,
+    sunny: WEATHER_BACKDROP_LAYOUT.sunny.position[0],
+    cloudy: WEATHER_BACKDROP_LAYOUT.cloudy.position[0],
+    "hot-and-dry": WEATHER_BACKDROP_LAYOUT["hot-and-dry"].position[0],
+    thunderstorm: WEATHER_BACKDROP_LAYOUT.thunderstorm.position[0],
   });
 
   let state = initialState;
