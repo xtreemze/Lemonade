@@ -216,7 +216,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   });
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-shot-history",
-    /^forecast,stand,remaining(?:,stand)?$/u,
+    /^stand,remaining(?:,stand)?$/u,
   );
   await expectNoHorizontalOverflow(page);
   await expectNoVerticalOverflow(page);
