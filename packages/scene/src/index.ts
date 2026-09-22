@@ -322,24 +322,14 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
 
 const createSeller = (characterSeed: number): SellerRig => {
   const person = createPerson(characterSeed ^ 0x51_1e_12, 10_001);
-  const expressionMaterial = makeMaterial(0x3a2a25);
-
-  const leftBrow = new Mesh(
-    new BoxGeometry(0.11, 0.018, 0.018),
-    expressionMaterial.clone(),
-  );
-  const rightBrow = leftBrow.clone();
+  const leftBrow = new Group();
+  const rightBrow = new Group();
+  const mouthLeft = new Group();
+  const mouthRight = new Group();
   leftBrow.position.set(-0.085, 0.125, 0.235);
   rightBrow.position.set(0.085, 0.125, 0.235);
-
-  const mouthLeft = new Mesh(
-    new BoxGeometry(0.12, 0.018, 0.018),
-    expressionMaterial.clone(),
-  );
-  const mouthRight = mouthLeft.clone();
   mouthLeft.position.set(-0.055, -0.09, 0.238);
   mouthRight.position.set(0.055, -0.09, 0.238);
-
   person.head.add(leftBrow, rightBrow, mouthLeft, mouthRight);
   return Object.freeze({
     person,
@@ -506,11 +496,6 @@ export const createLemonsvilleScene = (
   ground.rotation.x = -Math.PI / 2;
   ground.position.z = -3.5;
   scene.add(ground);
-
-  const mainRoad = new Mesh(new PlaneGeometry(44, 4.2), makeMaterial(0xb2916e));
-  mainRoad.rotation.x = -Math.PI / 2;
-  mainRoad.position.set(0, 0.012, 4.1);
-  scene.add(mainRoad);
 
   const stand = createStand();
   scene.add(stand.root);
@@ -686,12 +671,13 @@ export const createLemonsvilleScene = (
     });
 
   void import("./character-detail.js")
-    .then(({ decorateCharacterHead }) => {
+    .then(({ decorateCharacterHead, decorateSellerExpression }) => {
       if (disposed) return;
       for (const person of [...customers, ...buyers]) {
         decorateCharacterHead(person.head, person.profile);
       }
       decorateCharacterHead(seller.person.head, seller.person.profile, false);
+      decorateSellerExpression(seller.eyebrows, seller.mouth);
       canvas.dataset["characterDetail"] = "ready";
       render();
     })
