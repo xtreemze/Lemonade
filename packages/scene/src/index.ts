@@ -24,6 +24,7 @@ import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { walkingCycleAtDistance } from "./gait.js";
+import { createGizmoController, type GizmoController } from "./gizmo-controller.js";
 import {
   characterGroundClearance,
   WORLD_SCALE,
@@ -63,12 +64,16 @@ export type LemonsvilleSceneState = Readonly<{
   reducedMotion: boolean;
 }>;
 
+export type LemonsvilleSceneOptions = Readonly<{
+  enableGizmo?: boolean;
+}>;
+
 export interface LemonsvilleSceneController {
   update(state: LemonsvilleSceneState): void;
   resize(width: number, height: number): void;
   dispose(): void;
-  scene?: any; // Three.js Scene for dev tools
-  camera?: any; // Three.js Camera for dev tools
+  scene: Scene;
+  camera: PerspectiveCamera;
 }
 
 const PASSERBY_POOL_SIZE = 128;
@@ -430,6 +435,7 @@ const disposeObject = (object: Object3D): void => {
 export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
+  options: LemonsvilleSceneOptions = {},
 ): LemonsvilleSceneController | null => {
   let renderer: WebGLRenderer;
   try {
@@ -607,6 +613,16 @@ export const createLemonsvilleScene = (
   const render = (): void => {
     renderer.render(scene, camera);
   };
+
+  let gizmoController: GizmoController | null = null;
+  if (options.enableGizmo === true) {
+    gizmoController = createGizmoController({
+      camera,
+      scene,
+      container: canvas,
+      onTransformChanged: render,
+    });
+  }
 
   void import("./neighborhood.js")
     .then(({ populateNeighborhood }) => {
@@ -1126,6 +1142,7 @@ export const createLemonsvilleScene = (
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
     animationFrame = null;
     signTexture?.dispose();
+    gizmoController?.dispose();
     scene.traverse(disposeObject);
     renderer.dispose();
   };
@@ -1134,4 +1151,4 @@ export const createLemonsvilleScene = (
   return Object.freeze({ update, resize, dispose, scene, camera });
 };
 
-export { createGizmoController, type GizmoController } from "./gizmo-controller.js";
+export { createGizmoController, type GizmoController };
