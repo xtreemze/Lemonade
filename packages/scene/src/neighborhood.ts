@@ -524,15 +524,15 @@ export const populateNeighborhood = (
     0.014,
     "paved-road",
   );
-  addRoad(6.4, 128, -48, -22, 0x5b6266, 0.014, "paved-road");
+  addRoad(6.4, 128, -58, -22, 0x5b6266, 0.014, "paved-road");
   addRoad(6.2, 128, -15.5, -22, 0x5b6266, 0.014, "paved-road");
   addRoad(6.2, 128, 18.5, -22, 0x5b6266, 0.014, "paved-road");
-  addRoad(6.4, 128, 52, -22, 0x5b6266, 0.014, "paved-road");
-  addRoad(worldSpan, 4.8, 0, -15.5, 0x62686b, 0.014, "paved-road");
+  addRoad(6.4, 128, 58, -22, 0x5b6266, 0.014, "paved-road");
+  addRoad(worldSpan, 4.8, 0, -17, 0x62686b, 0.014, "paved-road");
   addRoad(worldSpan, 4.4, 0, -37, 0x646a6d, 0.014, "paved-road");
   addRoad(worldSpan, 4.6, 0, -58.5, 0x60676b, 0.014, "paved-road");
   addRoad(worldSpan, 4.8, 0, 25, 0x60676b, 0.014, "paved-road");
-  for (const sidewalkZ of [-19.1, -12, -40.4, -33.6, -62, -55, 21.4, 28.6]) {
+  for (const sidewalkZ of [-20.6, -13.4, -40.4, -33.6, -62, -55, 21.4, 28.6]) {
     addRoad(worldSpan, 2, 0, sidewalkZ, 0xd4d0c6, 0.022, "sidewalk");
   }
   addRoad(
