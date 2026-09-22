@@ -530,6 +530,19 @@ export const createAmbientLife = (
     createVehicle(0x63745f, seed, 6, "pickup"),
     createVehicle(0x7d7270, seed, 7, "sedan"),
   ];
+  pets.forEach((pet, index) => {
+    pet.name = `pet-${String(index + 1).padStart(2, "0")}`;
+  });
+  wildlife.forEach((bird, index) => {
+    bird.name = `bird-${String(index + 1).padStart(2, "0")}`;
+  });
+  bicycles.forEach((bicycle, index) => {
+    bicycle.name = `bicycle-${String(index + 1).padStart(2, "0")}`;
+  });
+  vehicles.forEach((vehicle, index) => {
+    vehicle.name = `vehicle-${String(index + 1).padStart(2, "0")}`;
+  });
+
   const residents = [
     createTransportCharacter(seed ^ 0x7341, 12_000),
     createTransportCharacter(seed ^ 0x7341, 12_001),
@@ -538,9 +551,12 @@ export const createAmbientLife = (
   ];
   const mailCarrier = createTransportCharacter(seed ^ 0x4d41494c, 12_100);
   const gardener = createTransportCharacter(seed ^ 0x47415244, 12_200);
+  mailCarrier.root.name = "mail-carrier";
+  gardener.root.name = "gardener";
   mailCarrier.root.userData["sceneRole"] = "ambient-mail-carrier";
   gardener.root.userData["sceneRole"] = "ambient-gardener";
   residents.forEach((resident, index) => {
+    resident.root.name = `resident-${String(index + 1).padStart(2, "0")}`;
     resident.root.userData["sceneRole"] = "ambient-resident";
     resident.root.userData["residentIndex"] = index;
   });
