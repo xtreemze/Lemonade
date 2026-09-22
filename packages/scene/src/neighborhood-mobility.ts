@@ -693,9 +693,17 @@ export const createNeighborhoodMobilitySystem = (
             x: drivewayProperty.drivewayX,
             z: access.parkingZ,
           });
+          const sidewalkCrossingPoint = Object.freeze({
+            x: drivewayProperty.drivewayX,
+            z: access.sidewalkCenterZ,
+          });
+          const crossingOccupied = pedestrianPoints.some(
+            (point) => pointDistance(point, sidewalkCrossingPoint) <= 2.8,
+          );
           let vehiclePoint = roadPoint;
           let vehicleYaw = 0;
           let parked = false;
+          let yieldingAtDriveway = false;
           if (t < 0.28) {
             vehiclePoint = Object.freeze({
               x: roadPoint.x - 26 + 26 * (t / 0.28),
@@ -708,6 +716,24 @@ export const createNeighborhoodMobilitySystem = (
               z: roadPoint.z + (parkPoint.z - roadPoint.z) * p,
             });
             vehicleYaw = Math.sign(parkPoint.z - roadPoint.z) * Math.PI / 2;
+            const crossingProgress = clamp01(
+              Math.abs(
+                (access.sidewalkCenterZ - roadPoint.z) /
+                  Math.max(0.001, parkPoint.z - roadPoint.z),
+              ),
+            );
+            if (
+              crossingOccupied &&
+              p >= Math.max(0, crossingProgress - 0.18) &&
+              p <= Math.min(1, crossingProgress + 0.12)
+            ) {
+              const roadSide = Math.sign(roadPoint.z - access.sidewalkCenterZ) || 1;
+              vehiclePoint = Object.freeze({
+                x: roadPoint.x,
+                z: access.sidewalkCenterZ + roadSide * 2.15,
+              });
+              yieldingAtDriveway = true;
+            }
           } else if (t < 0.72) {
             vehiclePoint = parkPoint;
             vehicleYaw = Math.sign(parkPoint.z - roadPoint.z) * Math.PI / 2;
@@ -719,6 +745,25 @@ export const createNeighborhoodMobilitySystem = (
               z: parkPoint.z + (roadPoint.z - parkPoint.z) * p,
             });
             vehicleYaw = Math.sign(roadPoint.z - parkPoint.z) * Math.PI / 2;
+            const crossingProgress = clamp01(
+              Math.abs(
+                (access.sidewalkCenterZ - parkPoint.z) /
+                  Math.max(0.001, roadPoint.z - parkPoint.z),
+              ),
+            );
+            if (
+              crossingOccupied &&
+              p >= Math.max(0, crossingProgress - 0.18) &&
+              p <= Math.min(1, crossingProgress + 0.12)
+            ) {
+              const drivewaySide =
+                Math.sign(parkPoint.z - access.sidewalkCenterZ) || -1;
+              vehiclePoint = Object.freeze({
+                x: roadPoint.x,
+                z: access.sidewalkCenterZ + drivewaySide * 2.15,
+              });
+              yieldingAtDriveway = true;
+            }
           } else {
             vehiclePoint = Object.freeze({
               x: roadPoint.x + 30 * ((t - 0.84) / 0.16),
@@ -742,9 +787,9 @@ export const createNeighborhoodMobilitySystem = (
             vehicleYaw,
             parked ? 0 : 5.2,
             focus,
-            parked ? "parking" : "none",
+            parked ? "parking" : yieldingAtDriveway ? "crossing" : "none",
             drivewayProperty.role,
-            false,
+            yieldingAtDriveway,
           );
           actors.push(drivewayVehicle);
           addStatistical(counts, drivewayVehicle);
@@ -853,7 +898,7 @@ export const createNeighborhoodMobilitySystem = (
           "mail-carrier",
           mailPoint,
           0,
-          mailInteraction ? 0 : 1.55,
+          mailInteraction ? 0 : 1.42,
           focus,
           mailInteraction ? "mailbox" : "none",
           nearestMailbox?.propertyRole ?? null,
