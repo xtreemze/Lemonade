@@ -1,9 +1,15 @@
-import type {
-  BasisPoints,
-  CustomerId,
-  MoneyCents,
-  Seed,
+import {
+  basisPoints,
+  customerId,
+  moneyCents,
+  type BasisPoints,
+  type CustomerId,
+  type DayNumber,
+  type MoneyCents,
+  type Seed,
 } from "./primitives.js";
+import { createNamedRandom, deriveSeed } from "./rng.js";
+import type { OperatingScaleLevel } from "./scale.js";
 
 export type CustomerType =
   | "impulse"
@@ -70,6 +76,94 @@ export type AudienceSummary = Readonly<{
   purchased: number;
   stockout: number;
 }>;
+
+export type AudienceScaleRules = Readonly<{
+  neighborhoodSize: number;
+  dailyAudience: number;
+}>;
+
+const CUSTOMER_TYPES = Object.freeze([
+  "impulse",
+  "price-sensitive",
+  "regular",
+  "destination",
+] as const);
+
+const AUDIENCE_SCALE_RULES: Readonly<
+  Record<OperatingScaleLevel, AudienceScaleRules>
+> = Object.freeze({
+  1: Object.freeze({ neighborhoodSize: 48, dailyAudience: 24 }),
+  2: Object.freeze({ neighborhoodSize: 144, dailyAudience: 72 }),
+  3: Object.freeze({ neighborhoodSize: 384, dailyAudience: 200 }),
+  4: Object.freeze({ neighborhoodSize: 900, dailyAudience: 480 }),
+});
+
+export const audienceRulesForScale = (
+  level: OperatingScaleLevel,
+): AudienceScaleRules => AUDIENCE_SCALE_RULES[level];
+
+export const deriveCustomerTraits = (
+  neighborhoodSeed: Seed,
+  id: CustomerId,
+): CustomerTraits => {
+  const random = createNamedRandom(
+    neighborhoodSeed,
+    "customer-traits",
+    Number(id),
+  );
+  const type = CUSTOMER_TYPES[
+    random.nextInt(0, CUSTOMER_TYPES.length)
+  ] as CustomerType;
+
+  return Object.freeze({
+    id,
+    type,
+    visualSeed: deriveSeed(
+      neighborhoodSeed,
+      "customer-visual-identity",
+      Number(id),
+    ),
+    intrinsicPriceTolerance: moneyCents(random.nextInt(125, 501)),
+    advertisingResponsiveness: basisPoints(random.nextInt(3_500, 9_501)),
+    familiarity: basisPoints(random.nextInt(1_000, 9_001)),
+    loyalty: basisPoints(random.nextInt(1_000, 9_001)),
+    weatherCommitment: basisPoints(random.nextInt(2_500, 10_001)),
+  });
+};
+
+export const selectDayAudience = (
+  neighborhoodSeed: Seed,
+  day: DayNumber,
+  level: OperatingScaleLevel,
+): DayAudience => {
+  const rules = audienceRulesForScale(level);
+  const ids = Array.from(
+    { length: rules.neighborhoodSize },
+    (_, index) => customerId(index),
+  );
+  const random = createNamedRandom(
+    neighborhoodSeed,
+    "audience-selection",
+    Number(day),
+    level,
+  );
+
+  for (let index = ids.length - 1; index > 0; index -= 1) {
+    const targetIndex = random.nextInt(0, index + 1);
+    const current = ids[index];
+    const target = ids[targetIndex];
+    if (current === undefined || target === undefined) {
+      throw new Error("audience shuffle invariant failed");
+    }
+    ids[index] = target;
+    ids[targetIndex] = current;
+  }
+
+  return Object.freeze({
+    neighborhoodSize: rules.neighborhoodSize,
+    customerIds: Object.freeze(ids.slice(0, rules.dailyAudience)),
+  });
+};
 
 const requireNonNegativeIndex = (value: number, name: string): void => {
   if (!Number.isSafeInteger(value) || value < 0) {
