@@ -168,8 +168,9 @@ Minimum categories:
 - progression boundary/rounding tests;
 - browser tests for decision validation;
 - Playwright coverage for a complete keyboard-only day;
-- `pnpm lint:mobile-contract` for static full-viewport/mobile-first invariants;
-- `pnpm test:mobile-contract` across the required portrait and landscape touch viewport matrix, with zero document/nested scrolling or vertical clipping;
+- `pnpm verify:mobile` as the mandatory combined static + browser mobile gate;
+- the mobile contract must cover the required portrait and landscape touch viewport matrix with zero document/nested scrolling, clipping, offscreen visible flow content, or sub-44×44 primary touch targets;
+- never skip, fixme, expected-fail, ignore, disable, or exempt a mobile-contract case; fix the layout or split the flow into sequential screens;
 - reduced-motion and non-WebGL fallbacks for presentation work.
 
 Bug fixes should include a regression test whenever the bug is representable deterministically.
