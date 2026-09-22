@@ -21,9 +21,37 @@ export const STREET_LAYOUT = Object.freeze({
   }),
 });
 
+export type SidewalkSide = "near" | "far";
+
+export const sidewalkSideForLane = (lane: number): SidewalkSide => {
+  const normalized = Math.abs(Math.trunc(Number.isFinite(lane) ? lane : 0)) % 4;
+  return normalized < 2 ? "near" : "far";
+};
+
 export const sidewalkLaneZ = (lane: number): number => {
   const normalized = Math.abs(Math.trunc(Number.isFinite(lane) ? lane : 0)) % 4;
-  return 0.82 + normalized * 0.39;
+  if (normalized < 2) return 0.9 + normalized * 0.72;
+  return 7.92 + (normalized - 2) * 0.72;
+};
+
+export const clampToSidewalk = (
+  z: number,
+  side: SidewalkSide,
+  inset = 0.1,
+): number => {
+  const safeInset = Math.max(0, Math.min(0.4, inset));
+  const sidewalk =
+    side === "near" ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
+  return Math.min(
+    sidewalk.maxZ - safeInset,
+    Math.max(sidewalk.minZ + safeInset, z),
+  );
+};
+
+export const closestSidewalkSide = (z: number): SidewalkSide => {
+  const nearDistance = Math.abs(z - STREET_LAYOUT.nearSidewalk.centerZ);
+  const farDistance = Math.abs(z - STREET_LAYOUT.farSidewalk.centerZ);
+  return nearDistance <= farDistance ? "near" : "far";
 };
 
 export const roadLaneZ = (
@@ -66,10 +94,5 @@ export const gardenSignPosition = (index: number): GardenSignPosition => {
   });
 };
 
-export const clampToNearSidewalk = (z: number, inset = 0.1): number => {
-  const safeInset = Math.max(0, Math.min(0.4, inset));
-  return Math.min(
-    STREET_LAYOUT.nearSidewalk.maxZ - safeInset,
-    Math.max(STREET_LAYOUT.nearSidewalk.minZ + safeInset, z),
-  );
-};
+export const clampToNearSidewalk = (z: number, inset = 0.1): number =>
+  clampToSidewalk(z, "near", inset);
