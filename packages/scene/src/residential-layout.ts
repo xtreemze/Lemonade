@@ -340,13 +340,13 @@ const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
   resolveFrontAccess(
     seed,
     Object.freeze([
-      makeProperty(seed, 0, "west-end", -44.6, -7.1, 0.96, 0.035, false, 1),
-      makeProperty(seed, 1, "west-mid", -33.7, -8.4, 1.02, -0.045, false, 1),
-      makeProperty(seed, 2, "west-near", -24.0, -6.6, 0.92, 0.06, false, 1),
+      makeProperty(seed, 0, "west-end", -58.0, -7.1, 0.96, 0.035, false, 1),
+      makeProperty(seed, 1, "west-mid", -42.0, -8.4, 1.02, -0.045, false, 1),
+      makeProperty(seed, 2, "west-near", -25.5, -6.6, 0.92, 0.06, false, 1),
       makeProperty(seed, 3, "stand-home", -4.7, -7.9, 1.06, 0.045, false, -1),
       makeProperty(seed, 4, "stand-neighbor", 8.8, -8.6, 0.97, -0.055, false, 1),
       makeProperty(seed, 5, "east-mid", 29.1, -6.8, 1.01, 0.025, false, -1),
-      makeProperty(seed, 6, "east-end", 41.5, -8.3, 0.94, -0.05, false, 1),
+      makeProperty(seed, 6, "east-end", 45.0, -8.3, 0.94, -0.05, false, 1),
     ]),
   );
 
