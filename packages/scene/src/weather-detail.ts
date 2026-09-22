@@ -252,7 +252,7 @@ export const populateWeatherObjects = (
     cloud.userData["driftPhase"] = layout.driftPhase;
     cloud.userData["baseX"] = layout.position[0];
     addCloud(cloud, index % 2 === 0 ? 0xcbd7d7 : 0xd5dddd);
-    cloud.position.set(...layout.position);
+    cloud.position.set(layout.position[0], layout.position[1], layout.position[2]);
     cloud.scale.setScalar(layout.scale);
     weather.cloudy.add(cloud);
     return cloud;
@@ -270,7 +270,7 @@ export const populateWeatherObjects = (
     cloud.userData["baseY"] = layout.position[1];
     cloud.userData["baseZ"] = layout.position[2];
     addCloud(cloud, 0x657786);
-    cloud.position.set(...layout.position);
+    cloud.position.set(layout.position[0], layout.position[1], layout.position[2]);
     cloud.scale.setScalar(layout.scale);
     weather.thunderstorm.add(cloud);
     return cloud;
