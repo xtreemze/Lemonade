@@ -17,6 +17,15 @@ const activityForConfidence = (confidence: number): CustomerActivity => {
   return "busy";
 };
 
+const sellerMoodForConfidence = (confidence: number): string => {
+  if (confidence <= 0) return "discouraged";
+  if (confidence === 1) return "uncertain";
+  if (confidence === 2) return "cautious";
+  if (confidence === 3) return "steady";
+  if (confidence === 4) return "optimistic";
+  return "radiant";
+};
+
 const pedestrianCount: Readonly<Record<CustomerActivity, number>> = Object.freeze({
   quiet: 4,
   light: 7,
@@ -33,6 +42,7 @@ export type LemonsvilleSceneInput = Readonly<{
   sold: number;
   prepared: number;
   priceCents: number;
+  characterSeed: number;
   durationMs: number;
 }>;
 
@@ -76,7 +86,7 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
       ? String(Math.max(0, input.priceCents)) + "¢"
       : "$" + (Math.max(0, input.priceCents) / 100).toFixed(2);
 
-  return `${weather} weather; confidence ${String(input.confidence)}/5; ${String(input.visibleSigns)} advertising signs at ${price} per cup; ${String(input.prepared)} glasses prepared; ${activity}.`;
+  return `${weather} weather; the seller looks ${sellerMoodForConfidence(input.confidence)}; ${String(input.visibleSigns)} advertising signs at ${price} per cup; ${String(input.prepared)} glasses prepared; ${activity}.`;
 };
 
 const createState = (
@@ -96,6 +106,8 @@ const createState = (
     sold,
     priceCents,
     durationMs,
+    confidence: Math.max(0, Math.min(5, input.confidence)),
+    characterSeed: input.characterSeed >>> 0,
     storyboard: createStreetStoryboard({
       durationMs: Math.max(1, durationMs),
       prepared,
@@ -191,6 +203,8 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
     elements.canvas.dataset["preparedCups"] = String(Math.max(0, input.prepared));
     elements.canvas.dataset["plannedSales"] = String(Math.max(0, input.sold));
     elements.canvas.dataset["priceCents"] = String(Math.max(0, input.priceCents));
+    elements.canvas.dataset["characterSeed"] = String(input.characterSeed >>> 0);
+    elements.canvas.dataset["sellerMood"] = sellerMoodForConfidence(input.confidence);
     elements.equivalent.textContent = description;
     elements.fallbackDescription.textContent = description;
 
