@@ -23,7 +23,6 @@ import {
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { CupInventory } from "./cup-inventory.js";
-import { crowdGroundClearance, crowdPosesAt } from "./crowd-motion.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -188,6 +187,8 @@ type SellerRig = Readonly<{
   eyebrows: readonly [Group, Group];
   mouth: readonly [Group, Group];
 }>;
+
+const personGroundY = (person: PersonRig): number => 0.225 * person.profile.heightScale;
 
 const createLimb = (
   upperLength: number,
@@ -538,7 +539,7 @@ export const createLemonsvilleScene = (
   }
 
   const seller = createSeller(initialState.characterSeed);
-  seller.person.root.position.set(0, crowdGroundClearance(seller.person.profile.heightScale), -0.3);
+  seller.person.root.position.set(0, personGroundY(seller.person), -0.3);
   seller.person.root.scale.multiplyScalar(0.98);
   scene.add(seller.person.root);
 
@@ -549,7 +550,7 @@ export const createLemonsvilleScene = (
   canvas.dataset["sellerExpressionStyle"] = "face-posture-confidence";
   canvas.dataset["neighborhoodDetail"] = "loading";
   canvas.dataset["worldScale"] = "kiosk-houses-mature-vegetation";
-  canvas.dataset["crowdModel"] = "routed-separated-grounded";
+  canvas.dataset["crowdModel"] = "loading";
   canvas.dataset["groundContact"] = "height-aware-clearance";
   canvas.dataset["ambientLife"] = "loading";
   canvas.dataset["atmosphere"] = "weather-fog-depth";
@@ -577,6 +578,22 @@ export const createLemonsvilleScene = (
   });
 
   let state = initialState;
+  let crowdMotion:
+    | Readonly<{
+        crowdPosesAt(
+          beats: StreetStoryboard["passersBy"],
+          actorCount: number,
+          elapsedMs: number,
+          durationMs: number,
+        ): readonly Readonly<{
+          x: number;
+          z: number;
+          heading: number;
+          pace: number;
+          seesAdvertisement: boolean;
+        }>[];
+      }>
+    | null = null;
   let ambientLife:
     | Readonly<{
         update(
@@ -668,6 +685,16 @@ export const createLemonsvilleScene = (
     })
     .catch(() => undefined);
 
+  void import("./crowd-motion.js")
+    .then(({ crowdPosesAt }) => {
+      if (disposed) return;
+      crowdMotion = Object.freeze({ crowdPosesAt });
+      canvas.dataset["crowdModel"] = "routed-separated-grounded";
+      resetAnimatedObjects();
+      render();
+    })
+    .catch(() => undefined);
+
   void import("./ambient-life.js")
     .then(({ createAmbientLife }) => {
       if (disposed) return;
@@ -729,12 +756,13 @@ export const createLemonsvilleScene = (
       customers.length,
       Math.max(6, Math.min(18, storyboard.passersBy.length)),
     );
-    const poses = crowdPosesAt(
-      storyboard.passersBy,
-      visibleCount,
-      0,
-      Math.max(1, storyboard.durationMs),
-    );
+    const poses =
+      crowdMotion?.crowdPosesAt(
+        storyboard.passersBy,
+        visibleCount,
+        0,
+        Math.max(1, storyboard.durationMs),
+      ) ?? [];
     customers.forEach((customer, index) => {
       const pose = poses[index];
       customer.root.visible = pose !== undefined;
@@ -742,7 +770,7 @@ export const createLemonsvilleScene = (
       if (pose === undefined) return;
       customer.root.position.set(
         pose.x,
-        crowdGroundClearance(customer.profile.heightScale),
+        personGroundY(customer),
         pose.z,
       );
       customer.root.rotation.y = pose.heading;
@@ -836,7 +864,7 @@ export const createLemonsvilleScene = (
       }
 
       buyer.root.visible = true;
-      buyer.root.position.set(x, crowdGroundClearance(buyer.profile.heightScale), z);
+      buyer.root.position.set(x, personGroundY(buyer), z);
       buyer.root.rotation.y =
         phase === "purchasing" || phase === "drinking"
           ? sale.direction === -1
@@ -865,12 +893,13 @@ export const createLemonsvilleScene = (
       customers.length,
       Math.max(activeBuyerCount + 1, Math.min(18, storyboard.passersBy.length)),
     );
-    const poses = crowdPosesAt(
-      storyboard.passersBy,
-      targetCount,
-      elapsedMs,
-      Math.max(1, storyboard.durationMs),
-    );
+    const poses =
+      crowdMotion?.crowdPosesAt(
+        storyboard.passersBy,
+        targetCount,
+        elapsedMs,
+        Math.max(1, storyboard.durationMs),
+      ) ?? [];
 
     customers.forEach((customer, index) => {
       const pose = poses[index];
@@ -880,7 +909,7 @@ export const createLemonsvilleScene = (
 
       customer.root.position.set(
         pose.x,
-        crowdGroundClearance(customer.profile.heightScale),
+        personGroundY(customer),
         pose.z,
       );
       customer.root.rotation.y = pose.heading;
