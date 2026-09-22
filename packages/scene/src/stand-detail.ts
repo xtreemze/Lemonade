@@ -9,9 +9,9 @@ import {
 
 import { STAND_LAYOUT } from "./stand-layout.js";
 
-export const STAND_SIGN_CENTER_Y = 3.28;
+export const STAND_SIGN_CENTER_Y = 2.62;
 const STOCK_LEMONS = 8;
-const JUICE_FULL_HEIGHT = 0.3;
+const JUICE_FULL_HEIGHT = 0.24;
 const JUICE_BOTTOM_Y = STAND_LAYOUT.counterTopY + 0.04;
 
 export type StandDetailController = Readonly<{
@@ -121,28 +121,30 @@ export const populateStand = (
     0x6b573d,
   );
 
-  const basket = addBox(
-    detail,
-    [0.66, 0.25, 0.48],
-    [-1.17, STAND_LAYOUT.counterTopY + 0.125, 0.34],
-    0x9b6a3c,
-  );
+  const basket = new Group();
   basket.userData["sceneRole"] = "stand-basket";
+  basket.position.set(-0.95, STAND_LAYOUT.counterTopY, 0.3);
+  addBox(basket, [0.54, 0.05, 0.36], [0, 0.025, 0], 0x9b6a3c);
+  addBox(basket, [0.54, 0.09, 0.04], [0, 0.09, -0.16], 0xa77745);
+  addBox(basket, [0.54, 0.09, 0.04], [0, 0.09, 0.16], 0xa77745);
+  addBox(basket, [0.04, 0.09, 0.28], [-0.25, 0.09, 0], 0xa77745);
+  addBox(basket, [0.04, 0.09, 0.28], [0.25, 0.09, 0], 0xa77745);
+  detail.add(basket);
 
   const pitcher = new Mesh(
-    new CylinderGeometry(0.2, 0.25, 0.5, 10),
+    new CylinderGeometry(0.15, 0.19, 0.38, 10),
     material(0xf0ebd3, {
       transparent: true,
       opacity: 0.72,
       roughness: 0.28,
     }),
   );
-  pitcher.position.set(-0.66, STAND_LAYOUT.counterTopY + 0.25, 0.34);
+  pitcher.position.set(-0.48, STAND_LAYOUT.counterTopY + 0.19, 0.3);
   pitcher.userData["sceneRole"] = "stand-pitcher";
   detail.add(pitcher);
 
   const pitcherLemonade = new Mesh(
-    new CylinderGeometry(0.17, 0.21, JUICE_FULL_HEIGHT, 10),
+    new CylinderGeometry(0.12, 0.16, JUICE_FULL_HEIGHT, 10),
     material(0xeac54b),
   );
   pitcherLemonade.userData["sceneRole"] = "stand-juice";
@@ -152,26 +154,26 @@ export const populateStand = (
     const lemon = new Group();
     lemon.userData["sceneRole"] = "stand-stock-lemon";
     const fruit = new Mesh(
-      new SphereGeometry(0.12, 7, 5),
+      new SphereGeometry(0.045, 7, 5),
       material(0xf6d33b),
     );
     fruit.scale.set(1.15, 0.9, 0.9);
     lemon.add(fruit);
 
     const leaf = new Mesh(
-      new CylinderGeometry(0, 0.045, 0.12, 5),
+      new CylinderGeometry(0, 0.018, 0.05, 5),
       material(0x4f8c4a),
     );
     leaf.rotation.z = Math.PI / 2;
-    leaf.position.set(0.12, 0.065, 0);
+    leaf.position.set(0.047, 0.026, 0);
     lemon.add(leaf);
 
     const column = index % 4;
     const row = Math.floor(index / 4);
     lemon.position.set(
-      -1.4 + column * 0.15,
-      STAND_LAYOUT.counterTopY + 0.26 + row * 0.15,
-      0.31 + (column % 2) * 0.1,
+      -1.115 + column * 0.11,
+      STAND_LAYOUT.counterTopY + 0.11 + row * 0.055,
+      0.245 + (column % 2) * 0.09,
     );
     detail.add(lemon);
     return lemon;
@@ -182,9 +184,9 @@ export const populateStand = (
     pitcherLemonade.visible = fraction > 0;
     pitcherLemonade.scale.y = Math.max(0.001, fraction);
     pitcherLemonade.position.set(
-      -0.66,
+      -0.48,
       JUICE_BOTTOM_Y + (JUICE_FULL_HEIGHT * fraction) / 2,
-      0.34,
+      0.3,
     );
 
     const lemonCount = visibleLemonCountForStock(remaining, prepared);
