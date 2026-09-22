@@ -667,7 +667,7 @@ export const populateNeighborhood = (
     ...layout.outerProperties,
   ];
   for (const property of allProperties) {
-    const access = residentialAccessLayout(property);
+    const access = residentialAccessLayout(property, seed);
     if (property.drivewayX !== null) {
       road(
         scene,
@@ -778,7 +778,7 @@ export const populateNeighborhood = (
 
   allProperties.forEach((property, index) => {
     if (index % 3 !== 0) return;
-    const access = residentialAccessLayout(property);
+    const access = residentialAccessLayout(property, seed);
     const lateral = index % 2 === 0 ? 2.15 : -2.15;
     const x = property.houseX + lateral;
     const z = access.pathCenterZ;
