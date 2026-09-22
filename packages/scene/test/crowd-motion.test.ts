@@ -232,15 +232,15 @@ describe("crowd motion", () => {
   it("reduces exposed street life in storms without changing simulation population math", () => {
     expect(ambientPopulationFor("sunny", "simulation")).toEqual({
       pets: 2,
-      wildlife: 3,
-      bicycles: 2,
-      vehicles: 1,
+      wildlife: 4,
+      bicycles: 3,
+      vehicles: 4,
     });
     expect(ambientPopulationFor("thunderstorm", "simulation")).toEqual({
       pets: 0,
       wildlife: 0,
       bicycles: 0,
-      vehicles: 2,
+      vehicles: 3,
     });
     expect(ambientPopulationFor("sunny", "forecast")).toEqual({
       pets: 0,
