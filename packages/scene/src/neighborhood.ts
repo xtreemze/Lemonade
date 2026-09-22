@@ -2,7 +2,6 @@ import {
   BoxGeometry,
   CylinderGeometry,
   Group,
-  LOD,
   Mesh,
   MeshStandardMaterial,
   PlaneGeometry,
@@ -71,21 +70,47 @@ const distantHouse = (color: number): Group => {
   return root;
 };
 
+const distanceLod = (
+  near: Group,
+  far: Group,
+  threshold: number,
+  x: number,
+  z: number,
+  scale: number,
+  rotationY = 0,
+): Group => {
+  const root = new Group();
+  root.add(near, far);
+  far.visible = false;
+  root.position.set(x, 0, z);
+  root.rotation.y = rotationY;
+  root.scale.setScalar(scale);
+  root.userData["lodMode"] = "distance-two-level";
+  root.onBeforeRender = (_renderer, _scene, camera) => {
+    const dx = camera.position.x - root.position.x;
+    const dz = camera.position.z - root.position.z;
+    const nearVisible = dx * dx + dz * dz < threshold * threshold;
+    near.visible = nearVisible;
+    far.visible = !nearVisible;
+  };
+  return root;
+};
+
 const houseLod = (
   x: number,
   z: number,
   color: number,
   scale: number,
   rotationY: number,
-): LOD => {
-  const lod = new LOD();
-  lod.addLevel(detailedHouse(color), 0);
-  lod.addLevel(distantHouse(color), 34);
-  lod.position.set(x, 0, z);
-  lod.rotation.y = rotationY;
-  lod.scale.setScalar(scale);
-  return lod;
-};
+): Group => distanceLod(
+  detailedHouse(color),
+  distantHouse(color),
+  34,
+  x,
+  z,
+  scale,
+  rotationY,
+);
 
 const detailedTree = (color: number): Group => {
   const root = new Group();
@@ -117,14 +142,8 @@ const distantTree = (color: number): Group => {
   return root;
 };
 
-const treeLod = (x: number, z: number, scale: number, color: number): LOD => {
-  const lod = new LOD();
-  lod.addLevel(detailedTree(color), 0);
-  lod.addLevel(distantTree(color), 28);
-  lod.position.set(x, 0, z);
-  lod.scale.setScalar(scale);
-  return lod;
-};
+const treeLod = (x: number, z: number, scale: number, color: number): Group =>
+  distanceLod(detailedTree(color), distantTree(color), 28, x, z, scale);
 
 const shrub = (x: number, z: number, scale: number, color: number): Group => {
   const root = new Group();
@@ -154,6 +173,27 @@ const distantHill = (
   hill.scale.set(width, height, width * 0.4);
   hill.position.set(x, -height * 0.22, z);
   scene.add(hill);
+};
+
+const atmosphereBand = (
+  scene: Scene,
+  z: number,
+  y: number,
+  width: number,
+  height: number,
+  color: number,
+  opacity: number,
+): void => {
+  const hazeMaterial = new MeshStandardMaterial({
+    color,
+    transparent: true,
+    opacity,
+    roughness: 1,
+    depthWrite: false,
+  });
+  const band = new Mesh(new PlaneGeometry(width, height), hazeMaterial);
+  band.position.set(0, y, z);
+  scene.add(band);
 };
 
 export type NeighborhoodStats = Readonly<{
@@ -227,6 +267,8 @@ export const populateNeighborhood = (scene: Scene): NeighborhoodStats => {
   distantHill(scene, -16, -82, 31, 13, 0x6b8264);
   distantHill(scene, 24, -80, 29, 11, 0x748b6c);
   distantHill(scene, 58, -76, 26, 12, 0x677e61);
+  atmosphereBand(scene, -63, 10, 150, 34, 0xb9c8bd, 0.08);
+  atmosphereBand(scene, -86, 12, 170, 38, 0xc8d2ca, 0.11);
 
   return Object.freeze({
     houseLods: housePositions.length,
