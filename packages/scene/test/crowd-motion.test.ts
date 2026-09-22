@@ -305,6 +305,30 @@ describe("crowd motion", () => {
     }
   });
 
+  it("starts late pedestrians at a route boundary and moves them immediately", () => {
+    const lateBeat: PasserbyBeat = Object.freeze({
+      pedestrianIndex: 0,
+      startAtMs: 1_000,
+      endAtMs: 5_000,
+      direction: -1,
+      lane: 0,
+      seesAdvertisement: true,
+      signIndex: 0,
+    });
+    const simulation = createCrowdSimulation([lateBeat], 1, 6_000);
+
+    expect(simulation.sample(999).poses[0]).toBeUndefined();
+    const spawned = simulation.sample(1_000).poses[0];
+    const moved = simulation.sample(1_100).poses[0];
+    expect(spawned).toBeDefined();
+    expect(moved).toBeDefined();
+    if (spawned === undefined || moved === undefined) return;
+
+    expect(spawned.travelDistance).toBeCloseTo(0, 6);
+    expect(moved.travelDistance).toBeCloseTo(moved.worldSpeed * 0.1, 5);
+    expect(Math.hypot(moved.x - spawned.x, moved.z - spawned.z)).toBeGreaterThan(0.08);
+  });
+
   it("provides enough ground clearance for adult and child seeded heights", () => {
     expect(crowdGroundClearance(0.68)).toBeGreaterThan(0.11);
     expect(crowdGroundClearance(0.9)).toBeGreaterThan(0.15);
