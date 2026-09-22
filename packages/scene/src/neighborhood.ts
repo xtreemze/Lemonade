@@ -152,32 +152,86 @@ const houseLod = (
   rotationY,
 );
 
-const detailedTree = (color: number): Group => {
+const plantUnit = (seed: number, salt: number): number => {
+  let value = Math.imul((Math.trunc(seed * 1_000) + salt + 1) >>> 0, 0x9e3779b1);
+  value = Math.imul(value ^ (value >>> 16), 0x21f0aaad);
+  return ((value ^ (value >>> 15)) >>> 0) / 0xffff_ffff;
+};
+
+const detailedTree = (color: number, seed: number): Group => {
   const root = new Group();
+  root.userData["sceneRole"] = "procedural-tree-detail";
+  root.userData["proceduralVariant"] = Math.floor(plantUnit(seed, 1) * 10_000);
+
+  const trunkHeight = 2.35 + plantUnit(seed, 2) * 0.75;
   const trunk = new Mesh(
-    new CylinderGeometry(0.22, 0.34, 2.6, 7),
+    new CylinderGeometry(
+      0.2 + plantUnit(seed, 3) * 0.06,
+      0.33 + plantUnit(seed, 4) * 0.08,
+      trunkHeight,
+      7,
+    ),
     material(0x765232),
   );
-  trunk.position.y = 1.3;
+  trunk.position.y = trunkHeight / 2;
   root.add(trunk);
-  for (const [x, y, z, scale] of [
-    [0, 3.5, 0, 1.55],
-    [-0.65, 3.25, 0.2, 1.05],
-    [0.62, 3.18, -0.15, 1.0],
-  ] as const) {
-    const crown = new Mesh(new SphereGeometry(1.35 * scale, 10, 7), material(color));
-    crown.position.set(x, y, z);
+
+  const branchCount = 3 + Math.floor(plantUnit(seed, 5) * 3);
+  for (let index = 0; index < branchCount; index += 1) {
+    const angle = plantUnit(seed, 20 + index) * Math.PI * 2;
+    const length = 0.72 + plantUnit(seed, 40 + index) * 0.48;
+    const branch = new Mesh(
+      new CylinderGeometry(0.06, 0.095, length, 6),
+      material(0x765232),
+    );
+    branch.position.set(
+      Math.cos(angle) * length * 0.24,
+      trunkHeight * (0.64 + plantUnit(seed, 60 + index) * 0.23),
+      Math.sin(angle) * length * 0.24,
+    );
+    branch.rotation.z = Math.PI / 2.8 + (plantUnit(seed, 80 + index) - 0.5) * 0.25;
+    branch.rotation.y = angle;
+    root.add(branch);
+  }
+
+  const crownCount = 4 + Math.floor(plantUnit(seed, 100) * 3);
+  for (let index = 0; index < crownCount; index += 1) {
+    const angle = plantUnit(seed, 120 + index) * Math.PI * 2;
+    const radius = 0.65 + plantUnit(seed, 140 + index) * 0.95;
+    const crown = new Mesh(
+      new SphereGeometry(radius, 10, 7),
+      material(color),
+    );
+    crown.scale.set(
+      0.86 + plantUnit(seed, 160 + index) * 0.42,
+      0.82 + plantUnit(seed, 180 + index) * 0.5,
+      0.86 + plantUnit(seed, 200 + index) * 0.42,
+    );
+    crown.position.set(
+      Math.cos(angle) * (0.25 + plantUnit(seed, 220 + index) * 0.85),
+      trunkHeight + 0.45 + plantUnit(seed, 240 + index) * 1.4,
+      Math.sin(angle) * (0.2 + plantUnit(seed, 260 + index) * 0.72),
+    );
     root.add(crown);
   }
   return root;
 };
 
-const distantTree = (color: number): Group => {
+const distantTree = (color: number, seed: number): Group => {
   const root = new Group();
-  const trunk = new Mesh(new CylinderGeometry(0.22, 0.3, 2.4, 5), material(0x765232));
-  trunk.position.y = 1.2;
-  const crown = new Mesh(new SphereGeometry(2.15, 7, 5), material(color));
-  crown.position.y = 3.55;
+  root.userData["sceneRole"] = "procedural-tree-distant";
+  const trunkHeight = 2.2 + plantUnit(seed, 2) * 0.45;
+  const trunk = new Mesh(
+    new CylinderGeometry(0.2, 0.3, trunkHeight, 5),
+    material(0x765232),
+  );
+  trunk.position.y = trunkHeight / 2;
+  const crown = new Mesh(
+    new SphereGeometry(1.8 + plantUnit(seed, 7) * 0.45, 7, 5),
+    material(color),
+  );
+  crown.scale.set(1.05, 1 + plantUnit(seed, 9) * 0.24, 0.92);
+  crown.position.y = trunkHeight + 1.15;
   root.add(trunk, crown);
   return root;
 };
@@ -188,31 +242,74 @@ const treeLod = (
   scale: number,
   color: number,
   phase: number,
-): Group =>
-  markWindResponsive(
-    distanceLod(detailedTree(color), distantTree(color), 28, x, z, scale),
-    phase,
+): Group => {
+  const root = distanceLod(
+    detailedTree(color, phase),
+    distantTree(color, phase),
+    28,
+    x,
+    z,
+    scale,
   );
+  root.userData["sceneRole"] = "procedural-tree";
+  root.userData["proceduralVariant"] = Math.floor(plantUnit(phase, 301) * 10_000);
+  return markWindResponsive(root, phase);
+};
 
-const shrub = (
+const detailedShrub = (color: number, seed: number): Group => {
+  const root = new Group();
+  root.userData["sceneRole"] = "procedural-shrub-detail";
+  const clumps = 4 + Math.floor(plantUnit(seed, 1) * 3);
+  for (let index = 0; index < clumps; index += 1) {
+    const angle = plantUnit(seed, 10 + index) * Math.PI * 2;
+    const distance = 0.12 + plantUnit(seed, 30 + index) * 0.62;
+    const size = 0.48 + plantUnit(seed, 50 + index) * 0.5;
+    const crown = new Mesh(new SphereGeometry(size, 8, 6), material(color));
+    crown.scale.set(
+      0.84 + plantUnit(seed, 70 + index) * 0.42,
+      0.74 + plantUnit(seed, 90 + index) * 0.35,
+      0.84 + plantUnit(seed, 110 + index) * 0.42,
+    );
+    crown.position.set(
+      Math.cos(angle) * distance,
+      size * (0.58 + plantUnit(seed, 130 + index) * 0.16),
+      Math.sin(angle) * distance * 0.58,
+    );
+    root.add(crown);
+  }
+  return root;
+};
+
+const distantShrub = (color: number, seed: number): Group => {
+  const root = new Group();
+  root.userData["sceneRole"] = "procedural-shrub-distant";
+  const crown = new Mesh(
+    new SphereGeometry(0.9 + plantUnit(seed, 3) * 0.28, 6, 4),
+    material(color),
+  );
+  crown.scale.set(1.35, 0.72, 0.9);
+  crown.position.y = 0.62;
+  root.add(crown);
+  return root;
+};
+
+const shrubLod = (
   x: number,
   z: number,
   scale: number,
   color: number,
   phase: number,
 ): Group => {
-  const root = new Group();
-  for (const [offsetX, offsetZ, size] of [
-    [-0.48, 0.05, 0.75],
-    [0.15, 0, 0.92],
-    [0.68, 0.18, 0.64],
-  ] as const) {
-    const crown = new Mesh(new SphereGeometry(size, 8, 6), material(color));
-    crown.position.set(offsetX, size * 0.72, offsetZ);
-    root.add(crown);
-  }
-  root.position.set(x, 0, z);
-  root.scale.setScalar(scale);
+  const root = distanceLod(
+    detailedShrub(color, phase),
+    distantShrub(color, phase),
+    18,
+    x,
+    z,
+    scale,
+  );
+  root.userData["sceneRole"] = "procedural-shrub";
+  root.userData["proceduralVariant"] = Math.floor(plantUnit(phase, 401) * 10_000);
   return markWindResponsive(root, phase);
 };
 
@@ -319,6 +416,7 @@ export type NeighborhoodStats = Readonly<{
   driveways: number;
   treeLods: number;
   shrubs: number;
+  shrubLods: number;
   flowers: number;
   yardDetails: number;
   pavedRoads: number;
@@ -524,7 +622,7 @@ export const populateNeighborhood = (
   layout.shrubs.forEach((planting, index) => {
     const color = TREE_PALETTE[planting.paletteIndex] ?? TREE_PALETTE[0];
     scene.add(
-      shrub(
+      shrubLod(
         planting.x,
         planting.z,
         planting.scale,
@@ -553,6 +651,7 @@ export const populateNeighborhood = (
     driveways: layout.frontProperties.filter((property) => property.drivewayX !== null).length,
     treeLods: layout.trees.length,
     shrubs: layout.shrubs.length,
+    shrubLods: layout.shrubs.length,
     flowers: layout.flowers.length,
     yardDetails: yardDetails.length,
     pavedRoads,
