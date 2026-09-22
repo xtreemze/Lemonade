@@ -10,6 +10,9 @@ export type CharacterProfile = Readonly<{
   walkPace: number;
   gaitAmplitude: number;
   strideOffset: number;
+  eyeSpacing: number;
+  headWidthScale: number;
+  headHeightScale: number;
 }>;
 
 const clothes = [0xd75c51, 0x507d83, 0xe0a43c, 0x7766a6, 0x3f7d68, 0x9c5b72, 0x3f6f9f, 0xbf7048] as const;
@@ -45,5 +48,8 @@ export const characterProfileFor = (seed: number, index: number): CharacterProfi
     walkPace: 0.88 + ((secondary >>> 3) & 15) / 58,
     gaitAmplitude: 0.48 + ((secondary >>> 8) & 7) / 35,
     strideOffset: (secondary / 0xffff_ffff) * Math.PI * 2,
+    eyeSpacing: 0.078 + ((secondary >>> 13) & 7) / 230,
+    headWidthScale: 0.9 + ((secondary >>> 17) & 7) / 42,
+    headHeightScale: 0.94 + ((secondary >>> 21) & 7) / 36,
   });
 };

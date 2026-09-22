@@ -338,16 +338,18 @@ const applySellerExpression = (seller: SellerRig, confidence: number): void => {
   seller.person.torso.position.y = 1.05;
   seller.person.head.position.y = 1.73;
 
-  seller.person.head.rotation.x = lerp(0.14, -0.045, progress);
-  seller.person.torso.rotation.x = lerp(0.13, -0.015, progress);
-  seller.eyebrows[0].rotation.z = expression * 0.18;
-  seller.eyebrows[1].rotation.z = -expression * 0.18;
+  seller.person.head.rotation.x = lerp(0.2, -0.06, progress);
+  seller.person.torso.rotation.x = lerp(0.17, -0.025, progress);
+  seller.eyebrows[0].rotation.z = expression * 0.26;
+  seller.eyebrows[1].rotation.z = -expression * 0.26;
   seller.eyebrows[0].position.y = 0.125 + progress * 0.018;
   seller.eyebrows[1].position.y = 0.125 + progress * 0.018;
-  seller.mouth[0].rotation.z = -expression * 0.34;
-  seller.mouth[1].rotation.z = expression * 0.34;
-  seller.person.arms[0].root.rotation.x = lerp(0.18, -0.12, progress);
-  seller.person.arms[1].root.rotation.x = lerp(0.12, -0.08, progress);
+  seller.mouth[0].rotation.z = -expression * 0.46;
+  seller.mouth[1].rotation.z = expression * 0.46;
+  seller.mouth[0].position.y = -0.09 + expression * 0.012;
+  seller.mouth[1].position.y = -0.09 + expression * 0.012;
+  seller.person.arms[0].root.rotation.x = lerp(0.28, -0.18, progress);
+  seller.person.arms[1].root.rotation.x = lerp(0.22, -0.14, progress);
 };
 
 const resetPersonPose = (person: PersonRig): void => {
@@ -525,6 +527,8 @@ export const createLemonsvilleScene = (
   let cupInventory: CupInventory | null = null;
   canvas.dataset["cupVisualStyle"] = "original-svg-3d";
   canvas.dataset["characterRigStyle"] = "articulated-joints-face";
+  canvas.dataset["walkCycleStyle"] = "seeded-articulated-gait";
+  canvas.dataset["sellerExpressionStyle"] = "face-posture-confidence";
   canvas.dataset["neighborhoodDetail"] = "loading";
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));

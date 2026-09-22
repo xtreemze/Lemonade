@@ -136,10 +136,10 @@ export const sceneCameraComposition = (
     return Object.freeze({
       mode,
       shot,
-      fov: mode === "portrait" ? 54 : mode === "wide" ? 36 : 43,
+      fov: mode === "portrait" ? 57 : mode === "wide" ? 36 : 43,
       position:
         mode === "portrait"
-          ? ([0, 13.5, 29] as const)
+          ? ([0, 14.6, 32] as const)
           : mode === "wide"
             ? ([0, 9.2, 19] as const)
             : ([0, 10.8, 23] as const),
@@ -151,10 +151,10 @@ export const sceneCameraComposition = (
     return Object.freeze({
       mode,
       shot,
-      fov: mode === "portrait" ? 40 : mode === "wide" ? 30 : 34,
+      fov: mode === "portrait" ? 44 : mode === "wide" ? 30 : 34,
       position:
         mode === "portrait"
-          ? ([0, 5.7, 11.8] as const)
+          ? ([0, 6.4, 13.8] as const)
           : mode === "wide"
             ? ([0, 4.1, 7.7] as const)
             : ([0, 4.8, 9.1] as const),
@@ -165,10 +165,10 @@ export const sceneCameraComposition = (
   return Object.freeze({
     mode,
     shot,
-    fov: mode === "portrait" ? 46 : mode === "wide" ? 30 : 35,
+    fov: mode === "portrait" ? 51 : mode === "wide" ? 30 : 35,
     position:
       mode === "portrait"
-        ? ([0, 8.5, 18.8] as const)
+        ? ([0, 9.7, 22.2] as const)
         : mode === "wide"
           ? ([0, 5.7, 11.8] as const)
           : ([0, 6.6, 14.2] as const),

@@ -18,9 +18,12 @@ export const decorateCharacterHead = (
   includeMouth = true,
 ): void => {
   const eyeMaterial = material(0x263238);
-  for (const x of [-0.09, 0.09]) {
+  head.scale.x *= profile.headWidthScale;
+  head.scale.y *= profile.headHeightScale;
+
+  for (const direction of [-1, 1] as const) {
     const eye = new Mesh(new SphereGeometry(0.026, 8, 6), eyeMaterial.clone());
-    eye.position.set(x, 0.045, 0.248);
+    eye.position.set(direction * profile.eyeSpacing, 0.045, 0.248);
     head.add(eye);
   }
 

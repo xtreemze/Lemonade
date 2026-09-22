@@ -96,6 +96,14 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "articulated-joints-face",
   );
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-walk-cycle-style",
+    "seeded-articulated-gait",
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-seller-expression-style",
+    "face-posture-confidence",
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-neighborhood-detail",
     "expanded-streets-houses-vegetation",
   );
