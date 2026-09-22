@@ -71,6 +71,22 @@ describe("unified neighborhood mobility", () => {
     );
   });
 
+  it("routes bicycles across multiple neighborhood street groups", () => {
+    const sample = sampleDay(3, 5_000);
+    const bicycleIds = sample.actors
+      .filter((actor) => actor.kind === "bicycle")
+      .map((actor) => actor.id);
+
+    expect(bicycleIds).toHaveLength(3);
+    expect(new Set(bicycleIds)).toEqual(
+      new Set([
+        "traffic-bicycle:main",
+        "traffic-bicycle:front-grid",
+        "traffic-bicycle:deep-grid",
+      ]),
+    );
+  });
+
   it("gives pedestrians crossing priority over nearby vehicles and bicycles", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const samples = Array.from({ length: 20 }, (_, index) =>
