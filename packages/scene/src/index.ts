@@ -535,7 +535,6 @@ export const createLemonsvilleScene = (
 
   let cupInventory: CupInventory | null = null;
   canvas.dataset["cupVisualStyle"] = "original-svg-3d";
-  canvas.dataset["neighborhoodDetail"] = "loading";
 
   const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
   for (const lemon of lemons) scene.add(lemon);
@@ -660,7 +659,6 @@ export const createLemonsvilleScene = (
     .then(({ populateNeighborhood }) => {
       if (disposed) return;
       populateNeighborhood(scene);
-      canvas.dataset["neighborhoodDetail"] = "lod-extended-streets-houses-vegetation";
       render();
     })
     .catch(() => undefined);
@@ -764,7 +762,6 @@ export const createLemonsvilleScene = (
     stand.shutter.visible = forecast;
     seller.person.root.visible = !forecast;
     canvas.dataset["standState"] = forecast ? "closed" : "open";
-    canvas.dataset["scenePopulation"] = forecast ? "empty" : "active";
 
     const signLimit = forecast
       ? 0
