@@ -23,7 +23,8 @@ import {
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
-import { LEMON_CENTER_Y, SELLER_Z } from "./stand-anchors.js";
+import { SELLER_Z } from "./stand-anchors.js";
+import type { StandDetailController } from "./stand-detail.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -408,33 +409,6 @@ const applyBuyerPose = (
   }
 };
 
-const createLemon = (index: number): Group => {
-  const lemon = new Group();
-  const fruit = new Mesh(
-    new SphereGeometry(0.22, 7, 5),
-    makeMaterial(0xf6d33b),
-  );
-  fruit.scale.set(1.15, 0.9, 0.9);
-  lemon.add(fruit);
-
-  const leaf = new Mesh(
-    new CylinderGeometry(0, 0.08, 0.22, 5),
-    makeMaterial(0x4f8c4a),
-  );
-  leaf.rotation.z = Math.PI / 2;
-  leaf.position.set(0.22, 0.12, 0);
-  lemon.add(leaf);
-
-  const column = index % 4;
-  const row = Math.floor(index / 4);
-  lemon.position.set(
-    -0.75 + column * 0.5,
-    LEMON_CENTER_Y + row * 0.27,
-    0.46 + (index % 2) * 0.06,
-  );
-  return lemon;
-};
-
 type DisposableMesh = Mesh<BufferGeometry, Material | Material[]>;
 
 const isDisposableMesh = (object: Object3D): object is DisposableMesh =>
@@ -449,9 +423,6 @@ const disposeObject = (object: Object3D): void => {
     object.material.dispose();
   }
 };
-
-const visibleInventoryCount = (prepared: number, maximum: number, divisor: number): number =>
-  prepared <= 0 ? 0 : Math.min(maximum, Math.max(1, Math.ceil(prepared / divisor)));
 
 export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
@@ -524,11 +495,8 @@ export const createLemonsvilleScene = (
   scene.add(seller.person.root);
 
   let cupInventory: CupInventory | null = null;
+  let standDetail: StandDetailController | null = null;
   canvas.dataset["cupVisualStyle"] = "original-svg-3d";
-
-  const lemons = Array.from({ length: 8 }, (_, index) => createLemon(index));
-  for (const lemon of lemons) scene.add(lemon);
-  const lemonOrigins = lemons.map((lemon) => lemon.position.y);
 
   const weatherObjects: Record<SceneWeather, Group> = {
     sunny: new Group(),
@@ -637,7 +605,10 @@ export const createLemonsvilleScene = (
   void import("./stand-detail.js")
     .then(({ populateStand }) => {
       if (disposed) return;
-      populateStand(stand.root, stand.shutter);
+      standDetail = populateStand(stand.root, stand.shutter);
+      const remaining =
+        state.phase === "forecast" ? 0 : storyboard.prepared;
+      standDetail.setStock(remaining, storyboard.prepared);
       render();
     })
     .catch(() => undefined);
@@ -684,7 +655,10 @@ export const createLemonsvilleScene = (
       const nextInventory = createCupInventory();
       cupInventory = nextInventory;
       for (const mesh of nextInventory.meshes) scene.add(mesh);
-      nextInventory.setCount(state.phase === "forecast" ? 0 : storyboard.prepared);
+      nextInventory.setStock(
+        state.phase === "forecast" ? 0 : storyboard.prepared,
+        storyboard.prepared,
+      );
       render();
     })
     .catch(() => undefined);
@@ -758,14 +732,9 @@ export const createLemonsvilleScene = (
       sign.root.visible = index < signLimit;
     });
 
-    const lemonLimit = forecast
-      ? 0
-      : visibleInventoryCount(state.prepared, lemons.length, 12);
-    lemons.forEach((lemon, index) => {
-      lemon.visible = index < lemonLimit;
-    });
-
-    cupInventory?.setCount(forecast ? 0 : storyboard.prepared);
+    const remaining = forecast ? 0 : storyboard.prepared;
+    cupInventory?.setStock(remaining, storyboard.prepared);
+    standDetail?.setStock(remaining, storyboard.prepared);
   };
 
   const resetAnimatedObjects = (): void => {
@@ -774,10 +743,6 @@ export const createLemonsvilleScene = (
     applyPhaseStaging();
     signs.forEach((sign) => {
       sign.root.rotation.z = 0;
-    });
-    lemons.forEach((lemon, index) => {
-      lemon.position.y = lemonOrigins[index] ?? lemon.position.y;
-      lemon.rotation.y = 0;
     });
     for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
       weatherObjects[weather].position.x = weatherOrigins[weather];
@@ -937,22 +902,16 @@ export const createLemonsvilleScene = (
       storyboard.durationMs
     );
 
-    cupInventory?.setCount(
-      state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs),
-    );
+    const remainingStock =
+      state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs);
+    cupInventory?.setStock(remainingStock, storyboard.prepared);
+    standDetail?.setStock(remainingStock, storyboard.prepared);
 
     signs.forEach((sign, index) => {
       if (sign.root.visible) {
         sign.root.rotation.z = Math.sin(seconds * 1.7 + index * 0.55) * 0.035;
       }
     });
-    lemons.forEach((lemon, index) => {
-      if (!lemon.visible) return;
-      lemon.position.y =
-        (lemonOrigins[index] ?? lemon.position.y) + Math.sin(seconds * 2.2 + index) * 0.035;
-      lemon.rotation.y = seconds * 0.55 + index;
-    });
-
     const activeWeather = weatherObjects[state.weather];
     activeWeather.position.x =
       weatherOrigins[state.weather] +
