@@ -1,4 +1,5 @@
-import { Group, Mesh } from "three";
+import { Group } from "three";
+import type { Mesh } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
