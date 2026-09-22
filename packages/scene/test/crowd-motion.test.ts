@@ -126,7 +126,7 @@ describe("crowd motion", () => {
     scene.add(owner);
 
     const ambient = createAmbientLife(scene, 17, [owner]);
-    ambient.update("sunny", "simulation", 2_000, 6_000);
+    const sample = ambient.update("sunny", "simulation", 2_000, 6_000);
 
     const pet = scene.children.find(
       (object) => object.userData["sceneRole"] === "ambient-pet",
@@ -143,10 +143,24 @@ describe("crowd motion", () => {
     expect(pet?.rotation.y).toBeCloseTo(0);
     expect(pet?.position.z).toBeLessThan(STREET_LAYOUT.road.minZ);
 
-    expect(Math.abs(bicycle?.rotation.y ?? 0)).toBeCloseTo(Math.PI);
-    expect(bicycle?.position.z).toBeGreaterThan(STREET_LAYOUT.road.minZ);
-    expect(vehicle?.rotation.y).toBeCloseTo(0);
-    expect(vehicle?.position.z).toBeGreaterThan(STREET_LAYOUT.road.minZ);
+    const expectedBicycle = sample.actors.find(
+      (actor) => actor.kind === "bicycle" && actor.visible,
+    );
+    expect(expectedBicycle).toBeDefined();
+    expect(bicycle?.rotation.y).toBeCloseTo(-(expectedBicycle?.yaw ?? 0));
+    expect(bicycle?.position.x).toBeCloseTo(expectedBicycle?.x ?? 0);
+    expect(bicycle?.position.z).toBeCloseTo(expectedBicycle?.z ?? 0);
+
+    const visibleVehicles = sample.actors.filter(
+      (actor) => actor.kind === "vehicle" && actor.visible,
+    );
+    const expectedVehicle =
+      visibleVehicles.find((actor) => actor.id === "resident-vehicle") ??
+      visibleVehicles[0];
+    expect(expectedVehicle).toBeDefined();
+    expect(vehicle?.rotation.y).toBeCloseTo(-(expectedVehicle?.yaw ?? 0));
+    expect(vehicle?.position.x).toBeCloseTo(expectedVehicle?.x ?? 0);
+    expect(vehicle?.position.z).toBeCloseTo(expectedVehicle?.z ?? 0);
   });
 
   it("gives cyclists and drivers the same facial hair and clothing detail system", () => {
