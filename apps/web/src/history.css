@@ -237,8 +237,15 @@
 
 .game-shell[data-view="history"] .history-chart {
   width: 100%;
-  height: min(15dvh, 112px);
-  min-height: 54px;
+  height: auto;
+  min-height: 100px;
+  max-height: 180px;
+}
+
+@media (orientation: landscape) {
+  .game-shell[data-view="history"] .history-chart {
+    max-height: 200px;
+  }
 }
 
 .game-shell[data-view="history"] .chart-legend {
@@ -282,10 +289,6 @@
 
   .game-shell[data-view="history"] .chart-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .game-shell[data-view="history"] .history-chart {
-    height: min(22dvh, 96px);
   }
 }
 

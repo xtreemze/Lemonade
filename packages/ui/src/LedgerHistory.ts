@@ -19,11 +19,12 @@ const seriesPoints = (
   values: readonly number[],
   minValue: number,
   maxValue: number,
+  chartHeight: number,
 ): string => {
   if (values.length === 0) return "";
 
   const usableWidth = CHART_WIDTH - CHART_PADDING * 2;
-  const usableHeight = CHART_HEIGHT - CHART_PADDING * 2;
+  const usableHeight = chartHeight - CHART_PADDING * 2;
   const span = Math.max(1, maxValue - minValue);
   const denominator = Math.max(1, values.length - 1);
 
@@ -36,27 +37,39 @@ const seriesPoints = (
     .join(" ");
 };
 
+const calculateChartHeight = (dataPoints: number): number => {
+  // Use a minimum height and add height based on number of points
+  // This ensures charts with more data use more vertical space
+  const baseHeight = 120;
+  const pointHeight = Math.min(dataPoints - 1, 5) * 10;
+  return baseHeight + pointHeight;
+};
+
 const balanceTrends = (
   points: readonly LedgerPoint[],
-): Readonly<{ cash: string; debt: string }> => {
+): Readonly<{ cash: string; debt: string; height: number }> => {
   const cash = points.map((point) => point.endingCashCents);
   const debt = points.map((point) => point.endingDebtCents);
   const maximum = Math.max(1, ...cash, ...debt);
+  const chartHeight = calculateChartHeight(points.length);
   return Object.freeze({
-    cash: seriesPoints(cash, 0, maximum),
-    debt: seriesPoints(debt, 0, maximum),
+    cash: seriesPoints(cash, 0, maximum, chartHeight),
+    debt: seriesPoints(debt, 0, maximum, chartHeight),
+    height: chartHeight,
   });
 };
 
 const inventoryTrends = (
   points: readonly LedgerPoint[],
-): Readonly<{ prepared: string; sold: string }> => {
+): Readonly<{ prepared: string; sold: string; height: number }> => {
   const prepared = points.map((point) => point.prepared);
   const sold = points.map((point) => point.sold);
   const maximum = Math.max(1, ...prepared, ...sold);
+  const chartHeight = calculateChartHeight(points.length);
   return Object.freeze({
-    prepared: seriesPoints(prepared, 0, maximum),
-    sold: seriesPoints(sold, 0, maximum),
+    prepared: seriesPoints(prepared, 0, maximum, chartHeight),
+    sold: seriesPoints(sold, 0, maximum, chartHeight),
+    height: chartHeight,
   });
 };
 
@@ -90,22 +103,23 @@ const createChart = (
   ariaLabel: string,
   firstSeries: Readonly<{ className: string; points: string; label: string; legendClass: string }>,
   secondSeries: Readonly<{ className: string; points: string; label: string; legendClass: string }>,
+  chartHeight: number = CHART_HEIGHT,
 ): HTMLElement => {
   const figure = createElement("figure", "chart-card");
   appendText(figure, "figcaption", caption);
 
   const svg = createSvgElement("svg");
   svg.classList.add("history-chart");
-  svg.setAttribute("viewBox", `0 0 ${String(CHART_WIDTH)} ${String(CHART_HEIGHT)}`);
+  svg.setAttribute("viewBox", `0 0 ${String(CHART_WIDTH)} ${String(chartHeight)}`);
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", ariaLabel);
 
   const axis = createSvgElement("line");
   axis.classList.add("chart-axis");
   axis.setAttribute("x1", String(CHART_PADDING));
-  axis.setAttribute("y1", String(CHART_HEIGHT - CHART_PADDING));
+  axis.setAttribute("y1", String(chartHeight - CHART_PADDING));
   axis.setAttribute("x2", String(CHART_WIDTH - CHART_PADDING));
-  axis.setAttribute("y2", String(CHART_HEIGHT - CHART_PADDING));
+  axis.setAttribute("y2", String(chartHeight - CHART_PADDING));
 
   const firstLine = createSvgElement("polyline");
   firstLine.setAttribute("class", `chart-line ${firstSeries.className}`);
@@ -242,6 +256,7 @@ export const renderLedgerHistory = (
         label: "Debt",
         legendClass: "legend-debt",
       }),
+      balances.height,
     ),
     createChart(
       "Prepared vs sold",
@@ -258,6 +273,7 @@ export const renderLedgerHistory = (
         label: "Sold",
         legendClass: "legend-sold",
       }),
+      inventory.height,
     ),
   );
   section.append(chartGrid, createHistoryTable(points));
