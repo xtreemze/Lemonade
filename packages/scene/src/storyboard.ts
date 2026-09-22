@@ -110,6 +110,17 @@ export const endingCloseupProgressAt = (
   return Math.min(1, (elapsed - storyboard.activeDurationMs) / duration);
 };
 
+export const endingConfidenceAt = (
+  storyboard: StreetStoryboard,
+  elapsedMs: number,
+  currentConfidence: number,
+  nextConfidence: number,
+): number => {
+  const progress = endingCloseupProgressAt(storyboard, elapsedMs);
+  const eased = progress * progress * (3 - 2 * progress);
+  return currentConfidence + (nextConfidence - currentConfidence) * eased;
+};
+
 export const remainingCameraProgressAt = (
   storyboard: StreetStoryboard,
   elapsedMs: number,
