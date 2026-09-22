@@ -183,7 +183,10 @@ const expectPlanningControlWeight = async (page: Page): Promise<void> => {
           ? 0
           : Number.parseFloat(firstSliderStyle.getPropertyValue("--slider-track-size")),
       sliderHeights: sliders.map((slider) => slider.getBoundingClientRect().height),
-      controlGaps: controlRects.slice(1).map((rect, index) => rect.top - controlRects[index]!.bottom),
+      controlGaps: controlRects.slice(1).map((rect, index) => {
+        const previous = controlRects[index];
+        return previous === undefined ? 0 : rect.top - previous.bottom;
+      }),
     };
   });
 
@@ -257,6 +260,7 @@ for (const viewport of viewports) {
       await expect(main).toHaveAttribute("data-view", "planning", { timeout: 10_000 });
       await expectViewportContract(page, "planning");
       await expect(page.getByRole("slider")).toHaveCount(3);
+      await expectPlanningControlWeight(page);
       await expectCenteredBottomAction(
         page,
         page.getByRole("button", { name: "Sell for the day" }),
