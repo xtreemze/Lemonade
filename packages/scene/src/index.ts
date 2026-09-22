@@ -514,6 +514,29 @@ export const createLemonsvilleScene = (
 
   let state = initialState;
   let crowdMotion: StreetMotion | null = null;
+  let dayCycleAt:
+    | ((
+        elapsedMs: number,
+        durationMs: number,
+        weather: SceneWeather,
+      ) => Readonly<{
+        progress: number;
+        skyColor: number;
+        sunColor: number;
+        hemisphereIntensity: number;
+        sunlightIntensity: number;
+        sunPosition: readonly [number, number, number];
+      }>)
+    | null = null;
+  let weatherDetail:
+    | Readonly<{
+        update(
+          kind: SceneWeather,
+          elapsedMs: number,
+          durationMs: number,
+        ): void;
+      }>
+    | null = null;
   let ambientLife:
     | Readonly<{
         update(
@@ -594,6 +617,43 @@ export const createLemonsvilleScene = (
     renderer.render(scene, camera);
   };
 
+  const applyAtmosphere = (elapsedMs: number): void => {
+    if (state.phase === "simulation" && dayCycleAt !== null) {
+      const cycle = dayCycleAt(
+        elapsedMs,
+        Math.max(1, storyboard.durationMs),
+        state.weather,
+      );
+      renderer.setClearColor(cycle.skyColor, 1);
+      hemisphere.intensity = cycle.hemisphereIntensity;
+      sunlight.intensity = cycle.sunlightIntensity;
+      sunlight.color.setHex(cycle.sunColor);
+      sunlight.position.set(...cycle.sunPosition);
+      canvas.dataset["dayProgress"] = cycle.progress.toFixed(3);
+      return;
+    }
+
+    const atmosphereColor =
+      state.phase === "forecast"
+        ? earlyMorningSkyColor[state.weather]
+        : skyColor[state.weather];
+    renderer.setClearColor(atmosphereColor, 1);
+    hemisphere.intensity = state.phase === "forecast" ? 1.35 : 1.9;
+    sunlight.intensity = state.phase === "forecast" ? 1.05 : 1.8;
+    sunlight.color.setHex(0xfff0c9);
+    sunlight.position.set(-5, 10, 7);
+    canvas.dataset["dayProgress"] = state.phase === "simulation" ? "0.000" : "";
+  };
+
+  void import("./day-cycle.js")
+    .then((module) => {
+      if (disposed) return;
+      dayCycleAt = module.dayCycleAt;
+      applyAtmosphere(0);
+      render();
+    })
+    .catch(() => undefined);
+
   void import("./neighborhood.js")
     .then(({ populateNeighborhood }) => {
       if (disposed) return;
@@ -638,10 +698,15 @@ export const createLemonsvilleScene = (
   void import("./weather-detail.js")
     .then(({ populateWeatherObjects }) => {
       if (disposed) return;
-      populateWeatherObjects(weatherObjects);
+      weatherDetail = populateWeatherObjects(weatherObjects);
       for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
         weatherOrigins[weather] = weatherObjects[weather].position.x;
       }
+      weatherDetail.update(
+        state.weather,
+        0,
+        Math.max(1, state.durationMs),
+      );
       render();
     })
     .catch(() => undefined);
@@ -751,8 +816,14 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, storyboard.durationMs)
+      Math.max(1, storyboard.durationMs),
     );
+    weatherDetail?.update(
+      state.weather,
+      0,
+      Math.max(1, storyboard.durationMs),
+    );
+    applyAtmosphere(0);
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
 
@@ -916,6 +987,12 @@ export const createLemonsvilleScene = (
     activeWeather.position.x =
       weatherOrigins[state.weather] +
       Math.sin(seconds * 0.45) * (state.weather === "sunny" ? 0.08 : 0.3);
+    weatherDetail?.update(
+      state.weather,
+      elapsedMs,
+      Math.max(1, storyboard.durationMs),
+    );
+    applyAtmosphere(elapsedMs);
 
     render();
     animationFrame = window.requestAnimationFrame(animate);
@@ -950,11 +1027,7 @@ export const createLemonsvilleScene = (
       applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
     }
 
-    const atmosphereColor =
-      state.phase === "forecast" ? earlyMorningSkyColor[state.weather] : skyColor[state.weather];
-    renderer.setClearColor(atmosphereColor, 1);
-    hemisphere.intensity = state.phase === "forecast" ? 1.35 : 1.9;
-    sunlight.intensity = state.phase === "forecast" ? 1.05 : 1.8;
+    applyAtmosphere(0);
 
     for (const [weather, weatherObject] of Object.entries(weatherObjects) as [
       SceneWeather,
@@ -968,7 +1041,12 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, state.durationMs)
+      Math.max(1, state.durationMs),
+    );
+    weatherDetail?.update(
+      state.weather,
+      0,
+      Math.max(1, state.durationMs),
     );
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
