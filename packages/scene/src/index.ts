@@ -31,7 +31,6 @@ import {
 } from "./world-scale.js";
 import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
 import { STREET_LAYOUT } from "./street-layout.js";
-import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
 import { businessDayFrameAt, type WeatherDetailController } from "./weather-detail.js";
 import {
@@ -808,16 +807,15 @@ export const createLemonsvilleScene = (
     pos: { x: number; z: number },
     minZ: number,
     maxZ: number,
-    minX: number = -12,
-    maxX: number = 12,
+    minX = -12,
+    maxX = 12,
   ): { x: number; z: number } => ({
     x: Math.max(minX, Math.min(maxX, pos.x)),
     z: Math.max(minZ, Math.min(maxZ, pos.z)),
   });
 
   const animateBuyers = (elapsedMs: number): number => {
-    const activeBuyerPositions: Array<{ x: number; z: number }> = [];
-    const personRadius = 0.35;
+    const activeBuyerPositions: { x: number; z: number }[] = [];
 
     for (const buyer of buyers) {
       const fade = buyerFadeState.get(buyer);
