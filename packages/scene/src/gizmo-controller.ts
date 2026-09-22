@@ -295,13 +295,13 @@ export const createGizmoController = (options: GizmoOptions) => {
       let foundAxis: 'x' | 'y' | 'z' | null = null;
 
       // Check if we hit a gizmo part (axis indicator)
-      if (target.userData?.axis) {
+      if (target.userData?.["axis"]) {
         foundAxis = target.userData["axis"];
       } else {
         // Traverse up to find a gizmo part
         let current = target;
         while (current.parent && !foundAxis) {
-          if (current.userData?.axis) {
+          if (current.userData?.["axis"]) {
             foundAxis = current.userData["axis"];
           }
           current = current.parent;
