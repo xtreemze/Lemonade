@@ -1197,7 +1197,7 @@ body:has(.game-shell[data-view="forecast"]) {
   }
 
   .game-shell[data-view="planning"] .game-slider {
-    min-height: 42px;
+    min-height: 48px;
   }
 
   .game-shell[data-view="planning"] .simulation-button-art {
