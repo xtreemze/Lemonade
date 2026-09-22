@@ -1,4 +1,32 @@
-import * as THREE from "three";
+import {
+  BoxGeometry,
+  type BufferGeometry,
+  CanvasTexture,
+  ConeGeometry,
+  CylinderGeometry,
+  DirectionalLight,
+  DoubleSide,
+  Euler,
+  Group,
+  HemisphereLight,
+  IcosahedronGeometry,
+  InstancedMesh,
+  LinearFilter,
+  type Material,
+  Matrix4,
+  Mesh,
+  MeshPhysicalMaterial,
+  MeshStandardMaterial,
+  type Object3D,
+  PerspectiveCamera,
+  PlaneGeometry,
+  Quaternion,
+  SRGBColorSpace,
+  Scene,
+  SphereGeometry,
+  Vector3,
+  WebGLRenderer,
+} from "three";
 
 import { characterProfileFor } from "./characters.js";
 import {
@@ -67,15 +95,15 @@ const smoothStep = (value: number): number => {
 const lerp = (start: number, end: number, progress: number): number =>
   start + (end - start) * progress;
 
-const makeMaterial = (color: number): THREE.MeshStandardMaterial =>
-  new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92 });
+const makeMaterial = (color: number): MeshStandardMaterial =>
+  new MeshStandardMaterial({ color, flatShading: true, roughness: 0.92 });
 
 const makeWeatherMaterial = (
   color: number,
   emissive = 0x000000,
   emissiveIntensity = 0,
-): THREE.MeshStandardMaterial =>
-  new THREE.MeshStandardMaterial({
+): MeshStandardMaterial =>
+  new MeshStandardMaterial({
     color,
     flatShading: false,
     roughness: 0.88,
@@ -85,19 +113,19 @@ const makeWeatherMaterial = (
   });
 
 const addBox = (
-  parent: THREE.Object3D,
+  parent: Object3D,
   size: readonly [number, number, number],
   position: readonly [number, number, number],
   color: number,
-): THREE.Mesh => {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), makeMaterial(color));
+): Mesh => {
+  const mesh = new Mesh(new BoxGeometry(...size), makeMaterial(color));
   mesh.position.set(...position);
   parent.add(mesh);
   return mesh;
 };
 
-const createStand = (): THREE.Group => {
-  const stand = new THREE.Group();
+const createStand = (): Group => {
+  const stand = new Group();
   addBox(stand, [4.5, 1.8, 1.7], [0, 0.9, 0], 0xe7c672);
   addBox(stand, [4.9, 0.28, 2.05], [0, 2.18, 0], 0xf3d85d);
   addBox(stand, [4.2, 0.8, 0.18], [0, 1.0, 0.94], 0xffefaf);
@@ -107,12 +135,12 @@ const createStand = (): THREE.Group => {
   return stand;
 };
 
-const createHouse = (x: number, color: number, scale: number): THREE.Group => {
-  const house = new THREE.Group();
+const createHouse = (x: number, color: number, scale: number): Group => {
+  const house = new Group();
   addBox(house, [3.4, 2.6, 2.4], [0, 1.3, 0], color);
 
-  const roof = new THREE.Mesh(
-    new THREE.ConeGeometry(2.75, 1.6, 4),
+  const roof = new Mesh(
+    new ConeGeometry(2.75, 1.6, 4),
     makeMaterial(0x7f4a43),
   );
   roof.rotation.y = Math.PI / 4;
@@ -126,17 +154,17 @@ const createHouse = (x: number, color: number, scale: number): THREE.Group => {
   return house;
 };
 
-const createTree = (x: number, z: number): THREE.Group => {
-  const tree = new THREE.Group();
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.16, 0.24, 1.5, 6),
+const createTree = (x: number, z: number): Group => {
+  const tree = new Group();
+  const trunk = new Mesh(
+    new CylinderGeometry(0.16, 0.24, 1.5, 6),
     makeMaterial(0x765232),
   );
   trunk.position.y = 0.75;
   tree.add(trunk);
 
-  const crown = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.05, 0),
+  const crown = new Mesh(
+    new IcosahedronGeometry(1.05, 0),
     makeMaterial(0x5f8d56),
   );
   crown.position.y = 2.0;
@@ -146,23 +174,23 @@ const createTree = (x: number, z: number): THREE.Group => {
 };
 
 type SignModel = Readonly<{
-  root: THREE.Group;
-  labelMaterial: THREE.MeshStandardMaterial;
+  root: Group;
+  labelMaterial: MeshStandardMaterial;
 }>;
 
 const createSign = (index: number): SignModel => {
-  const root = new THREE.Group();
+  const root = new Group();
   addBox(root, [0.1, 0.85, 0.1], [0, 0.43, 0], 0x644c34);
   addBox(root, [0.95, 0.62, 0.12], [0, 1.05, 0], 0xf5d34c);
 
-  const labelMaterial = new THREE.MeshStandardMaterial({
+  const labelMaterial = new MeshStandardMaterial({
     color: 0xffffff,
     emissive: 0xffffff,
     emissiveIntensity: 0.35,
     roughness: 0.9,
-    side: THREE.DoubleSide,
+    side: DoubleSide,
   });
-  const label = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.52), labelMaterial);
+  const label = new Mesh(new PlaneGeometry(0.86, 0.52), labelMaterial);
   label.position.set(0, 1.05, 0.066);
   root.add(label);
 
@@ -178,12 +206,12 @@ const createSign = (index: number): SignModel => {
 };
 
 type PersonRig = Readonly<{
-  root: THREE.Group;
-  torso: THREE.Mesh;
-  head: THREE.Mesh;
-  arms: readonly [THREE.Group, THREE.Group];
-  legs: readonly [THREE.Group, THREE.Group];
-  cup: THREE.Group;
+  root: Group;
+  torso: Mesh;
+  head: Mesh;
+  arms: readonly [Group, Group];
+  legs: readonly [Group, Group];
+  cup: Group;
   strideOffset: number;
   walkPace: number;
   gaitAmplitude: number;
@@ -191,14 +219,14 @@ type PersonRig = Readonly<{
 
 type SellerRig = Readonly<{
   person: PersonRig;
-  eyebrows: readonly [THREE.Mesh, THREE.Mesh];
-  mouth: readonly [THREE.Mesh, THREE.Mesh];
+  eyebrows: readonly [Mesh, Mesh];
+  mouth: readonly [Mesh, Mesh];
 }>;
 
-const createLimb = (length: number, radius: number, color: number): THREE.Group => {
-  const pivot = new THREE.Group();
-  const mesh = new THREE.Mesh(
-    new THREE.CylinderGeometry(radius, radius, length, 5),
+const createLimb = (length: number, radius: number, color: number): Group => {
+  const pivot = new Group();
+  const mesh = new Mesh(
+    new CylinderGeometry(radius, radius, length, 5),
     makeMaterial(color),
   );
   mesh.position.y = -length / 2;
@@ -206,26 +234,26 @@ const createLimb = (length: number, radius: number, color: number): THREE.Group 
   return pivot;
 };
 
-const createLemonadeCup = (scale = 1): THREE.Group => {
-  const cup = new THREE.Group();
+const createLemonadeCup = (scale = 1): Group => {
+  const cup = new Group();
 
-  const glass = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.075, 0.09, 0.19, 8, 1, true),
-    new THREE.MeshStandardMaterial({
+  const glass = new Mesh(
+    new CylinderGeometry(0.075, 0.09, 0.19, 8, 1, true),
+    new MeshStandardMaterial({
       color: 0xaeffff,
       transparent: true,
       opacity: 0.46,
       roughness: 0.22,
       metalness: 0,
-      side: THREE.DoubleSide,
+      side: DoubleSide,
       depthWrite: false,
     }),
   );
   cup.add(glass);
 
-  const liquid = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.061, 0.073, 0.115, 8),
-    new THREE.MeshStandardMaterial({
+  const liquid = new Mesh(
+    new CylinderGeometry(0.061, 0.073, 0.115, 8),
+    new MeshStandardMaterial({
       color: 0xefff00,
       transparent: true,
       opacity: 0.68,
@@ -235,7 +263,7 @@ const createLemonadeCup = (scale = 1): THREE.Group => {
   liquid.position.y = -0.022;
   cup.add(liquid);
 
-  const iceMaterial = new THREE.MeshStandardMaterial({
+  const iceMaterial = new MeshStandardMaterial({
     color: 0xf3fff3,
     transparent: true,
     opacity: 0.88,
@@ -245,14 +273,14 @@ const createLemonadeCup = (scale = 1): THREE.Group => {
     [-0.024, 0.025, 0.012, -0.28],
     [0.027, 0.045, -0.006, 0.34],
   ] as const) {
-    const ice = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.038, 0.05), iceMaterial.clone());
+    const ice = new Mesh(new BoxGeometry(0.052, 0.038, 0.05), iceMaterial.clone());
     ice.position.set(x, y, z);
     ice.rotation.y = rotation;
     cup.add(ice);
   }
 
-  const straw = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.008, 0.008, 0.25, 6),
+  const straw = new Mesh(
+    new CylinderGeometry(0.008, 0.008, 0.25, 6),
     makeMaterial(0xff551d),
   );
   straw.position.set(0.028, 0.085, 0.008);
@@ -263,32 +291,32 @@ const createLemonadeCup = (scale = 1): THREE.Group => {
 };
 
 const addCharacterHair = (
-  head: THREE.Mesh,
+  head: Mesh,
   style: 0 | 1 | 2 | 3,
   color: number,
   accessory: 0 | 1 | 2,
 ): void => {
   if (style === 1) {
-    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.255, 7, 4), makeMaterial(color));
+    const hair = new Mesh(new SphereGeometry(0.255, 7, 4), makeMaterial(color));
     hair.scale.set(1, 0.42, 1);
     hair.position.y = 0.16;
     head.add(hair);
   } else if (style === 2) {
-    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.11, 0.34), makeMaterial(color));
+    const hair = new Mesh(new BoxGeometry(0.42, 0.11, 0.34), makeMaterial(color));
     hair.position.set(0, 0.18, -0.01);
     head.add(hair);
   } else if (style === 3) {
-    const hair = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.25, 0.12, 7), makeMaterial(color));
+    const hair = new Mesh(new CylinderGeometry(0.22, 0.25, 0.12, 7), makeMaterial(color));
     hair.position.y = 0.18;
     head.add(hair);
   }
 
   if (accessory === 1) {
-    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.035, 0.34), makeMaterial(color));
+    const brim = new Mesh(new BoxGeometry(0.46, 0.035, 0.34), makeMaterial(color));
     brim.position.set(0, 0.23, 0.05);
     head.add(brim);
   } else if (accessory === 2) {
-    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.018, 0.018), makeMaterial(0x273036));
+    const bridge = new Mesh(new BoxGeometry(0.18, 0.018, 0.018), makeMaterial(0x273036));
     bridge.position.set(0, 0.035, 0.235);
     head.add(bridge);
   }
@@ -296,15 +324,15 @@ const addCharacterHair = (
 
 const createPerson = (characterSeed: number, index: number): PersonRig => {
   const profile = characterProfileFor(characterSeed, index);
-  const root = new THREE.Group();
+  const root = new Group();
 
-  const torso = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.25, 0.34, 0.9, 6),
+  const torso = new Mesh(
+    new CylinderGeometry(0.25, 0.34, 0.9, 6),
     makeMaterial(profile.clothingColor),
   );
   torso.position.y = 1.05;
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.25, 7, 5),
+  const head = new Mesh(
+    new SphereGeometry(0.25, 7, 5),
     makeMaterial(profile.skinColor),
   );
   head.position.y = 1.73;
@@ -312,7 +340,7 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
 
   const eyeMaterial = makeMaterial(0x263238);
   for (const x of [-0.085, 0.085]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.024, 5, 4), eyeMaterial.clone());
+    const eye = new Mesh(new SphereGeometry(0.024, 5, 4), eyeMaterial.clone());
     eye.position.set(x, 0.035, 0.232);
     head.add(eye);
   }
@@ -356,16 +384,16 @@ const createSeller = (characterSeed: number): SellerRig => {
   const person = createPerson(characterSeed ^ 0x51_1e_12, 10_001);
   const expressionMaterial = makeMaterial(0x3a2a25);
 
-  const leftBrow = new THREE.Mesh(
-    new THREE.BoxGeometry(0.11, 0.018, 0.018),
+  const leftBrow = new Mesh(
+    new BoxGeometry(0.11, 0.018, 0.018),
     expressionMaterial.clone(),
   );
   const rightBrow = leftBrow.clone();
   leftBrow.position.set(-0.085, 0.125, 0.235);
   rightBrow.position.set(0.085, 0.125, 0.235);
 
-  const mouthLeft = new THREE.Mesh(
-    new THREE.BoxGeometry(0.12, 0.018, 0.018),
+  const mouthLeft = new Mesh(
+    new BoxGeometry(0.12, 0.018, 0.018),
     expressionMaterial.clone(),
   );
   const mouthRight = mouthLeft.clone();
@@ -457,27 +485,27 @@ const applyBuyerPose = (
 };
 
 type CupInventory = Readonly<{
-  meshes: readonly THREE.InstancedMesh[];
+  meshes: readonly InstancedMesh[];
   setCount(count: number): void;
 }>;
 
 const createCupInventory = (): CupInventory => {
-  const shells = new THREE.InstancedMesh(
-    new THREE.CylinderGeometry(0.075, 0.09, 0.19, 8, 1, true),
-    new THREE.MeshStandardMaterial({
+  const shells = new InstancedMesh(
+    new CylinderGeometry(0.075, 0.09, 0.19, 8, 1, true),
+    new MeshStandardMaterial({
       color: 0xaeffff,
       transparent: true,
       opacity: 0.42,
       roughness: 0.22,
       metalness: 0,
-      side: THREE.DoubleSide,
+      side: DoubleSide,
       depthWrite: false,
     }),
     MAX_PREPARED_CUPS,
   );
-  const liquid = new THREE.InstancedMesh(
-    new THREE.CylinderGeometry(0.061, 0.073, 0.115, 8),
-    new THREE.MeshStandardMaterial({
+  const liquid = new InstancedMesh(
+    new CylinderGeometry(0.061, 0.073, 0.115, 8),
+    new MeshStandardMaterial({
       color: 0xefff00,
       transparent: true,
       opacity: 0.66,
@@ -485,9 +513,9 @@ const createCupInventory = (): CupInventory => {
     }),
     MAX_PREPARED_CUPS,
   );
-  const iceA = new THREE.InstancedMesh(
-    new THREE.BoxGeometry(0.052, 0.038, 0.05),
-    new THREE.MeshStandardMaterial({
+  const iceA = new InstancedMesh(
+    new BoxGeometry(0.052, 0.038, 0.05),
+    new MeshStandardMaterial({
       color: 0xf3fff3,
       transparent: true,
       opacity: 0.88,
@@ -495,9 +523,9 @@ const createCupInventory = (): CupInventory => {
     }),
     MAX_PREPARED_CUPS,
   );
-  const iceB = new THREE.InstancedMesh(
-    new THREE.BoxGeometry(0.048, 0.036, 0.048),
-    new THREE.MeshStandardMaterial({
+  const iceB = new InstancedMesh(
+    new BoxGeometry(0.048, 0.036, 0.048),
+    new MeshStandardMaterial({
       color: 0xe9f4e9,
       transparent: true,
       opacity: 0.86,
@@ -505,16 +533,16 @@ const createCupInventory = (): CupInventory => {
     }),
     MAX_PREPARED_CUPS,
   );
-  const straws = new THREE.InstancedMesh(
-    new THREE.CylinderGeometry(0.008, 0.008, 0.25, 6),
+  const straws = new InstancedMesh(
+    new CylinderGeometry(0.008, 0.008, 0.25, 6),
     makeMaterial(0xff551d),
     MAX_PREPARED_CUPS,
   );
 
-  const matrix = new THREE.Matrix4();
-  const quaternion = new THREE.Quaternion();
-  const scale = new THREE.Vector3(1, 1, 1);
-  const position = new THREE.Vector3();
+  const matrix = new Matrix4();
+  const quaternion = new Quaternion();
+  const scale = new Vector3(1, 1, 1);
+  const position = new Vector3();
 
   for (let index = 0; index < MAX_PREPARED_CUPS; index += 1) {
     const column = index % 20;
@@ -529,17 +557,17 @@ const createCupInventory = (): CupInventory => {
     matrix.makeTranslation(x, y - 0.022, z + 0.003);
     liquid.setMatrixAt(index, matrix);
 
-    quaternion.setFromEuler(new THREE.Euler(0, -0.28, 0));
+    quaternion.setFromEuler(new Euler(0, -0.28, 0));
     position.set(x - 0.024, y + 0.025, z + 0.012);
     matrix.compose(position, quaternion, scale);
     iceA.setMatrixAt(index, matrix);
 
-    quaternion.setFromEuler(new THREE.Euler(0, 0.34, 0));
+    quaternion.setFromEuler(new Euler(0, 0.34, 0));
     position.set(x + 0.027, y + 0.045, z - 0.006);
     matrix.compose(position, quaternion, scale);
     iceB.setMatrixAt(index, matrix);
 
-    quaternion.setFromEuler(new THREE.Euler(0, 0, -0.2));
+    quaternion.setFromEuler(new Euler(0, 0, -0.2));
     position.set(x + 0.028, y + 0.085, z + 0.008);
     matrix.compose(position, quaternion, scale);
     straws.setMatrixAt(index, matrix);
@@ -563,17 +591,17 @@ const createCupInventory = (): CupInventory => {
   });
 };
 
-const createLemon = (index: number): THREE.Group => {
-  const lemon = new THREE.Group();
-  const fruit = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.22, 1),
+const createLemon = (index: number): Group => {
+  const lemon = new Group();
+  const fruit = new Mesh(
+    new IcosahedronGeometry(0.22, 1),
     makeMaterial(0xf6d33b),
   );
   fruit.scale.set(1.15, 0.9, 0.9);
   lemon.add(fruit);
 
-  const leaf = new THREE.Mesh(
-    new THREE.ConeGeometry(0.08, 0.22, 5),
+  const leaf = new Mesh(
+    new ConeGeometry(0.08, 0.22, 5),
     makeMaterial(0x4f8c4a),
   );
   leaf.rotation.z = Math.PI / 2;
@@ -586,8 +614,8 @@ const createLemon = (index: number): THREE.Group => {
   return lemon;
 };
 
-const createCloud = (color: number): THREE.Group => {
-  const cloud = new THREE.Group();
+const createCloud = (color: number): Group => {
+  const cloud = new Group();
   const material = makeWeatherMaterial(color);
   const puffs = [
     { radius: 0.72, x: -0.78, y: 0, z: 0 },
@@ -598,8 +626,8 @@ const createCloud = (color: number): THREE.Group => {
   ] as const;
 
   for (const puff of puffs) {
-    const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(puff.radius, 20, 16),
+    const mesh = new Mesh(
+      new SphereGeometry(puff.radius, 20, 16),
       material.clone(),
     );
     mesh.position.set(puff.x, puff.y, puff.z);
@@ -608,17 +636,17 @@ const createCloud = (color: number): THREE.Group => {
   return cloud;
 };
 
-const createSun = (radius: number): THREE.Group => {
-  const group = new THREE.Group();
-  const core = new THREE.Mesh(
-    new THREE.SphereGeometry(radius, 24, 18),
+const createSun = (radius: number): Group => {
+  const group = new Group();
+  const core = new Mesh(
+    new SphereGeometry(radius, 24, 18),
     makeWeatherMaterial(0xffd447, 0xffc93a, 0.55),
   );
   group.add(core);
 
-  const halo = new THREE.Mesh(
-    new THREE.SphereGeometry(radius * 1.18, 24, 18),
-    new THREE.MeshStandardMaterial({
+  const halo = new Mesh(
+    new SphereGeometry(radius * 1.18, 24, 18),
+    new MeshStandardMaterial({
       color: 0xffe27a,
       emissive: 0xffd447,
       emissiveIntensity: 0.45,
@@ -632,11 +660,11 @@ const createSun = (radius: number): THREE.Group => {
   return group;
 };
 
-const createWeatherObjects = (): Record<SceneWeather, THREE.Group> => {
+const createWeatherObjects = (): Record<SceneWeather, Group> => {
   const sunny = createSun(0.82);
   sunny.position.set(5.1, 6.7, -1.8);
 
-  const partlyCloudy = new THREE.Group();
+  const partlyCloudy = new Group();
   const partlySun = createSun(0.62);
   partlySun.position.set(0.88, 0.5, -0.25);
   partlyCloudy.add(partlySun);
@@ -650,8 +678,8 @@ const createWeatherObjects = (): Record<SceneWeather, THREE.Group> => {
 
   const thunderstorm = createCloud(0x657786);
   thunderstorm.position.set(-3.6, 6.25, -1.4);
-  const bolt = new THREE.Mesh(
-    new THREE.ConeGeometry(0.16, 1.05, 8),
+  const bolt = new Mesh(
+    new ConeGeometry(0.16, 1.05, 8),
     makeWeatherMaterial(0xf8d346, 0xf8d346, 0.3),
   );
   bolt.position.set(0.4, -1.05, 0.08);
@@ -659,8 +687,8 @@ const createWeatherObjects = (): Record<SceneWeather, THREE.Group> => {
   thunderstorm.add(bolt);
 
   for (let index = 0; index < 7; index += 1) {
-    const drop = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.02, 0.02, 0.62, 8),
+    const drop = new Mesh(
+      new CylinderGeometry(0.02, 0.02, 0.62, 8),
       makeWeatherMaterial(0x7dc7df),
     );
     drop.position.set(-1.05 + index * 0.35, -1.25 - (index % 2) * 0.45, 0.15);
@@ -671,12 +699,12 @@ const createWeatherObjects = (): Record<SceneWeather, THREE.Group> => {
   return { sunny, cloudy, "hot-and-dry": partlyCloudy, thunderstorm };
 };
 
-type DisposableMesh = THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>;
+type DisposableMesh = Mesh<BufferGeometry, Material | Material[]>;
 
-const isDisposableMesh = (object: THREE.Object3D): object is DisposableMesh =>
-  object instanceof THREE.Mesh;
+const isDisposableMesh = (object: Object3D): object is DisposableMesh =>
+  object instanceof Mesh;
 
-const disposeObject = (object: THREE.Object3D): void => {
+const disposeObject = (object: Object3D): void => {
   if (!isDisposableMesh(object)) return;
   object.geometry.dispose();
   if (Array.isArray(object.material)) {
@@ -693,9 +721,9 @@ export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
 ): LemonsvilleSceneController | null => {
-  let renderer: THREE.WebGLRenderer;
+  let renderer: WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({
+    renderer = new WebGLRenderer({
       canvas,
       antialias: true,
       alpha: false,
@@ -706,25 +734,25 @@ export const createLemonsvilleScene = (
   }
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.outputColorSpace = SRGBColorSpace;
   renderer.shadowMap.enabled = false;
 
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+  const scene = new Scene();
+  const camera = new PerspectiveCamera(34, 1, 0.1, 100);
   camera.position.set(0, 6.8, 13.5);
   camera.lookAt(0, 1.7, 0);
 
-  scene.add(new THREE.HemisphereLight(0xfff2c6, 0x526b51, 1.9));
-  const sunlight = new THREE.DirectionalLight(0xfff0c9, 1.8);
+  scene.add(new HemisphereLight(0xfff2c6, 0x526b51, 1.9));
+  const sunlight = new DirectionalLight(0xfff0c9, 1.8);
   sunlight.position.set(-5, 10, 7);
   scene.add(sunlight);
 
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 24), makeMaterial(0x92ad68));
+  const ground = new Mesh(new PlaneGeometry(30, 24), makeMaterial(0x92ad68));
   ground.rotation.x = -Math.PI / 2;
   ground.position.z = -1.5;
   scene.add(ground);
 
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(30, 4.0), makeMaterial(0xb2916e));
+  const road = new Mesh(new PlaneGeometry(30, 4.0), makeMaterial(0xb2916e));
   road.rotation.x = -Math.PI / 2;
   road.position.set(0, 0.012, 4.1);
   scene.add(road);
@@ -738,7 +766,7 @@ export const createLemonsvilleScene = (
   scene.add(createStand());
 
   const signs = Array.from({ length: 40 }, (_, index) => createSign(index));
-  let signTexture: THREE.CanvasTexture | null = null;
+  let signTexture: CanvasTexture | null = null;
   let signPriceLabel = "";
   let disposed = false;
   let signTextureGeneration = 0;
@@ -812,11 +840,11 @@ export const createLemonsvilleScene = (
     const generation = ++signTextureGeneration;
     void signLabelModule.then(({ createPriceSignSurface }) => {
       if (disposed || generation !== signTextureGeneration || priceLabel !== signPriceLabel) return;
-      const nextTexture = new THREE.CanvasTexture(createPriceSignSurface(priceLabel));
+      const nextTexture = new CanvasTexture(createPriceSignSurface(priceLabel));
       const previousTexture = signTexture;
-      nextTexture.colorSpace = THREE.SRGBColorSpace;
-      nextTexture.minFilter = THREE.LinearFilter;
-      nextTexture.magFilter = THREE.LinearFilter;
+      nextTexture.colorSpace = SRGBColorSpace;
+      nextTexture.minFilter = LinearFilter;
+      nextTexture.magFilter = LinearFilter;
       signTexture = nextTexture;
       for (const sign of signs) {
         sign.labelMaterial.map = nextTexture;
@@ -1079,7 +1107,7 @@ export const createLemonsvilleScene = (
 
     for (const [weather, weatherObject] of Object.entries(weatherObjects) as [
       SceneWeather,
-      THREE.Group,
+      Group,
     ][]) {
       weatherObject.visible = weather === state.weather;
     }
