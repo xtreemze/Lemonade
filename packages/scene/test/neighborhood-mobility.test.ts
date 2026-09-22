@@ -5,6 +5,12 @@ import {
   mobilityDetailForDistance,
   type NeighborhoodMobilitySample,
 } from "../src/neighborhood-mobility.js";
+import {
+  generateResidentialLayout,
+  residentialAccessLayout,
+} from "../src/residential-layout.js";
+
+const MOBILITY_SEED = 0x5eed1234;
 
 const sampleDay = (
   dayNumber: number,
@@ -12,7 +18,7 @@ const sampleDay = (
   phase: "forecast" | "simulation" = "simulation",
   weather: "sunny" | "cloudy" = "sunny",
 ): NeighborhoodMobilitySample =>
-  createNeighborhoodMobilitySystem(0x5eed1234).sample({
+  createNeighborhoodMobilitySystem(MOBILITY_SEED).sample({
     weather,
     phase,
     elapsedMs,
@@ -61,7 +67,7 @@ describe("unified neighborhood mobility", () => {
   });
 
   it("gives pedestrians crossing priority over nearby vehicles and bicycles", () => {
-    const system = createNeighborhoodMobilitySystem(0x5eed1234);
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const samples = Array.from({ length: 20 }, (_, index) =>
       system.sample({
         weather: "sunny",
@@ -86,7 +92,7 @@ describe("unified neighborhood mobility", () => {
   });
 
   it("cycles residents and a pet through residence doors and window activity", () => {
-    const system = createNeighborhoodMobilitySystem(0x5eed1234);
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const samples = Array.from({ length: 28 }, (_, index) =>
       system.sample({
         weather: "cloudy",
@@ -118,7 +124,7 @@ describe("unified neighborhood mobility", () => {
   });
 
   it("drives a resident vehicle into a driveway, parks, and later departs", () => {
-    const system = createNeighborhoodMobilitySystem(0x5eed1234);
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const parked = system.sample({
       weather: "cloudy",
       phase: "simulation",
@@ -139,14 +145,42 @@ describe("unified neighborhood mobility", () => {
     expect(
       parked.properties.some((property) => property.vehicleParked),
     ).toBe(true);
-    expect(
-      parked.actors.some(
-        (actor) =>
-          actor.id === "resident-vehicle" &&
-          actor.interaction === "parking" &&
-          actor.speed === 0,
-      ),
-    ).toBe(true);
+    const parkedVehicle = parked.actors.find(
+      (actor) => actor.id === "resident-vehicle",
+    );
+    expect(parkedVehicle?.interaction).toBe("parking");
+    expect(parkedVehicle?.speed).toBe(0);
+
+    const layout = generateResidentialLayout(MOBILITY_SEED);
+    const drivewayProperty =
+      layout.frontProperties.find(
+        (property) =>
+          property.role === "east-mid" && property.drivewayX !== null,
+      ) ??
+      layout.frontProperties.find(
+        (property) => property.drivewayX !== null,
+      );
+    expect(drivewayProperty).toBeDefined();
+    if (drivewayProperty !== undefined && drivewayProperty.drivewayX !== null) {
+      const access = residentialAccessLayout(
+        drivewayProperty,
+        MOBILITY_SEED,
+      );
+      expect(parkedVehicle?.x).toBeCloseTo(drivewayProperty.drivewayX);
+      expect(parkedVehicle?.z).toBeCloseTo(access.parkingZ);
+      expect(
+        layout.exclusions.some(
+          (rect) =>
+            rect.role === "sidewalk" &&
+            parkedVehicle !== undefined &&
+            parkedVehicle.x >= rect.minX &&
+            parkedVehicle.x <= rect.maxX &&
+            parkedVehicle.z >= rect.minZ &&
+            parkedVehicle.z <= rect.maxZ,
+        ),
+      ).toBe(false);
+    }
+
     expect(
       later.properties.some((property) => property.vehicleParked),
     ).toBe(false);
@@ -170,7 +204,7 @@ describe("unified neighborhood mobility", () => {
   });
 
   it("runs the mail route every forecast and a gardener on exactly one weekday", () => {
-    const system = createNeighborhoodMobilitySystem(0x5eed1234);
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const mailDays = Array.from({ length: 7 }, (_, index) =>
       system.sample({
         weather: "cloudy",
@@ -214,7 +248,7 @@ describe("unified neighborhood mobility", () => {
     expect(mobilityDetailForDistance(50)).toBe("reduced");
     expect(mobilityDetailForDistance(120)).toBe("statistical");
 
-    const system = createNeighborhoodMobilitySystem(0x5eed1234);
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const distant = system.sample({
       weather: "sunny",
       phase: "simulation",
