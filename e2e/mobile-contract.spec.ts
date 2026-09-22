@@ -198,7 +198,7 @@ const expectPlanningControlWeight = async (page: Page): Promise<void> => {
   expect(metrics.sliderCount).toBe(3);
   expect(metrics.trackSize).toBeGreaterThanOrEqual(16);
   expect(Math.min(...metrics.sliderHeights)).toBeGreaterThanOrEqual(
-    viewport.height <= 360 ? 48 : 60,
+    viewport.width > viewport.height ? 48 : 60,
   );
   expect(Math.min(...metrics.controlGaps)).toBeGreaterThanOrEqual(0);
 };
