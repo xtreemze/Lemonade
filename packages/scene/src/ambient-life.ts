@@ -5,6 +5,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   SphereGeometry,
+  type Object3D,
   type Scene,
 } from "three";
 
@@ -41,7 +42,7 @@ export type AmbientLifeController = Readonly<{
     phase: AmbientPhase,
     elapsedMs: number,
     durationMs: number,
-    owners?: readonly AmbientOwnerAnchor[],
+    owners?: readonly Object3D[],
   ): void;
 }>;
 
@@ -209,10 +210,16 @@ export const createAmbientLife = (scene: Scene, seed: number): AmbientLifeContro
     update(weather, phase, elapsedMs, durationMs, owners = []): void {
       const population = ambientPopulationFor(weather, phase);
       pets.forEach((pet, index) => {
-        const owner = owners[index % Math.max(1, owners.length)];
+        const owner = owners.find((candidate, ownerIndex) =>
+          candidate.visible && ownerIndex >= index,
+        ) ?? owners.find((candidate) => candidate.visible);
         pet.visible = index < population.pets && owner !== undefined;
         if (!pet.visible || owner === undefined) return;
-        const pose = petFollowPose(owner, index);
+        const pose = petFollowPose({
+          x: owner.position.x,
+          z: owner.position.z,
+          heading: owner.rotation.y,
+        }, index);
         const gait = Math.sin(elapsedMs * 0.012 + index * 1.7 + (seed & 15) * 0.21);
         pet.position.set(pose.x, Math.abs(gait) * 0.018, pose.z);
         pet.rotation.y = pose.yaw;
