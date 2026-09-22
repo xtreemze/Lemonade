@@ -420,10 +420,14 @@ export type ResidentialAccessLayout = Readonly<{
   sidewalkCenterZ: number;
   sidewalkEdgeZ: number;
   roadEdgeZ: number;
+  doorX: number;
   doorZ: number;
+  entryX: number;
+  entryZ: number;
   parkingZ: number;
   drivewayCenterZ: number;
   drivewayDepth: number;
+  pathCenterX: number;
   pathCenterZ: number;
   pathDepth: number;
 }>;
@@ -432,12 +436,19 @@ export const residentialAccessLayout = (
   property: ResidentialPropertySpec,
   seed = DEFAULT_RESIDENTIAL_SEED,
 ): ResidentialAccessLayout => {
-  const frontDirection: -1 | 1 =
-    Math.cos(property.rotationY) >= 0 ? 1 : -1;
+  const frontX = Math.sin(property.rotationY);
+  const frontZ = Math.cos(property.rotationY);
+  const frontDirection: -1 | 1 = frontZ >= 0 ? 1 : -1;
   const footprint = propertyFootprint(property);
+  const doorDistance = 2.34 * property.scale;
+  const entryDistance = 3.34 * property.scale;
+  const doorX = property.houseX + frontX * doorDistance;
+  const doorZ = property.houseZ + frontZ * doorDistance;
+  const entryX = property.houseX + frontX * entryDistance;
+  const entryZ = property.houseZ + frontZ * entryDistance;
   const sidewalk = nearestAccessRect(
     property,
-    property.houseX,
+    entryX,
     "sidewalk",
     seed,
   );
@@ -455,10 +466,9 @@ export const residentialAccessLayout = (
       : sidewalkCenterZ >= property.houseZ
         ? sidewalk.minZ
         : sidewalk.maxZ;
-  const doorZ =
-    property.houseZ + frontDirection * (footprint.halfDepth + 0.18);
-  const pathDepth = Math.max(0.72, Math.abs(sidewalkEdgeZ - doorZ) + 0.12);
-  const pathCenterZ = (doorZ + sidewalkEdgeZ) / 2;
+  const pathDepth = Math.max(0.72, Math.abs(sidewalkEdgeZ - entryZ) + 0.12);
+  const pathCenterX = entryX;
+  const pathCenterZ = (entryZ + sidewalkEdgeZ) / 2;
 
   const drivewayX = property.drivewayX ?? property.houseX;
   const road = nearestAccessRect(property, drivewayX, "road", seed);
@@ -483,10 +493,14 @@ export const residentialAccessLayout = (
     sidewalkCenterZ,
     sidewalkEdgeZ,
     roadEdgeZ,
+    doorX,
     doorZ,
+    entryX,
+    entryZ,
     parkingZ,
     drivewayCenterZ,
     drivewayDepth,
+    pathCenterX,
     pathCenterZ,
     pathDepth,
   });
@@ -495,8 +509,12 @@ export const residentialAccessLayout = (
 const drivewayRectForProperty = (
   property: ResidentialPropertySpec,
   drivewayX: number,
+  seed: number,
 ): ResidentialRect => {
-  const access = residentialAccessLayout(property);
+  const access = residentialAccessLayout(
+    Object.freeze({ ...property, drivewayX }),
+    seed,
+  );
   const halfDepth = access.drivewayDepth / 2;
   return Object.freeze({
     minX: drivewayX - DRIVEWAY_HALF_WIDTH,
@@ -519,6 +537,7 @@ const rectsHaveClearance = (
 
 const resolveGeneratedAccess = (
   properties: readonly ResidentialPropertySpec[],
+  seed: number,
 ): readonly ResidentialPropertySpec[] => {
   const occupied: ResidentialRect[] = [];
   const resolved = properties.map((property) => {
@@ -533,7 +552,11 @@ const resolveGeneratedAccess = (
       const distance = baseDistance + step * 0.42;
       for (const side of [preferredSide, -preferredSide] as const) {
         const candidateX = property.houseX + side * distance;
-        const candidateRect = drivewayRectForProperty(property, candidateX);
+        const candidateRect = drivewayRectForProperty(
+          property,
+          candidateX,
+          seed,
+        );
         const clearsHouses = properties.every((other) => {
           const footprint = propertyFootprint(other);
           return !footprintIntersectsRect(
@@ -583,8 +606,8 @@ const accessExclusions = (
         role: "driveway" as const,
       },
       {
-        minX: property.houseX - 0.52,
-        maxX: property.houseX + 0.52,
+        minX: access.pathCenterX - 0.52,
+        maxX: access.pathCenterX + 0.52,
         minZ: access.pathCenterZ - pathHalfDepth,
         maxZ: access.pathCenterZ + pathHalfDepth,
         role: "path" as const,
@@ -708,7 +731,7 @@ const generateFlowers = (
     const x = -13 + unit(seed, 7_000 + attempt * 3) * 11.2;
     const z = -5.3 + unit(seed, 7_001 + attempt * 3) * 4.1;
     const candidate = { x, z };
-    if (residentialPointIsBlocked(candidate, layout, 0.16)) continue;
+    if (residentialPointIsBlocked(candidate, layout, 0.38)) continue;
     result.push(
       Object.freeze({
         x,
@@ -835,6 +858,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       [-46, -35, -24.5, -9.1, 4, 16.5, 29.7, 41.7],
       true,
     ),
+    safeSeed,
   );
   const back = resolveGeneratedAccess(
     rowProperties(
@@ -844,23 +868,27 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       [-47, -36.5, -25.4, -9.7, 3.5, 16.5, 28.5, 39.6, 52.5],
       true,
     ),
+    safeSeed,
   );
-  const outer = resolveGeneratedAccess([
-    ...rowProperties(
-      safeSeed,
-      2_900,
-      16.8,
-      [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
-      false,
-    ),
-    ...rowProperties(
-      safeSeed,
-      3_000,
-      -72,
-      [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
-      false,
-    ),
-  ]);
+  const outer = resolveGeneratedAccess(
+    [
+      ...rowProperties(
+        safeSeed,
+        2_900,
+        16.8,
+        [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
+        false,
+      ),
+      ...rowProperties(
+        safeSeed,
+        3_000,
+        -72,
+        [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
+        false,
+      ),
+    ],
+    safeSeed,
+  );
   const allProperties = [...front, ...middle, ...back, ...outer];
   const exclusions = Object.freeze([
     ...baseExclusions(safeSeed),
@@ -880,7 +908,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     3_050,
     "back",
     partial,
-    2.45,
+    3.5,
     1.45,
     7,
   );
@@ -905,7 +933,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     5_050,
     "front",
     partial,
-    0.86,
+    1.9,
     0.72,
     7,
   );
@@ -929,7 +957,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     6_900,
     "front",
     partial,
-    0.24,
+    0.38,
     0.48,
     5,
   );
