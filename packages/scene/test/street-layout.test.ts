@@ -48,7 +48,7 @@ describe("street zoning", () => {
     expect(repeated).toEqual(first);
     expect(alternate.roads).not.toEqual(first.roads);
     expect(first.roads.length).toBeGreaterThan(30);
-    expect(first.sidewalks.length).toBeGreaterThan(20);
+    expect(first.sidewalks.length).toBeGreaterThan(40);
     expect(
       first.roads.filter((strip) => Math.abs(strip.rotationY) > 0.08).length,
     ).toBeGreaterThan(8);
@@ -62,6 +62,11 @@ describe("street zoning", () => {
         first.roads.some((road) => streetStripsOverlap(sidewalk, road)),
       ).toBe(false);
     }
+
+    expect(Math.max(...first.roads.map((strip) => Math.abs(strip.x))))
+      .toBeGreaterThan(100);
+    expect(first.roads.some((strip) => strip.streetId === "front-grid")).toBe(true);
+    expect(first.roads.some((strip) => strip.streetId === "deep-grid")).toBe(true);
 
     const mainSidewalks = first.sidewalks.filter(
       (strip) => strip.streetId === "main",

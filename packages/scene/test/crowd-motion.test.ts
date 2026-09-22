@@ -5,6 +5,7 @@ import {
   ambientPopulationFor,
   createAmbientLife,
   petFollowPose,
+  vehicleVariantSpec,
   xTravelYaw,
 } from "../src/ambient-life.js";
 import {
@@ -42,13 +43,9 @@ describe("crowd motion", () => {
       new Set(["near", "far"]),
     );
     for (const pose of first) {
-      expect(Math.abs(pose.x)).toBeLessThanOrEqual(12.8);
-      const sidewalk =
-        pose.side === "near"
-          ? STREET_LAYOUT.nearSidewalk
-          : STREET_LAYOUT.farSidewalk;
-      expect(pose.z).toBeGreaterThanOrEqual(sidewalk.minZ);
-      expect(pose.z).toBeLessThanOrEqual(sidewalk.maxZ);
+      expect(Math.abs(pose.x)).toBeLessThanOrEqual(106);
+      expect(pose.z).toBeGreaterThanOrEqual(pose.routeMinZ);
+      expect(pose.z).toBeLessThanOrEqual(pose.routeMaxZ);
       expect(
         pose.z < STREET_LAYOUT.road.minZ ||
           pose.z > STREET_LAYOUT.road.maxZ,
@@ -62,7 +59,7 @@ describe("crowd motion", () => {
         const b = first[right];
         if (b === undefined) continue;
         const distance = Math.hypot(a.x - b.x, a.z - b.z);
-        expect(distance).toBeGreaterThan(0.24);
+        expect(distance).toBeGreaterThan(0.42);
       }
     }
   });
@@ -77,6 +74,23 @@ describe("crowd motion", () => {
     }
     expect(xTravelYaw(1)).toBeCloseTo(0);
     expect(Math.abs(xTravelYaw(-1))).toBeCloseTo(Math.PI);
+  });
+
+  it("uses road-scale dimensions for sedan, sports, pickup, and truck bodies", () => {
+    const sedan = vehicleVariantSpec("sedan");
+    const sports = vehicleVariantSpec("sports");
+    const pickup = vehicleVariantSpec("pickup");
+    const truck = vehicleVariantSpec("truck");
+
+    for (const spec of [sedan, sports, pickup, truck]) {
+      expect(spec.length).toBeGreaterThan(4);
+      expect(spec.width).toBeGreaterThan(1.7);
+      expect(spec.wheelRadius).toBeGreaterThan(0.3);
+    }
+    expect(sports.bodyHeight).toBeLessThan(sedan.bodyHeight);
+    expect(pickup.length).toBeGreaterThan(sedan.length);
+    expect(truck.length).toBeGreaterThan(pickup.length);
+    expect(truck.cabinHeight).toBeGreaterThan(sedan.cabinHeight);
   });
 
   it("keeps pets behind their pedestrian owner on the same sidewalk", () => {
@@ -212,6 +226,20 @@ describe("crowd motion", () => {
     );
   });
 
+  it("keeps walkers moving through the wider neighborhood at normal walking speed", () => {
+    const early = crowdPosesAt(beats, 12, 250, 6_000);
+    const late = crowdPosesAt(beats, 12, 5_750, 6_000);
+    const extent = [...early, ...late].reduce(
+      (max, pose) => Math.max(max, Math.abs(pose.x)),
+      0,
+    );
+    expect(extent).toBeGreaterThan(42);
+    for (const pose of [...early, ...late]) {
+      expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.15);
+      expect(pose.worldSpeed).toBeLessThanOrEqual(2.05);
+    }
+  });
+
   it("provides enough ground clearance for adult and child seeded heights", () => {
     expect(crowdGroundClearance(0.68)).toBeGreaterThan(0.11);
     expect(crowdGroundClearance(0.9)).toBeGreaterThan(0.15);
@@ -232,7 +260,7 @@ describe("crowd motion", () => {
       pets: 0,
       wildlife: 0,
       bicycles: 0,
-      vehicles: 2,
+      vehicles: 3,
     });
     expect(ambientPopulationFor("sunny", "forecast")).toEqual({
       pets: 0,

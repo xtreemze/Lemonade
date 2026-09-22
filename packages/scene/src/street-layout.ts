@@ -136,12 +136,12 @@ export type GardenSignPosition = Readonly<{
 }>;
 
 const STAND_GARDEN_SIGN_COLUMNS = [
-  -7.25,
-  -6.05,
-  -4.85,
-  -3.65,
-  -2.55,
-  -1.85,
+  -7.4,
+  -6.4,
+  -5.75,
+  -3.6,
+  -2.7,
+  -1.8,
 ] as const;
 
 export const gardenSignPosition = (index: number): GardenSignPosition => {
@@ -333,41 +333,55 @@ export const generateStreetNetwork = (
   const roads = [
     ...straightRoad(
       "main",
-      { x: -75, z: mainCenterZ },
-      { x: 75, z: mainCenterZ },
-      12,
+      { x: -120, z: mainCenterZ },
+      { x: 120, z: mainCenterZ },
+      18,
       width,
     ),
     ...curveRoad(
       "west-curve",
-      { x: -18, z: 34 },
-      { x: -21 + signedUnit(safeSeed, 11) * 2.2, z: -18 },
-      { x: -13.2, z: -76 },
+      { x: -58, z: 42 },
+      { x: -21 + signedUnit(safeSeed, 11) * 2.2, z: -22 },
+      { x: -58, z: -92 },
       8,
       width,
     ),
     ...curveRoad(
       "east-curve",
-      { x: 21, z: 34 },
-      { x: 16 + signedUnit(safeSeed, 17) * 2.4, z: -20 },
-      { x: 22.5, z: -76 },
+      { x: 58, z: 42 },
+      { x: 16 + signedUnit(safeSeed, 17) * 2.4, z: -24 },
+      { x: 58, z: -92 },
       8,
       width,
     ),
     ...curveRoad(
       "middle-curve",
-      { x: -75, z: -16.5 },
+      { x: -120, z: -16.5 },
       { x: 0, z: -13.5 + signedUnit(safeSeed, 23) * 2 },
-      { x: 75, z: -17.5 },
+      { x: 120, z: -17.5 },
       8,
       width,
     ),
     ...curveRoad(
       "back-curve",
-      { x: -75, z: -38.5 },
+      { x: -120, z: -38.5 },
       { x: 0, z: -41 + signedUnit(safeSeed, 29) * 2.2 },
-      { x: 75, z: -36.5 },
+      { x: 120, z: -36.5 },
       8,
+      width,
+    ),
+    ...straightRoad(
+      "front-grid",
+      { x: -120, z: 25 },
+      { x: 120, z: 25 },
+      18,
+      width,
+    ),
+    ...straightRoad(
+      "deep-grid",
+      { x: -120, z: -62 },
+      { x: 120, z: -62 },
+      18,
       width,
     ),
   ] as const;

@@ -58,28 +58,41 @@ describe("procedural residential layout", () => {
 
   it("keeps complete house and planting footprints out of roads, sidewalks, driveways and house fronts", () => {
     const layout = generateResidentialLayout(0xdecafbad);
-    expect(layout.trees).toHaveLength(48);
-    expect(layout.shrubs).toHaveLength(14);
+    expect(layout.trees).toHaveLength(72);
+    expect(layout.shrubs).toHaveLength(20);
     expect(layout.flowers).toHaveLength(12);
 
-    for (const property of [
+    const blockedHouses = [
       ...layout.frontProperties,
       ...layout.middleProperties,
       ...layout.backProperties,
-    ]) {
+      ...layout.outerProperties,
+    ].flatMap((property) => {
       const localHalfWidth = (HOUSE_FOOTPRINT_WIDTH * property.scale) / 2;
       const localHalfDepth = (HOUSE_FOOTPRINT_DEPTH * property.scale) / 2;
       const cosine = Math.abs(Math.cos(property.rotationY));
       const sine = Math.abs(Math.sin(property.rotationY));
-      expect(
-        residentialFootprintIntersectsHardscape(
-          { x: property.houseX, z: property.houseZ },
-          layout,
-          localHalfWidth * cosine + localHalfDepth * sine,
-          localHalfWidth * sine + localHalfDepth * cosine,
-        ),
-      ).toBe(false);
-    }
+      const blocked = residentialFootprintIntersectsHardscape(
+        { x: property.houseX, z: property.houseZ },
+        layout,
+        localHalfWidth * cosine + localHalfDepth * sine,
+        localHalfWidth * sine + localHalfDepth * cosine,
+      );
+      return blocked
+        ? [
+            {
+              role: property.role,
+              x: Number(property.houseX.toFixed(2)),
+              z: Number(property.houseZ.toFixed(2)),
+              drivewayX:
+                property.drivewayX === null
+                  ? null
+                  : Number(property.drivewayX.toFixed(2)),
+            },
+          ]
+        : [];
+    });
+    expect(blockedHouses).toEqual([]);
 
     for (const planting of layout.trees) {
       const clearance = 3.5 * planting.scale;
@@ -107,6 +120,19 @@ describe("procedural residential layout", () => {
     expect(layout.frontProperties).toHaveLength(7);
     expect(layout.middleProperties).toHaveLength(8);
     expect(layout.backProperties).toHaveLength(9);
+    expect(layout.outerProperties).toHaveLength(24);
+    expect(layout.outerProperties.some((property) => property.houseZ > 12)).toBe(true);
+    expect(layout.outerProperties.some((property) => property.houseZ < -58)).toBe(true);
+    expect(layout.outerProperties.some((property) => Math.abs(property.houseX) > 65)).toBe(true);
+
+    for (const property of [
+      ...layout.frontProperties,
+      ...layout.middleProperties,
+      ...layout.backProperties,
+      ...layout.outerProperties,
+    ]) {
+      expect(property.drivewayX).not.toBeNull();
+    }
 
     const xs = layout.frontProperties.map((property) => property.houseX);
     const mirrored = xs.filter((x) => xs.some((candidate) => Math.abs(candidate + x) < 0.25));

@@ -12,9 +12,8 @@ import {
 
 import {
   DEFAULT_RESIDENTIAL_SEED,
-  FRONT_DRIVEWAY_CENTER_Z,
-  FRONT_DRIVEWAY_DEPTH,
   generateResidentialLayout,
+  residentialAccessLayout,
   residentialFootprintIntersectsHardscape,
   type ResidentialPropertySpec,
 } from "./residential-layout.js";
@@ -24,6 +23,7 @@ import {
   type StreetStripSpec,
 } from "./street-layout.js";
 import { WORLD_SCALE } from "./world-scale.js";
+import type { PropertyActivity } from "./neighborhood-mobility.js";
 
 const material = (color: number, flatShading = true): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading, roughness: 0.92 });
@@ -33,10 +33,11 @@ const box = (
   size: readonly [number, number, number],
   position: readonly [number, number, number],
   color: number,
-): void => {
+): Mesh => {
   const mesh = new Mesh(new BoxGeometry(...size), material(color));
   mesh.position.set(...position);
   parent.add(mesh);
+  return mesh;
 };
 
 const road = (
@@ -95,12 +96,17 @@ const detailedHouse = (color: number): Group => {
   roof.position.y = 4.45;
   root.add(roof);
 
-  box(
-    root,
+  const doorPivot = new Group();
+  doorPivot.position.set(-WORLD_SCALE.house.doorWidth / 2, 0, 2.34);
+  doorPivot.userData["sceneRole"] = "house-door";
+  const door = box(
+    doorPivot,
     [WORLD_SCALE.house.doorWidth, WORLD_SCALE.house.doorHeight, 0.18],
-    [0, WORLD_SCALE.house.doorHeight / 2, 2.34],
+    [WORLD_SCALE.house.doorWidth / 2, WORLD_SCALE.house.doorHeight / 2, 0],
     0x486c69,
   );
+  door.userData["sceneRole"] = "house-door-panel";
+  root.add(doorPivot);
   box(
     root,
     [WORLD_SCALE.house.doorWidth + 0.18, 0.12, 0.12],
@@ -124,7 +130,13 @@ const detailedHouse = (color: number): Group => {
   root.add(knob);
 
   for (const x of [-1.7, 1.7]) {
-    box(root, [0.92, 0.95, 0.14], [x, 2.1, 2.36], 0xb8d9d2);
+    const windowPane = box(
+      root,
+      [0.92, 0.95, 0.14],
+      [x, 2.1, 2.36],
+      0xb8d9d2,
+    );
+    windowPane.userData["sceneRole"] = "house-window";
     box(root, [1.08, 0.1, 0.11], [x, 2.62, 2.46], 0xf1dfbd);
     box(root, [1.08, 0.1, 0.11], [x, 1.58, 2.46], 0xf1dfbd);
     box(root, [0.1, 1.05, 0.11], [x - 0.51, 2.1, 2.46], 0xf1dfbd);
@@ -419,6 +431,31 @@ const fenceRunDepth = (x: number, z: number, depth: number): Group => {
   return root;
 };
 
+const sprinkler = (
+  x: number,
+  z: number,
+  propertyRole: string,
+): Group => {
+  const root = new Group();
+  root.position.set(x, 0.03, z);
+  root.visible = false;
+  root.userData["sceneRole"] = "yard-sprinkler";
+  root.userData["propertyRole"] = propertyRole;
+  const hub = new Mesh(
+    new CylinderGeometry(0.08, 0.1, 0.16, 8),
+    material(0x647b83),
+  );
+  hub.position.y = 0.08;
+  root.add(hub);
+  const arm = new Group();
+  arm.userData["sceneRole"] = "sprinkler-arm";
+  box(arm, [0.7, 0.035, 0.035], [0, 0.19, 0], 0x7393a0);
+  box(arm, [0.035, 0.035, 0.22], [0.34, 0.19, 0.1], 0x7393a0);
+  box(arm, [0.035, 0.035, 0.22], [-0.34, 0.19, -0.1], 0x7393a0);
+  root.add(arm);
+  return root;
+};
+
 const distantHill = (
   scene: Scene,
   x: number,
@@ -537,11 +574,67 @@ export const updateNeighborhoodWind = (
   });
 };
 
+
+const propertyRoleForObject = (object: Object3D): string | null => {
+  let current: Object3D | null = object;
+  while (current !== null) {
+    const role = current.userData["propertyRole"];
+    if (typeof role === "string") return role;
+    current = current.parent;
+  }
+  return null;
+};
+
+export const updateNeighborhoodActivity = (
+  scene: Scene,
+  activities: readonly PropertyActivity[],
+  elapsedMs: number,
+): void => {
+  const byRole = new Map(
+    activities.map((activity) => [activity.propertyRole, activity] as const),
+  );
+  scene.traverse((object) => {
+    const sceneRole = object.userData["sceneRole"];
+    const propertyRole = propertyRoleForObject(object);
+    if (propertyRole === null) return;
+    const activity = byRole.get(propertyRole);
+    if (activity === undefined) return;
+
+    if (sceneRole === "house-door" && object instanceof Group) {
+      object.rotation.y = activity.doorOpen ? -1.08 : 0;
+      return;
+    }
+
+    if (sceneRole === "house-window" && object instanceof Mesh) {
+      const materials = Array.isArray(object.material)
+        ? object.material
+        : [object.material];
+      for (const candidate of materials) {
+        if (!(candidate instanceof MeshStandardMaterial)) continue;
+        candidate.emissive.setHex(activity.windowActivity ? 0xffc86a : 0x000000);
+        candidate.emissiveIntensity = activity.windowActivity ? 0.38 : 0;
+      }
+      return;
+    }
+
+    if (sceneRole === "yard-sprinkler" && object instanceof Group) {
+      object.visible = activity.sprinklerOn;
+      if (!object.visible) return;
+      const arm = object.children.find(
+        (child) => child.userData["sceneRole"] === "sprinkler-arm",
+      );
+      if (arm !== undefined) {
+        arm.rotation.y = elapsedMs * 0.0045;
+      }
+    }
+  });
+};
+
 export const populateNeighborhood = (
   scene: Scene,
   seed = DEFAULT_RESIDENTIAL_SEED,
 ): NeighborhoodStats => {
-  const worldSpan = 150;
+  const worldSpan = 240;
   const layout = generateResidentialLayout(seed);
   const streetNetwork = generateStreetNetwork(seed);
   let roadSegments = streetNetwork.roads.length + streetNetwork.sidewalks.length;
@@ -554,7 +647,7 @@ export const populateNeighborhood = (
     streetStrip(scene, strip, 0xd4d0c6);
   }
 
-  for (let x = -72; x <= 72; x += 7.5) {
+  for (let x = -115; x <= 115; x += 7.5) {
     road(
       scene,
       3.2,
@@ -567,19 +660,36 @@ export const populateNeighborhood = (
     );
   }
 
-  for (const property of layout.frontProperties) {
+  const allProperties = [
+    ...layout.frontProperties,
+    ...layout.middleProperties,
+    ...layout.backProperties,
+    ...layout.outerProperties,
+  ];
+  for (const property of allProperties) {
+    const access = residentialAccessLayout(property);
     if (property.drivewayX !== null) {
       road(
         scene,
         WORLD_SCALE.street.drivewayWidth,
-        FRONT_DRIVEWAY_DEPTH,
+        access.drivewayDepth,
         property.drivewayX,
-        FRONT_DRIVEWAY_CENTER_Z,
+        access.drivewayCenterZ,
         0xc9b995,
         0.019,
         "driveway",
       );
-      roadSegments += 1;
+      road(
+        scene,
+        1.04,
+        access.pathDepth,
+        property.houseX,
+        access.pathCenterZ,
+        0xd8c9aa,
+        0.021,
+        "front-path",
+      );
+      roadSegments += 2;
     }
     const color = HOUSE_PALETTE[property.color] ?? HOUSE_PALETTE[0];
     const home = houseLod(
@@ -589,23 +699,18 @@ export const populateNeighborhood = (
       property.scale,
       property.rotationY,
     );
-    home.userData["sceneRole"] = property.role;
+    home.userData["sceneRole"] = layout.frontProperties.includes(property)
+      ? property.role
+      : "residential-" + property.role;
+    home.userData["propertyRole"] = property.role;
     scene.add(home);
   }
 
-  const housePositions = [...layout.middleProperties, ...layout.backProperties];
-  for (const property of housePositions) {
-    const color = HOUSE_PALETTE[property.color] ?? HOUSE_PALETTE[0];
-    scene.add(
-      houseLod(
-        property.houseX,
-        property.houseZ,
-        color,
-        property.scale,
-        property.rotationY,
-      ),
-    );
-  }
+  const housePositions = [
+    ...layout.middleProperties,
+    ...layout.backProperties,
+    ...layout.outerProperties,
+  ];
 
   const yardDetails: Group[] = [];
   const clearYardX = (
@@ -647,6 +752,14 @@ export const populateNeighborhood = (
     ) {
       return;
     }
+    const intersectsTree = layout.trees.some((tree) => {
+      const clearance = 3.2 * tree.scale;
+      return (
+        Math.abs(tree.x - detail.position.x) <= clearance + halfWidth &&
+        Math.abs(tree.z - detail.position.z) <= clearance + halfDepth
+      );
+    });
+    if (intersectsTree) return;
     yardDetails.push(detail);
   };
 
@@ -662,6 +775,25 @@ export const populateNeighborhood = (
   addYardDetailIfClear(fenceRun(7.8, -0.65, 2.6), 2.6 / 2, 0.06);
   addYardDetailIfClear(fenceRun(0, -4.7, 1.4), 1.4 / 2, 0.06);
   for (const detail of yardDetails) scene.add(detail);
+
+  allProperties.forEach((property, index) => {
+    if (index % 3 !== 0) return;
+    const access = residentialAccessLayout(property);
+    const lateral = index % 2 === 0 ? 2.15 : -2.15;
+    const x = property.houseX + lateral;
+    const z = access.pathCenterZ;
+    if (
+      residentialFootprintIntersectsHardscape(
+        { x, z },
+        layout,
+        0.28,
+        0.28,
+      )
+    ) {
+      return;
+    }
+    scene.add(sprinkler(x, z, property.role));
+  });
 
   layout.trees.forEach((planting, index) => {
     const color = TREE_PALETTE[planting.paletteIndex] ?? TREE_PALETTE[0];
@@ -696,18 +828,19 @@ export const populateNeighborhood = (
     scene.add(flower(planting.x, planting.z, color, 40 + index * 0.91));
   });
 
-  distantHill(scene, -52, -76, 24, 10, 0x718967);
-  distantHill(scene, -16, -82, 31, 13, 0x6b8264);
-  distantHill(scene, 24, -80, 29, 11, 0x748b6c);
-  distantHill(scene, 58, -76, 26, 12, 0x677e61);
-  atmosphereBand(scene, -63, 10, 150, 34, 0xb9c8bd, 0.08);
-  atmosphereBand(scene, -86, 12, 170, 38, 0xc8d2ca, 0.11);
+  distantHill(scene, -94, -102, 34, 13, 0x718967);
+  distantHill(scene, -48, -108, 38, 15, 0x6b8264);
+  distantHill(scene, 4, -112, 42, 16, 0x748b6c);
+  distantHill(scene, 62, -106, 36, 14, 0x677e61);
+  distantHill(scene, 104, -100, 30, 12, 0x718967);
+  atmosphereBand(scene, -82, 12, 260, 42, 0xb9c8bd, 0.08);
+  atmosphereBand(scene, -116, 15, 300, 48, 0xc8d2ca, 0.11);
 
   return Object.freeze({
     houseLods: layout.frontProperties.length + housePositions.length,
     featuredHomes: 1,
     frontProperties: layout.frontProperties.length,
-    driveways: layout.frontProperties.filter((property) => property.drivewayX !== null).length,
+    driveways: allProperties.filter((property) => property.drivewayX !== null).length,
     treeLods: layout.trees.length,
     shrubs: layout.shrubs.length,
     flowers: layout.flowers.length,

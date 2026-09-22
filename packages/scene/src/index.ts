@@ -24,6 +24,10 @@ import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { walkingCycleAtDistance } from "./gait.js";
+import type {
+  NeighborhoodMobilitySample,
+  PropertyActivity,
+} from "./neighborhood-mobility.js";
 import {
   characterGroundClearance,
   WORLD_SCALE,
@@ -33,6 +37,7 @@ import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
 import type { WeatherDetailController } from "./weather-detail.js";
 import {
+  BUYER_POOL_SIZE,
   buyerPhaseAt,
   buyerSlotForSale,
   remainingCameraProgressAt,
@@ -56,6 +61,7 @@ export type LemonsvilleSceneState = Readonly<{
   confidence: number;
   nextConfidence: number;
   characterSeed: number;
+  dayNumber: number;
   storyboard: StreetStoryboard;
   phase: ScenePhase;
   reducedMotion: boolean;
@@ -68,7 +74,6 @@ export interface LemonsvilleSceneController {
 }
 
 const PASSERBY_POOL_SIZE = 32;
-const BUYER_POOL_SIZE = 192;
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
@@ -512,8 +517,13 @@ export const createLemonsvilleScene = (
           phase: ScenePhase,
           elapsedMs: number,
           durationMs: number,
-        ): void;
+          dayNumber?: number,
+          focus?: Readonly<{ x: number; z: number }>,
+        ): NeighborhoodMobilitySample;
       }>
+    | null = null;
+  let updateNeighborhoodActivity:
+    | ((activities: readonly PropertyActivity[], elapsedMs: number) => void)
     | null = null;
   let animationFrame: number | null = null;
   let animationEpoch = performance.now();
@@ -585,10 +595,32 @@ export const createLemonsvilleScene = (
     renderer.render(scene, camera);
   };
 
+  const updateAmbient = (
+    elapsedMs: number,
+    durationMs: number,
+  ): NeighborhoodMobilitySample | null => {
+    const sample = ambientLife?.update(
+      state.weather,
+      state.phase,
+      elapsedMs,
+      durationMs,
+      state.dayNumber,
+      { x: camera.position.x, z: camera.position.z },
+    ) ?? null;
+    if (sample !== null) {
+      updateNeighborhoodActivity?.(sample.properties, elapsedMs);
+    }
+    return sample;
+  };
+
   void import("./neighborhood.js")
-    .then(({ populateNeighborhood }) => {
+    .then(({ populateNeighborhood, updateNeighborhoodActivity: updateActivity }) => {
       if (disposed) return;
       populateNeighborhood(scene, initialState.characterSeed ^ 0x4c_45_4d_4f);
+      updateNeighborhoodActivity = (activities, elapsedMs) => {
+        updateActivity(scene, activities, elapsedMs);
+      };
+      updateAmbient(0, Math.max(1, state.durationMs));
       render();
     })
     .catch(() => undefined);
@@ -621,7 +653,7 @@ export const createLemonsvilleScene = (
         initialState.characterSeed,
         customers.map((customer) => customer.root),
       );
-      ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
+      updateAmbient(0, Math.max(1, state.durationMs));
       render();
     })
     .catch(() => undefined);
@@ -752,12 +784,7 @@ export const createLemonsvilleScene = (
       Math.max(1, storyboard.durationMs),
       state.reducedMotion,
     );
-    ambientLife?.update(
-      state.weather,
-      state.phase,
-      0,
-      Math.max(1, storyboard.durationMs)
-    );
+    updateAmbient(0, Math.max(1, storyboard.durationMs));
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
 
@@ -775,14 +802,40 @@ export const createLemonsvilleScene = (
       const buyer = buyers[buyerSlotForSale(sale, buyers.length)];
       if (buyer === undefined) continue;
 
-      const streetX = sale.direction === -1 ? -8.4 : 8.4;
-      const exitX = -streetX;
       const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
       const counterZ = 1.22;
       const drinkX = sale.direction === -1 ? -1.35 : 1.35;
       const drinkZ = 1.78;
+      const approachDurationSeconds =
+        Math.max(1, sale.purchaseAtMs - sale.approachAtMs) / 1_000;
+      const approachTargetDistance = 1.5 * approachDurationSeconds;
+      const approachZDistance = Math.abs(counterZ - streetZ);
+      const approachXDistance = Math.sqrt(
+        Math.max(
+          0.04,
+          approachTargetDistance * approachTargetDistance -
+            approachZDistance * approachZDistance,
+        ),
+      );
+      const streetX =
+        counterX +
+        (sale.direction === -1 ? -approachXDistance : approachXDistance);
       const approachDistance = Math.hypot(counterX - streetX, counterZ - streetZ);
+      const departDurationSeconds =
+        Math.max(1, sale.departAtMs - sale.drinkEndAtMs) / 1_000;
+      const departTargetDistance = 1.5 * departDurationSeconds;
+      const departZDistance = Math.abs(streetZ - drinkZ);
+      const departXDistance = Math.sqrt(
+        Math.max(
+          0.04,
+          departTargetDistance * departTargetDistance -
+            departZDistance * departZDistance,
+        ),
+      );
+      const exitX =
+        drinkX +
+        (sale.direction === -1 ? departXDistance : -departXDistance);
       const departDistance = Math.hypot(exitX - drinkX, streetZ - drinkZ);
       let x = counterX;
       let z = counterZ;
@@ -933,12 +986,7 @@ export const createLemonsvilleScene = (
     const activeBuyerCount = animateBuyers(elapsedMs);
     animatePassersBy(elapsedMs, activeBuyerCount);
     animateSeller(seconds, elapsedMs);
-    ambientLife?.update(
-      state.weather,
-      state.phase,
-      elapsedMs,
-      storyboard.durationMs
-    );
+    updateAmbient(elapsedMs, storyboard.durationMs);
 
     const remainingStock =
       state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs);
@@ -1001,12 +1049,7 @@ export const createLemonsvilleScene = (
     );
 
     applyPhaseStaging();
-    ambientLife?.update(
-      state.weather,
-      state.phase,
-      0,
-      Math.max(1, state.durationMs)
-    );
+    updateAmbient(0, Math.max(1, state.durationMs));
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
     render();

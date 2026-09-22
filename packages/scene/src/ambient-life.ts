@@ -12,6 +12,11 @@ import {
 import { characterProfileFor } from "./characters.js";
 import { decorateCharacter } from "./character-detail.js";
 import { updateNeighborhoodWind } from "./neighborhood.js";
+import {
+  createNeighborhoodMobilitySystem,
+  type MobilityPose,
+  type NeighborhoodMobilitySample,
+} from "./neighborhood-mobility.js";
 import { WORLD_SCALE } from "./world-scale.js";
 import {
   clampToSidewalk,
@@ -47,7 +52,9 @@ export type AmbientLifeController = Readonly<{
     phase: AmbientPhase,
     elapsedMs: number,
     durationMs: number,
-  ): void;
+    dayNumber?: number,
+    focus?: Readonly<{ x: number; z: number }>,
+  ): NeighborhoodMobilitySample;
 }>;
 
 const material = (color: number): MeshStandardMaterial =>
@@ -68,7 +75,7 @@ export const ambientPopulationFor = (
     case "cloudy":
       return Object.freeze({ pets: 1, wildlife: 0, bicycles: 1, vehicles: 1 });
     case "thunderstorm":
-      return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 2 });
+      return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 3 });
   }
 };
 
@@ -253,36 +260,91 @@ const createBicycle = (
   return root;
 };
 
+export type VehicleVariant = "sedan" | "sports" | "pickup" | "truck";
+
+export type VehicleVariantSpec = Readonly<{
+  length: number;
+  width: number;
+  bodyHeight: number;
+  cabinHeight: number;
+  wheelRadius: number;
+}>;
+
+export const vehicleVariantSpec = (
+  variant: VehicleVariant,
+): VehicleVariantSpec => {
+  switch (variant) {
+    case "sports":
+      return Object.freeze({
+        length: 4.35,
+        width: 1.82,
+        bodyHeight: 0.58,
+        cabinHeight: 0.44,
+        wheelRadius: 0.34,
+      });
+    case "pickup":
+      return Object.freeze({
+        length: 5.25,
+        width: 1.96,
+        bodyHeight: 0.78,
+        cabinHeight: 0.78,
+        wheelRadius: 0.4,
+      });
+    case "truck":
+      return Object.freeze({
+        length: 5.8,
+        width: 2.06,
+        bodyHeight: 0.92,
+        cabinHeight: 1.05,
+        wheelRadius: 0.43,
+      });
+    case "sedan":
+      return Object.freeze({
+        length: 4.65,
+        width: 1.88,
+        bodyHeight: 0.68,
+        cabinHeight: 0.62,
+        wheelRadius: 0.36,
+      });
+  }
+};
+
 const createVehicle = (
   color: number,
   seed: number,
   index: number,
+  variant: VehicleVariant,
 ): Group => {
+  const spec = vehicleVariantSpec(variant);
   const root = new Group();
   root.userData["sceneRole"] = "ambient-vehicle";
+  root.userData["vehicleVariant"] = variant;
+
   const body = new Mesh(
-    new BoxGeometry(
-      WORLD_SCALE.vehicle.length,
-      WORLD_SCALE.vehicle.bodyHeight,
-      WORLD_SCALE.vehicle.width,
-    ),
+    new BoxGeometry(spec.length, spec.bodyHeight, spec.width),
     material(color),
   );
-  body.position.y = 0.58;
+  body.position.y = spec.wheelRadius + spec.bodyHeight * 0.62;
   root.add(body);
 
+  const cabinLength =
+    variant === "truck"
+      ? spec.length * 0.32
+      : variant === "pickup"
+        ? spec.length * 0.4
+        : spec.length * 0.48;
+  const cabinX =
+    variant === "truck" ? spec.length * 0.25 : -spec.length * 0.08;
   const cabinBase = new Mesh(
-    new BoxGeometry(2, 0.18, WORLD_SCALE.vehicle.width * 0.9),
+    new BoxGeometry(cabinLength, 0.16, spec.width * 0.9),
     material(color),
   );
-  cabinBase.position.set(-0.28, 0.88, 0);
+  cabinBase.position.set(
+    cabinX,
+    spec.wheelRadius + spec.bodyHeight + 0.08,
+    0,
+  );
   root.add(cabinBase);
-  const roof = new Mesh(
-    new BoxGeometry(1.6, 0.08, WORLD_SCALE.vehicle.width * 0.9),
-    material(color),
-  );
-  roof.position.set(-0.28, 1.5, 0);
-  root.add(roof);
 
   const glass = new MeshStandardMaterial({
     color: 0xb9d2d8,
@@ -291,35 +353,85 @@ const createVehicle = (
     roughness: 0.2,
     depthWrite: false,
   });
-  for (const z of [-WORLD_SCALE.vehicle.width * 0.455, WORLD_SCALE.vehicle.width * 0.455]) {
-    const sideWindow = new Mesh(new BoxGeometry(1.5, 0.5, 0.025), glass.clone());
-    sideWindow.position.set(-0.28, 1.2, z);
-    root.add(sideWindow);
-  }
-  for (const x of [-1.05, 0.5]) {
-    const endWindow = new Mesh(
-      new BoxGeometry(0.025, 0.48, WORLD_SCALE.vehicle.width * 0.76),
+  const windowHeight = Math.max(0.34, spec.cabinHeight * 0.72);
+  for (const z of [-spec.width * 0.455, spec.width * 0.455]) {
+    const sideWindow = new Mesh(
+      new BoxGeometry(cabinLength * 0.8, windowHeight, 0.025),
       glass.clone(),
     );
-    endWindow.position.set(x, 1.2, 0);
-    root.add(endWindow);
+    sideWindow.position.set(
+      cabinX,
+      spec.wheelRadius + spec.bodyHeight + spec.cabinHeight * 0.5,
+      z,
+    );
+    root.add(sideWindow);
   }
 
-  const hood = new Mesh(
-    new BoxGeometry(1.15, 0.28, WORLD_SCALE.vehicle.width * 0.88),
+  const roof = new Mesh(
+    new BoxGeometry(cabinLength * 0.9, 0.08, spec.width * 0.9),
     material(color),
   );
-  hood.position.set(1.5, 0.86, 0);
-  root.add(hood);
+  roof.position.set(
+    cabinX,
+    spec.wheelRadius + spec.bodyHeight + spec.cabinHeight,
+    0,
+  );
+  root.add(roof);
 
-  for (const x of [-1.35, 1.35]) {
-    for (const z of [-0.78, 0.78]) {
+  if (variant === "pickup") {
+    const bed = new Mesh(
+      new BoxGeometry(spec.length * 0.34, spec.bodyHeight * 0.46, spec.width * 0.88),
+      material(color),
+    );
+    bed.position.set(
+      -spec.length * 0.31,
+      spec.wheelRadius + spec.bodyHeight * 0.84,
+      0,
+    );
+    root.add(bed);
+  } else if (variant === "truck") {
+    const cargo = new Mesh(
+      new BoxGeometry(spec.length * 0.48, 1.7, spec.width * 0.94),
+      material(color),
+    );
+    cargo.position.set(
+      -spec.length * 0.24,
+      spec.wheelRadius + 1.36,
+      0,
+    );
+    root.add(cargo);
+  } else {
+    const hood = new Mesh(
+      new BoxGeometry(
+        spec.length * 0.24,
+        spec.bodyHeight * 0.34,
+        spec.width * 0.88,
+      ),
+      material(color),
+    );
+    hood.position.set(
+      spec.length * 0.39,
+      spec.wheelRadius + spec.bodyHeight * 1.02,
+      0,
+    );
+    root.add(hood);
+  }
+
+  const axleX = spec.length * 0.31;
+  const wheelZ = spec.width * 0.47;
+  for (const x of [-axleX, axleX]) {
+    for (const z of [-wheelZ, wheelZ]) {
       const wheel = new Mesh(
-        new CylinderGeometry(0.32, 0.32, 0.22, 12),
+        new CylinderGeometry(
+          spec.wheelRadius,
+          spec.wheelRadius,
+          0.18,
+          12,
+        ),
         material(0x2c3034),
       );
       wheel.rotation.x = Math.PI / 2;
-      wheel.position.set(x, 0.32, z);
+      wheel.position.set(x, spec.wheelRadius, z);
       root.add(wheel);
     }
   }
@@ -327,7 +439,11 @@ const createVehicle = (
   const driver = createTransportCharacter(seed ^ 0x51a7, 10_100 + index);
   driver.root.userData["sceneRole"] = "ambient-driver";
   driver.root.scale.setScalar(0.42);
-  driver.root.position.set(-0.35, 0.72, 0.12);
+  driver.root.position.set(
+    cabinX,
+    spec.wheelRadius + spec.bodyHeight * 0.7,
+    0.12,
+  );
   driver.arms[0].rotation.x = -0.72;
   driver.arms[1].rotation.x = -0.72;
   driver.legs[0].rotation.x = 0.62;
@@ -348,6 +464,39 @@ const routeProgress = (
   return progress - Math.floor(progress);
 };
 
+const applyTransportWalk = (
+  rig: TransportCharacterRig,
+  elapsedMs: number,
+  speed: number,
+): void => {
+  const cycle = elapsedMs * 0.009 * Math.max(0.4, speed);
+  const stride = Math.sin(cycle) * 0.52;
+  rig.legs[0].rotation.x = stride;
+  rig.legs[1].rotation.x = -stride;
+  rig.arms[0].rotation.x = -stride * 0.72;
+  rig.arms[1].rotation.x = stride * 0.72;
+  rig.root.position.y = Math.abs(Math.sin(cycle)) * 0.018;
+};
+
+const placeRig = (
+  rig: TransportCharacterRig,
+  pose: MobilityPose | undefined,
+  elapsedMs: number,
+): void => {
+  rig.root.visible = pose?.visible === true;
+  if (pose === undefined || !pose.visible) return;
+  rig.root.position.set(pose.x, 0, pose.z);
+  rig.root.rotation.y = -pose.yaw;
+  applyTransportWalk(rig, elapsedMs, pose.speed);
+  if (pose.interaction === "gardening") {
+    rig.arms[0].rotation.x = -1.05;
+    rig.arms[1].rotation.x = -0.72;
+    rig.root.rotation.z = Math.sin(elapsedMs * 0.004) * 0.08;
+  } else if (pose.interaction === "mailbox") {
+    rig.arms[1].rotation.x = -1.15;
+  }
+};
+
 export const createAmbientLife = (
   scene: Scene,
   seed: number,
@@ -363,22 +512,58 @@ export const createAmbientLife = (
   const bicycles = [
     createBicycle(0x4f7f91, seed, 0),
     createBicycle(0xb45d4c, seed, 1),
+    createBicycle(0x75864f, seed, 2),
   ];
   const vehicles = [
-    createVehicle(0x7189a8, seed, 0),
-    createVehicle(0xa65e52, seed, 1),
+    createVehicle(0x7189a8, seed, 0, "sedan"),
+    createVehicle(0xa65e52, seed, 1, "sports"),
+    createVehicle(0x6b7c61, seed, 2, "pickup"),
+    createVehicle(0x8a796d, seed, 3, "truck"),
   ];
+  const residents = [
+    createTransportCharacter(seed ^ 0x7341, 12_000),
+    createTransportCharacter(seed ^ 0x7341, 12_001),
+    createTransportCharacter(seed ^ 0x7341, 12_002),
+    createTransportCharacter(seed ^ 0x7341, 12_003),
+  ];
+  const mailCarrier = createTransportCharacter(seed ^ 0x4d41494c, 12_100);
+  const gardener = createTransportCharacter(seed ^ 0x47415244, 12_200);
+  mailCarrier.root.userData["sceneRole"] = "ambient-mail-carrier";
+  gardener.root.userData["sceneRole"] = "ambient-gardener";
+  residents.forEach((resident, index) => {
+    resident.root.userData["sceneRole"] = "ambient-resident";
+    resident.root.userData["residentIndex"] = index;
+  });
 
-  for (const actor of [...pets, ...wildlife, ...bicycles, ...vehicles]) {
+  const mobility = createNeighborhoodMobilitySystem(seed);
+
+  for (const actor of [
+    ...pets,
+    ...wildlife,
+    ...bicycles,
+    ...vehicles,
+    ...residents.map((resident) => resident.root),
+    mailCarrier.root,
+    gardener.root,
+  ]) {
     actor.visible = false;
     scene.add(actor);
   }
 
   return Object.freeze({
-    update(weather, phase, elapsedMs, durationMs): void {
+    update(
+      weather,
+      phase,
+      elapsedMs,
+      durationMs,
+      dayNumber = 1,
+      focus = Object.freeze({ x: 0, z: 0 }),
+    ): void {
       updateNeighborhoodWind(scene, elapsedMs / 1000, weather);
       const population = ambientPopulationFor(weather, phase);
-      pets.forEach((pet, index) => {
+      const pedestrianObstacles: Array<Readonly<{ x: number; z: number }>> = [];
+
+      pets.slice(0, 2).forEach((pet, index) => {
         const owner = owners.find((candidate, ownerIndex) =>
           candidate.visible && ownerIndex >= index,
         ) ?? owners.find((candidate) => candidate.visible);
@@ -393,7 +578,56 @@ export const createAmbientLife = (
         pet.position.set(pose.x, Math.abs(gait) * 0.018, pose.z);
         pet.rotation.y = pose.yaw;
         pet.rotation.z = gait * 0.025;
+        pedestrianObstacles.push({ x: pose.x, z: pose.z });
       });
+
+      for (const owner of owners) {
+        if (!owner.visible) continue;
+        pedestrianObstacles.push({
+          x: owner.position.x,
+          z: owner.position.z,
+        });
+      }
+
+      const sample = mobility.sample({
+        weather,
+        phase,
+        elapsedMs,
+        durationMs,
+        dayNumber,
+        focus,
+        pedestrianObstacles,
+      });
+
+      const residentPet = sample.actors.find((actor) => actor.id === "resident-pet");
+      const homePet = pets[2];
+      if (homePet !== undefined) {
+        homePet.visible = residentPet?.visible === true;
+        if (residentPet?.visible === true) {
+          const gait = Math.sin(elapsedMs * 0.011 + 2.7);
+          homePet.position.set(residentPet.x, Math.abs(gait) * 0.018, residentPet.z);
+          homePet.rotation.y = -residentPet.yaw;
+          homePet.rotation.z = gait * 0.025;
+        }
+      }
+
+      const residentPoses = sample.actors.filter(
+        (actor) => actor.kind === "resident",
+      );
+      residents.forEach((resident, index) => {
+        placeRig(resident, residentPoses[index], elapsedMs);
+      });
+      placeRig(
+        mailCarrier,
+        sample.actors.find((actor) => actor.kind === "mail-carrier"),
+        elapsedMs,
+      );
+      placeRig(
+        gardener,
+        sample.actors.find((actor) => actor.kind === "gardener"),
+        elapsedMs,
+      );
+
       wildlife.forEach((bird, index) => {
         bird.visible = index < population.wildlife;
         if (!bird.visible) return;
@@ -422,38 +656,45 @@ export const createAmbientLife = (
             side * (0.18 + Math.sin(progress * Math.PI * 18 + index) * 0.42);
         }
       });
+
+      const bicyclePoses = sample.actors.filter(
+        (actor) => actor.kind === "bicycle" && actor.visible,
+      );
       bicycles.forEach((bike, index) => {
-        const direction = index % 2 === 0 ? -1 : 1;
-        const progress = routeProgress(
-          elapsedMs,
-          durationMs,
-          index * 0.47 + 0.18,
-          0.9 + index * 0.12,
-        );
-        bike.visible = index < population.bicycles && progress > 0.08 && progress < 0.78;
-        if (!bike.visible) return;
-        const x = direction === 1
-          ? -18 + progress * 36
-          : 18 - progress * 36;
-        bike.position.set(x, 0.02, roadLaneZ("bicycle", index));
-        bike.rotation.y = xTravelYaw(direction);
+        const pose = index < population.bicycles ? bicyclePoses[index] : undefined;
+        bike.visible = pose !== undefined;
+        if (pose === undefined) return;
+        bike.position.set(pose.x, 0.02, pose.z);
+        bike.rotation.y = -pose.yaw;
       });
+
+      const allVehiclePoses = sample.actors.filter(
+        (actor) => actor.kind === "vehicle" && actor.visible,
+      );
+      const residentVehicle = allVehiclePoses.find(
+        (actor) => actor.id === "resident-vehicle",
+      );
+      const throughTraffic = allVehiclePoses.filter(
+        (actor) => actor.id !== "resident-vehicle",
+      );
+      const vehiclePoses = [
+        ...(residentVehicle === undefined ? [] : [residentVehicle]),
+        ...throughTraffic.slice(
+          0,
+          Math.max(
+            0,
+            population.vehicles - (residentVehicle === undefined ? 0 : 1),
+          ),
+        ),
+      ];
       vehicles.forEach((vehicle, index) => {
-        const direction = index % 2 === 0 ? 1 : -1;
-        const progress = routeProgress(
-          elapsedMs,
-          durationMs,
-          index * 0.53 + 0.08,
-          0.52 + index * 0.09,
-        );
-        vehicle.visible = index < population.vehicles && progress > 0.04 && progress < 0.82;
-        if (!vehicle.visible) return;
-        const x = direction === 1
-          ? -20 + progress * 40
-          : 20 - progress * 40;
-        vehicle.position.set(x, 0.02, roadLaneZ("vehicle", index));
-        vehicle.rotation.y = xTravelYaw(direction);
+        const pose = vehiclePoses[index];
+        vehicle.visible = pose !== undefined;
+        if (pose === undefined) return;
+        vehicle.position.set(pose.x, 0.02, pose.z);
+        vehicle.rotation.y = -pose.yaw;
       });
+      return sample;
     },
   });
 };

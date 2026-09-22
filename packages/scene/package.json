@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./crowd-director": "./src/crowd-director.ts",
     "./neighborhood-navigation": "./src/neighborhood-navigation.ts",
+    "./neighborhood-mobility": "./src/neighborhood-mobility.ts",
     "./storyboard": "./src/storyboard.ts",
     "./storyboard-create": "./src/storyboard-create.ts"
   },

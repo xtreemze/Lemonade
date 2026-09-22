@@ -833,6 +833,7 @@ export class LemonadeApp {
       prepared: resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses),
       priceCents: resolvedDay === null ? this.#price : Number(resolvedDay.decision.price),
       characterSeed: Number(this.#runSeed),
+      dayNumber: resolvedDay === null ? Number(this.#game.day) : Number(resolvedDay.day),
       durationMs:
         scenePhase === "simulation"
           ? SIMULATION_PRESENTATION_MS

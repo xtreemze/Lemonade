@@ -3,10 +3,9 @@ import type { Group, Scene } from "three";
 import { walkingCycleAtDistance } from "./gait.js";
 import { characterGroundClearance } from "./world-scale.js";
 import {
-  clampToSidewalk,
   gardenSignPosition,
+  STREET_LAYOUT,
   sidewalkLaneZ,
-  sidewalkLaneZForSide,
   sidewalkSideForActor,
   type SidewalkSide,
 } from "./street-layout.js";
@@ -22,6 +21,8 @@ export type CrowdPose = Readonly<{
   worldSpeed: number;
   travelDistance: number;
   side: SidewalkSide;
+  routeMinZ: number;
+  routeMaxZ: number;
   seesAdvertisement: boolean;
 }>;
 
@@ -36,6 +37,23 @@ export type CrowdSimulation = Readonly<{
 
 const CROWD_CELL_SIZE = 0.72;
 const CROWD_SEPARATION = 0.46;
+
+const NEIGHBORHOOD_SIDEWALK_BANDS = Object.freeze([
+  Object.freeze({ minZ: 20.05, maxZ: 21.7 }),
+  Object.freeze({ minZ: 28.3, maxZ: 29.95 }),
+  Object.freeze({ minZ: -66.95, maxZ: -65.3 }),
+  Object.freeze({ minZ: -58.7, maxZ: -57.05 }),
+] as const);
+
+const clampToRoute = (
+  z: number,
+  minZ: number,
+  maxZ: number,
+  inset = 0.1,
+): number => {
+  const safeInset = Math.max(0, Math.min(0.35, inset));
+  return Math.min(maxZ - safeInset, Math.max(minZ + safeInset, z));
+};
 
 const fract = (value: number): number => value - Math.floor(value);
 
@@ -62,32 +80,58 @@ const basePose = (
   actorCount: number,
 ): CrowdPose => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
-  const durationSeconds = safeDuration / 1_000;
   const count = Math.max(1, actorCount);
-  const routeRate = 0.76 + deterministicUnit(actorIndex, 17) * 0.34;
+  const worldSpeed = 1.28 + deterministicUnit(actorIndex, 17) * 0.54;
   const phaseOffset = actorIndex / count + deterministicUnit(actorIndex, 29) * 0.11;
-  const unwrappedProgress =
-    (Math.max(0, elapsedMs) / safeDuration) * routeRate + phaseOffset;
-  const progress = fract(unwrappedProgress);
   const direction = beat.direction;
-  const startX = direction === -1 ? -12.5 : 12.5;
+  const startX = direction === -1 ? -104 : 104;
   const endX = -startX;
   const pathDistance = Math.abs(endX - startX);
+  const elapsedSeconds =
+    Math.max(0, Math.min(elapsedMs, safeDuration * 8)) / 1_000;
+  const unwrappedProgress =
+    phaseOffset + elapsedSeconds * worldSpeed / pathDistance;
+  const progress = fract(unwrappedProgress);
   const x = startX + (endX - startX) * progress;
 
   const side = sidewalkSideForActor(beat.pedestrianIndex);
-  const laneBase = sidewalkLaneZForSide(side, beat.lane);
+  const standSidewalk =
+    side === "near"
+      ? STREET_LAYOUT.nearSidewalk
+      : STREET_LAYOUT.farSidewalk;
+  const neighborhoodBand =
+    NEIGHBORHOOD_SIDEWALK_BANDS[
+      Math.abs(actorIndex + beat.pedestrianIndex) %
+        NEIGHBORHOOD_SIDEWALK_BANDS.length
+    ];
+  const route =
+    beat.seesAdvertisement || actorIndex < 4
+      ? standSidewalk
+      : (neighborhoodBand ?? standSidewalk);
+  const laneFraction = (Math.abs(Math.trunc(beat.lane)) % 4) / 3;
+  const laneBase =
+    route.minZ +
+    0.28 +
+    laneFraction * Math.max(0, route.maxZ - route.minZ - 0.56);
   const meander = Math.sin(progress * Math.PI * 2 + actorIndex * 0.83) * 0.045;
   const attention = beat.seesAdvertisement
     ? Math.exp(-Math.pow((progress - 0.5) / 0.13, 2))
     : 0;
   const signSide = beat.signIndex >= 0 && beat.signIndex % 2 === 0 ? -1 : 1;
   const signPull = attention * signSide * 0.22;
-  const standwardDrift = side === "near" ? -attention * 0.07 : -attention * 0.025;
-  const z = clampToSidewalk(laneBase + meander + standwardDrift, side, 0.12);
+  const standwardDrift = beat.seesAdvertisement
+    ? side === "near"
+      ? -attention * 0.07
+      : -attention * 0.025
+    : 0;
+  const z = clampToRoute(
+    laneBase + meander + standwardDrift,
+    route.minZ,
+    route.maxZ,
+    0.12,
+  );
 
-  const worldSpeed = Math.abs(endX - startX) * routeRate / durationSeconds;
-  const pace = Math.max(0.72, Math.min(1.7, worldSpeed / 1.55));
+  const pace = Math.max(0.72, Math.min(1.35, worldSpeed / 1.55));
   const baseHeading = direction === -1 ? Math.PI / 2 : -Math.PI / 2;
   const attentionHeading =
     signSide * (side === "near" ? 0.48 : 0.32) * attention;
@@ -99,6 +143,8 @@ const basePose = (
     worldSpeed,
     travelDistance: pathDistance * unwrappedProgress,
     side,
+    routeMinZ: route.minZ,
+    routeMaxZ: route.maxZ,
     seesAdvertisement: beat.seesAdvertisement,
   });
 };
@@ -111,6 +157,8 @@ interface MutableCrowdPose {
   worldSpeed: number;
   travelDistance: number;
   side: SidewalkSide;
+  routeMinZ: number;
+  routeMaxZ: number;
   seesAdvertisement: boolean;
 }
 
@@ -119,46 +167,75 @@ const cellKey = (x: number, z: number): string =>
   String(cellCoordinate(x)) + ":" + String(cellCoordinate(z));
 
 const separateCrowd = (poses: MutableCrowdPose[]): number => {
-  const cells = new Map<string, number[]>();
-  poses.forEach((pose, index) => {
-    const key = cellKey(pose.x, pose.z);
-    const bucket = cells.get(key);
-    if (bucket === undefined) cells.set(key, [index]);
-    else bucket.push(index);
-  });
-
   let neighborChecks = 0;
-  for (let left = 0; left < poses.length; left += 1) {
-    const a = poses[left];
-    if (a === undefined) continue;
-    const cellX = cellCoordinate(a.x);
-    const cellZ = cellCoordinate(a.z);
+  for (let pass = 0; pass < 3; pass += 1) {
+    const cells = new Map<string, number[]>();
+    poses.forEach((pose, index) => {
+      const key = cellKey(pose.x, pose.z);
+      const bucket = cells.get(key);
+      if (bucket === undefined) cells.set(key, [index]);
+      else bucket.push(index);
+    });
 
-    for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
-      for (let offsetZ = -1; offsetZ <= 1; offsetZ += 1) {
-        const bucket = cells.get(
-          String(cellX + offsetX) + ":" + String(cellZ + offsetZ),
-        );
-        if (bucket === undefined) continue;
-        for (const right of bucket) {
-          if (right <= left) continue;
-          const b = poses[right];
-          if (b?.side !== a.side) continue;
-          neighborChecks += 1;
+    for (let left = 0; left < poses.length; left += 1) {
+      const a = poses[left];
+      if (a === undefined) continue;
+      const cellX = cellCoordinate(a.x);
+      const cellZ = cellCoordinate(a.z);
 
-          const dx = b.x - a.x;
-          const dz = b.z - a.z;
-          const distanceSquared = dx * dx + dz * dz;
-          if (distanceSquared >= CROWD_SEPARATION * CROWD_SEPARATION) continue;
+      for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+        for (let offsetZ = -1; offsetZ <= 1; offsetZ += 1) {
+          const bucket = cells.get(
+            String(cellX + offsetX) + ":" + String(cellZ + offsetZ),
+          );
+          if (bucket === undefined) continue;
+          for (const right of bucket) {
+            if (right <= left) continue;
+            const b = poses[right];
+            if (b === undefined) continue;
+            if (
+              a.routeMinZ !== b.routeMinZ ||
+              a.routeMaxZ !== b.routeMaxZ
+            ) {
+              continue;
+            }
+            neighborChecks += 1;
 
-          const distance = Math.sqrt(Math.max(0.0001, distanceSquared));
-          const deterministicSide =
-            deterministicUnit(left + right, 71) < 0.5 ? -1 : 1;
-          const separationSide =
-            Math.abs(dz) > 0.01 ? Math.sign(dz) : deterministicSide;
-          const push = (CROWD_SEPARATION - distance) * 0.52;
-          a.z = clampToSidewalk(a.z - push * separationSide, a.side, 0.1);
-          b.z = clampToSidewalk(b.z + push * separationSide, b.side, 0.1);
+            const dx = b.x - a.x;
+            const dz = b.z - a.z;
+            const distanceSquared = dx * dx + dz * dz;
+            if (distanceSquared >= CROWD_SEPARATION * CROWD_SEPARATION) continue;
+
+            const distance = Math.sqrt(Math.max(0.0001, distanceSquared));
+            const deterministicSide =
+              deterministicUnit(left + right, 71) < 0.5 ? -1 : 1;
+            const separationSide =
+              Math.abs(dz) > 0.01 ? Math.sign(dz) : deterministicSide;
+            const push = (CROWD_SEPARATION - distance) * 0.52;
+            const previousAZ = a.z;
+            const previousBZ = b.z;
+            a.z = clampToRoute(
+              a.z - push * separationSide,
+              a.routeMinZ,
+              a.routeMaxZ,
+              0.1,
+            );
+            b.z = clampToRoute(
+              b.z + push * separationSide,
+              b.routeMinZ,
+              b.routeMaxZ,
+              0.1,
+            );
+            const lateralResolved =
+              Math.abs(a.z - previousAZ) + Math.abs(b.z - previousBZ);
+            if (lateralResolved < push * 0.7) {
+              const travelSignA = Math.sin(a.heading) >= 0 ? 1 : -1;
+              const travelSignB = Math.sin(b.heading) >= 0 ? 1 : -1;
+              const yieldDistance = (CROWD_SEPARATION - distance) * 0.34;
+              a.x -= travelSignA * yieldDistance;
+              b.x -= travelSignB * yieldDistance;
+            }
+          }
         }
       }
     }
