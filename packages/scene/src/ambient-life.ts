@@ -83,18 +83,15 @@ export const petFollowPose = (
   owner: AmbientOwnerAnchor,
   index: number,
 ): PetFollowPose => {
-  const forwardX = Math.sin(owner.heading);
-  const forwardZ = Math.cos(owner.heading);
+  // Pedestrians may turn their torso/head toward an advertisement while their
+  // route still moves along X. Pets follow the route, not the owner's glance.
+  const direction: -1 | 1 = Math.sin(owner.heading) >= 0 ? 1 : -1;
   const lateral = (index % 2 === 0 ? 1 : -1) * (0.15 + (index % 3) * 0.025);
   const trailingDistance = 0.66 + (index % 2) * 0.1;
   return Object.freeze({
-    x: owner.x - forwardX * trailingDistance + forwardZ * lateral,
-    z: clampToNearSidewalk(
-      owner.z - forwardZ * trailingDistance - forwardX * lateral,
-      0.12,
-    ),
-    // Pedestrians face local +Z; pets are modeled nose-first along local +X.
-    yaw: normalizeYaw(owner.heading - Math.PI / 2),
+    x: owner.x - direction * trailingDistance,
+    z: clampToNearSidewalk(owner.z + lateral, 0.12),
+    yaw: xTravelYaw(direction),
   });
 };
 
@@ -114,6 +111,7 @@ const createBird = (color: number): Group => {
 
 const createPet = (color: number): Group => {
   const root = new Group();
+  root.userData["sceneRole"] = "ambient-pet";
   const body = new Mesh(new BoxGeometry(0.5, 0.28, 0.22), material(color));
   body.position.y = 0.3;
   const head = new Mesh(new SphereGeometry(0.16, 8, 6), material(color));
@@ -135,6 +133,7 @@ const createPet = (color: number): Group => {
 
 const createBicycle = (color: number): Group => {
   const root = new Group();
+  root.userData["sceneRole"] = "ambient-bicycle";
   const wheelMaterial = material(0x2f3438);
   for (const x of [-0.42, 0.42]) {
     const wheel = new Mesh(
@@ -161,6 +160,7 @@ const createBicycle = (color: number): Group => {
 
 const createVehicle = (color: number): Group => {
   const root = new Group();
+  root.userData["sceneRole"] = "ambient-vehicle";
   const body = new Mesh(new BoxGeometry(1.65, 0.52, 0.82), material(color));
   body.position.y = 0.48;
   root.add(body);
