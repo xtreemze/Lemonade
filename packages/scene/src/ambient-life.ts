@@ -12,6 +12,7 @@ import {
 import { characterProfileFor } from "./characters.js";
 import { decorateCharacter } from "./character-detail.js";
 import { updateNeighborhoodWind } from "./neighborhood.js";
+import { WORLD_SCALE } from "./world-scale.js";
 import {
   clampToSidewalk,
   roadLaneZ,
@@ -220,24 +221,29 @@ const createBicycle = (
   const root = new Group();
   root.userData["sceneRole"] = "ambient-bicycle";
   const wheelMaterial = material(0x2f3438);
-  for (const x of [-0.42, 0.42]) {
+  const wheelRadius = WORLD_SCALE.bicycle.wheelDiameter / 2;
+  const axleX = WORLD_SCALE.bicycle.length * 0.36;
+  for (const x of [-axleX, axleX]) {
     const wheel = new Mesh(
-      new CylinderGeometry(0.28, 0.28, 0.045, 12),
+      new CylinderGeometry(wheelRadius, wheelRadius, 0.045, 12),
       wheelMaterial,
     );
     wheel.rotation.x = Math.PI / 2;
-    wheel.position.set(x, 0.3, 0);
+    wheel.position.set(x, wheelRadius, 0);
     root.add(wheel);
   }
-  const frame = new Mesh(new BoxGeometry(0.76, 0.055, 0.055), material(color));
-  frame.position.y = 0.42;
+  const frame = new Mesh(
+    new BoxGeometry(WORLD_SCALE.bicycle.length * 0.7, 0.055, 0.055),
+    material(color),
+  );
+  frame.position.y = wheelRadius + 0.16;
   frame.rotation.z = 0.08;
   root.add(frame);
 
   const rider = createTransportCharacter(seed, 500 + index);
   rider.root.userData["sceneRole"] = "ambient-rider";
   rider.root.scale.setScalar(0.58);
-  rider.root.position.set(-0.02, 0.22, 0);
+  rider.root.position.set(-0.02, wheelRadius - 0.08, 0);
   rider.root.rotation.z = -0.12;
   rider.arms[0].rotation.x = -0.92;
   rider.arms[1].rotation.x = -0.92;
@@ -254,15 +260,28 @@ const createVehicle = (
 ): Group => {
   const root = new Group();
   root.userData["sceneRole"] = "ambient-vehicle";
-  const body = new Mesh(new BoxGeometry(1.65, 0.52, 0.82), material(color));
-  body.position.y = 0.48;
+  const body = new Mesh(
+    new BoxGeometry(
+      WORLD_SCALE.vehicle.length,
+      WORLD_SCALE.vehicle.bodyHeight,
+      WORLD_SCALE.vehicle.width,
+    ),
+    material(color),
+  );
+  body.position.y = 0.58;
   root.add(body);
 
-  const cabinBase = new Mesh(new BoxGeometry(0.9, 0.18, 0.76), material(color));
-  cabinBase.position.set(-0.12, 0.76, 0);
+  const cabinBase = new Mesh(
+    new BoxGeometry(2, 0.18, WORLD_SCALE.vehicle.width * 0.9),
+    material(color),
+  );
+  cabinBase.position.set(-0.28, 0.88, 0);
   root.add(cabinBase);
-  const roof = new Mesh(new BoxGeometry(0.72, 0.08, 0.76), material(color));
-  roof.position.set(-0.14, 1.14, 0);
+  const roof = new Mesh(
+    new BoxGeometry(1.6, 0.08, WORLD_SCALE.vehicle.width * 0.9),
+    material(color),
+  );
+  roof.position.set(-0.28, 1.5, 0);
   root.add(roof);
 
   const glass = new MeshStandardMaterial({
@@ -272,37 +291,43 @@ const createVehicle = (
     roughness: 0.2,
     depthWrite: false,
   });
-  for (const z of [-0.385, 0.385]) {
-    const sideWindow = new Mesh(new BoxGeometry(0.7, 0.32, 0.025), glass.clone());
-    sideWindow.position.set(-0.14, 0.96, z);
+  for (const z of [-WORLD_SCALE.vehicle.width * 0.455, WORLD_SCALE.vehicle.width * 0.455]) {
+    const sideWindow = new Mesh(new BoxGeometry(1.5, 0.5, 0.025), glass.clone());
+    sideWindow.position.set(-0.28, 1.2, z);
     root.add(sideWindow);
   }
-  for (const x of [-0.49, 0.23]) {
-    const endWindow = new Mesh(new BoxGeometry(0.025, 0.3, 0.65), glass.clone());
-    endWindow.position.set(x, 0.96, 0);
+  for (const x of [-1.05, 0.5]) {
+    const endWindow = new Mesh(
+      new BoxGeometry(0.025, 0.48, WORLD_SCALE.vehicle.width * 0.76),
+      glass.clone(),
+    );
+    endWindow.position.set(x, 1.2, 0);
     root.add(endWindow);
   }
 
-  const hood = new Mesh(new BoxGeometry(0.4, 0.16, 0.7), material(color));
-  hood.position.set(0.75, 0.7, 0);
+  const hood = new Mesh(
+    new BoxGeometry(1.15, 0.28, WORLD_SCALE.vehicle.width * 0.88),
+    material(color),
+  );
+  hood.position.set(1.5, 0.86, 0);
   root.add(hood);
 
-  for (const x of [-0.55, 0.55]) {
-    for (const z of [-0.36, 0.36]) {
+  for (const x of [-1.35, 1.35]) {
+    for (const z of [-0.78, 0.78]) {
       const wheel = new Mesh(
-        new CylinderGeometry(0.18, 0.18, 0.12, 10),
+        new CylinderGeometry(0.32, 0.32, 0.22, 12),
         material(0x2c3034),
       );
       wheel.rotation.x = Math.PI / 2;
-      wheel.position.set(x, 0.24, z);
+      wheel.position.set(x, 0.32, z);
       root.add(wheel);
     }
   }
 
   const driver = createTransportCharacter(seed ^ 0x51a7, 10_100 + index);
   driver.root.userData["sceneRole"] = "ambient-driver";
-  driver.root.scale.setScalar(0.4);
-  driver.root.position.set(-0.12, 0.45, 0.08);
+  driver.root.scale.setScalar(0.42);
+  driver.root.position.set(-0.35, 0.72, 0.12);
   driver.arms[0].rotation.x = -0.72;
   driver.arms[1].rotation.x = -0.72;
   driver.legs[0].rotation.x = 0.62;
