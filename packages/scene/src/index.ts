@@ -21,10 +21,8 @@ import {
 } from "three";
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
-import {
-  walkingCycleAtDistance,
-  type StreetMotion,
-} from "./crowd-motion.js";
+import type { StreetMotion } from "./crowd-motion.js";
+import { walkingCycleAtDistance } from "./gait.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { SELLER_Z } from "./stand-anchors.js";
 import type { StandDetailController } from "./stand-detail.js";
