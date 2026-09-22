@@ -22,5 +22,6 @@ jobs:
           install: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @lemonade/scene typecheck
-      - run: pnpm --filter @lemonade/scene test
+      - name: Run pedestrian and navigation regression suites
+        run: pnpm --filter @lemonade/scene exec vitest run test/crowd-motion.test.ts test/buyer-motion.test.ts test/storyboard.test.ts test/neighborhood-navigation.test.ts
       - run: pnpm --filter @lemonade/scene build
