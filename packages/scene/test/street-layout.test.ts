@@ -7,15 +7,21 @@ import {
 } from "../src/street-layout.js";
 
 describe("street zoning", () => {
-  it("keeps all pedestrian lanes inside the widened near sidewalk", () => {
-    for (let lane = 0; lane < 4; lane += 1) {
-      const z = sidewalkLaneZ(lane);
+  it("maps pedestrian lanes onto both sidewalks without entering the road", () => {
+    const lanes = Array.from({ length: 4 }, (_, lane) => sidewalkLaneZ(lane));
+    const near = lanes.filter((z) => z < STREET_LAYOUT.road.minZ);
+    const far = lanes.filter((z) => z > STREET_LAYOUT.road.maxZ);
+
+    expect(near).toHaveLength(2);
+    expect(far).toHaveLength(2);
+    for (const z of near) {
       expect(z).toBeGreaterThan(STREET_LAYOUT.nearSidewalk.minZ);
       expect(z).toBeLessThan(STREET_LAYOUT.nearSidewalk.maxZ);
-      expect(z).toBeLessThan(STREET_LAYOUT.road.minZ);
     }
-    expect(STREET_LAYOUT.nearSidewalk.maxZ - STREET_LAYOUT.nearSidewalk.minZ)
-      .toBeGreaterThanOrEqual(1.8);
+    for (const z of far) {
+      expect(z).toBeGreaterThan(STREET_LAYOUT.farSidewalk.minZ);
+      expect(z).toBeLessThan(STREET_LAYOUT.farSidewalk.maxZ);
+    }
   });
 
   it("places advertising signs in garden bands instead of the sidewalk or road", () => {
