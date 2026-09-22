@@ -24,6 +24,10 @@ import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { walkingCycleAtDistance } from "./gait.js";
+import type {
+  NeighborhoodMobilitySample,
+  PropertyActivity,
+} from "./neighborhood-mobility.js";
 import {
   characterGroundClearance,
   WORLD_SCALE,
@@ -520,8 +524,13 @@ export const createLemonsvilleScene = (
           phase: ScenePhase,
           elapsedMs: number,
           durationMs: number,
-        ): void;
+          dayNumber?: number,
+          focus?: Readonly<{ x: number; z: number }>,
+        ): NeighborhoodMobilitySample;
       }>
+    | null = null;
+  let updateNeighborhoodActivity:
+    | ((activities: readonly PropertyActivity[], elapsedMs: number) => void)
     | null = null;
   let animationFrame: number | null = null;
   let animationEpoch = performance.now();
@@ -593,10 +602,32 @@ export const createLemonsvilleScene = (
     renderer.render(scene, camera);
   };
 
+  const updateAmbient = (
+    elapsedMs: number,
+    durationMs: number,
+  ): NeighborhoodMobilitySample | null => {
+    const sample = ambientLife?.update(
+      state.weather,
+      state.phase,
+      elapsedMs,
+      durationMs,
+      state.dayNumber,
+      { x: camera.position.x, z: camera.position.z },
+    ) ?? null;
+    if (sample !== null) {
+      updateNeighborhoodActivity?.(sample.properties, elapsedMs);
+    }
+    return sample;
+  };
+
   void import("./neighborhood.js")
-    .then(({ populateNeighborhood }) => {
+    .then(({ populateNeighborhood, updateNeighborhoodActivity: updateActivity }) => {
       if (disposed) return;
       populateNeighborhood(scene, initialState.characterSeed ^ 0x4c_45_4d_4f);
+      updateNeighborhoodActivity = (activities, elapsedMs) => {
+        updateActivity(scene, activities, elapsedMs);
+      };
+      updateAmbient(0, Math.max(1, state.durationMs));
       render();
     })
     .catch(() => undefined);
@@ -629,7 +660,7 @@ export const createLemonsvilleScene = (
         initialState.characterSeed,
         customers.map((customer) => customer.root),
       );
-      ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
+      updateAmbient(0, Math.max(1, state.durationMs));
       render();
     })
     .catch(() => undefined);
@@ -760,14 +791,7 @@ export const createLemonsvilleScene = (
       Math.max(1, storyboard.durationMs),
       state.reducedMotion,
     );
-    ambientLife?.update(
-      state.weather,
-      state.phase,
-      0,
-      Math.max(1, storyboard.durationMs),
-      state.dayNumber,
-      { x: camera.position.x, z: camera.position.z },
-    );
+    updateAmbient(0, Math.max(1, storyboard.durationMs));
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
 
@@ -972,14 +996,7 @@ export const createLemonsvilleScene = (
     const activeBuyerCount = animateBuyers(elapsedMs);
     animatePassersBy(elapsedMs, activeBuyerCount);
     animateSeller(seconds, elapsedMs);
-    ambientLife?.update(
-      state.weather,
-      state.phase,
-      elapsedMs,
-      storyboard.durationMs,
-      state.dayNumber,
-      { x: camera.position.x, z: camera.position.z },
-    );
+    updateAmbient(elapsedMs, storyboard.durationMs);
 
     const remainingStock =
       state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs);
@@ -1042,14 +1059,7 @@ export const createLemonsvilleScene = (
     );
 
     applyPhaseStaging();
-    ambientLife?.update(
-      state.weather,
-      state.phase,
-      0,
-      Math.max(1, state.durationMs),
-      state.dayNumber,
-      { x: camera.position.x, z: camera.position.z },
-    );
+    updateAmbient(0, Math.max(1, state.durationMs));
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
     render();
