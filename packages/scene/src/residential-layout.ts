@@ -912,14 +912,22 @@ const generatePropertyPlantings = (
     const direction = yardZone === "back"
       ? -access.frontDirection
       : access.frontDirection;
-    const baseDistance =
-      footprint.halfDepth + (yardZone === "back" ? 3.25 : 1.05);
     const lateralCandidates =
       yardZone === "back"
         ? [-2.4, 2.4, 0, -3.5, 3.5, -4.8, 4.8, -6.2, 6.2]
         : [-2.2, 2.2, -3.05, 3.05];
 
     for (let attempt = 0; attempt < (yardZone === "back" ? 90 : 28); attempt += 1) {
+      const scale =
+        yardZone === "back"
+          ? 0.48 +
+            unit(seed, salt + propertyIndex * 107 + attempt * 7 + 2) * 0.16
+          : 0.84 +
+            unit(seed, salt + propertyIndex * 107 + attempt * 7 + 2) * 0.22;
+      const footprintClearance = clearance * scale;
+      const baseDistance =
+        footprint.halfDepth +
+        (yardZone === "back" ? footprintClearance + 0.28 : 1.05);
       const lateralBase =
         lateralCandidates[attempt % lateralCandidates.length] ?? 0;
       const ring = Math.floor(attempt / lateralCandidates.length);
@@ -931,16 +939,9 @@ const generatePropertyPlantings = (
         property.houseZ +
         direction *
           (baseDistance +
-            ring * 0.62 +
-            unit(seed, salt + propertyIndex * 103 + attempt * 7 + 1) * 0.3);
-      const scale =
-        yardZone === "back"
-          ? 0.62 +
-            unit(seed, salt + propertyIndex * 107 + attempt * 7 + 2) * 0.18
-          : 0.84 +
-            unit(seed, salt + propertyIndex * 107 + attempt * 7 + 2) * 0.22;
+            ring * 0.48 +
+            unit(seed, salt + propertyIndex * 103 + attempt * 7 + 1) * 0.22);
       const candidate = { x, z };
-      const footprintClearance = clearance * scale;
 
       if (
         residentialFootprintIntersectsHardscape(
