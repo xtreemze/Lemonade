@@ -75,14 +75,14 @@ export const populateStand = (
     addBox(root, post.size, post.position, 0x5e4934);
   }
   addBox(root, STAND_LAYOUT.canopy.size, STAND_LAYOUT.canopy.position, 0xe6a93b);
-  addBox(shutter, [3.0, 0.82, 0.1], [0, 0.96, 0.78], 0xd39b43);
-  addBox(shutter, [0.92, 0.24, 0.04], [0, 0.98, 0.84], 0xf4dc83);
+  addBox(shutter, [2.42, 1.02, 0.08], [0, 1.48, 0.7], 0xd39b43);
+  addBox(shutter, [0.78, 0.2, 0.04], [0, 1.5, 0.75], 0xf4dc83);
 
   const detail = new Group();
   detail.userData["sceneRole"] = "stand-detail";
 
-  addBox(detail, [0.08, 0.54, 0.08], [-0.58, 3.0, 0.58], 0x6b573d);
-  addBox(detail, [0.08, 0.54, 0.08], [0.58, 3.0, 0.58], 0x6b573d);
+  addBox(detail, [0.06, 0.42, 0.06], [-0.52, 2.39, 0.52], 0x6b573d);
+  addBox(detail, [0.06, 0.42, 0.06], [0.52, 2.39, 0.52], 0x6b573d);
   const signBoard = addBox(
     detail,
     [1.58, 0.56, 0.1],
@@ -93,20 +93,20 @@ export const populateStand = (
   signBoard.rotation.z = -0.055;
 
   const lemonBadge = new Mesh(
-    new SphereGeometry(0.2, 10, 8),
+    new SphereGeometry(0.13, 10, 8),
     material(0xf6d33b),
   );
   lemonBadge.scale.set(1.22, 0.86, 0.24);
-  lemonBadge.position.set(-0.48, STAND_SIGN_CENTER_Y, 0.72);
+  lemonBadge.position.set(-0.5, STAND_SIGN_CENTER_Y, 0.72);
   lemonBadge.rotation.z = 0.18;
   detail.add(lemonBadge);
 
   const badgeLeaf = new Mesh(
-    new CylinderGeometry(0, 0.07, 0.2, 5),
+    new CylinderGeometry(0, 0.04, 0.11, 5),
     material(0x4f8c4a),
   );
   badgeLeaf.rotation.z = Math.PI / 2.6;
-  badgeLeaf.position.set(-0.27, STAND_SIGN_CENTER_Y + 0.15, 0.72);
+  badgeLeaf.position.set(-0.37, STAND_SIGN_CENTER_Y + 0.1, 0.72);
   detail.add(badgeLeaf);
   addBox(
     detail,
@@ -171,11 +171,11 @@ export const populateStand = (
     const column = index % 4;
     const row = Math.floor(index / 4);
     lemon.position.set(
-      -1.115 + column * 0.11,
-      STAND_LAYOUT.counterTopY + 0.11 + row * 0.055,
-      0.245 + (column % 2) * 0.09,
+      -0.165 + column * 0.11,
+      0.11 + row * 0.055,
+      -0.055 + (column % 2) * 0.09,
     );
-    detail.add(lemon);
+    basket.add(lemon);
     return lemon;
   });
 
