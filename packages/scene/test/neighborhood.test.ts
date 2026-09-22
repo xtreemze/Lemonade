@@ -61,10 +61,11 @@ describe("neighborhood world scale", () => {
     let checkedScenery = 0;
 
     scene.traverse((object) => {
-      const role = object.userData["sceneRole"];
+      const userData = object.userData as Record<string, unknown>;
+      const role = userData["sceneRole"];
       if (typeof role !== "string" || !checkedRoles.has(role)) return;
-      const clearanceHalfWidth = object.userData["clearanceHalfWidth"];
-      const clearanceHalfDepth = object.userData["clearanceHalfDepth"];
+      const clearanceHalfWidth = userData["clearanceHalfWidth"];
+      const clearanceHalfDepth = userData["clearanceHalfDepth"];
       if (
         typeof clearanceHalfWidth === "number" &&
         typeof clearanceHalfDepth === "number"
@@ -78,10 +79,9 @@ describe("neighborhood world scale", () => {
           ),
         ).toBe(true);
       } else {
+        const clearanceRadiusValue = userData["clearanceRadius"];
         const clearanceRadius =
-          typeof object.userData["clearanceRadius"] === "number"
-            ? object.userData["clearanceRadius"]
-            : 0;
+          typeof clearanceRadiusValue === "number" ? clearanceRadiusValue : 0;
         expect(
           staticSceneryPlacementAllowed(
             object.position.x,
@@ -91,10 +91,9 @@ describe("neighborhood world scale", () => {
         ).toBe(true);
       }
       if (role === "tree") {
+        const clearanceRadiusValue = userData["clearanceRadius"];
         const clearanceRadius =
-          typeof object.userData["clearanceRadius"] === "number"
-            ? object.userData["clearanceRadius"]
-            : 0;
+          typeof clearanceRadiusValue === "number" ? clearanceRadiusValue : 0;
         expect(
           blocksFrontHouseFacade(
             object.position.x,
