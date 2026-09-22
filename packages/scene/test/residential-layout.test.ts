@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_RESIDENTIAL_SEED,
+  DRIVEWAY_HALF_WIDTH,
+  HOUSE_FOOTPRINT_DEPTH,
+  HOUSE_FOOTPRINT_WIDTH,
   generateResidentialLayout,
+  residentialFootprintIntersectsHardscape,
   residentialPointIsBlocked,
 } from "../src/residential-layout.js";
 import { STAND_LAYOUT } from "../src/stand-layout.js";
@@ -38,18 +42,51 @@ describe("procedural residential layout", () => {
 
     for (const property of layout.frontProperties) {
       if (property.drivewayX === null || property.mailboxX === null) continue;
-      expect(Math.abs(property.mailboxX - property.drivewayX)).toBeGreaterThan(1.2);
+      expect(Math.abs(property.mailboxX - property.drivewayX)).toBeGreaterThan(
+        DRIVEWAY_HALF_WIDTH + 0.3,
+      );
     }
   });
 
-  it("keeps all generated planting anchors out of roads, sidewalks, driveways and house fronts", () => {
+  it("keeps complete house and planting footprints out of roads, sidewalks, driveways and house fronts", () => {
     const layout = generateResidentialLayout(0xdecafbad);
     expect(layout.trees).toHaveLength(48);
     expect(layout.shrubs).toHaveLength(14);
     expect(layout.flowers).toHaveLength(12);
 
-    for (const planting of [...layout.trees, ...layout.shrubs, ...layout.flowers]) {
-      expect(residentialPointIsBlocked(planting, layout)).toBe(false);
+    for (const property of [
+      ...layout.frontProperties,
+      ...layout.middleProperties,
+      ...layout.backProperties,
+    ]) {
+      expect(
+        residentialFootprintIntersectsHardscape(
+          { x: property.houseX, z: property.houseZ },
+          layout,
+          (HOUSE_FOOTPRINT_WIDTH * property.scale) / 2,
+          (HOUSE_FOOTPRINT_DEPTH * property.scale) / 2,
+        ),
+      ).toBe(false);
+    }
+
+    for (const planting of layout.trees) {
+      const clearance = 2.15 * planting.scale;
+      expect(residentialPointIsBlocked(planting, layout, clearance)).toBe(false);
+      expect(
+        residentialFootprintIntersectsHardscape(
+          planting,
+          layout,
+          clearance,
+          clearance,
+        ),
+      ).toBe(false);
+    }
+    for (const planting of layout.shrubs) {
+      const clearance = 1.05 * planting.scale;
+      expect(residentialPointIsBlocked(planting, layout, clearance)).toBe(false);
+    }
+    for (const planting of layout.flowers) {
+      expect(residentialPointIsBlocked(planting, layout, 0.16)).toBe(false);
     }
   });
 
