@@ -76,6 +76,28 @@ const streetStrip = (
   return mesh;
 };
 
+const accessStrip = (
+  scene: Scene,
+  length: number,
+  width: number,
+  x: number,
+  z: number,
+  rotationY: number,
+  color: number,
+  y: number,
+  role: string,
+): Mesh => {
+  const mesh = new Mesh(
+    new BoxGeometry(length, 0.018, width),
+    material(color),
+  );
+  mesh.position.set(x, y, z);
+  mesh.rotation.y = -rotationY;
+  mesh.userData["sceneRole"] = role;
+  scene.add(mesh);
+  return mesh;
+};
+
 const markWindResponsive = (root: Group, phase: number): Group => {
   root.userData["windResponsive"] = true;
   root.userData["windPhase"] = phase;
@@ -697,12 +719,13 @@ export const populateNeighborhood = (
         0.019,
         "driveway",
       );
-      road(
+      accessStrip(
         scene,
+        access.pathLength,
         access.pathWidth,
-        access.pathDepth,
         access.pathCenterX,
         access.pathCenterZ,
+        access.pathRotationY,
         0xd8c9aa,
         0.021,
         "front-path",
