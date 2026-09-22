@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { characterProfileFor } from "../src/characters.js";
+import { STREET_LAYOUT } from "../src/street-layout.js";
 import {
   createStreetStoryboard,
   formatPriceLabel,
@@ -190,6 +191,13 @@ describe("street simulation storyboard", () => {
     expect(portraitStand.position[2]).toBeGreaterThan(portraitRemaining.position[2]);
     expect(portraitForecast.lookAt[2]).toBeLessThan(portraitStand.lookAt[2]);
     expect(portraitRemaining.lookAt[2]).toBeGreaterThanOrEqual(1);
+
+    const landscapeStand = sceneCameraComposition(844, 390, "stand");
+    expect(landscapeStand.position[2])
+      .toBeGreaterThan(STREET_LAYOUT.farSidewalk.maxZ + 6);
+    expect(landscapeStand.lookAt[2]).toBeGreaterThan(STREET_LAYOUT.road.minZ);
+    expect(landscapeStand.lookAt[2]).toBeLessThan(STREET_LAYOUT.road.maxZ);
+    expect(landscapeStand.fov).toBeGreaterThanOrEqual(34);
   });
 
   it("derives stable, varied character appearance and gait from the run seed", () => {
