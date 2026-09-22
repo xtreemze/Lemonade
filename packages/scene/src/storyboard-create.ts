@@ -1,9 +1,10 @@
-import type {
-  PasserbyBeat,
-  SaleBeat,
-  SceneShot,
-  StreetDirection,
-  StreetStoryboard,
+import {
+  BUYER_POOL_SIZE,
+  type PasserbyBeat,
+  type SaleBeat,
+  type SceneShot,
+  type StreetDirection,
+  type StreetStoryboard,
 } from "./storyboard.js";
 
 export type StreetStoryboardInput = Readonly<{
@@ -65,19 +66,55 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
 
   const purchaseWindowStart = Math.round(activeDurationMs * 0.22);
   const purchaseWindowEnd = Math.round(activeDurationMs * 0.68);
-  const approachTravelMs = Math.min(1_600, Math.max(1_100, activeDurationMs * 0.16));
+  const naturalApproachTravelMs = Math.min(
+    1_600,
+    Math.max(1_100, activeDurationMs * 0.16),
+  );
   const purchaseDurationMs = Math.min(220, Math.max(130, activeDurationMs * 0.028));
   const drinkDurationMs = Math.min(430, Math.max(240, activeDurationMs * 0.055));
-  const departTravelMs = Math.min(1_600, Math.max(1_300, activeDurationMs * 0.16));
-
-  const sales = Array.from({ length: sold }, (_, index): SaleBeat => {
-    const purchaseAtMs =
+  const naturalDepartTravelMs = Math.min(
+    1_600,
+    Math.max(1_300, activeDurationMs * 0.16),
+  );
+  const purchaseTimes = Object.freeze(
+    Array.from({ length: sold }, (_, index) =>
       sold === 1
         ? Math.round(activeDurationMs * 0.48)
         : Math.round(
             purchaseWindowStart +
               ((purchaseWindowEnd - purchaseWindowStart) * index) / Math.max(1, sold - 1),
-          );
+          ),
+    ),
+  );
+  let minimumSlotReuseGapMs = Number.POSITIVE_INFINITY;
+  for (let index = 0; index + BUYER_POOL_SIZE < purchaseTimes.length; index += 1) {
+    const purchaseAtMs = purchaseTimes[index];
+    const nextPurchaseAtMs = purchaseTimes[index + BUYER_POOL_SIZE];
+    if (purchaseAtMs === undefined || nextPurchaseAtMs === undefined) continue;
+    minimumSlotReuseGapMs = Math.min(
+      minimumSlotReuseGapMs,
+      nextPurchaseAtMs - purchaseAtMs,
+    );
+  }
+  const fixedLifecycleMs = purchaseDurationMs + drinkDurationMs;
+  const denseTravelBudgetMs = Number.isFinite(minimumSlotReuseGapMs)
+    ? Math.max(2, minimumSlotReuseGapMs - fixedLifecycleMs - 16)
+    : Number.POSITIVE_INFINITY;
+  const approachTravelMs = Number.isFinite(denseTravelBudgetMs)
+    ? Math.min(
+        naturalApproachTravelMs,
+        Math.max(1, Math.floor(denseTravelBudgetMs / 2)),
+      )
+    : naturalApproachTravelMs;
+  const departTravelMs = Number.isFinite(denseTravelBudgetMs)
+    ? Math.min(
+        naturalDepartTravelMs,
+        Math.max(1, Math.floor(denseTravelBudgetMs - approachTravelMs)),
+      )
+    : naturalDepartTravelMs;
+
+  const sales = Array.from({ length: sold }, (_, index): SaleBeat => {
+    const purchaseAtMs = purchaseTimes[index] ?? 0;
     const purchaseEndAtMs = Math.min(
       activeDurationMs,
       Math.round(purchaseAtMs + purchaseDurationMs),
