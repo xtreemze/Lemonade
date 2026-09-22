@@ -801,7 +801,7 @@ export const createLemonsvilleScene = (
   };
 
   const animateBuyers = (elapsedMs: number): number => {
-    const activeBuyerPositions: Array<{ x: number; z: number }> = [];
+    const activeBuyerPositions: { x: number; z: number }[] = [];
 
     for (const buyer of buyers) {
       const fade = buyerFadeState.get(buyer);
