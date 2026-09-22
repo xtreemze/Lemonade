@@ -140,3 +140,64 @@ export const dayCycleAt = (
   if (finalFrame === undefined) throw new Error("day-cycle keyframes missing");
   return interpolate(finalFrame, finalFrame, 1);
 };
+
+
+export type AtmospherePhase = "idle" | "simulation" | "forecast";
+
+export type AtmosphereTarget = Readonly<{
+  setSky(color: number): void;
+  setHemisphere(intensity: number): void;
+  setSun(
+    color: number,
+    intensity: number,
+    position: readonly [number, number, number],
+  ): void;
+  setProgress(progress: number | null): void;
+}>;
+
+export type AtmosphereController = Readonly<{
+  update(
+    phase: AtmospherePhase,
+    weather: DayCycleWeather,
+    elapsedMs: number,
+    durationMs: number,
+  ): void;
+}>;
+
+const staticSky = (
+  weather: DayCycleWeather,
+  earlyMorning: boolean,
+): number => {
+  const [morning, midday] = weatherSky(weather);
+  return earlyMorning ? morning : midday;
+};
+
+export const createAtmosphereController = (
+  target: AtmosphereTarget,
+): AtmosphereController =>
+  Object.freeze({
+    update(phase, weather, elapsedMs, durationMs): void {
+      if (phase === "simulation") {
+        const cycle = dayCycleAt(elapsedMs, durationMs, weather);
+        target.setSky(cycle.skyColor);
+        target.setHemisphere(cycle.hemisphereIntensity);
+        target.setSun(
+          cycle.sunColor,
+          cycle.sunlightIntensity,
+          cycle.sunPosition,
+        );
+        target.setProgress(cycle.progress);
+        return;
+      }
+
+      const forecast = phase === "forecast";
+      target.setSky(staticSky(weather, forecast));
+      target.setHemisphere(forecast ? 1.35 : 1.9);
+      target.setSun(
+        0xfff0c9,
+        forecast ? 1.05 : 1.8,
+        [-5, 10, 7],
+      );
+      target.setProgress(null);
+    },
+  });
