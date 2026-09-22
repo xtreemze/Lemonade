@@ -9,8 +9,8 @@ import {
   crowdGroundClearance,
   crowdPosesAt,
   walkingBodyLift,
-  walkingCycleAtDistance,
 } from "../src/crowd-motion.js";
+import { walkingCycleAtDistance } from "../src/gait.js";
 import { STREET_LAYOUT, roadLaneZ } from "../src/street-layout.js";
 import type { PasserbyBeat } from "../src/storyboard.js";
 
