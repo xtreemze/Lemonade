@@ -1229,7 +1229,9 @@ export const createPersistentSceneViewer = (
     link.href = url;
     link.download = `lemonade-scene-${String(state.seed)}.json`;
     link.click();
-    window.setTimeout(() => {\n      URL.revokeObjectURL(url);\n    }, 0);
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 0);
     setStatus("Editor state exported.");
   });
 
