@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { characterIdentityFor } from "../src/character-detail.js";
 import { characterProfileFor } from "../src/characters.js";
 
 describe("seeded scene characters", () => {
@@ -25,21 +26,30 @@ describe("seeded scene characters", () => {
   });
 
   it("includes adult men, adult women, boys, and girls with modeled garment variety", () => {
-    const profiles = Array.from({ length: 24 }, (_, index) =>
-      characterProfileFor(0x1ead2026, index),
-    );
+    const actors = Array.from({ length: 24 }, (_, index) => {
+      const profile = characterProfileFor(0x1ead2026, index);
+      return Object.freeze({
+        profile,
+        identity: characterIdentityFor(index, profile),
+      });
+    });
     const cohorts = new Set(
-      profiles.map((profile) => `${profile.ageGroup}:${profile.gender}`),
+      actors.map(({ identity }) => `${identity.ageGroup}:${identity.gender}`),
     );
 
     expect(cohorts).toEqual(
       new Set(["adult:male", "adult:female", "child:male", "child:female"]),
     );
-    expect(new Set(profiles.map((profile) => profile.garmentStyle)).size).toBeGreaterThanOrEqual(3);
-    expect(profiles.filter((profile) => profile.ageGroup === "child").every(
-      (profile) => profile.heightScale < 0.88,
-    )).toBe(true);
-    expect(characterProfileFor(0x1ead2026, 10_001).ageGroup).toBe("adult");
+    expect(
+      new Set(actors.map(({ identity }) => identity.garmentStyle)).size,
+    ).toBeGreaterThanOrEqual(3);
+    expect(
+      actors
+        .filter(({ identity }) => identity.ageGroup === "child")
+        .every(({ profile }) => profile.heightScale < 0.88),
+    ).toBe(true);
+    const seller = characterProfileFor(0x1ead2026, 10_001);
+    expect(characterIdentityFor(10_001, seller).ageGroup).toBe("adult");
   });
 
   it("changes character identity when the run seed changes", () => {
