@@ -1,0 +1,26 @@
+name: focused scene pedestrian check
+
+on:
+  pull_request:
+    paths:
+      - "packages/scene/**"
+      - ".github/workflows/scene-pedestrian-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  scene:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @lemonade/scene typecheck
+      - run: pnpm --filter @lemonade/scene test
+      - run: pnpm --filter @lemonade/scene build
