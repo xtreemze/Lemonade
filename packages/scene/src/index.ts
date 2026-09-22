@@ -24,23 +24,17 @@ import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { walkingCycleAtDistance } from "./gait.js";
-import type {
-  NeighborhoodMobilitySample,
-  PropertyActivity,
-} from "./neighborhood-mobility.js";
 import {
   characterGroundClearance,
   WORLD_SCALE,
 } from "./world-scale.js";
-import { updateNeighborhoodWind } from "./neighborhood.js";
 import { SELLER_Z } from "./stand-anchors.js";
-import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
 import type { WeatherDetailController } from "./weather-detail.js";
 import {
-  BUYER_POOL_SIZE,
   buyerPhaseAt,
   buyerSlotForSale,
+  endingConfidenceAt,
   remainingCameraProgressAt,
   remainingCupsAt,
   sceneCameraComposition,
@@ -49,11 +43,6 @@ import {
   type SceneShotKind,
   type StreetStoryboard,
 } from "./storyboard.js";
-import { createGizmoController, type GizmoController, type TransformMode, type ObjectTransform } from "./gizmo-controller.js";
-import { createGizmoUI } from "./gizmo-ui.js";
-
-export { createGizmoController, createGizmoUI };
-export type { GizmoController, TransformMode, ObjectTransform };
 
 export type SceneWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 export type CustomerActivity = "quiet" | "light" | "steady" | "lively" | "busy";
@@ -67,14 +56,9 @@ export type LemonsvilleSceneState = Readonly<{
   confidence: number;
   nextConfidence: number;
   characterSeed: number;
-  dayNumber: number;
   storyboard: StreetStoryboard;
   phase: ScenePhase;
   reducedMotion: boolean;
-}>;
-
-export type LemonsvilleSceneOptions = Readonly<{
-  enableGizmo?: boolean;
 }>;
 
 export interface LemonsvilleSceneController {
@@ -84,6 +68,7 @@ export interface LemonsvilleSceneController {
 }
 
 const PASSERBY_POOL_SIZE = 32;
+const BUYER_POOL_SIZE = 192;
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
@@ -441,13 +426,13 @@ const disposeObject = (object: Object3D): void => {
 export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
-  options: LemonsvilleSceneOptions = {},
 ): LemonsvilleSceneController | null => {
   let renderer: WebGLRenderer;
   try {
     renderer = new WebGLRenderer({
       canvas,
       antialias: true,
+      alpha: false,
       powerPreference: "high-performance",
     });
   } catch {
@@ -456,12 +441,13 @@ export const createLemonsvilleScene = (
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = SRGBColorSpace;
+  renderer.shadowMap.enabled = false;
+  renderer.setClearColor(0x8fa7b8, 1);
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
-
-  let gizmo: ReturnType<typeof createGizmoController> | null = null;
-  let gizmoUI: HTMLElement | null = null;
+  camera.position.set(0, 6.8, 13.5);
+  camera.lookAt(0, 1.7, 0);
 
   const hemisphere = new HemisphereLight(0xfff2c6, 0x526b51, 1.9);
   scene.add(hemisphere);
@@ -472,19 +458,13 @@ export const createLemonsvilleScene = (
   const ground = new Mesh(new PlaneGeometry(160, 150), makeMaterial(0x92ad68));
   ground.rotation.x = -Math.PI / 2;
   ground.position.z = -32;
-  ground.name = "ground";
   scene.add(ground);
 
   const stand = createStand();
-  stand.root.name = "lemonadeStand";
-  stand.root.position.z = -1;
+  stand.root.position.z = -2;
   scene.add(stand.root);
 
-  const signs = Array.from({ length: 40 }, (_, index) => {
-    const sign = createSign();
-    sign.root.name = `advertisingSign_${index}`;
-    return sign;
-  });
+  const signs = Array.from({ length: 40 }, () => createSign());
   let signTexture: CanvasTexture | null = null;
   let signPriceLabel = "";
   let disposed = false;
@@ -493,23 +473,20 @@ export const createLemonsvilleScene = (
     | Promise<Readonly<{ createPriceSignSurface(priceLabel: string): HTMLCanvasElement }>>
     | null = null;
 
-  const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) => {
-    const customer = createPerson(initialState.characterSeed, index);
-    customer.root.name = `passerby_${index}`;
-    scene.add(customer.root);
-    return customer;
-  });
+  const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) =>
+    createPerson(initialState.characterSeed, index),
+  );
+  for (const customer of customers) scene.add(customer.root);
 
-  const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) => {
-    const buyer = createPerson(initialState.characterSeed, index + PASSERBY_POOL_SIZE);
+  const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) =>
+    createPerson(initialState.characterSeed, index + PASSERBY_POOL_SIZE),
+  );
+  for (const buyer of buyers) {
     buyer.root.visible = false;
-    buyer.root.name = `buyer_${index}`;
     scene.add(buyer.root);
-    return buyer;
-  });
+  }
 
   const seller = createSeller(initialState.characterSeed);
-  seller.person.root.name = "seller";
   seller.person.root.position.set(
     0,
     personGroundY(seller.person),
@@ -532,7 +509,6 @@ export const createLemonsvilleScene = (
 
   let state = initialState;
   let crowdMotion: StreetMotion | null = null;
-  let applySellerGesture: SellerGestureApplier | null = null;
   let weatherDetail: WeatherDetailController | null = null;
   let ambientLife:
     | Readonly<{
@@ -541,13 +517,8 @@ export const createLemonsvilleScene = (
           phase: ScenePhase,
           elapsedMs: number,
           durationMs: number,
-          dayNumber?: number,
-          focus?: Readonly<{ x: number; z: number }>,
-        ): NeighborhoodMobilitySample;
+        ): void;
       }>
-    | null = null;
-  let updateNeighborhoodActivity:
-    | ((activities: readonly PropertyActivity[], elapsedMs: number) => void)
     | null = null;
   let animationFrame: number | null = null;
   let animationEpoch = performance.now();
@@ -619,34 +590,10 @@ export const createLemonsvilleScene = (
     renderer.render(scene, camera);
   };
 
-  const updateAmbient = (
-    elapsedMs: number,
-    durationMs: number,
-  ): NeighborhoodMobilitySample | null => {
-    const sample = ambientLife?.update(
-      state.weather,
-      state.phase,
-      elapsedMs,
-      durationMs,
-      state.dayNumber,
-      { x: camera.position.x, z: camera.position.z },
-    ) ?? null;
-    if (sample !== null) {
-      updateNeighborhoodActivity?.(sample.properties, elapsedMs);
-    }
-    return sample;
-  };
-
-  const neighborhoodSeed = initialState.characterSeed ^ 0x4c_45_4d_4f;
-
   void import("./neighborhood.js")
-    .then(({ populateNeighborhood, updateNeighborhoodActivity: updateActivity }) => {
+    .then(({ populateNeighborhood }) => {
       if (disposed) return;
-      populateNeighborhood(scene, neighborhoodSeed);
-      updateNeighborhoodActivity = (activities, elapsedMs) => {
-        updateActivity(scene, activities, elapsedMs);
-      };
-      updateAmbient(0, Math.max(1, state.durationMs));
+      populateNeighborhood(scene, initialState.characterSeed ^ 0x4c_45_4d_4f);
       render();
     })
     .catch(() => undefined);
@@ -665,7 +612,7 @@ export const createLemonsvilleScene = (
   void import("./crowd-motion.js")
     .then(({ initializeStreetMotion }) => {
       if (disposed) return;
-      crowdMotion = initializeStreetMotion(scene, signs, neighborhoodSeed);
+      crowdMotion = initializeStreetMotion(scene, signs);
       resetAnimatedObjects();
       render();
     })
@@ -678,9 +625,8 @@ export const createLemonsvilleScene = (
         scene,
         initialState.characterSeed,
         customers.map((customer) => customer.root),
-        neighborhoodSeed,
       );
-      updateAmbient(0, Math.max(1, state.durationMs));
+      ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
       render();
     })
     .catch(() => undefined);
@@ -723,9 +669,8 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./character-detail.js")
-    .then(({ applySellerConfidenceGesture, decorateSceneCharacters }) => {
+    .then(({ decorateSceneCharacters }) => {
       if (disposed) return;
-      applySellerGesture = applySellerConfidenceGesture;
       decorateSceneCharacters(
         customers,
         buyers,
@@ -811,7 +756,12 @@ export const createLemonsvilleScene = (
       Math.max(1, storyboard.durationMs),
       state.reducedMotion,
     );
-    updateAmbient(0, Math.max(1, storyboard.durationMs));
+    ambientLife?.update(
+      state.weather,
+      state.phase,
+      0,
+      Math.max(1, storyboard.durationMs)
+    );
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
 
@@ -829,40 +779,14 @@ export const createLemonsvilleScene = (
       const buyer = buyers[buyerSlotForSale(sale, buyers.length)];
       if (buyer === undefined) continue;
 
+      const streetX = sale.direction === -1 ? -8.4 : 8.4;
+      const exitX = -streetX;
       const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
       const counterZ = 1.22;
       const drinkX = sale.direction === -1 ? -1.35 : 1.35;
       const drinkZ = 1.78;
-      const approachDurationSeconds =
-        Math.max(1, sale.purchaseAtMs - sale.approachAtMs) / 1_000;
-      const approachTargetDistance = 1.5 * approachDurationSeconds;
-      const approachZDistance = Math.abs(counterZ - streetZ);
-      const approachXDistance = Math.sqrt(
-        Math.max(
-          0.04,
-          approachTargetDistance * approachTargetDistance -
-            approachZDistance * approachZDistance,
-        ),
-      );
-      const streetX =
-        counterX +
-        (sale.direction === -1 ? -approachXDistance : approachXDistance);
       const approachDistance = Math.hypot(counterX - streetX, counterZ - streetZ);
-      const departDurationSeconds =
-        Math.max(1, sale.departAtMs - sale.drinkEndAtMs) / 1_000;
-      const departTargetDistance = 1.5 * departDurationSeconds;
-      const departZDistance = Math.abs(streetZ - drinkZ);
-      const departXDistance = Math.sqrt(
-        Math.max(
-          0.04,
-          departTargetDistance * departTargetDistance -
-            departZDistance * departZDistance,
-        ),
-      );
-      const exitX =
-        drinkX +
-        (sale.direction === -1 ? departXDistance : -departXDistance);
       const departDistance = Math.hypot(exitX - drinkX, streetZ - drinkZ);
       let x = counterX;
       let z = counterZ;
@@ -943,46 +867,35 @@ export const createLemonsvilleScene = (
     });
   };
 
+  const sellerConfidenceAt = (elapsedMs: number): number => {
+    if (
+      state.phase !== "simulation" ||
+      elapsedMs <= storyboard.activeDurationMs
+    ) {
+      return state.confidence;
+    }
+    return endingConfidenceAt(
+      storyboard,
+      elapsedMs,
+      state.confidence,
+      state.nextConfidence,
+    );
+  };
+
   const animateSeller = (seconds: number, elapsedMs: number): void => {
     seller.person.root.visible = state.phase !== "forecast";
     if (state.phase === "forecast") return;
-
-    const closeupDuration = Math.max(
-      1,
-      storyboard.durationMs - storyboard.activeDurationMs,
-    );
-    const closeupProgress =
-      state.phase === "simulation" && elapsedMs > storyboard.activeDurationMs
-        ? clamp01((elapsedMs - storyboard.activeDurationMs) / closeupDuration)
-        : 0;
-    const easedCloseup =
-      closeupProgress * closeupProgress * (3 - 2 * closeupProgress);
-    const confidence =
-      state.confidence +
-      (state.nextConfidence - state.confidence) * easedCloseup;
-    applySellerExpression(seller, confidence);
-
-    applySellerGesture?.(
-      seller.person.torso,
-      seller.person.head,
-      seller.person.arms[0].root,
-      seller.person.arms[1].root,
-      closeupProgress,
-      confidence,
-    );
-
+    applySellerExpression(seller, sellerConfidenceAt(elapsedMs));
     if (state.reducedMotion || state.phase === "idle") return;
     const breathing = Math.sin(seconds * 2.1) * 0.025;
-    seller.person.torso.position.y += breathing;
-    seller.person.head.position.y += breathing * 0.7;
+    seller.person.torso.position.y = 1.05 + breathing;
+    seller.person.head.position.y = 1.73 + breathing * 0.7;
     seller.person.arms[0].root.rotation.x += Math.sin(seconds * 1.7) * 0.035;
     seller.person.arms[1].root.rotation.x += Math.sin(seconds * 1.7 + 0.8) * 0.035;
 
-    const serving =
-      elapsedMs < storyboard.activeDurationMs &&
-      storyboard.sales.some(
-        (sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing",
-      );
+    const serving = storyboard.sales.some(
+      (sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing",
+    );
     if (serving) {
       seller.person.arms[1].root.rotation.x = -1.2;
       seller.person.torso.rotation.x -= 0.06;
@@ -1013,7 +926,12 @@ export const createLemonsvilleScene = (
     const activeBuyerCount = animateBuyers(elapsedMs);
     animatePassersBy(elapsedMs, activeBuyerCount);
     animateSeller(seconds, elapsedMs);
-    updateAmbient(elapsedMs, storyboard.durationMs);
+    ambientLife?.update(
+      state.weather,
+      state.phase,
+      elapsedMs,
+      storyboard.durationMs
+    );
 
     const remainingStock =
       state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs);
@@ -1032,7 +950,6 @@ export const createLemonsvilleScene = (
       storyboard.durationMs,
       state.reducedMotion,
     );
-    updateNeighborhoodWind(scene, seconds, state.weather);
 
     render();
     animationFrame = window.requestAnimationFrame(animate);
@@ -1077,7 +994,12 @@ export const createLemonsvilleScene = (
     );
 
     applyPhaseStaging();
-    updateAmbient(0, Math.max(1, state.durationMs));
+    ambientLife?.update(
+      state.weather,
+      state.phase,
+      0,
+      Math.max(1, state.durationMs)
+    );
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
     render();
@@ -1096,31 +1018,9 @@ export const createLemonsvilleScene = (
     render();
   };
 
-  update(initialState);
-
-  // Initialize gizmo if enabled
-  if (options.enableGizmo) {
-    gizmo = createGizmoController({
-      camera,
-      scene,
-      container: canvas,
-    });
-
-    gizmoUI = createGizmoUI({
-      gizmoController: gizmo,
-      container: canvas.parentElement || document.body,
-    });
-
-    document.body.appendChild(gizmoUI);
-  }
-
   const dispose = (): void => {
     if (disposed) return;
     disposed = true;
-    gizmo?.dispose();
-    if (gizmoUI && gizmoUI.parentElement) {
-      gizmoUI.parentElement.removeChild(gizmoUI);
-    }
     signTextureGeneration += 1;
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
     animationFrame = null;
@@ -1129,5 +1029,6 @@ export const createLemonsvilleScene = (
     renderer.dispose();
   };
 
+  update(initialState);
   return Object.freeze({ update, resize, dispose });
 };

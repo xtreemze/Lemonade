@@ -76,18 +76,18 @@ export const populateStand = (
     addBox(root, post.size, post.position, 0x5e4934);
   }
   addBox(root, STAND_LAYOUT.canopy.size, STAND_LAYOUT.canopy.position, 0xe6a93b);
-  addBox(shutter, [2.42, 1.02, 0.08], [0, 1.48, -0.3], 0xd39b43);
-  addBox(shutter, [0.78, 0.2, 0.04], [0, 1.5, -0.25], 0xf4dc83);
+  addBox(shutter, [2.42, 1.02, 0.08], [0, 1.48, 0.7], 0xd39b43);
+  addBox(shutter, [0.78, 0.2, 0.04], [0, 1.5, 0.75], 0xf4dc83);
 
   const detail = new Group();
   detail.userData["sceneRole"] = "stand-detail";
 
-  addBox(detail, [0.06, 0.42, 0.06], [-0.52, 2.39, -0.48], 0x6b573d);
-  addBox(detail, [0.06, 0.42, 0.06], [0.52, 2.39, -0.48], 0x6b573d);
+  addBox(detail, [0.06, 0.42, 0.06], [-0.52, 2.39, 0.52], 0x6b573d);
+  addBox(detail, [0.06, 0.42, 0.06], [0.52, 2.39, 0.52], 0x6b573d);
   const signBoard = addBox(
     detail,
     [1.58, 0.56, 0.1],
-    [0, STAND_SIGN_CENTER_Y, -0.35],
+    [0, STAND_SIGN_CENTER_Y, 0.65],
     0xffe36a,
   );
   signBoard.userData["sceneRole"] = "stand-sign";
@@ -112,13 +112,13 @@ export const populateStand = (
   addBox(
     detail,
     [0.62, 0.07, 0.04],
-    [0.33, STAND_SIGN_CENTER_Y + 0.07, -0.28],
+    [0.33, STAND_SIGN_CENTER_Y + 0.07, 0.72],
     0x6b573d,
   );
   addBox(
     detail,
     [0.76, 0.06, 0.04],
-    [0.25, STAND_SIGN_CENTER_Y - 0.07, -0.28],
+    [0.25, STAND_SIGN_CENTER_Y - 0.07, 0.72],
     0x6b573d,
   );
 
@@ -140,7 +140,7 @@ export const populateStand = (
       roughness: 0.28,
     }),
   );
-  pitcher.position.set(-0.57, STAND_LAYOUT.counterTopY + 0.19, 0.3);
+  pitcher.position.set(-0.57, STAND_LAYOUT.counterTopY + 0.19, -0.7);
   pitcher.userData["sceneRole"] = "stand-pitcher";
   detail.add(pitcher);
 
@@ -187,7 +187,7 @@ export const populateStand = (
     pitcherLemonade.position.set(
       -0.57,
       JUICE_BOTTOM_Y + (JUICE_FULL_HEIGHT * fraction) / 2,
-      -1.2,
+      0.3,
     );
 
     const lemonCount = visibleLemonCountForStock(remaining, prepared);
