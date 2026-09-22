@@ -228,6 +228,7 @@ export const populateWeatherObjects = (
   weather.sunny.add(sunContainer);
 
   const partlySun = new Group();
+  partlySun.userData["sceneRole"] = "partly-sun";
   partlySun.position.set(0, 0.8, -2);
   addSun(partlySun, 0.62);
   weather["hot-and-dry"].add(partlySun);
@@ -235,6 +236,7 @@ export const populateWeatherObjects = (
   const partlyCloudGroup = new Group();
   for (let i = 0; i < 3; i++) {
     const partlyCloud = new Group();
+    partlyCloud.userData["sceneRole"] = `partly-cloud-${i}`;
     const baseLayout = { position: [-1.5 + i * 1.5, 1.5 + i * 0.2, -0.2], scale: 0.9 + i * 0.1 } as const;
     partlyCloud.position.set(...baseLayout.position);
     partlyCloud.scale.setScalar(baseLayout.scale);

@@ -65,6 +65,8 @@ export interface LemonsvilleSceneController {
   update(state: LemonsvilleSceneState): void;
   resize(width: number, height: number): void;
   dispose(): void;
+  scene?: any; // Three.js Scene for dev tools
+  camera?: any; // Three.js Camera for dev tools
 }
 
 const PASSERBY_POOL_SIZE = 32;
@@ -1030,5 +1032,7 @@ export const createLemonsvilleScene = (
   };
 
   update(initialState);
-  return Object.freeze({ update, resize, dispose });
+  return Object.freeze({ update, resize, dispose, scene, camera });
 };
+
+export { createGizmoController } from "./gizmo-controller.js";
