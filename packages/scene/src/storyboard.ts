@@ -211,7 +211,7 @@ export const sceneCameraComposition = (
   return {
     mode,
     fov: profile[0],
-    position: [shot === "remaining" ? 0.2 : 0, profile[1], profile[2]],
+    position: [0, profile[1], profile[2]],
     lookAt: [shot === "remaining" ? 0.45 : 0, profile[3], profile[4]],
   };
 };
