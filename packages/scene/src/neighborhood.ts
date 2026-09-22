@@ -251,7 +251,7 @@ const treeLod = (
   );
   root.userData["sceneRole"] = "procedural-tree";
   root.userData["plantVariant"] = variant;
-  root.userData["clearanceRadius"] = 2.15 * scale;
+  root.userData["clearanceRadius"] = 3.5 * scale;
   return markWindResponsive(root, phase);
 };
 
@@ -306,7 +306,7 @@ const shrubLod = (
   );
   root.userData["sceneRole"] = "procedural-shrub";
   root.userData["plantVariant"] = Math.floor(plantUnit(seed, 151) * 1_000);
-  root.userData["clearanceRadius"] = 1.05 * scale;
+  root.userData["clearanceRadius"] = 1.9 * scale;
   return markWindResponsive(root, phase);
 };
 
