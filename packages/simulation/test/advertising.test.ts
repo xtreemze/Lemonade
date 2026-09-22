@@ -122,7 +122,7 @@ describe("advertising awareness", () => {
       day: dayNumber(6),
       traits,
       signs: signCount(7),
-      weather: "cloudy" as const,
+      weather: "cloudy",
       advertisingFatigue: basisPoints(2_500),
     });
 
