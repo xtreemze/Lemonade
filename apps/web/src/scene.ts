@@ -44,6 +44,7 @@ export type LemonsvilleSceneInput = Readonly<{
   prepared: number;
   priceCents: number;
   characterSeed: number;
+  dayNumber: number;
   durationMs: number;
 }>;
 
@@ -110,6 +111,7 @@ const createState = (
     confidence: Math.max(0, Math.min(5, input.confidence)),
     nextConfidence: Math.max(0, Math.min(5, input.nextConfidence)),
     characterSeed: input.characterSeed >>> 0,
+    dayNumber: Math.max(1, Math.trunc(input.dayNumber)),
     storyboard: createStreetStoryboard({
       durationMs: Math.max(1, durationMs),
       prepared,
@@ -204,6 +206,7 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
     elements.canvas.dataset["plannedSales"] = String(Math.max(0, input.sold));
     elements.canvas.dataset["priceCents"] = String(Math.max(0, input.priceCents));
     elements.canvas.dataset["characterSeed"] = String(input.characterSeed >>> 0);
+    elements.canvas.dataset["dayNumber"] = String(Math.max(1, Math.trunc(input.dayNumber)));
     elements.canvas.dataset["sellerMood"] = sellerMoodForConfidence(input.confidence);
     elements.canvas.dataset["nextSellerMood"] = sellerMoodForConfidence(input.nextConfidence);
     elements.equivalent.textContent = description;
