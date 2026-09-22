@@ -172,61 +172,80 @@ const expectCenteredBottomAction = async (
 test.describe.configure({ mode: "parallel" });
 
 for (const viewport of viewports) {
-  test.describe(`mobile contract: ${viewport.name}`, () => {
-    test.use({
+  test(`mobile contract: ${viewport.name} owns the complete daily flow`, async ({ browser }, testInfo) => {
+    test.slow();
+
+    const configuredBaseURL = testInfo.project.use.baseURL;
+    if (typeof configuredBaseURL !== "string") {
+      throw new TypeError("Mobile contract requires a configured Playwright baseURL.");
+    }
+
+    const context = await browser.newContext({
+      baseURL: configuredBaseURL,
       viewport: { width: viewport.width, height: viewport.height },
+      screen: { width: viewport.width, height: viewport.height },
       deviceScaleFactor: 1,
       hasTouch: true,
       isMobile: true,
     });
+    const page = await context.newPage();
 
-    test("owns the complete daily flow", async ({ page }) => {
-      test.slow();
+    try {
       await page.goto("./");
 
-    const main = page.getByRole("main");
-    await expect(main).toBeVisible();
-    await expect(main).toHaveAttribute("data-view", "forecast");
-    await expectViewportContract(page, "forecast");
-    await expect(page.locator("#scene-canvas")).toHaveAttribute(
-      "data-presentation-duration-ms",
-      "6000",
-    );
-    await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning", {
-      timeout: 10_000,
-    });
-    await expectViewportContract(page, "planning");
-    await expect(page.getByRole("slider")).toHaveCount(3);
-    await expectCenteredBottomAction(
-      page,
-      page.getByRole("button", { name: "Sell for the day" }),
-      viewport.height <= 360 ? 18 : 24,
-    );
+      const initialViewport = await page.evaluate(() => ({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        screenWidth: window.screen.width,
+        screenHeight: window.screen.height,
+      }));
+      expect(initialViewport).toEqual({
+        width: viewport.width,
+        height: viewport.height,
+        screenWidth: viewport.width,
+        screenHeight: viewport.height,
+      });
 
-    await page.getByRole("button", { name: "Sell for the day" }).click();
-    await expect(page.getByRole("main")).toHaveAttribute("data-view", "simulation");
-    await expectViewportContract(page, "simulation");
+      const main = page.getByRole("main");
+      await expect(main).toBeVisible();
+      await expect(main).toHaveAttribute("data-view", "forecast");
+      await expectViewportContract(page, "forecast");
+      await expect(page.locator("#scene-canvas")).toHaveAttribute(
+        "data-presentation-duration-ms",
+        "6000",
+      );
 
-    await expect(page.getByRole("main")).toHaveAttribute("data-view", "report", {
-      timeout: 15_000,
-    });
-    await expectViewportContract(page, "report");
-    await expect(page.locator("#report-title")).toBeVisible();
-    await expect(page.locator(".results-grid > div")).toHaveCount(4);
-    await expectCenteredBottomAction(
-      page,
-      page.getByRole("button", { name: "Plan next day" }),
-      viewport.height <= 360 ? 18 : 24,
-    );
-
-    await page.getByRole("button", { name: "Plan next day" }).click();
-    await expect(page.getByRole("main")).toHaveAttribute("data-view", "forecast");
-    await expectViewportContract(page, "forecast");
-
-    await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning", {
-      timeout: 10_000,
-    });
+      await expect(main).toHaveAttribute("data-view", "planning", { timeout: 10_000 });
       await expectViewportContract(page, "planning");
-    });
+      await expect(page.getByRole("slider")).toHaveCount(3);
+      await expectCenteredBottomAction(
+        page,
+        page.getByRole("button", { name: "Sell for the day" }),
+        viewport.height <= 360 ? 18 : 24,
+      );
+
+      await page.getByRole("button", { name: "Sell for the day" }).click();
+      await expect(main).toHaveAttribute("data-view", "simulation");
+      await expectViewportContract(page, "simulation");
+
+      await expect(main).toHaveAttribute("data-view", "report", { timeout: 15_000 });
+      await expectViewportContract(page, "report");
+      await expect(page.locator("#report-title")).toBeVisible();
+      await expect(page.locator(".results-grid > div")).toHaveCount(4);
+      await expectCenteredBottomAction(
+        page,
+        page.getByRole("button", { name: "Plan next day" }),
+        viewport.height <= 360 ? 18 : 24,
+      );
+
+      await page.getByRole("button", { name: "Plan next day" }).click();
+      await expect(main).toHaveAttribute("data-view", "forecast");
+      await expectViewportContract(page, "forecast");
+
+      await expect(main).toHaveAttribute("data-view", "planning", { timeout: 10_000 });
+      await expectViewportContract(page, "planning");
+    } finally {
+      await context.close();
+    }
   });
 }
