@@ -110,28 +110,28 @@ export const createGizmoController = (options: GizmoOptions) => {
     xCone.position.x = axisLength;
     xCone.rotation.z = Math.PI / 2;
     xCone.name = "gizmo-x";
-    xCone.userData.axis = "x";
+    xCone.userData["axis"] = "x";
     gizmo.add(xCone);
 
     const xLineGeom = new BufferGeometry();
     xLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, axisLength - coneHeight / 2, 0, 0]), 3));
     const xLine = new Line(xLineGeom, new LineBasicMaterial({ color: 0xff0000, linewidth: 3 }));
     xLine.name = "gizmo-x";
-    xLine.userData.axis = "x";
+    xLine.userData["axis"] = "x";
     gizmo.add(xLine);
 
     // Y axis (green)
     const yCone = new Mesh(new ConeGeometry(coneRadius, coneHeight, 8), new MeshBasicMaterial({ color: 0x00ff00 }));
     yCone.position.y = axisLength;
     yCone.name = "gizmo-y";
-    yCone.userData.axis = "y";
+    yCone.userData["axis"] = "y";
     gizmo.add(yCone);
 
     const yLineGeom = new BufferGeometry();
     yLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, axisLength - coneHeight / 2, 0]), 3));
     const yLine = new Line(yLineGeom, new LineBasicMaterial({ color: 0x00ff00, linewidth: 3 }));
     yLine.name = "gizmo-y";
-    yLine.userData.axis = "y";
+    yLine.userData["axis"] = "y";
     gizmo.add(yLine);
 
     // Z axis (blue)
@@ -139,14 +139,14 @@ export const createGizmoController = (options: GizmoOptions) => {
     zCone.position.z = axisLength;
     zCone.rotation.x = Math.PI / 2;
     zCone.name = "gizmo-z";
-    zCone.userData.axis = "z";
+    zCone.userData["axis"] = "z";
     gizmo.add(zCone);
 
     const zLineGeom = new BufferGeometry();
     zLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, 0, axisLength - coneHeight / 2]), 3));
     const zLine = new Line(zLineGeom, new LineBasicMaterial({ color: 0x0000ff, linewidth: 3 }));
     zLine.name = "gizmo-z";
-    zLine.userData.axis = "z";
+    zLine.userData["axis"] = "z";
     gizmo.add(zLine);
 
     return gizmo;
@@ -296,13 +296,13 @@ export const createGizmoController = (options: GizmoOptions) => {
 
       // Check if we hit a gizmo part (axis indicator)
       if (target.userData?.axis) {
-        foundAxis = target.userData.axis;
+        foundAxis = target.userData["axis"];
       } else {
         // Traverse up to find a gizmo part
         let current = target;
         while (current.parent && !foundAxis) {
           if (current.userData?.axis) {
-            foundAxis = current.userData.axis;
+            foundAxis = current.userData["axis"];
           }
           current = current.parent;
         }
