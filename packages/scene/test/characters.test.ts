@@ -20,6 +20,8 @@ describe("seeded scene characters", () => {
     expect(new Set(profiles.map((profile) => profile.hairStyle)).size).toBeGreaterThan(2);
     expect(new Set(profiles.map((profile) => profile.heightScale.toFixed(3))).size).toBeGreaterThan(8);
     expect(new Set(profiles.map((profile) => profile.walkPace.toFixed(3))).size).toBeGreaterThan(8);
+    expect(new Set(profiles.map((profile) => profile.eyeSpacing.toFixed(3))).size).toBeGreaterThan(4);
+    expect(new Set(profiles.map((profile) => profile.headWidthScale.toFixed(3))).size).toBeGreaterThan(4);
   });
 
   it("changes character identity when the run seed changes", () => {
