@@ -136,6 +136,7 @@ const expectViewportContract = async (
         scrollHeight: document.documentElement.scrollHeight,
       },
       windowScroll: { x: window.scrollX, y: window.scrollY },
+      htmlOverflow: getComputedStyle(document.documentElement).overflow,
       bodyOverflow: getComputedStyle(document.body).overflow,
       shellOverflow: getComputedStyle(shell).overflow,
       overflowViolations,
@@ -152,6 +153,7 @@ const expectViewportContract = async (
   expect(contract.document.scrollWidth).toBeLessThanOrEqual(contract.document.clientWidth + 1);
   expect(contract.document.scrollHeight).toBeLessThanOrEqual(contract.document.clientHeight + 1);
   expect(contract.windowScroll).toEqual({ x: 0, y: 0 });
+  expect(contract.htmlOverflow).toBe("hidden");
   expect(contract.bodyOverflow).toBe("hidden");
   expect(contract.shellOverflow).toBe("hidden");
   expect(contract.overflowViolations).toEqual([]);
@@ -203,9 +205,7 @@ const expectPlanningControlWeight = async (page: Page): Promise<void> => {
 
   expect(metrics.sliderCount).toBe(3);
   expect(metrics.trackSize).toBeGreaterThanOrEqual(16);
-  expect(Math.min(...metrics.sliderHeights)).toBeGreaterThanOrEqual(
-    viewport.width > viewport.height ? 48 : 60,
-  );
+  expect(Math.min(...metrics.sliderHeights)).toBeGreaterThanOrEqual(60);
   expect(Math.min(...metrics.controlGaps)).toBeGreaterThanOrEqual(0);
 };
 
