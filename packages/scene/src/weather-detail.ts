@@ -242,7 +242,7 @@ export const populateWeatherObjects = (
     const partlyCloud = new Group();
     partlyCloud.userData["sceneRole"] = `partly-cloud-${i}`;
     const baseLayout = cloudPositions[i]!;
-    partlyCloud.position.set(...baseLayout.position);
+    partlyCloud.position.set(\n      baseLayout.position[0],\n      baseLayout.position[1],\n      baseLayout.position[2],\n    );
     partlyCloud.scale.setScalar(baseLayout.scale);
     addCloud(partlyCloud, 0xd7e0df);
     partlyCloudGroup.add(partlyCloud);
