@@ -370,8 +370,8 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     color: HOUSE_PALETTE[0],
     scale: 0.96,
     rotationY: 0.035,
-    drivewayX: -40.8,
-    mailboxX: -42.25,
+    drivewayX: -40.2,
+    mailboxX: -41.65,
   }),
   Object.freeze({
     role: "west-mid",
@@ -380,8 +380,8 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     color: HOUSE_PALETTE[4],
     scale: 1.02,
     rotationY: -0.045,
-    drivewayX: -29.8,
-    mailboxX: -31.25,
+    drivewayX: -29.3,
+    mailboxX: -30.75,
   }),
   Object.freeze({
     role: "west-near",
@@ -390,8 +390,8 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     color: HOUSE_PALETTE[2],
     scale: 0.92,
     rotationY: 0.06,
-    drivewayX: -20.7,
-    mailboxX: -22.15,
+    drivewayX: -19.8,
+    mailboxX: -21.25,
   }),
   Object.freeze({
     role: "stand-home",
@@ -400,8 +400,8 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     color: 0xd8a766,
     scale: 1.06,
     rotationY: 0.045,
-    drivewayX: -8.45,
-    mailboxX: -7.0,
+    drivewayX: -9.0,
+    mailboxX: -7.55,
   }),
   Object.freeze({
     role: "stand-neighbor",
@@ -410,8 +410,8 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     color: HOUSE_PALETTE[4],
     scale: 0.97,
     rotationY: -0.055,
-    drivewayX: 12.1,
-    mailboxX: 10.65,
+    drivewayX: 13.1,
+    mailboxX: 11.65,
   }),
   Object.freeze({
     role: "east-mid",
@@ -420,8 +420,8 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     color: HOUSE_PALETTE[1],
     scale: 1.01,
     rotationY: 0.025,
-    drivewayX: 25.7,
-    mailboxX: 27.15,
+    drivewayX: 24.8,
+    mailboxX: 26.25,
   }),
   Object.freeze({
     role: "east-end",
@@ -430,8 +430,8 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] = Object.freeze
     color: HOUSE_PALETTE[5],
     scale: 0.94,
     rotationY: -0.05,
-    drivewayX: 45.0,
-    mailboxX: 43.55,
+    drivewayX: 45.7,
+    mailboxX: 44.25,
   }),
 ]);
 
