@@ -253,36 +253,91 @@ const createBicycle = (
   return root;
 };
 
+export type VehicleVariant = "sedan" | "sports" | "pickup" | "truck";
+
+export type VehicleVariantSpec = Readonly<{
+  length: number;
+  width: number;
+  bodyHeight: number;
+  cabinHeight: number;
+  wheelRadius: number;
+}>;
+
+export const vehicleVariantSpec = (
+  variant: VehicleVariant,
+): VehicleVariantSpec => {
+  switch (variant) {
+    case "sports":
+      return Object.freeze({
+        length: 4.35,
+        width: 1.82,
+        bodyHeight: 0.58,
+        cabinHeight: 0.44,
+        wheelRadius: 0.34,
+      });
+    case "pickup":
+      return Object.freeze({
+        length: 5.25,
+        width: 1.96,
+        bodyHeight: 0.78,
+        cabinHeight: 0.78,
+        wheelRadius: 0.4,
+      });
+    case "truck":
+      return Object.freeze({
+        length: 5.8,
+        width: 2.06,
+        bodyHeight: 0.92,
+        cabinHeight: 1.05,
+        wheelRadius: 0.43,
+      });
+    case "sedan":
+      return Object.freeze({
+        length: 4.65,
+        width: 1.88,
+        bodyHeight: 0.68,
+        cabinHeight: 0.62,
+        wheelRadius: 0.36,
+      });
+  }
+};
+
 const createVehicle = (
   color: number,
   seed: number,
   index: number,
+  variant: VehicleVariant,
 ): Group => {
+  const spec = vehicleVariantSpec(variant);
   const root = new Group();
   root.userData["sceneRole"] = "ambient-vehicle";
+  root.userData["vehicleVariant"] = variant;
+
   const body = new Mesh(
-    new BoxGeometry(
-      WORLD_SCALE.vehicle.length,
-      WORLD_SCALE.vehicle.bodyHeight,
-      WORLD_SCALE.vehicle.width,
-    ),
+    new BoxGeometry(spec.length, spec.bodyHeight, spec.width),
     material(color),
   );
-  body.position.y = 0.58;
+  body.position.y = spec.wheelRadius + spec.bodyHeight * 0.62;
   root.add(body);
 
+  const cabinLength =
+    variant === "truck"
+      ? spec.length * 0.32
+      : variant === "pickup"
+        ? spec.length * 0.4
+        : spec.length * 0.48;
+  const cabinX =
+    variant === "truck" ? spec.length * 0.25 : -spec.length * 0.08;
   const cabinBase = new Mesh(
-    new BoxGeometry(2, 0.18, WORLD_SCALE.vehicle.width * 0.9),
+    new BoxGeometry(cabinLength, 0.16, spec.width * 0.9),
     material(color),
   );
-  cabinBase.position.set(-0.28, 0.88, 0);
+  cabinBase.position.set(
+    cabinX,
+    spec.wheelRadius + spec.bodyHeight + 0.08,
+    0,
+  );
   root.add(cabinBase);
-  const roof = new Mesh(
-    new BoxGeometry(1.6, 0.08, WORLD_SCALE.vehicle.width * 0.9),
-    material(color),
-  );
-  roof.position.set(-0.28, 1.5, 0);
-  root.add(roof);
 
   const glass = new MeshStandardMaterial({
     color: 0xb9d2d8,
@@ -291,35 +346,85 @@ const createVehicle = (
     roughness: 0.2,
     depthWrite: false,
   });
-  for (const z of [-WORLD_SCALE.vehicle.width * 0.455, WORLD_SCALE.vehicle.width * 0.455]) {
-    const sideWindow = new Mesh(new BoxGeometry(1.5, 0.5, 0.025), glass.clone());
-    sideWindow.position.set(-0.28, 1.2, z);
-    root.add(sideWindow);
-  }
-  for (const x of [-1.05, 0.5]) {
-    const endWindow = new Mesh(
-      new BoxGeometry(0.025, 0.48, WORLD_SCALE.vehicle.width * 0.76),
+  const windowHeight = Math.max(0.34, spec.cabinHeight * 0.72);
+  for (const z of [-spec.width * 0.455, spec.width * 0.455]) {
+    const sideWindow = new Mesh(
+      new BoxGeometry(cabinLength * 0.8, windowHeight, 0.025),
       glass.clone(),
     );
-    endWindow.position.set(x, 1.2, 0);
-    root.add(endWindow);
+    sideWindow.position.set(
+      cabinX,
+      spec.wheelRadius + spec.bodyHeight + spec.cabinHeight * 0.5,
+      z,
+    );
+    root.add(sideWindow);
   }
 
-  const hood = new Mesh(
-    new BoxGeometry(1.15, 0.28, WORLD_SCALE.vehicle.width * 0.88),
+  const roof = new Mesh(
+    new BoxGeometry(cabinLength * 0.9, 0.08, spec.width * 0.9),
     material(color),
   );
-  hood.position.set(1.5, 0.86, 0);
-  root.add(hood);
+  roof.position.set(
+    cabinX,
+    spec.wheelRadius + spec.bodyHeight + spec.cabinHeight,
+    0,
+  );
+  root.add(roof);
 
-  for (const x of [-1.35, 1.35]) {
-    for (const z of [-0.78, 0.78]) {
+  if (variant === "pickup") {
+    const bed = new Mesh(
+      new BoxGeometry(spec.length * 0.34, spec.bodyHeight * 0.46, spec.width * 0.88),
+      material(color),
+    );
+    bed.position.set(
+      -spec.length * 0.31,
+      spec.wheelRadius + spec.bodyHeight * 0.84,
+      0,
+    );
+    root.add(bed);
+  } else if (variant === "truck") {
+    const cargo = new Mesh(
+      new BoxGeometry(spec.length * 0.48, 1.7, spec.width * 0.94),
+      material(color),
+    );
+    cargo.position.set(
+      -spec.length * 0.24,
+      spec.wheelRadius + 1.36,
+      0,
+    );
+    root.add(cargo);
+  } else {
+    const hood = new Mesh(
+      new BoxGeometry(
+        spec.length * 0.24,
+        spec.bodyHeight * 0.34,
+        spec.width * 0.88,
+      ),
+      material(color),
+    );
+    hood.position.set(
+      spec.length * 0.39,
+      spec.wheelRadius + spec.bodyHeight * 1.02,
+      0,
+    );
+    root.add(hood);
+  }
+
+  const axleX = spec.length * 0.31;
+  const wheelZ = spec.width * 0.47;
+  for (const x of [-axleX, axleX]) {
+    for (const z of [-wheelZ, wheelZ]) {
       const wheel = new Mesh(
-        new CylinderGeometry(0.32, 0.32, 0.22, 12),
+        new CylinderGeometry(
+          spec.wheelRadius,
+          spec.wheelRadius,
+          0.18,
+          12,
+        ),
         material(0x2c3034),
       );
       wheel.rotation.x = Math.PI / 2;
-      wheel.position.set(x, 0.32, z);
+      wheel.position.set(x, spec.wheelRadius, z);
       root.add(wheel);
     }
   }
@@ -327,7 +432,11 @@ const createVehicle = (
   const driver = createTransportCharacter(seed ^ 0x51a7, 10_100 + index);
   driver.root.userData["sceneRole"] = "ambient-driver";
   driver.root.scale.setScalar(0.42);
-  driver.root.position.set(-0.35, 0.72, 0.12);
+  driver.root.position.set(
+    cabinX,
+    spec.wheelRadius + spec.bodyHeight * 0.7,
+    0.12,
+  );
   driver.arms[0].rotation.x = -0.72;
   driver.arms[1].rotation.x = -0.72;
   driver.legs[0].rotation.x = 0.62;
@@ -364,8 +473,10 @@ export const createAmbientLife = (
     createBicycle(0xb45d4c, seed, 1),
   ];
   const vehicles = [
-    createVehicle(0x7189a8, seed, 0),
-    createVehicle(0xa65e52, seed, 1),
+    createVehicle(0x7189a8, seed, 0, "sedan"),
+    createVehicle(0xa65e52, seed, 1, "sports"),
+    createVehicle(0x6b7c61, seed, 2, "pickup"),
+    createVehicle(0x8a796d, seed, 3, "truck"),
   ];
 
   for (const actor of [...pets, ...wildlife, ...bicycles, ...vehicles]) {
@@ -427,11 +538,16 @@ export const createAmbientLife = (
         bike.visible = index < population.bicycles && progress > 0.08 && progress < 0.78;
         if (!bike.visible) return;
         const x = direction === 1
-          ? -18 + progress * 36
-          : 18 - progress * 36;
+          ? -96 + progress * 192
+          : 96 - progress * 192;
         bike.position.set(x, 0.02, roadLaneZ("bicycle", index));
         bike.rotation.y = xTravelYaw(direction);
       });
+      const vehicleOffset =
+        Math.floor(
+          routeProgress(elapsedMs, durationMs, (seed & 7) * 0.11, 0.74) *
+            vehicles.length,
+        ) % vehicles.length;
       vehicles.forEach((vehicle, index) => {
         const direction = index % 2 === 0 ? 1 : -1;
         const progress = routeProgress(
@@ -440,11 +556,16 @@ export const createAmbientLife = (
           index * 0.53 + 0.08,
           0.52 + index * 0.09,
         );
-        vehicle.visible = index < population.vehicles && progress > 0.04 && progress < 0.82;
+        const activeIndex =
+          (index - vehicleOffset + vehicles.length) % vehicles.length;
+        vehicle.visible =
+          activeIndex < population.vehicles &&
+          progress > 0.04 &&
+          progress < 0.82;
         if (!vehicle.visible) return;
         const x = direction === 1
-          ? -20 + progress * 40
-          : 20 - progress * 40;
+          ? -110 + progress * 220
+          : 110 - progress * 220;
         vehicle.position.set(x, 0.02, roadLaneZ("vehicle", index));
         vehicle.rotation.y = xTravelYaw(direction);
       });
