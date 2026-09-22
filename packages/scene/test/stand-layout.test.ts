@@ -26,7 +26,7 @@ describe("lemonade stand staging", () => {
   it("reserves a clear central sightline between cups and stock", () => {
     expect(STAND_LAYOUT.stockFootprint.maxX)
       .toBeLessThan(STAND_LAYOUT.sellerSightline.minX);
-    expect(STAND_LAYOUT.cupFootprint.minX)
+    expect(STAND_LAYOUT.cupFootprint.minX - 0.09)
       .toBeGreaterThan(STAND_LAYOUT.sellerSightline.maxX);
     expect(STAND_LAYOUT.stockFootprint.maxX)
       .toBeLessThan(STAND_LAYOUT.cupFootprint.minX);
