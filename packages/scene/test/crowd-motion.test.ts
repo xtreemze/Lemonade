@@ -1,7 +1,17 @@
+import { Scene } from "three";
 import { describe, expect, it } from "vitest";
 
-import { ambientPopulationFor } from "../src/ambient-life.js";
-import { crowdGroundClearance, crowdPosesAt, walkingBodyLift } from "../src/crowd-motion.js";
+import {
+  ambientPopulationFor,
+  createAmbientLife,
+  petFollowerPose,
+  streetHeadingForDirection,
+} from "../src/ambient-life.js";
+import {
+  crowdGroundClearance,
+  crowdPosesAt,
+  walkingBodyLift,
+} from "../src/crowd-motion.js";
 import type { PasserbyBeat } from "../src/storyboard.js";
 
 const beats: readonly PasserbyBeat[] = Object.freeze(
@@ -68,5 +78,42 @@ describe("crowd motion", () => {
       bicycles: 0,
       vehicles: 0,
     });
+  });
+
+  it("points ambient actors toward the street ends instead of the horizon", () => {
+    expect(streetHeadingForDirection(1)).toBe(0);
+    expect(streetHeadingForDirection(-1)).toBe(Math.PI);
+
+    const scene = new Scene();
+    const ambient = createAmbientLife(scene, 17);
+    ambient.update(
+      "sunny",
+      "simulation",
+      2_000,
+      10_000,
+      [{ x: 2.4, z: 3.3, heading: Math.PI / 2 }],
+    );
+
+    const actor = (role: string) =>
+      scene.children.find((child) => child.userData["sceneRole"] === role);
+
+    expect(actor("ambient-pet")?.rotation.y).toBeCloseTo(0);
+    expect(actor("ambient-bird")?.rotation.y).toBeCloseTo(0);
+    expect(actor("ambient-bicycle")?.rotation.y).toBeCloseTo(Math.PI);
+    expect(actor("ambient-vehicle")?.rotation.y).toBeCloseTo(0);
+  });
+
+  it("keeps pets behind and beside their walking owner", () => {
+    const owner = { x: 4, z: 3.4, heading: Math.PI / 2 };
+    const pet = petFollowerPose(owner, 0);
+
+    expect(pet.x).toBeLessThan(owner.x);
+    expect(Math.abs(pet.z - owner.z)).toBeLessThanOrEqual(0.3);
+    expect(pet.heading).toBe(0);
+
+    const reverseOwner = { x: -2, z: 3.7, heading: -Math.PI / 2 };
+    const reversePet = petFollowerPose(reverseOwner, 1);
+    expect(reversePet.x).toBeGreaterThan(reverseOwner.x);
+    expect(reversePet.heading).toBe(Math.PI);
   });
 });
