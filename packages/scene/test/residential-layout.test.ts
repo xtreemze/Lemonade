@@ -97,7 +97,7 @@ describe("procedural residential layout", () => {
 
     for (const planting of layout.trees) {
       const clearance =
-        (planting.yardZone === "back" ? 2.45 : 3.5) * planting.scale;
+        (planting.yardZone === "back" ? 3.2 : 3.5) * planting.scale;
       expect(residentialPointIsBlocked(planting, layout, clearance)).toBe(false);
       expect(
         residentialFootprintIntersectsHardscape(
@@ -110,11 +110,11 @@ describe("procedural residential layout", () => {
     }
     for (const planting of layout.shrubs) {
       const clearance =
-        (planting.yardZone === "front" ? 0.86 : 1.9) * planting.scale;
+        (planting.yardZone === "front" ? 1.45 : 1.9) * planting.scale;
       expect(residentialPointIsBlocked(planting, layout, clearance)).toBe(false);
     }
     for (const planting of layout.flowers) {
-      expect(residentialPointIsBlocked(planting, layout, 0.16)).toBe(false);
+      expect(residentialPointIsBlocked(planting, layout, 0.38)).toBe(false);
     }
   });
 
