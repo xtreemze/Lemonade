@@ -14,8 +14,21 @@ export type CrowdPose = Readonly<{
   z: number;
   heading: number;
   pace: number;
+  worldSpeed: number;
   seesAdvertisement: boolean;
 }>;
+
+export type CrowdSample = Readonly<{
+  poses: readonly CrowdPose[];
+  neighborChecks: number;
+}>;
+
+export type CrowdSimulation = Readonly<{
+  sample(elapsedMs: number): CrowdSample;
+}>;
+
+const CROWD_CELL_SIZE = 0.72;
+const CROWD_SEPARATION = 0.46;
 
 const fract = (value: number): number => value - Math.floor(value);
 
@@ -37,10 +50,11 @@ const basePose = (
   actorCount: number,
 ): CrowdPose => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
+  const durationSeconds = safeDuration / 1_000;
   const count = Math.max(1, actorCount);
-  const speed = 0.76 + deterministicUnit(actorIndex, 17) * 0.34;
+  const routeRate = 0.76 + deterministicUnit(actorIndex, 17) * 0.34;
   const phaseOffset = actorIndex / count + deterministicUnit(actorIndex, 29) * 0.11;
-  const progress = fract((Math.max(0, elapsedMs) / safeDuration) * speed + phaseOffset);
+  const progress = fract((Math.max(0, elapsedMs) / safeDuration) * routeRate + phaseOffset);
   const direction = beat.direction;
   const startX = direction === -1 ? -12.5 : 12.5;
   const endX = -startX;
@@ -55,14 +69,104 @@ const basePose = (
   const signPull = attention * signSide * 0.22;
   const z = clampToNearSidewalk(laneBase + meander - attention * 0.07, 0.12);
 
+  const worldSpeed = Math.abs(endX - startX) * routeRate / durationSeconds;
+  const pace = Math.max(0.72, Math.min(1.7, worldSpeed / 1.55));
   const baseHeading = direction === -1 ? Math.PI / 2 : -Math.PI / 2;
   const attentionHeading = signSide * 0.48 * attention;
   return Object.freeze({
     x: x + signPull,
     z,
     heading: baseHeading + attentionHeading,
-    pace: speed,
+    pace,
+    worldSpeed,
     seesAdvertisement: beat.seesAdvertisement,
+  });
+};
+
+type MutableCrowdPose = {
+  x: number;
+  z: number;
+  heading: number;
+  pace: number;
+  worldSpeed: number;
+  seesAdvertisement: boolean;
+};
+
+const cellCoordinate = (value: number): number => Math.floor(value / CROWD_CELL_SIZE);
+const cellKey = (x: number, z: number): string => `${cellCoordinate(x)}:${cellCoordinate(z)}`;
+
+const separateCrowd = (poses: MutableCrowdPose[]): number => {
+  const cells = new Map<string, number[]>();
+  poses.forEach((pose, index) => {
+    const key = cellKey(pose.x, pose.z);
+    const bucket = cells.get(key);
+    if (bucket === undefined) cells.set(key, [index]);
+    else bucket.push(index);
+  });
+
+  let neighborChecks = 0;
+  for (let left = 0; left < poses.length; left += 1) {
+    const a = poses[left];
+    if (a === undefined) continue;
+    const cellX = cellCoordinate(a.x);
+    const cellZ = cellCoordinate(a.z);
+
+    for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+      for (let offsetZ = -1; offsetZ <= 1; offsetZ += 1) {
+        const bucket = cells.get(`${cellX + offsetX}:${cellZ + offsetZ}`);
+        if (bucket === undefined) continue;
+        for (const right of bucket) {
+          if (right <= left) continue;
+          const b = poses[right];
+          if (b === undefined) continue;
+          neighborChecks += 1;
+
+          const dx = b.x - a.x;
+          const dz = b.z - a.z;
+          const distanceSquared = dx * dx + dz * dz;
+          if (distanceSquared >= CROWD_SEPARATION * CROWD_SEPARATION) continue;
+
+          const distance = Math.sqrt(Math.max(0.0001, distanceSquared));
+          const deterministicSide =
+            deterministicUnit(left + right, 71) < 0.5 ? -1 : 1;
+          const side = Math.abs(dz) > 0.01 ? Math.sign(dz) : deterministicSide;
+          const push = (CROWD_SEPARATION - distance) * 0.52;
+          a.z = clampToNearSidewalk(a.z - push * side, 0.1);
+          b.z = clampToNearSidewalk(b.z + push * side, 0.1);
+        }
+      }
+    }
+  }
+
+  return neighborChecks;
+};
+
+export const createCrowdSimulation = (
+  beats: readonly PasserbyBeat[],
+  actorCount: number,
+  durationMs: number,
+): CrowdSimulation => {
+  const count = Math.max(0, Math.min(Math.trunc(actorCount), 48));
+  const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
+
+  return Object.freeze({
+    sample(elapsedMs: number): CrowdSample {
+      if (count === 0 || beats.length === 0) {
+        return Object.freeze({ poses: Object.freeze([]), neighborChecks: 0 });
+      }
+
+      const poses: MutableCrowdPose[] = Array.from({ length: count }, (_, index) => {
+        const beat = beats[(index * 7) % beats.length];
+        if (beat === undefined) throw new Error("crowd beat invariant failed");
+        return { ...basePose(beat, index, elapsedMs, safeDuration, count) };
+      });
+
+      const neighborChecks = separateCrowd(poses);
+      return Object.freeze({
+        poses: Object.freeze(poses.map((pose) => Object.freeze(pose))),
+        neighborChecks,
+      });
+    },
   });
 };
 
@@ -71,48 +175,14 @@ export const crowdPosesAt = (
   actorCount: number,
   elapsedMs: number,
   durationMs: number,
-): readonly CrowdPose[] => {
-  const count = Math.max(0, Math.min(Math.trunc(actorCount), 48));
-  if (count === 0 || beats.length === 0) return Object.freeze([]);
-
-  const poses = Array.from({ length: count }, (_, index) => {
-    const beat = beats[(index * 7) % beats.length];
-    if (beat === undefined) {
-      throw new Error("crowd beat invariant failed");
-    }
-    return { ...basePose(beat, index, elapsedMs, durationMs, count) };
-  });
-
-  // Deterministic local separation keeps walkers from occupying the same
-  // sidewalk space without allowing avoidance to spill them into the road.
-  for (let pass = 0; pass < 2; pass += 1) {
-    for (let left = 0; left < poses.length; left += 1) {
-      const a = poses[left];
-      if (a === undefined) continue;
-      for (let right = left + 1; right < poses.length; right += 1) {
-        const b = poses[right];
-        if (b === undefined) continue;
-        const dx = b.x - a.x;
-        const dz = b.z - a.z;
-        const distanceSquared = dx * dx + dz * dz;
-        if (distanceSquared >= 0.46 * 0.46) continue;
-        const direction = deterministicUnit(left + right, pass + 71) < 0.5 ? -1 : 1;
-        const push = (0.46 - Math.sqrt(Math.max(0.0001, distanceSquared))) * 0.52;
-        a.z = clampToNearSidewalk(a.z - push * direction, 0.1);
-        b.z = clampToNearSidewalk(b.z + push * direction, 0.1);
-      }
-    }
-  }
-
-  return Object.freeze(poses.map((pose) => Object.freeze(pose)));
-};
+): readonly CrowdPose[] =>
+  createCrowdSimulation(beats, actorCount, durationMs).sample(elapsedMs).poses;
 
 export const walkingBodyLift = (seconds: number, pace: number, strideOffset: number): number => {
   const cycle = seconds * 7.2 * pace + strideOffset;
   const stance = Math.abs(Math.sin(cycle));
   return 0.018 + stance * 0.028;
 };
-
 
 export type StreetMotion = Readonly<{
   crowdPosesAt: typeof crowdPosesAt;
@@ -129,5 +199,36 @@ export const initializeStreetMotion = (
     sign.root.rotation.y = position.rotationY;
     scene.add(sign.root);
   });
-  return Object.freeze({ crowdPosesAt, sidewalkLaneZ });
+
+  let cachedBeats: readonly PasserbyBeat[] | null = null;
+  let cachedActorCount = -1;
+  let cachedDurationMs = -1;
+  let cachedSimulation: CrowdSimulation | null = null;
+
+  const sampledCrowdPosesAt: typeof crowdPosesAt = (
+    beats,
+    actorCount,
+    elapsedMs,
+    durationMs,
+  ) => {
+    const safeActorCount = Math.max(0, Math.min(Math.trunc(actorCount), 48));
+    const safeDurationMs = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
+    if (
+      cachedSimulation === null ||
+      cachedBeats !== beats ||
+      cachedActorCount !== safeActorCount ||
+      cachedDurationMs !== safeDurationMs
+    ) {
+      cachedBeats = beats;
+      cachedActorCount = safeActorCount;
+      cachedDurationMs = safeDurationMs;
+      cachedSimulation = createCrowdSimulation(beats, safeActorCount, safeDurationMs);
+    }
+    return cachedSimulation.sample(elapsedMs).poses;
+  };
+
+  return Object.freeze({
+    crowdPosesAt: sampledCrowdPosesAt,
+    sidewalkLaneZ,
+  });
 };
