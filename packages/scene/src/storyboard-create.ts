@@ -65,10 +65,10 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
 
   const purchaseWindowStart = Math.round(activeDurationMs * 0.22);
   const purchaseWindowEnd = Math.round(activeDurationMs * 0.68);
-  const approachTravelMs = Math.min(1_500, Math.max(850, activeDurationMs * 0.16));
+  const approachTravelMs = Math.min(1_600, Math.max(1_100, activeDurationMs * 0.16));
   const purchaseDurationMs = Math.min(220, Math.max(130, activeDurationMs * 0.028));
   const drinkDurationMs = Math.min(430, Math.max(240, activeDurationMs * 0.055));
-  const departTravelMs = Math.min(1_500, Math.max(850, activeDurationMs * 0.16));
+  const departTravelMs = Math.min(1_600, Math.max(1_300, activeDurationMs * 0.16));
 
   const sales = Array.from({ length: sold }, (_, index): SaleBeat => {
     const purchaseAtMs =
