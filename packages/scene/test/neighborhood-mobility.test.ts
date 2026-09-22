@@ -10,6 +10,8 @@ import {
   residentialAccessLayout,
 } from "../src/residential-layout.js";
 
+const MOBILITY_SEED = 0x5eed1234;
+
 const sampleDay = (
   dayNumber: number,
   elapsedMs: number,
@@ -24,8 +26,6 @@ const sampleDay = (
     dayNumber,
     focus: { x: 0, z: 0 },
   });
-
-const MOBILITY_SEED = 0x5eed1234;
 
 describe("unified neighborhood mobility", () => {
   it("is deterministic for the same seed, day, phase, and presentation time", () => {
