@@ -320,3 +320,32 @@ export const decorateSellerExpression = (
     half.add(mesh);
   }
 };
+
+
+export type DecoratableCharacter = Readonly<{
+  root: Group;
+  head: Mesh;
+  profile: CharacterProfile;
+}>;
+
+export const decorateSceneCharacters = (
+  customers: readonly DecoratableCharacter[],
+  buyers: readonly DecoratableCharacter[],
+  seller: DecoratableCharacter,
+  eyebrows: readonly [Group, Group],
+  mouth: readonly [Group, Group],
+): void => {
+  customers.forEach((person, index) => {
+    decorateCharacter(person.root, person.head, person.profile, index);
+  });
+  buyers.forEach((person, index) => {
+    decorateCharacter(
+      person.root,
+      person.head,
+      person.profile,
+      index + customers.length,
+    );
+  });
+  decorateCharacter(seller.root, seller.head, seller.profile, 10_001, false);
+  decorateSellerExpression(eyebrows, mouth);
+};
