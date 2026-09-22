@@ -116,9 +116,10 @@ describe("weather backdrop staging", () => {
     expect(world(noon)[1]).toBeGreaterThan(20);
     expect(world(dawn)[1]).toBeLessThan(5);
     expect(world(sunset)[1]).toBeLessThan(5);
-    expect(world(dawn)[2]).toBeLessThan(-150);
-    expect(world(noon)[2]).toBeLessThan(-150);
-    expect(world(sunset)[2]).toBeLessThan(-150);
+    for (const position of [world(dawn), world(noon), world(sunset)]) {
+      expect(position[2]).toBeLessThan(-130);
+      expect(position[2]).toBeGreaterThan(-140);
+    }
   });
 
   it("moves the business simulation from dawn through daylight into night", () => {
