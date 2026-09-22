@@ -20,7 +20,6 @@ import {
 import { WORLD_SCALE } from "./world-scale.js";
 import {
   clampToSidewalk,
-  roadLaneZ,
   sidewalkSideForZ,
 } from "./street-layout.js";
 
@@ -484,7 +483,7 @@ const placeRig = (
   elapsedMs: number,
 ): void => {
   rig.root.visible = pose?.visible === true;
-  if (pose === undefined || !pose.visible) return;
+  if (!pose?.visible) return;
   rig.root.position.set(pose.x, 0, pose.z);
   rig.root.rotation.y = -pose.yaw;
   applyTransportWalk(rig, elapsedMs, pose.speed);
@@ -566,7 +565,7 @@ export const createAmbientLife = (
     ): NeighborhoodMobilitySample {
       updateNeighborhoodWind(scene, elapsedMs / 1000, weather);
       const population = ambientPopulationFor(weather, phase);
-      const pedestrianObstacles: Array<Readonly<{ x: number; z: number }>> = [];
+      const pedestrianObstacles: Readonly<{ x: number; z: number }>[] = [];
 
       pets.slice(0, 2).forEach((pet, index) => {
         const owner = owners.find((candidate, ownerIndex) =>
