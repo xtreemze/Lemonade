@@ -1,5 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const FORECAST_PRESENTATION_MS = 6_000;
+const SIMULATION_PRESENTATION_MS = 10_000;
+const PHASE_SETTLE_MARGIN_MS = 2_000;
+
+const expectPlanningReady = async (page: Page): Promise<void> => {
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning", {
+    timeout: FORECAST_PRESENTATION_MS + PHASE_SETTLE_MARGIN_MS,
+  });
+};
+
 const expectNoHorizontalOverflow = async (page: Page): Promise<void> => {
   const dimensions = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -8,7 +18,17 @@ const expectNoHorizontalOverflow = async (page: Page): Promise<void> => {
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 };
 
+const expectNoVerticalOverflow = async (page: Page): Promise<void> => {
+  const dimensions = await page.evaluate(() => ({
+    clientHeight: document.documentElement.clientHeight,
+    scrollHeight: document.documentElement.scrollHeight,
+  }));
+  expect(dimensions.scrollHeight).toBeLessThanOrEqual(dimensions.clientHeight + 1);
+};
+
 test("release artifact completes a day without uncaught runtime failures", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
   page.on("console", (message) => {
@@ -30,6 +50,7 @@ test("release artifact completes a day without uncaught runtime failures", async
       elements.every((element) => element.shadowRoot === null),
     ),
   ).toBe(true);
+  await expectPlanningReady(page);
   await expect(page.getByRole("slider")).toHaveCount(3);
   await expect(page.locator("#scene-equivalent")).not.toBeEmpty();
 
@@ -47,8 +68,14 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await page.goto("./");
 
   const main = page.getByRole("main");
-  await expect(main).toHaveAttribute("data-view", "planning");
+  await expect(main).toHaveAttribute("data-view", "forecast");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-presentation-duration-ms",
+    String(FORECAST_PRESENTATION_MS),
+  );
   await expectNoHorizontalOverflow(page);
+  await expectNoVerticalOverflow(page);
+  await expectPlanningReady(page);
   await expect(page.getByRole("slider", { name: /Glasses/ })).toBeVisible();
   await expect(page.getByRole("slider", { name: /Signs/ })).toBeVisible();
   await expect(page.getByRole("slider", { name: /Price/ })).toBeVisible();
@@ -67,6 +94,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
       throw new Error(`expected ${name} slider bounds`);
     }
     expect(sliderBox.width).toBeGreaterThanOrEqual(controlBox.width * 0.95);
+    expect(sliderBox.height).toBeGreaterThanOrEqual(56);
     const thumbStyle = await slider.evaluate((element) => {
       const style = getComputedStyle(element);
       return {
@@ -75,20 +103,41 @@ test("narrow viewport keeps the complete planning surface above the fold", async
       };
     });
     expect(thumbStyle.kind).toBe(icon);
-    expect(thumbStyle.image).toContain("data:image/svg+xml");
+    expect(thumbStyle.image).toMatch(/(?:\.svg|svg\+xml|%3csvg)/iu);
   }
 
   const simulationButton = page.getByRole("button", { name: "Sell for the day" });
   await expect(simulationButton).toBeVisible();
-  const planningBounds = await page.evaluate(() => ({
-    clientHeight: document.documentElement.clientHeight,
-    scrollHeight: document.documentElement.scrollHeight,
-  }));
-  expect(planningBounds.scrollHeight).toBeLessThanOrEqual(planningBounds.clientHeight + 1);
+  await expectNoVerticalOverflow(page);
 
   const buttonBox = await simulationButton.boundingBox();
   if (buttonBox === null) throw new Error("expected simulation button bounds");
   expect(buttonBox.y + buttonBox.height).toBeLessThanOrEqual(740);
+  expect(740 - (buttonBox.y + buttonBox.height)).toBeLessThanOrEqual(24);
+
+  const simulationArt = page.locator(".simulation-button-art");
+  await expect(simulationArt).toBeVisible();
+  const artContract = await simulationArt.evaluate(async (image) => {
+    if (!(image instanceof HTMLImageElement)) throw new TypeError("expected simulation art image");
+    await image.decode();
+    const response = await fetch(image.src);
+    const markup = await response.text();
+    return {
+      naturalWidth: image.naturalWidth,
+      naturalHeight: image.naturalHeight,
+      clipsIce: markup.includes('clip-path="url(#glass-clip)"'),
+      floatsIce: markup.includes("ice-float"),
+      floatsStraw: markup.includes("straw-float"),
+      pours: markup.includes("pour-stream") && markup.includes("@keyframes pour"),
+    };
+  });
+  expect(artContract.naturalWidth).toBeGreaterThan(0);
+  expect(artContract.naturalHeight).toBeGreaterThan(0);
+  expect(artContract.clipsIce).toBe(true);
+  expect(artContract.floatsIce).toBe(true);
+  expect(artContract.floatsStraw).toBe(true);
+  expect(artContract.pours).toBe(true);
+  expect((await simulationButton.textContent())?.trim()).toBe("");
 
   await simulationButton.click();
   await expect(main).toHaveAttribute("data-view", "simulation");
@@ -96,29 +145,71 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expect(page.locator("#scene-equivalent")).toContainText("glasses prepared");
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-presentation-duration-ms",
-    "5000",
+    String(SIMULATION_PRESENTATION_MS),
   );
   const simulationStage = await page.locator(".stand-stage").boundingBox();
   if (simulationStage === null) throw new Error("expected simulation stage bounds");
   expect(simulationStage.width).toBeGreaterThanOrEqual(359);
   expect(simulationStage.height).toBeGreaterThanOrEqual(739);
-  await expect(main).toHaveAttribute("data-view", "report");
-  await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+  await expect(main).toHaveAttribute("data-view", "report", {
+    timeout: SIMULATION_PRESENTATION_MS + PHASE_SETTLE_MARGIN_MS,
+  });
+  await expectNoHorizontalOverflow(page);
+  await expectNoVerticalOverflow(page);
+  await expect(page.getByRole("region", { name: "Sales history" })).toBeHidden();
 
-  await page.getByRole("button", { name: "Plan next day" }).click();
+  const nextDayButton = page.getByRole("button", { name: "Plan next day" });
+  await expect(nextDayButton).toBeVisible();
+  expect((await nextDayButton.textContent())?.trim()).toBe("");
+  await expect(nextDayButton.locator("svg")).toHaveCount(1);
+  const nextDayBox = await nextDayButton.boundingBox();
+  if (nextDayBox === null) throw new Error("expected next-day control bounds");
+  expect(Math.abs(nextDayBox.x + nextDayBox.width / 2 - 180)).toBeLessThanOrEqual(2);
+  expect(740 - (nextDayBox.y + nextDayBox.height)).toBeLessThanOrEqual(24);
+
+  await nextDayButton.locator("svg").click();
   await expect(main).toHaveAttribute("data-view", "forecast");
+  await expectNoHorizontalOverflow(page);
+  await expectNoVerticalOverflow(page);
   await expect(page.locator("#scene-title")).not.toBeEmpty();
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-presentation-duration-ms",
-    "6000",
+    String(FORECAST_PRESENTATION_MS),
   );
-  await expect(main).toHaveAttribute("data-view", "planning", { timeout: 7_000 });
+  await expectPlanningReady(page);
   await expect(page.locator("#status-day")).toHaveText("2");
   await expectNoHorizontalOverflow(page);
+  await expectNoVerticalOverflow(page);
+});
+
+test("mobile landscape uses the full viewport without scrolling", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 740, height: 360 });
+  await page.goto("./");
+
+  const main = page.getByRole("main");
+  await expect(main).toHaveAttribute("data-view", "planning");
+  await expectNoHorizontalOverflow(page);
+  await expectNoVerticalOverflow(page);
+
+  const sliders = page.getByRole("slider");
+  await expect(sliders).toHaveCount(3);
+  for (let index = 0; index < 3; index += 1) {
+    await expect(sliders.nth(index)).toBeVisible();
+  }
+
+  const action = page.getByRole("button", { name: "Sell for the day" });
+  await expect(action).toBeVisible();
+  expect((await action.textContent())?.trim()).toBe("");
+  const actionBox = await action.boundingBox();
+  if (actionBox === null) throw new Error("expected landscape action bounds");
+  expect(360 - (actionBox.y + actionBox.height)).toBeLessThanOrEqual(18);
 });
 
 test("reset requires explicit in-page confirmation", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("./");
+  await expectPlanningReady(page);
 
   await page.locator(".run-tools-summary").click();
   await page.getByRole("button", { name: "Reset run" }).click();
@@ -159,6 +250,7 @@ test("reduced-motion preference collapses decorative transition and animation du
 });
 
 test("storage failure degrades to a playable in-memory run", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
     Object.defineProperty(globalThis, "indexedDB", {
       configurable: true,
@@ -169,6 +261,7 @@ test("storage failure degrades to a playable in-memory run", async ({ page }) =>
   });
 
   await page.goto("./");
+  await expectPlanningReady(page);
   await expect(page.locator("#run-error")).toContainText("Unable to open browser run storage");
   await expect(page.getByRole("button", { name: "Sell for the day" })).toBeEnabled();
   await page.getByRole("button", { name: "Sell for the day" }).click();
@@ -184,10 +277,13 @@ test("scene runtime failure falls back without blocking gameplay", async ({ page
 
   await page.goto("./");
 
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "forecast");
+  await expect(page.locator("#scene-fallback")).toBeVisible();
+  expect(sceneRequests).toHaveLength(1);
+  await expectPlanningReady(page);
+
   await expect(page.getByRole("slider")).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Sell for the day" })).toBeEnabled();
-  await expect(page.locator("#scene-fallback")).not.toBeVisible();
-  expect(sceneRequests).toHaveLength(0);
 
   await page.getByRole("button", { name: "Sell for the day" }).click();
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "simulation");
@@ -195,5 +291,7 @@ test("scene runtime failure falls back without blocking gameplay", async ({ page
   await expect(page.locator("#scene-fallback-description")).not.toBeEmpty();
   expect(sceneRequests).toHaveLength(1);
 
-  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible({
+    timeout: SIMULATION_PRESENTATION_MS + PHASE_SETTLE_MARGIN_MS,
+  });
 });

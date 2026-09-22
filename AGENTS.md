@@ -115,6 +115,10 @@ It has one primary submit action. Weather, market sentiment, financial obligatio
 - Prefer semantic HTML over generic containers with ARIA patches.
 - Preserve keyboard operation and precise input behavior.
 - Author responsive CSS mobile-first: narrow layouts are the source of truth and larger layouts are progressive enhancements using ascending relative-unit `width >= …` queries.
+- On mobile/touch devices, every primary daily-loop state—planning, simulation, report, and forecast—must own the full dynamic viewport width and height. Document scrolling, nested scrolling, and vertically clipped flow content are forbidden.
+- If a mobile state cannot fit legibly in one viewport, split it into sequential states or reduce nonessential presentation. Do not solve it with scrolling, desktop-style max-width containers, or hidden overflow that discards gameplay information.
+- The primary mobile flow action remains centered on the viewport and docked to the safe-area-aware bottom edge. It communicates visually through semantic custom iconography, with an accessible name retained for assistive technology rather than visible instructional wording.
+- Wide touch devices remain on the mobile contract. Desktop release of the full-screen shell requires both sufficient width and fine-pointer/hover capability.
 - Do not hide horizontal overflow to conceal layout defects, use legacy `100vh/100vw` for full-viewport sizing, or rely on `!important`/broad `transition: all` overrides.
 - Gate hover decoration behind `(hover: hover) and (pointer: fine)`; touch and keyboard interaction must remain complete without hover.
 - Do not rely on color, animation, hover, canvas, or audio as the sole carrier of gameplay information.
@@ -164,6 +168,9 @@ Minimum categories:
 - progression boundary/rounding tests;
 - browser tests for decision validation;
 - Playwright coverage for a complete keyboard-only day;
+- `pnpm verify:mobile` as the mandatory combined static + browser mobile gate;
+- the mobile contract must cover the required portrait and landscape touch viewport matrix with zero document/nested scrolling, clipping, offscreen visible flow content, or sub-44×44 primary touch targets;
+- never skip, fixme, expected-fail, ignore, disable, or exempt a mobile-contract case; fix the layout or split the flow into sequential screens;
 - reduced-motion and non-WebGL fallbacks for presentation work.
 
 Bug fixes should include a regression test whenever the bug is representable deterministically.
