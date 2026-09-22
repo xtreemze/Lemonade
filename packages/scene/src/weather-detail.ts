@@ -11,7 +11,10 @@ import type {
   WebGLRenderer,
 } from "three";
 
-import { WEATHER_BACKDROP_LAYOUT } from "./weather-layout.js";
+import {
+  CLOUDY_TOWN_CLOUD_LAYOUT,
+  WEATHER_BACKDROP_LAYOUT,
+} from "./weather-layout.js";
 
 export type WeatherKind = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 export type WeatherPhase = "idle" | "simulation" | "forecast";
@@ -232,6 +235,19 @@ export const populateWeatherObjects = (
   weather["hot-and-dry"].add(partlyCloud);
 
   addCloud(weather.cloudy, 0xd7e0df);
+
+  const cloudyTownClouds = CLOUDY_TOWN_CLOUD_LAYOUT.map((layout, index) => {
+    const cloud = new Group();
+    cloud.userData["sceneRole"] = "town-cloud";
+    cloud.userData["driftPhase"] = layout.driftPhase;
+    cloud.userData["baseX"] = layout.position[0];
+    addCloud(cloud, index % 2 === 0 ? 0xcbd7d7 : 0xd5dddd);
+    cloud.position.set(...layout.position);
+    cloud.scale.setScalar(layout.scale);
+    weather.cloudy.add(cloud);
+    return cloud;
+  });
+
   addCloud(weather.thunderstorm, 0x657786);
 
   const lightning = new Group();
@@ -287,6 +303,22 @@ export const populateWeatherObjects = (
       const drift = reducedMotion ? 0 : Math.sin(elapsedMs * 0.00045) *
         (activeWeather === "sunny" ? 0.08 : 0.3);
       active.position.x = origins[activeWeather] + drift;
+
+      cloudyTownClouds.forEach((cloud, index) => {
+        const baseX =
+          typeof cloud.userData["baseX"] === "number"
+            ? cloud.userData["baseX"]
+            : cloud.position.x;
+        const phaseOffset =
+          typeof cloud.userData["driftPhase"] === "number"
+            ? cloud.userData["driftPhase"]
+            : index;
+        const localDrift = reducedMotion
+          ? 0
+          : Math.sin(elapsedMs * (0.00016 + index * 0.000025) + phaseOffset) *
+            (0.18 + index * 0.035);
+        cloud.position.x = baseX + localDrift;
+      });
 
       const daylightElapsed =
         reducedMotion && phase === "simulation"
