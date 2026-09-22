@@ -73,6 +73,22 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "data-presentation-duration-ms",
     String(FORECAST_PRESENTATION_MS),
   );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-cup-visual-style",
+    "original-svg-3d",
+    { timeout: 4_000 },
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-character-seed",
+    /\d+/u,
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-seller-mood",
+    /discouraged|uncertain|cautious|steady|optimistic|radiant/u,
+  );
+  await expect(page.locator("#scene-title")).not.toContainText("Confidence");
+  await expect(page.getByText("Confidence", { exact: true })).toHaveCount(0);
+  await expect(page.locator("#condition-sentiment")).not.toContainText(/\/\s*5/u);
   await expectNoHorizontalOverflow(page);
   await expectNoVerticalOverflow(page);
   await expectPlanningReady(page);
