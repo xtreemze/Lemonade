@@ -9,7 +9,6 @@ import {
   generateResidentialLayout,
   residentialAccessLayout,
 } from "../src/residential-layout.js";
-import { roadLaneZ } from "../src/street-layout.js";
 
 const MOBILITY_SEED = 0x5eed1234;
 
