@@ -893,7 +893,7 @@ export const createNeighborhoodMobilitySystem = (
           "mail-carrier",
           mailPoint,
           mailInteraction ? mailboxYaw : walkingYaw,
-          mailInteraction ? 0 : 0.8,
+          mailInteraction ? 0 : 0.55,
           focus,
           mailInteraction ? "mailbox" : "none",
           nearestMailbox?.propertyRole ?? null,
