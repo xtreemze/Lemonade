@@ -13,6 +13,7 @@ import type {
 
 import {
   CLOUDY_TOWN_CLOUD_LAYOUT,
+  HOT_DRY_CLOUD_LAYOUT,
   WEATHER_BACKDROP_LAYOUT,
 } from "./weather-layout.js";
 
@@ -230,7 +231,8 @@ export const populateWeatherObjects = (
   weather["hot-and-dry"].add(partlySun);
 
   const partlyCloud = new Group();
-  partlyCloud.position.set(-0.35, 0, 0.15);
+  partlyCloud.position.set(...HOT_DRY_CLOUD_LAYOUT.position);
+  partlyCloud.scale.setScalar(HOT_DRY_CLOUD_LAYOUT.scale);
   addCloud(partlyCloud, 0xd7e0df);
   weather["hot-and-dry"].add(partlyCloud);
 
