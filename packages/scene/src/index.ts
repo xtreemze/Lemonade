@@ -848,7 +848,7 @@ export const createLemonsvilleScene = (
       if (phase === "approaching") {
         const duration = Math.max(1, sale.purchaseAtMs - sale.approachAtMs);
         const progress = smoothStep((elapsedMs - sale.approachAtMs) / duration);
-        const offscreenZ = streetZ + (sale.direction === -1 ? 20 : -20);
+        const offscreenZ = streetZ - (sale.direction === -1 ? 20 : -20);
         x = lerp(streetX, counterX, progress);
         z = lerp(offscreenZ, counterZ, progress);
         travelDistance = approachDistance * progress;
