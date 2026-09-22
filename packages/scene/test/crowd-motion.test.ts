@@ -338,4 +338,38 @@ describe("crowd motion", () => {
       vehicles: 2,
     });
   });
+
+  it("never teleports an active pedestrian between sidewalk samples", () => {
+    const simulation = createCrowdSimulation(beats, 12, 12_000);
+    let previous = simulation.sample(0).poses;
+
+    for (let elapsedMs = 50; elapsedMs <= 12_000; elapsedMs += 50) {
+      const current = simulation.sample(elapsedMs).poses;
+      for (let index = 0; index < current.length; index += 1) {
+        const before = previous[index];
+        const after = current[index];
+        if (before === undefined || after === undefined) continue;
+        const displacement = Math.hypot(after.x - before.x, after.z - before.z);
+        const expectedTravel = Math.max(before.worldSpeed, after.worldSpeed) * 0.05;
+        expect(displacement).toBeLessThanOrEqual(expectedTravel + 0.28);
+      }
+      previous = current;
+    }
+  });
+
+  it("keeps ordinary pedestrians within a normal walking-speed envelope", () => {
+    const simulation = createCrowdSimulation(beats, 12, 12_000);
+    const sampled = [
+      ...simulation.sample(1_000).poses,
+      ...simulation.sample(6_000).poses,
+      ...simulation.sample(11_000).poses,
+    ].filter((pose) => pose !== undefined);
+
+    expect(sampled.length).toBeGreaterThan(0);
+    for (const pose of sampled) {
+      expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.2);
+      expect(pose.worldSpeed).toBeLessThanOrEqual(1.5);
+    }
+  });
+
 });
