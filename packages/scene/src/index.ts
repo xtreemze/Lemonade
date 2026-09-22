@@ -39,7 +39,6 @@ export type ScenePhase = "idle" | "simulation" | "forecast";
 
 export type LemonsvilleSceneState = Readonly<{
   weather: SceneWeather;
-  customerActivity: CustomerActivity;
   visibleSigns: number;
   prepared: number;
   sold: number;
@@ -66,14 +65,6 @@ const skyColor: Record<SceneWeather, number> = {
   thunderstorm: 0x536471,
 };
 
-const customerCount: Record<CustomerActivity, number> = {
-  quiet: 4,
-  light: 7,
-  steady: 10,
-  lively: 14,
-  busy: 18,
-};
-
 const PASSERBY_POOL_SIZE = 32;
 const BUYER_POOL_SIZE = 192;
 const MAX_PREPARED_CUPS = 400;
@@ -98,9 +89,7 @@ const makeWeatherMaterial = (
 ): MeshStandardMaterial =>
   new MeshStandardMaterial({
     color,
-    flatShading: false,
     roughness: 0.88,
-    metalness: 0,
     emissive,
     emissiveIntensity,
   });
@@ -835,7 +824,7 @@ export const createLemonsvilleScene = (
   const positionStaticPedestrians = (): void => {
     const visibleCount = Math.min(
       customers.length,
-      Math.max(6, customerCount[state.customerActivity] + 2),
+      Math.max(6, storyboard.passersBy.length),
     );
     customers.forEach((customer, index) => {
       customer.root.visible = index < visibleCount;
@@ -933,11 +922,7 @@ export const createLemonsvilleScene = (
   ): void => {
     const targetCount = Math.min(
       customers.length,
-      Math.max(
-        activeBuyerCount + 1,
-        customerCount[state.customerActivity] + 4,
-        Math.min(storyboard.passersBy.length, customers.length),
-      ),
+      Math.max(activeBuyerCount + 1, storyboard.passersBy.length),
     );
     const durationMs = Math.max(1, storyboard.durationMs);
     const globalProgress = clamp01(elapsedMs / durationMs);
