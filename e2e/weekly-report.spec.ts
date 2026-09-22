@@ -13,6 +13,8 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
 
     if (day < 7) {
       await expect(page.getByRole("heading", { name: /Week \d+ results/ })).toHaveCount(0);
+      await page.getByRole("button", { name: "Review sales history" }).click();
+      await expect(page.getByRole("main")).toHaveAttribute("data-view", "history");
       await page.getByRole("button", { name: "Plan next day" }).click();
       await expect(page.locator("#status-day")).toHaveText(String(day + 1));
       await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
@@ -25,6 +27,7 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
   await expect(page.locator(".weekly-results-grid")).toContainText("Sell-through");
   await expect(page.locator(".weekly-highlights")).toContainText("Best day");
   await expect(page.locator(".weekly-highlights")).toContainText("Lowest day");
+  await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
 
   const viewportContract = await page.evaluate(() => {
     const shell = document.querySelector(".game-shell");

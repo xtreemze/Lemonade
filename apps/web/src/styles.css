@@ -613,10 +613,12 @@ h2 {
 /* Mobile-first daily-loop invariant: every primary state owns the full dynamic viewport. */
 html:has(.game-shell[data-view="planning"]),
 html:has(.game-shell[data-view="report"]),
+html:has(.game-shell[data-view="history"]),
 html:has(.game-shell[data-view="simulation"]),
 html:has(.game-shell[data-view="forecast"]),
 body:has(.game-shell[data-view="planning"]),
 body:has(.game-shell[data-view="report"]),
+body:has(.game-shell[data-view="history"]),
 body:has(.game-shell[data-view="simulation"]),
 body:has(.game-shell[data-view="forecast"]) {
   width: 100%;
@@ -628,6 +630,7 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .game-shell[data-view="planning"],
 .game-shell[data-view="report"],
+.game-shell[data-view="history"],
 .game-shell[data-view="simulation"],
 .game-shell[data-view="forecast"] {
   position: fixed;
@@ -902,6 +905,10 @@ body:has(.game-shell[data-view="forecast"]) {
   display: none;
 }
 
+.history-next-button {
+  display: none;
+}
+
 .flow-action-button {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -931,6 +938,32 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .next-day-ray {
   stroke-width: 5;
+}
+
+.history-review-icon {
+  width: 68px;
+  height: 68px;
+  overflow: visible;
+}
+
+.history-review-axis,
+.history-review-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.history-review-axis {
+  stroke-width: 6;
+}
+
+.history-review-line {
+  stroke-width: 5;
+}
+
+.history-review-point {
+  fill: currentColor;
 }
 
 .game-shell[data-view="report"] {
@@ -1118,7 +1151,7 @@ body:has(.game-shell[data-view="forecast"]) {
     line-height: 1.1;
   }
 
-.game-shell[data-view="report"] .next-day-button {
+.game-shell[data-view="report"] .history-review-button {
   position: absolute;
   left: 50%;
   bottom: max(6px, env(safe-area-inset-bottom));
@@ -1136,7 +1169,52 @@ body:has(.game-shell[data-view="forecast"]) {
   transform: translateX(-50%);
 }
 
-.game-shell[data-view="report"] .next-day-button:active {
+.game-shell[data-view="report"] .history-review-button:active {
+  transform: translateX(-50%) scale(0.96);
+  box-shadow: none;
+}
+
+.game-shell[data-view="history"] {
+  display: block;
+  padding:
+    max(8px, env(safe-area-inset-top))
+    max(10px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom))
+    max(10px, env(safe-area-inset-left));
+  overflow: hidden;
+}
+
+.game-shell[data-view="history"] > :not(#ledger-history-host):not(#history-next-button) {
+  display: none;
+}
+
+.game-shell[data-view="history"] > #ledger-history-host {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding-bottom: 84px;
+  overflow: hidden;
+}
+
+.game-shell[data-view="history"] > .history-next-button {
+  position: absolute;
+  left: 50%;
+  bottom: max(6px, env(safe-area-inset-bottom));
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  min-height: 76px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #236f5e;
+  box-shadow: none;
+  transform: translateX(-50%);
+}
+
+.game-shell[data-view="history"] > .history-next-button:active {
   transform: translateX(-50%) scale(0.96);
   box-shadow: none;
 }
@@ -1247,13 +1325,15 @@ body:has(.game-shell[data-view="forecast"]) {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-.game-shell[data-view="report"] .next-day-button {
+.game-shell[data-view="report"] .history-review-button,
+.game-shell[data-view="history"] > .history-next-button {
   width: 58px;
   height: 58px;
   min-height: 58px;
   }
 
-.game-shell[data-view="report"] .next-day-icon {
+.game-shell[data-view="report"] .history-review-icon,
+.game-shell[data-view="history"] .next-day-icon {
   width: 52px;
   height: 52px;
   }

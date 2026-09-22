@@ -55,6 +55,8 @@ test("release artifact completes a day without uncaught runtime failures", async
   await expect(page.locator("#scene-equivalent")).not.toBeEmpty();
 
   await page.getByRole("button", { name: "Sell for the day" }).click();
+  await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
+  await page.getByRole("button", { name: "Review sales history" }).click();
   await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
   await page.getByRole("button", { name: "Plan next day" }).click();
   await expect(page.locator("#status-day")).toHaveText("2");
@@ -158,6 +160,21 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expectNoVerticalOverflow(page);
   await expect(page.getByRole("region", { name: "Sales history" })).toBeHidden();
 
+  const reviewHistoryButton = page.getByRole("button", { name: "Review sales history" });
+  await expect(reviewHistoryButton).toBeVisible();
+  expect((await reviewHistoryButton.textContent())?.trim()).toBe("");
+  await expect(reviewHistoryButton.locator("svg")).toHaveCount(1);
+  const reviewBox = await reviewHistoryButton.boundingBox();
+  if (reviewBox === null) throw new Error("expected history review control bounds");
+  expect(Math.abs(reviewBox.x + reviewBox.width / 2 - 180)).toBeLessThanOrEqual(2);
+  expect(740 - (reviewBox.y + reviewBox.height)).toBeLessThanOrEqual(24);
+
+  await reviewHistoryButton.locator("svg").click();
+  await expect(main).toHaveAttribute("data-view", "history");
+  await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await expectNoVerticalOverflow(page);
+
   const nextDayButton = page.getByRole("button", { name: "Plan next day" });
   await expect(nextDayButton).toBeVisible();
   expect((await nextDayButton.textContent())?.trim()).toBe("");
@@ -246,7 +263,7 @@ test("reduced-motion preference collapses decorative transition and animation du
   expect(durations.animationSeconds).toBeLessThanOrEqual(0.001);
   expect(durations.transitionSeconds).toBeLessThanOrEqual(0.001);
   await page.getByRole("button", { name: "Sell for the day" }).click();
-  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
 });
 
 test("storage failure degrades to a playable in-memory run", async ({ page }) => {
@@ -265,7 +282,7 @@ test("storage failure degrades to a playable in-memory run", async ({ page }) =>
   await expect(page.locator("#run-error")).toContainText("Unable to open browser run storage");
   await expect(page.getByRole("button", { name: "Sell for the day" })).toBeEnabled();
   await page.getByRole("button", { name: "Sell for the day" }).click();
-  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
 });
 
 test("scene runtime failure falls back without blocking gameplay", async ({ page }) => {
@@ -291,7 +308,11 @@ test("scene runtime failure falls back without blocking gameplay", async ({ page
   await expect(page.locator("#scene-fallback-description")).not.toBeEmpty();
   expect(sceneRequests).toHaveLength(1);
 
-  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible({
+  const reviewHistory = page.getByRole("button", { name: "Review sales history" });
+  await expect(reviewHistory).toBeVisible({
     timeout: SIMULATION_PRESENTATION_MS + PHASE_SETTLE_MARGIN_MS,
   });
+  await reviewHistory.click();
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "history");
+  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
 });

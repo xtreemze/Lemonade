@@ -5,13 +5,15 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const stylesPath = resolve(root, "apps/web/src/styles.css");
 const componentsPath = resolve(root, "apps/web/src/components.ts");
+const appPath = resolve(root, "apps/web/src/app.ts");
 const mobileSpecPath = resolve(root, "e2e/mobile-contract.spec.ts");
 const workflowPath = resolve(root, ".github/workflows/ci.yml");
 const indexPath = resolve(root, "apps/web/index.html");
 
-const [styles, components, mobileSpec, workflow, indexHtml] = await Promise.all([
+const [styles, components, app, mobileSpec, workflow, indexHtml] = await Promise.all([
   readFile(stylesPath, "utf8"),
   readFile(componentsPath, "utf8"),
+  readFile(appPath, "utf8"),
   readFile(mobileSpecPath, "utf8"),
   readFile(workflowPath, "utf8"),
   readFile(indexPath, "utf8"),
@@ -26,13 +28,13 @@ const requireMatch = (source, pattern, rule, message) => {
 };
 
 const stateSelector =
-  String.raw`\.game-shell\[data-view="planning"\],[\s\S]*?\.game-shell\[data-view="report"\],[\s\S]*?\.game-shell\[data-view="simulation"\],[\s\S]*?\.game-shell\[data-view="forecast"\]\s*\{([\s\S]*?)\}`;
+  String.raw`\.game-shell\[data-view="planning"\],[\s\S]*?\.game-shell\[data-view="report"\],[\s\S]*?\.game-shell\[data-view="history"\],[\s\S]*?\.game-shell\[data-view="simulation"\],[\s\S]*?\.game-shell\[data-view="forecast"\]\s*\{([\s\S]*?)\}`;
 
 const stateMatch = styles.match(new RegExp(stateSelector, "u"));
 if (stateMatch?.[1] === undefined) {
   fail(
     "mobile-flow-shared-shell",
-    "All four primary states must share one mobile-baseline shell rule.",
+    "All five primary states must share one fullscreen shell rule.",
   );
 } else {
   const declarations = stateMatch[1];
@@ -67,8 +69,9 @@ if (/@media[^{}]*(?:max-width\s*:|width\s*(?:<|<=))/iu.test(styles)) {
   );
 }
 
-const flowButtons = [...components.matchAll(/<button\b([^>]*\bflow-action-button\b[^>]*)>([\s\S]*?)<\/button>/gu)];
-if (flowButtons.length < 2) {
+const flowMarkup = [components, app].join("\n");
+const flowButtons = [...flowMarkup.matchAll(/<button\b([^>]*\bflow-action-button\b[^>]*)>([\s\S]*?)<\/button>/gu)];
+if (flowButtons.length < 3) {
   fail(
     "semantic-icon-actions",
     "Primary flow controls must use the shared flow-action-button contract.",
@@ -113,9 +116,16 @@ requireMatch(
 
 requireMatch(
   styles,
-  /\.game-shell\[data-view="report"\][\s\S]*?\.next-day-button\s*\{(?=[^}]*\bposition\s*:\s*absolute\s*;)(?=[^}]*\bleft\s*:\s*50%\s*;)(?=[^}]*\bbottom\s*:)(?=[^}]*\btransform\s*:\s*translateX\(-50%\)\s*;)[^}]*\}/u,
+  /\.game-shell\[data-view="report"\][\s\S]*?\.history-review-button\s*\{(?=[^}]*\bposition\s*:\s*absolute\s*;)(?=[^}]*\bleft\s*:\s*50%\s*;)(?=[^}]*\bbottom\s*:)(?=[^}]*\btransform\s*:\s*translateX\(-50%\)\s*;)[^}]*\}/u,
   "bottom-docked-primary-action",
   "The report action must remain absolutely anchored, horizontally centered, and bottom-docked.",
+);
+
+requireMatch(
+  styles,
+  /\.game-shell\[data-view="history"\][\s\S]*?\.history-next-button\s*\{(?=[^}]*\bposition\s*:\s*absolute\s*;)(?=[^}]*\bleft\s*:\s*50%\s*;)(?=[^}]*\bbottom\s*:)(?=[^}]*\btransform\s*:\s*translateX\(-50%\)\s*;)[^}]*\}/u,
+  "bottom-docked-primary-action",
+  "The history action must remain absolutely anchored, horizontally centered, and bottom-docked.",
 );
 
 for (const [width, height] of [
@@ -191,7 +201,7 @@ if (/\b(?:test|test\.describe)\.(?:skip|fixme|fail)\b/u.test(mobileSpec)) {
 }
 
 if (/mobile-contract-(?:ignore|disable|exempt)|mobile-contract:\s*(?:ignore|disable|exempt)/iu.test(
-  [styles, components, mobileSpec].join("\n"),
+  [styles, components, app, mobileSpec].join("\n"),
 )) {
   fail(
     "no-mobile-contract-source-exemptions",
@@ -200,7 +210,7 @@ if (/mobile-contract-(?:ignore|disable|exempt)|mobile-contract:\s*(?:ignore|disa
 }
 
 if (
-  /html:has\(\.game-shell\[data-view="(?:planning|report|simulation|forecast)"\]\)[\s\S]{0,600}?overflow\s*:\s*visible/u.test(
+  /html:has\(\.game-shell\[data-view="(?:planning|report|history|simulation|forecast)"\]\)[\s\S]{0,600}?overflow\s*:\s*visible/u.test(
     styles,
   ) ||
   /\.game-shell\[data-view="planning"\][\s\S]{0,300}?\.game-shell\[data-view="report"\][\s\S]{0,500}?position\s*:\s*static/u.test(
@@ -209,7 +219,7 @@ if (
 ) {
   fail(
     "no-fullscreen-release",
-    "Planning, simulation, report, and forecast may never release the viewport lock or fall back to document scrolling, including on wide fine-pointer desktops.",
+    "Planning, simulation, report, history, and forecast may never release the viewport lock or fall back to document scrolling, including on wide fine-pointer desktops.",
   );
 }
 

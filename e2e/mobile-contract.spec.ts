@@ -23,7 +23,7 @@ const desktopViewports: readonly MobileViewport[] = Object.freeze([
 
 const expectViewportContract = async (
   page: Page,
-  expectedView: "planning" | "simulation" | "report" | "forecast",
+  expectedView: "planning" | "simulation" | "report" | "history" | "forecast",
 ): Promise<void> => {
   const contract = await page.evaluate(() => {
     const shell = document.querySelector(".game-shell");
@@ -296,6 +296,16 @@ for (const viewport of viewports) {
       await expect(page.locator(".results-grid > div")).toHaveCount(4);
       await expectCenteredBottomAction(
         page,
+        page.getByRole("button", { name: "Review sales history" }),
+        viewport.height <= 360 ? 18 : 24,
+      );
+
+      await page.getByRole("button", { name: "Review sales history" }).click();
+      await expect(main).toHaveAttribute("data-view", "history");
+      await expectViewportContract(page, "history");
+      await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+      await expectCenteredBottomAction(
+        page,
         page.getByRole("button", { name: "Plan next day" }),
         viewport.height <= 360 ? 18 : 24,
       );
@@ -350,6 +360,15 @@ for (const viewport of desktopViewports) {
 
       await expect(main).toHaveAttribute("data-view", "report", { timeout: 15_000 });
       await expectViewportContract(page, "report");
+      await expectCenteredBottomAction(
+        page,
+        page.getByRole("button", { name: "Review sales history" }),
+      );
+
+      await page.getByRole("button", { name: "Review sales history" }).click();
+      await expect(main).toHaveAttribute("data-view", "history");
+      await expectViewportContract(page, "history");
+      await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
       await expectCenteredBottomAction(page, page.getByRole("button", { name: "Plan next day" }));
 
       await page.getByRole("button", { name: "Plan next day" }).click();

@@ -516,9 +516,9 @@ export class LemonadeDayReport extends LitElement {
   readonly #onClick = (event: Event): void => {
     const target = event.target;
     if (!(target instanceof Element)) return;
-    const button = target.closest<HTMLButtonElement>("button#next-button");
+    const button = target.closest<HTMLButtonElement>("button#review-history-button");
     if (button === null || !this.contains(button)) return;
-    this.dispatchEvent(new Event("lemonade-next-day", { bubbles: true, composed: true }));
+    this.dispatchEvent(new Event("lemonade-review-history", { bubbles: true, composed: true }));
   };
 
   protected override render(): ReturnType<typeof html> {
@@ -653,22 +653,24 @@ export class LemonadeDayReport extends LitElement {
             : ""}
         </p>
         <button
-          id="next-button"
-          class="next-button flow-action-button next-day-button"
+          id="review-history-button"
+          class="next-button flow-action-button history-review-button"
           type="button"
-          aria-label="Plan next day"
+          aria-label="Review sales history"
         >
           <svg
-            class="flow-action-icon next-day-icon"
+            class="flow-action-icon history-review-icon"
             viewBox="0 0 96 96"
             role="img"
             aria-hidden="true"
             focusable="false"
           >
-            <path class="next-day-horizon" d="M18 62h42" />
-            <path class="next-day-ray" d="M39 19v9M17 39l7 4M61 39l-7 4" />
-            <path class="next-day-sun" d="M24 62a15 15 0 0 1 30 0" />
-            <path class="next-day-arrow" d="M58 49l18 13-18 13M75 62H49" />
+            <path class="history-review-axis" d="M20 18v58h58" />
+            <path class="history-review-line" d="M27 64l14-18 13 10 20-28" />
+            <circle class="history-review-point" cx="27" cy="64" r="4" />
+            <circle class="history-review-point" cx="41" cy="46" r="4" />
+            <circle class="history-review-point" cx="54" cy="56" r="4" />
+            <circle class="history-review-point" cx="74" cy="28" r="4" />
           </svg>
         </button>
       </section>

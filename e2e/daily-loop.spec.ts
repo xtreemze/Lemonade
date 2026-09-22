@@ -29,7 +29,7 @@ test("plays a complete day with keyboard controls", async ({ page }) => {
 
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "report");
   await expect(page.getByRole("heading", { name: /sold$/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
 });
 
 test("supports precise numeric entry synchronized with sliders", async ({ page }) => {
@@ -95,8 +95,10 @@ test("restores both report and next-day phases across reloads", async ({ page })
 
   await page.reload();
   await expect(page.getByRole("heading", { name: reportText })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
 
+  await page.getByRole("button", { name: "Review sales history" }).click();
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "history");
   await page.getByRole("button", { name: "Plan next day" }).click();
   await expect(page.locator("#status-day")).toHaveText("2");
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
@@ -116,6 +118,8 @@ test("exports and imports a progressed run into a clean browser profile", async 
   await openPlanningView(sourcePage);
   await sourcePage.getByRole("button", { name: "Sell for the day" }).click();
   await expect(sourcePage.getByRole("main")).toHaveAttribute("data-view", "report");
+  await sourcePage.getByRole("button", { name: "Review sales history" }).click();
+  await expect(sourcePage.getByRole("main")).toHaveAttribute("data-view", "history");
   await sourcePage.getByRole("button", { name: "Plan next day" }).click();
   await expect(sourcePage.locator("#status-day")).toHaveText("2");
   await expect(sourcePage.getByRole("main")).toHaveAttribute("data-view", "planning");
