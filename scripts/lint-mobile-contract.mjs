@@ -123,6 +123,7 @@ for (const [width, height] of [
   [360, 740],
   [390, 844],
   [430, 932],
+  [568, 320],
   [740, 360],
   [844, 390],
   [932, 430],
@@ -144,6 +145,36 @@ requireMatch(
 );
 
 requireMatch(
+  mobileSpec,
+  /viewportViolations[\s\S]*?getBoundingClientRect[\s\S]*?window\.innerWidth[\s\S]*?window\.innerHeight[\s\S]*?expect\(contract\.viewportViolations\)\.toEqual\(\[\]\)/u,
+  "no-offscreen-flow-content",
+  "Browser certification must reject rendered flow content that escapes any viewport edge.",
+);
+
+requireMatch(
+  mobileSpec,
+  /interactiveViolations[\s\S]*?\.flow-action-button, \.game-slider[\s\S]*?rect\.width < 44[\s\S]*?rect\.height < 44[\s\S]*?expect\(contract\.interactiveViolations\)\.toEqual\(\[\]\)/u,
+  "minimum-touch-target",
+  "Primary mobile actions and game sliders must retain at least a 44×44 CSS-pixel interaction target.",
+);
+
+if (/\b(?:test|test\.describe)\.(?:skip|fixme|fail)\b/u.test(mobileSpec)) {
+  fail(
+    "no-mobile-contract-test-exemptions",
+    "The mobile contract suite may not skip, fixme, or expected-fail any viewport. Fix the layout instead.",
+  );
+}
+
+if (/mobile-contract-(?:ignore|disable|exempt)|mobile-contract:\s*(?:ignore|disable|exempt)/iu.test(
+  [styles, components, mobileSpec].join("\n"),
+)) {
+  fail(
+    "no-mobile-contract-source-exemptions",
+    "Mobile contract ignore/disable/exempt markers are forbidden. The fullscreen rule has no mobile exceptions.",
+  );
+}
+
+requireMatch(
   styles,
   /@media\s*\(width\s*>=\s*47\.5625rem\)\s*and\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.game-shell\[data-view="planning"\][\s\S]*?\.game-shell\[data-view="report"\]/u,
   "desktop-release-requires-fine-pointer",
@@ -159,9 +190,9 @@ requireMatch(
 
 requireMatch(
   workflow,
-  /pnpm\s+test:mobile-contract/u,
+  /pnpm\s+verify:mobile/u,
   "ci-mobile-gate",
-  "CI must run the dedicated mobile contract suite as an explicit merge gate.",
+  "CI must run the combined static and browser mobile contract as an explicit merge gate.",
 );
 
 if (failures.length > 0) {
@@ -170,5 +201,5 @@ if (failures.length > 0) {
   }
   process.exitCode = 1;
 } else {
-  console.log("Mobile contract lint passed: fullscreen, no-scroll, mobile-first, icon-only actions enforced.");
+  console.log("Mobile contract lint passed: fullscreen, no-scroll, no-clipping, touch-target, mobile-first, icon-only actions enforced with no exemptions.");
 }
