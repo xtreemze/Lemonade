@@ -59,7 +59,7 @@ describe("procedural residential layout", () => {
 
   it("keeps complete house and planting footprints out of roads, sidewalks, driveways and house fronts", () => {
     const layout = generateResidentialLayout(0xdecafbad);
-    expect(layout.trees).toHaveLength(72);
+    expect(layout.trees).toHaveLength(96);
     expect(layout.shrubs.length).toBeGreaterThanOrEqual(20);
     expect(layout.flowers.length).toBeGreaterThanOrEqual(12);
 
