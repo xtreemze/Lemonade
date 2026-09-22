@@ -885,9 +885,12 @@ export const createLemonsvilleScene = (
         if (dist < pedestrianRadius * 2) {
           const angle = Math.atan2(finalPos.z - otherPos.z, finalPos.x - otherPos.x);
           const minDist = pedestrianRadius * 2.1;
+          const targetX = otherPos.x + Math.cos(angle) * minDist;
+          const targetZ = otherPos.z + Math.sin(angle) * minDist;
+          const maxAdjust = 0.15;
           finalPos = {
-            x: otherPos.x + Math.cos(angle) * minDist,
-            z: otherPos.z + Math.sin(angle) * minDist,
+            x: Math.sign(targetX - finalPos.x) * Math.min(maxAdjust, Math.abs(targetX - finalPos.x)) + finalPos.x,
+            z: Math.sign(targetZ - finalPos.z) * Math.min(maxAdjust, Math.abs(targetZ - finalPos.z)) + finalPos.z,
           };
         }
       }
