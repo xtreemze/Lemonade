@@ -49,7 +49,10 @@ import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
-const SIMULATION_PRESENTATION_MS = 6_000;
+const ACTIVE_SIMULATION_PRESENTATION_MS = 6_000;
+const ENDING_CLOSEUP_PRESENTATION_MS = 2_000;
+const SIMULATION_PRESENTATION_MS =
+  ACTIVE_SIMULATION_PRESENTATION_MS + ENDING_CLOSEUP_PRESENTATION_MS;
 
 type PresentationPhase = "planning" | "simulation" | "report" | "history" | "forecast";
 
@@ -647,7 +650,7 @@ export class LemonadeApp {
     this.#clearFeedbackTimers();
     const schedule = createPurchaseFeedbackSchedule(
       Number(resolution.entry.sold),
-      SIMULATION_PRESENTATION_MS,
+      ACTIVE_SIMULATION_PRESENTATION_MS,
     );
     for (const beat of schedule) {
       this.#scheduleFeedback(beat.serveAtMs, "purchase:serve", "purchase:serve");
@@ -791,9 +794,15 @@ export class LemonadeApp {
       this.#presentation === "simulation" || this.#presentation === "forecast"
         ? this.#presentation
         : "idle";
+    const confidence = legacyConfidenceForState(this.#game);
+    const nextConfidence =
+      phase.kind === "report"
+        ? legacyConfidenceForState(phase.resolution.nextState)
+        : confidence;
     this.#scene.update({
       environment: this.#environment,
-      confidence: legacyConfidenceForState(this.#game),
+      confidence,
+      nextConfidence,
       visibleSigns: resolvedDay === null ? this.#signs : Number(resolvedDay.decision.signs),
       phase: scenePhase,
       sold: resolvedDay === null ? 0 : Number(resolvedDay.sold),
