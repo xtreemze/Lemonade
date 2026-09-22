@@ -1,7 +1,7 @@
 import {
   Box3,
   type Camera,
-  type Mesh,
+  Mesh,
   type Object3D,
   Raycaster,
   type Scene,
@@ -126,17 +126,17 @@ export const captureObjectTransform = (
       object.position.x,
       object.position.y,
       object.position.z,
-    ]),
+    ] as const),
     rotation: Object.freeze([
       object.rotation.x,
       object.rotation.y,
       object.rotation.z,
-    ]),
+    ] as const),
     scale: Object.freeze([
       object.scale.x,
       object.scale.y,
       object.scale.z,
-    ]),
+    ] as const),
   });
 
 export const applyObjectTransform = (
@@ -238,12 +238,12 @@ export const createGizmoController = (
         camera.position.x,
         camera.position.y,
         camera.position.z,
-      ]),
+      ] as const),
       target: Object.freeze([
         orbit.target.x,
         orbit.target.y,
         orbit.target.z,
-      ]),
+      ] as const),
       fov: cameraFov(camera),
     });
 
