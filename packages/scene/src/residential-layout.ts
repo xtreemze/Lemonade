@@ -113,6 +113,31 @@ const clearHouseFromBaseHardscape = (
   return Object.freeze({ x, z });
 };
 
+const mailboxAnchorIsClear = (x: number): boolean =>
+  !baseHardscape().some((rect) =>
+    footprintIntersectsRect(rect, { x, z: -0.3 }, 0.3, 0.3),
+  );
+
+const mailboxXForDriveway = (
+  drivewayX: number,
+  drivewaySide: -1 | 1,
+  offset: number,
+): number => {
+  const preferred = drivewayX + drivewaySide * offset;
+  if (mailboxAnchorIsClear(preferred)) return preferred;
+  const alternate = drivewayX - drivewaySide * offset;
+  if (mailboxAnchorIsClear(alternate)) return alternate;
+
+  for (let step = 1; step <= 8; step += 1) {
+    const distance = offset + step * 0.45;
+    const outer = drivewayX + drivewaySide * distance;
+    if (mailboxAnchorIsClear(outer)) return outer;
+    const inner = drivewayX - drivewaySide * distance;
+    if (mailboxAnchorIsClear(inner)) return inner;
+  }
+  return preferred;
+};
+
 const makeProperty = (
   seed: number,
   index: number,
@@ -155,14 +180,14 @@ const makeProperty = (
     drivewaySide === 0
       ? null
       : houseX + drivewaySide * drivewayOffset;
+  const mailboxOffset =
+    DRIVEWAY_HALF_WIDTH +
+    MAILBOX_CLEARANCE_FROM_DRIVEWAY +
+    unit(seed, index * 11 + 6) * 0.18;
   const mailboxX =
-    drivewayX === null
+    drivewayX === null || drivewaySide === 0
       ? null
-      : drivewayX +
-        drivewaySide *
-          (DRIVEWAY_HALF_WIDTH +
-            MAILBOX_CLEARANCE_FROM_DRIVEWAY +
-            unit(seed, index * 11 + 6) * 0.18);
+      : mailboxXForDriveway(drivewayX, drivewaySide, mailboxOffset);
 
   return Object.freeze({
     role,
@@ -199,7 +224,7 @@ const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
       scale: 0.97,
       rotationY: -0.055,
       drivewayX: 13.55,
-      mailboxX: 15.2,
+      mailboxX: 11.9,
     }),
     makeProperty(seed, 5, "east-mid", 29.1, -6.8, 1.01, 0.025, false, -1),
     makeProperty(seed, 6, "east-end", 41.5, -8.3, 0.94, -0.05, false, 1),
