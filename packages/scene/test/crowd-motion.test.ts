@@ -31,17 +31,26 @@ const beats: readonly PasserbyBeat[] = Object.freeze(
 );
 
 describe("crowd motion", () => {
-  it("keeps deterministic pedestrian paths separated and entirely on the sidewalk", () => {
+  it("keeps deterministic pedestrian paths separated across both sidewalks", () => {
     const first = crowdPosesAt(beats, 12, 2_750, 6_000);
     const repeated = crowdPosesAt(beats, 12, 2_750, 6_000);
     expect(repeated).toEqual(first);
     expect(first).toHaveLength(12);
 
+    const near = first.filter((pose) => pose.z < STREET_LAYOUT.road.minZ);
+    const far = first.filter((pose) => pose.z > STREET_LAYOUT.road.maxZ);
+    expect(near.length).toBeGreaterThan(0);
+    expect(far.length).toBeGreaterThan(0);
+
     for (const pose of first) {
       expect(Math.abs(pose.x)).toBeLessThanOrEqual(12.8);
-      expect(pose.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
-      expect(pose.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
-      expect(pose.z).toBeLessThan(STREET_LAYOUT.road.minZ);
+      const onNear =
+        pose.z >= STREET_LAYOUT.nearSidewalk.minZ &&
+        pose.z <= STREET_LAYOUT.nearSidewalk.maxZ;
+      const onFar =
+        pose.z >= STREET_LAYOUT.farSidewalk.minZ &&
+        pose.z <= STREET_LAYOUT.farSidewalk.maxZ;
+      expect(onNear || onFar).toBe(true);
     }
 
     for (let left = 0; left < first.length; left += 1) {
