@@ -892,16 +892,14 @@ export const createLemonsvilleScene = (
     const confidence = sellerConfidenceAt(elapsedMs);
     applySellerExpression(seller, confidence);
 
-    if (state.phase === "simulation") {
-      applySellerGesture?.(
-        seller.person.torso,
-        seller.person.head,
-        seller.person.arms[0].root,
-        seller.person.arms[1].root,
-        endingCloseupProgressAt(storyboard, elapsedMs),
-        confidence,
-      );
-    }
+    applySellerGesture?.(
+      seller.person.torso,
+      seller.person.head,
+      seller.person.arms[0].root,
+      seller.person.arms[1].root,
+      endingCloseupProgressAt(storyboard, elapsedMs),
+      confidence,
+    );
 
     if (state.reducedMotion || state.phase === "idle") return;
     const breathing = Math.sin(seconds * 2.1) * 0.025;
