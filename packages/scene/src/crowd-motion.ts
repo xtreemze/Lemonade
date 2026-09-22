@@ -1,5 +1,11 @@
-import { clampToNearSidewalk, sidewalkLaneZ } from "./street-layout.js";
+import {
+  clampToNearSidewalk,
+  gardenSignPosition,
+  sidewalkLaneZ,
+} from "./street-layout.js";
 import type { PasserbyBeat } from "./storyboard.js";
+
+export { gardenSignPosition, sidewalkLaneZ };
 
 export type CrowdPose = Readonly<{
   x: number;
