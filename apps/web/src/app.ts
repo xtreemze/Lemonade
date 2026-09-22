@@ -47,6 +47,7 @@ import {
 import { createHapticEngine, type HapticCue } from "./haptics.js";
 import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
+import { isGizmoEnabled, printGizmoHelp } from "./dev-gizmo.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
 const ACTIVE_SIMULATION_PRESENTATION_MS = 10_000;
@@ -326,12 +327,26 @@ export class LemonadeApp {
 
     root.innerHTML = SHELL_MARKUP;
     this.#elements = collectElements(root);
-    this.#scene = createLemonsvilleSceneView({
-      canvas: this.#elements.sceneCanvas,
-      fallback: this.#elements.sceneFallback,
-      fallbackDescription: this.#elements.sceneFallbackDescription,
-      equivalent: this.#elements.sceneEquivalent,
-    });
+
+    const gizmoEnabled = isGizmoEnabled();
+    if (gizmoEnabled) {
+      console.log("🎨 Gizmo mode enabled - type 'gizmoHelp()' for help");
+      printGizmoHelp();
+    }
+
+    this.#scene = createLemonsvilleSceneView(
+      {
+        canvas: this.#elements.sceneCanvas,
+        fallback: this.#elements.sceneFallback,
+        fallbackDescription: this.#elements.sceneFallbackDescription,
+        equivalent: this.#elements.sceneEquivalent,
+      },
+      {
+        sceneOptions: {
+          enableGizmo: gizmoEnabled,
+        },
+      },
+    );
 
     this.#elements.decisionPanel.addEventListener(
       "lemonade-decision-change",

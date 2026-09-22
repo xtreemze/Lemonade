@@ -3,6 +3,7 @@ import type {
   LemonsvilleSceneController,
   LemonsvilleSceneState,
   ScenePhase,
+  LemonsvilleSceneOptions,
 } from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
 import type { DayEnvironment } from "@lemonade/simulation";
@@ -46,6 +47,10 @@ export type LemonsvilleSceneInput = Readonly<{
   characterSeed: number;
   dayNumber: number;
   durationMs: number;
+}>;
+
+export type LemonsvilleSceneViewOptions = Readonly<{
+  sceneOptions?: LemonsvilleSceneOptions;
 }>;
 
 export type LemonsvilleSceneView = Readonly<{
@@ -125,7 +130,10 @@ const createState = (
   });
 };
 
-export const createLemonsvilleSceneView = (elements: SceneElements): LemonsvilleSceneView => {
+export const createLemonsvilleSceneView = (
+  elements: SceneElements,
+  options: LemonsvilleSceneViewOptions = {},
+): LemonsvilleSceneView => {
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   let reducedMotion = reducedMotionQuery.matches;
   let controller: LemonsvilleSceneController | null = null;
@@ -155,7 +163,7 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
 
       const description = describeScene(lastInput);
       const state = createState(lastInput, reducedMotion);
-      const nextController = createLemonsvilleScene(elements.canvas, state);
+      const nextController = createLemonsvilleScene(elements.canvas, state, options.sceneOptions);
 
       if (nextController === null) {
         showFallback(description);

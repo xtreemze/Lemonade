@@ -49,6 +49,11 @@ import {
   type SceneShotKind,
   type StreetStoryboard,
 } from "./storyboard.js";
+import { createGizmoController, type GizmoController, type TransformMode, type ObjectTransform } from "./gizmo-controller.js";
+import { createGizmoUI } from "./gizmo-ui.js";
+
+export { createGizmoController, createGizmoUI };
+export type { GizmoController, TransformMode, ObjectTransform };
 
 export type SceneWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 export type CustomerActivity = "quiet" | "light" | "steady" | "lively" | "busy";
@@ -66,6 +71,10 @@ export type LemonsvilleSceneState = Readonly<{
   storyboard: StreetStoryboard;
   phase: ScenePhase;
   reducedMotion: boolean;
+}>;
+
+export type LemonsvilleSceneOptions = Readonly<{
+  enableGizmo?: boolean;
 }>;
 
 export interface LemonsvilleSceneController {
@@ -432,6 +441,7 @@ const disposeObject = (object: Object3D): void => {
 export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
+  options: LemonsvilleSceneOptions = {},
 ): LemonsvilleSceneController | null => {
   let renderer: WebGLRenderer;
   try {
@@ -449,6 +459,9 @@ export const createLemonsvilleScene = (
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
+
+  let gizmo: ReturnType<typeof createGizmoController> | null = null;
+  let gizmoUI: HTMLElement | null = null;
 
   const hemisphere = new HemisphereLight(0xfff2c6, 0x526b51, 1.9);
   scene.add(hemisphere);
@@ -1073,9 +1086,31 @@ export const createLemonsvilleScene = (
     render();
   };
 
+  update(initialState);
+
+  // Initialize gizmo if enabled
+  if (options.enableGizmo) {
+    gizmo = createGizmoController({
+      camera,
+      scene,
+      container: canvas.parentElement || document.body,
+    });
+
+    gizmoUI = createGizmoUI({
+      gizmoController: gizmo,
+      container: canvas.parentElement || document.body,
+    });
+
+    document.body.appendChild(gizmoUI);
+  }
+
   const dispose = (): void => {
     if (disposed) return;
     disposed = true;
+    gizmo?.dispose();
+    if (gizmoUI && gizmoUI.parentElement) {
+      gizmoUI.parentElement.removeChild(gizmoUI);
+    }
     signTextureGeneration += 1;
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
     animationFrame = null;
@@ -1084,6 +1119,5 @@ export const createLemonsvilleScene = (
     renderer.dispose();
   };
 
-  update(initialState);
   return Object.freeze({ update, resize, dispose });
 };
