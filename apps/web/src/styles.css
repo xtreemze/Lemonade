@@ -394,7 +394,7 @@ h2 {
 
 .decision-control strong::before {
   content: '';
-  display: inline-block;
+  display: none;
   width: 28px;
   height: 28px;
   background-size: contain;
