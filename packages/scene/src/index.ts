@@ -23,7 +23,6 @@ import {
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { LEMON_CENTER_Y, SELLER_Z } from "./stand-anchors.js";
-import { gardenSignPosition, sidewalkLaneZ } from "./street-layout.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -121,7 +120,7 @@ type SignModel = Readonly<{
   labelMaterial: MeshStandardMaterial;
 }>;
 
-const createSign = (index: number): SignModel => {
+const createSign = (): SignModel => {
   const root = new Group();
   addBox(root, [0.1, 0.85, 0.1], [0, 0.43, 0], 0x644c34);
   addBox(root, [0.95, 0.62, 0.12], [0, 1.05, 0], 0xf5d34c);
@@ -137,9 +136,8 @@ const createSign = (index: number): SignModel => {
   label.position.set(0, 1.05, 0.066);
   root.add(label);
 
-  const position = gardenSignPosition(index);
-  root.position.set(position.x, position.y, position.z);
-  root.rotation.y = position.rotationY;
+  root.position.z = -1;
+  root.visible = false;
   return Object.freeze({ root, labelMaterial });
 };
 
@@ -159,6 +157,7 @@ type PersonRig = Readonly<{
   walkPace: number;
   gaitAmplitude: number;
   profile: CharacterProfile;
+  index: number;
 }>;
 
 type SellerRig = Readonly<{
@@ -300,6 +299,7 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
     walkPace: profile.walkPace,
     gaitAmplitude: profile.gaitAmplitude,
     profile,
+    index,
   });
 };
 
@@ -495,7 +495,8 @@ export const createLemonsvilleScene = (
   const stand = createStand();
   scene.add(stand.root);
 
-  const signs = Array.from({ length: 40 }, (_, index) => createSign(index));
+  const signs = Array.from({ length: 40 }, () => createSign());
+  let streetLayoutReady = false;
   let signTexture: CanvasTexture | null = null;
   let signPriceLabel = "";
   let disposed = false;
@@ -510,6 +511,7 @@ export const createLemonsvilleScene = (
     createPerson(initialState.characterSeed, index),
   );
   for (const customer of customers) scene.add(customer.root);
+  const petOwners = customers.map((customer) => customer.root);
 
   const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) =>
     createPerson(initialState.characterSeed, index + PASSERBY_POOL_SIZE),
@@ -564,6 +566,13 @@ export const createLemonsvilleScene = (
           pace: number;
           seesAdvertisement: boolean;
         }>[];
+        sidewalkLaneZ(lane: number): number;
+        gardenSignPosition(index: number): Readonly<{
+          x: number;
+          y: number;
+          z: number;
+          rotationY: number;
+        }>;
       }>
     | null = null;
   let ambientLife:
@@ -573,11 +582,7 @@ export const createLemonsvilleScene = (
           phase: ScenePhase,
           elapsedMs: number,
           durationMs: number,
-          owners?: readonly Readonly<{
-            x: number;
-            z: number;
-            heading: number;
-          }>[],
+          owners?: readonly Group[],
         ): void;
       }>
     | null = null;
@@ -679,9 +684,19 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./crowd-motion.js")
-    .then(({ crowdPosesAt }) => {
+    .then(({ crowdPosesAt, gardenSignPosition, sidewalkLaneZ }) => {
       if (disposed) return;
-      crowdMotion = Object.freeze({ crowdPosesAt });
+      crowdMotion = Object.freeze({
+        crowdPosesAt,
+        gardenSignPosition,
+        sidewalkLaneZ,
+      });
+      signs.forEach((sign, index) => {
+        const position = gardenSignPosition(index);
+        sign.root.position.set(position.x, position.y, position.z);
+        sign.root.rotation.y = position.rotationY;
+      });
+      streetLayoutReady = true;
       resetAnimatedObjects();
       render();
     })
@@ -722,19 +737,18 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./character-detail.js")
-    .then(({
-      decorateCharacterBody,
-      decorateCharacterHead,
-      decorateSellerExpression,
-    }) => {
+    .then(({ decorateCharacter, decorateSellerExpression }) => {
       if (disposed) return;
-      for (const person of [...customers, ...buyers, seller.person]) {
-        decorateCharacterBody(person.root, person.profile);
-      }
       for (const person of [...customers, ...buyers]) {
-        decorateCharacterHead(person.head, person.profile);
+        decorateCharacter(person.root, person.head, person.profile, person.index);
       }
-      decorateCharacterHead(seller.person.head, seller.person.profile, false);
+      decorateCharacter(
+        seller.person.root,
+        seller.person.head,
+        seller.person.profile,
+        seller.person.index,
+        false,
+      );
       decorateSellerExpression(seller.eyebrows, seller.mouth);
       render();
     })
@@ -782,21 +796,6 @@ export const createLemonsvilleScene = (
     }
   };
 
-  const visibleOwnerAnchors = (): readonly Readonly<{
-    x: number;
-    z: number;
-    heading: number;
-  }>[] =>
-    customers
-      .filter((customer) => customer.root.visible)
-      .map((customer) =>
-        Object.freeze({
-          x: customer.root.position.x,
-          z: customer.root.position.z,
-          heading: customer.root.rotation.y,
-        }),
-      );
-
   const applyPhaseStaging = (): void => {
     const forecast = state.phase === "forecast";
     stand.shutter.visible = forecast;
@@ -807,7 +806,7 @@ export const createLemonsvilleScene = (
       ? 0
       : Math.max(0, Math.min(signs.length, Math.trunc(state.visibleSigns)));
     signs.forEach((sign, index) => {
-      sign.root.visible = index < signLimit;
+      sign.root.visible = streetLayoutReady && index < signLimit;
     });
 
     const lemonLimit = forecast
@@ -840,7 +839,7 @@ export const createLemonsvilleScene = (
       state.phase,
       0,
       Math.max(1, storyboard.durationMs),
-      visibleOwnerAnchors(),
+      petOwners,
     );
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
@@ -861,7 +860,7 @@ export const createLemonsvilleScene = (
 
       const streetX = sale.direction === -1 ? -8.4 : 8.4;
       const exitX = -streetX;
-      const streetZ = sidewalkLaneZ(sale.lane);
+      const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
       const counterZ = 1.22;
       const drinkX = sale.direction === -1 ? -1.35 : 1.35;
@@ -989,7 +988,7 @@ export const createLemonsvilleScene = (
       state.phase,
       elapsedMs,
       storyboard.durationMs,
-      visibleOwnerAnchors(),
+      petOwners,
     );
     neighborhoodWind?.updateNeighborhoodWind(scene, seconds, state.weather);
 
@@ -1066,7 +1065,7 @@ export const createLemonsvilleScene = (
       state.phase,
       0,
       Math.max(1, state.durationMs),
-      visibleOwnerAnchors(),
+      petOwners,
     );
     neighborhoodWind?.updateNeighborhoodWind(scene, 0, state.weather);
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
