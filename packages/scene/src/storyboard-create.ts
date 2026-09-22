@@ -17,6 +17,7 @@ export type StreetStoryboardInput = Readonly<{
 
 export const MAX_STORYBOARD_CUPS = 400 as const;
 export const MAX_STORYBOARD_SIGNS = 40 as const;
+export const ACTIVE_STREET_DURATION_MS = 6_000 as const;
 export const ENDING_CLOSEUP_DURATION_MS = 4_000 as const;
 const MAX_PRICE_CENTS = 99_999;
 
@@ -45,9 +46,13 @@ const createShots = (
 
 export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStoryboard => {
   const durationMs = Math.max(1, finiteInteger(input.durationMs, 1));
+  const minimumActiveDurationMs = Math.min(
+    ACTIVE_STREET_DURATION_MS,
+    durationMs,
+  );
   const closeupDurationMs = Math.min(
     ENDING_CLOSEUP_DURATION_MS,
-    Math.max(0, durationMs - 1),
+    Math.max(0, durationMs - minimumActiveDurationMs),
   );
   const activeDurationMs = durationMs - closeupDurationMs;
   const prepared = clampInteger(input.prepared, 0, MAX_STORYBOARD_CUPS);
