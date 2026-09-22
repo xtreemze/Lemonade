@@ -59,6 +59,7 @@ export type LemonsvilleSceneState = Readonly<{
   confidence: number;
   nextConfidence: number;
   characterSeed: number;
+  dayNumber: number;
   storyboard: StreetStoryboard;
   phase: ScenePhase;
   reducedMotion: boolean;
@@ -763,7 +764,9 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, storyboard.durationMs)
+      Math.max(1, storyboard.durationMs),
+      state.dayNumber,
+      { x: camera.position.x, z: camera.position.z },
     );
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
@@ -973,7 +976,9 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       elapsedMs,
-      storyboard.durationMs
+      storyboard.durationMs,
+      state.dayNumber,
+      { x: camera.position.x, z: camera.position.z },
     );
 
     const remainingStock =
@@ -1041,7 +1046,9 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, state.durationMs)
+      Math.max(1, state.durationMs),
+      state.dayNumber,
+      { x: camera.position.x, z: camera.position.z },
     );
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
