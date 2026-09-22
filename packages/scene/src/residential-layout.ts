@@ -627,7 +627,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       safeSeed,
       1_100,
       -26,
-      [-46, -35, -24.5, -9.1, 4, 11.4, 29.7, 41.7],
+      [-46, -35, -24.5, -9.1, 4, 16.5, 29.7, 41.7],
       true,
     ),
   );
@@ -636,7 +636,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       safeSeed,
       2_300,
       -49.5,
-      [-47, -36.5, -25.4, -9.7, 3.5, 12, 28.5, 39.6, 49],
+      [-47, -36.5, -25.4, -9.7, 3.5, 16.5, 28.5, 39.6, 52.5],
       true,
     ),
   );
