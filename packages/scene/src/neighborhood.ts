@@ -578,7 +578,7 @@ export const updateNeighborhoodWind = (
 const propertyRoleForObject = (object: Object3D): string | null => {
   let current: Object3D | null = object;
   while (current !== null) {
-    const role = current.userData["propertyRole"];
+    const role: unknown = current.userData["propertyRole"];
     if (typeof role === "string") return role;
     current = current.parent;
   }
@@ -594,7 +594,7 @@ export const updateNeighborhoodActivity = (
     activities.map((activity) => [activity.propertyRole, activity] as const),
   );
   scene.traverse((object) => {
-    const sceneRole = object.userData["sceneRole"];
+    const sceneRole: unknown = object.userData["sceneRole"];
     const propertyRole = propertyRoleForObject(object);
     if (propertyRole === null) return;
     const activity = byRole.get(propertyRole);

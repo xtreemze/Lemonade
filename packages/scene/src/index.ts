@@ -613,10 +613,12 @@ export const createLemonsvilleScene = (
     return sample;
   };
 
+  const neighborhoodSeed = initialState.characterSeed ^ 0x4c_45_4d_4f;
+
   void import("./neighborhood.js")
     .then(({ populateNeighborhood, updateNeighborhoodActivity: updateActivity }) => {
       if (disposed) return;
-      populateNeighborhood(scene, initialState.characterSeed ^ 0x4c_45_4d_4f);
+      populateNeighborhood(scene, neighborhoodSeed);
       updateNeighborhoodActivity = (activities, elapsedMs) => {
         updateActivity(scene, activities, elapsedMs);
       };
@@ -639,7 +641,7 @@ export const createLemonsvilleScene = (
   void import("./crowd-motion.js")
     .then(({ initializeStreetMotion }) => {
       if (disposed) return;
-      crowdMotion = initializeStreetMotion(scene, signs);
+      crowdMotion = initializeStreetMotion(scene, signs, neighborhoodSeed);
       resetAnimatedObjects();
       render();
     })
@@ -652,6 +654,7 @@ export const createLemonsvilleScene = (
         scene,
         initialState.characterSeed,
         customers.map((customer) => customer.root),
+        neighborhoodSeed,
       );
       updateAmbient(0, Math.max(1, state.durationMs));
       render();
