@@ -132,7 +132,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   );
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-atmosphere",
-    "weather-fog-depth",
+    "layered-aerial-perspective",
   );
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-seller-mood",
