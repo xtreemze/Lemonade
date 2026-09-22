@@ -1186,16 +1186,47 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     outerProperties: outer,
   } as const;
 
-  const backyardTrees = generatePropertyPlantings(
-    safeSeed,
-    allProperties,
-    3_050,
-    "back",
-    partial,
-    3.5,
-    1.45,
-    7,
-  );
+  const backyardTrees: ResidentialPlanting[] = [
+    ...generatePropertyPlantings(
+      safeSeed,
+      allProperties,
+      3_050,
+      "back",
+      partial,
+      3.5,
+      1.45,
+      7,
+    ),
+  ];
+  for (const fallbackSalt of [4_050, 4_850] as const) {
+    const assignedRoles = new Set(
+      backyardTrees
+        .map((planting) => planting.propertyRole)
+        .filter((role): role is string => role !== null),
+    );
+    const missingProperties = allProperties.filter(
+      (property) => !assignedRoles.has(property.role),
+    );
+    if (missingProperties.length === 0) break;
+    const fallback = generatePropertyPlantings(
+      safeSeed,
+      missingProperties,
+      fallbackSalt,
+      "back",
+      partial,
+      3.5,
+      1.45,
+      7,
+    );
+    for (const candidate of fallback) {
+      const clearsExistingTrees = backyardTrees.every(
+        (existing) =>
+          Math.hypot(existing.x - candidate.x, existing.z - candidate.z) >=
+          1.45 * (existing.scale + candidate.scale),
+      );
+      if (clearsExistingTrees) backyardTrees.push(candidate);
+    }
+  }
   const trees = Object.freeze([
     ...backyardTrees,
     ...generatePlantings(
