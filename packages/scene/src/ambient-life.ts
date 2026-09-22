@@ -14,6 +14,7 @@ export type AmbientPhase = "idle" | "simulation" | "forecast";
 
 export type AmbientPopulation = Readonly<{
   pets: number;
+  wildlife: number;
   bicycles: number;
   vehicles: number;
 }>;
@@ -30,18 +31,32 @@ export const ambientPopulationFor = (
   phase: AmbientPhase,
 ): AmbientPopulation => {
   if (phase !== "simulation") {
-    return Object.freeze({ pets: 0, bicycles: 0, vehicles: 0 });
+    return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 0 });
   }
   switch (weather) {
     case "sunny":
-      return Object.freeze({ pets: 2, bicycles: 2, vehicles: 1 });
+      return Object.freeze({ pets: 2, wildlife: 2, bicycles: 2, vehicles: 1 });
     case "hot-and-dry":
-      return Object.freeze({ pets: 1, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 1, bicycles: 1, vehicles: 1 });
     case "cloudy":
-      return Object.freeze({ pets: 1, bicycles: 1, vehicles: 1 });
+      return Object.freeze({ pets: 1, wildlife: 1, bicycles: 1, vehicles: 1 });
     case "thunderstorm":
-      return Object.freeze({ pets: 0, bicycles: 0, vehicles: 2 });
+      return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 2 });
   }
+};
+
+const createBird = (color: number): Group => {
+  const root = new Group();
+  const body = new Mesh(new SphereGeometry(0.12, 7, 5), material(color));
+  body.scale.set(1.45, 0.72, 0.72);
+  root.add(body);
+  for (const direction of [-1, 1] as const) {
+    const wing = new Mesh(new BoxGeometry(0.34, 0.025, 0.12), material(color));
+    wing.position.set(0, 0.02, direction * 0.16);
+    wing.rotation.x = direction * 0.26;
+    root.add(wing);
+  }
+  return root;
 };
 
 const createPet = (color: number): Group => {
@@ -114,10 +129,11 @@ const routeProgress = (elapsedMs: number, durationMs: number, offset: number, sp
 
 export const createAmbientLife = (scene: Scene, seed: number): AmbientLifeController => {
   const pets = [createPet(0xa96f45), createPet(0x3e3a36), createPet(0xd1b48b)];
+  const wildlife = [createBird(0x5d6971), createBird(0x795d4e)];
   const bicycles = [createBicycle(0x4f7f91), createBicycle(0xb45d4c)];
   const vehicles = [createVehicle(0x7189a8), createVehicle(0xa65e52)];
 
-  for (const actor of [...pets, ...bicycles, ...vehicles]) {
+  for (const actor of [...pets, ...wildlife, ...bicycles, ...vehicles]) {
     actor.visible = false;
     scene.add(actor);
   }
@@ -133,18 +149,26 @@ export const createAmbientLife = (scene: Scene, seed: number): AmbientLifeContro
         pet.rotation.y = Math.PI / 2;
         pet.position.y = Math.abs(Math.sin(progress * Math.PI * 10)) * 0.015;
       });
+      wildlife.forEach((bird, index) => {
+        bird.visible = index < population.wildlife;
+        if (!bird.visible) return;
+        const progress = routeProgress(elapsedMs, durationMs, index * 0.39 + 0.12, 0.62 + index * 0.08);
+        bird.position.set(-16 + progress * 32, 5.8 + index * 0.8 + Math.sin(progress * Math.PI * 4) * 0.25, -3 - index * 3);
+        bird.rotation.y = Math.PI / 2;
+        bird.rotation.z = Math.sin(progress * Math.PI * 12) * 0.08;
+      });
       bicycles.forEach((bike, index) => {
-        bike.visible = index < population.bicycles;
-        if (!bike.visible) return;
         const progress = routeProgress(elapsedMs, durationMs, index * 0.47 + 0.18, 0.9 + index * 0.12);
+        bike.visible = index < population.bicycles && progress > 0.08 && progress < 0.78;
+        if (!bike.visible) return;
         bike.position.set(12 - progress * 24, 0.02, 4.75 + index * 0.42);
         bike.rotation.y = -Math.PI / 2;
       });
       vehicles.forEach((vehicle, index) => {
-        vehicle.visible = index < population.vehicles;
-        if (!vehicle.visible) return;
         const direction = index % 2 === 0 ? 1 : -1;
         const progress = routeProgress(elapsedMs, durationMs, index * 0.53 + 0.08, 0.52 + index * 0.09);
+        vehicle.visible = index < population.vehicles && progress > 0.04 && progress < 0.82;
+        if (!vehicle.visible) return;
         vehicle.position.set(direction * (-18 + progress * 36), 0.02, 5.7 + index * 0.72);
         vehicle.rotation.y = direction === 1 ? Math.PI / 2 : -Math.PI / 2;
       });
