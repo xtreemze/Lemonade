@@ -38,7 +38,7 @@ describe("neighborhood world scale", () => {
       if (object.userData["sceneRole"] === "stand-neighbor") standNeighborCount += 1;
       if (object.userData["sceneRole"] === "paved-road") pavedRoadCount += 1;
       if (object.userData["sceneRole"] === "garden-flower") flowerCount += 1;
-      const variant = object.userData["plantVariant"];
+      const variant: unknown = object.userData["plantVariant"];
       if (
         object.userData["sceneRole"] === "procedural-tree" &&
         typeof variant === "number"
