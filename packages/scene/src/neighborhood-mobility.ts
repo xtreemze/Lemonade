@@ -719,7 +719,7 @@ export const createNeighborhoodMobilitySystem = (
             const crossingProgress = clamp01(
               Math.abs(
                 (access.sidewalkCenterZ - roadPoint.z) /
-                  Math.max(0.001, parkPoint.z - roadPoint.z),
+                  Math.max(0.001, Math.abs(parkPoint.z - roadPoint.z)),
               ),
             );
             if (
@@ -748,7 +748,7 @@ export const createNeighborhoodMobilitySystem = (
             const crossingProgress = clamp01(
               Math.abs(
                 (access.sidewalkCenterZ - parkPoint.z) /
-                  Math.max(0.001, roadPoint.z - parkPoint.z),
+                  Math.max(0.001, Math.abs(roadPoint.z - parkPoint.z)),
               ),
             );
             if (
