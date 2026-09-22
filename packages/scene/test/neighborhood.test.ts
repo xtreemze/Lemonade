@@ -1,4 +1,4 @@
-import { Scene } from "three";
+import { Box3, Scene } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -82,43 +82,34 @@ describe("neighborhood world scale", () => {
     ]);
     let checkedScenery = 0;
 
+    scene.updateMatrixWorld(true);
     scene.traverse((object) => {
       const role: unknown = object.userData["sceneRole"];
       if (typeof role !== "string" || !checkedRoles.has(role)) return;
 
-      const halfWidth: unknown = object.userData["clearanceHalfWidth"];
-      const halfDepth: unknown = object.userData["clearanceHalfDepth"];
-      if (typeof halfWidth === "number" && typeof halfDepth === "number") {
-        expect(
-          residentialFootprintIntersectsHardscape(
-            { x: object.position.x, z: object.position.z },
-            layout,
-            halfWidth,
-            halfDepth,
-          ),
-        ).toBe(false);
-      } else {
-        const clearanceRadius: unknown = object.userData["clearanceRadius"];
-        const radius =
-          typeof clearanceRadius === "number" ? clearanceRadius : 0;
-        expect(
-          residentialFootprintIntersectsHardscape(
-            { x: object.position.x, z: object.position.z },
-            layout,
-            radius,
-            radius,
-          ),
-        ).toBe(false);
+      const bounds = new Box3().setFromObject(object);
+      const centerX = (bounds.min.x + bounds.max.x) / 2;
+      const centerZ = (bounds.min.z + bounds.max.z) / 2;
+      const halfWidth = (bounds.max.x - bounds.min.x) / 2;
+      const halfDepth = (bounds.max.z - bounds.min.z) / 2;
 
-        if (role === "procedural-tree") {
-          expect(
-            residentialPointIsBlocked(
-              { x: object.position.x, z: object.position.z },
-              layout,
-              radius,
-            ),
-          ).toBe(false);
-        }
+      expect(
+        residentialFootprintIntersectsHardscape(
+          { x: centerX, z: centerZ },
+          layout,
+          halfWidth,
+          halfDepth,
+        ),
+      ).toBe(false);
+
+      if (role === "procedural-tree") {
+        expect(
+          residentialPointIsBlocked(
+            { x: object.position.x, z: object.position.z },
+            layout,
+            Math.max(halfWidth, halfDepth),
+          ),
+        ).toBe(false);
       }
       checkedScenery += 1;
     });
