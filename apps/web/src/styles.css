@@ -292,11 +292,14 @@ h2 {
 
 .decision-panel,
 .report-panel {
+  display: flex;
+  flex-direction: column;
   margin-top: 22px;
   padding: clamp(18px, 4vw, 34px);
   border: 2px solid #211d14;
   background: #fff9e4;
   box-shadow: 8px 8px 0 #211d14;
+  gap: 16px;
 }
 
 .panel-heading {
@@ -315,10 +318,13 @@ h2 {
 }
 
 .decision-control {
-  display: grid;
-  gap: 8px;
-  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 0;
   border-top: 2px solid #d9cda9;
+  flex: 1;
+  justify-content: space-between;
 }
 
 .decision-control-heading {
@@ -359,7 +365,8 @@ h2 {
 
   width: 100%;
   min-height: 62px;
-  margin: 0;
+  flex: 1;
+  margin: 12px 0;
   border: 0;
   background: transparent;
   cursor: ew-resize;
@@ -809,10 +816,11 @@ body:has(.game-shell[data-view="forecast"]) {
 }
 
 .game-shell[data-view="planning"] .decision-control {
-  flex: none;
-  gap: 7px;
-  padding: clamp(10px, 2dvh, 16px) 0;
-  border-top-width: 1px;
+  flex: 1;
+  gap: 12px;
+  padding: 20px 0;
+  border-top-width: 2px;
+  justify-content: space-between;
 }
 
 .game-shell[data-view="planning"] .decision-control:first-of-type {
