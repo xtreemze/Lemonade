@@ -2,6 +2,7 @@ import { Group, Mesh, SphereGeometry, type Object3D } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
+  applySellerConfidenceGesture,
   characterIdentityFor,
   decorateCharacterBody,
   decorateCharacterHead,
@@ -39,6 +40,39 @@ describe("character geometry detail", () => {
       );
       expect(garments.length).toBeGreaterThanOrEqual(3);
     }
+  });
+
+  it("maps late closeup confidence into readable seller body language", () => {
+    const torso = new Mesh(new SphereGeometry(0.25, 8, 6));
+    const head = new Mesh(new SphereGeometry(0.25, 8, 6));
+    const leftArm = new Group();
+    const rightArm = new Group();
+    torso.position.y = 1.05;
+
+    applySellerConfidenceGesture(
+      torso,
+      head,
+      leftArm,
+      rightArm,
+      0.2,
+      5,
+    );
+    expect(torso.position.y).toBeCloseTo(1.05);
+
+    applySellerConfidenceGesture(
+      torso,
+      head,
+      leftArm,
+      rightArm,
+      1,
+      5,
+    );
+    expect(torso.position.y).toBeGreaterThan(1.09);
+    expect(head.rotation.x).toBeLessThan(0);
+    expect(leftArm.rotation.x).toBeLessThan(-0.5);
+    expect(rightArm.rotation.x).toBeLessThan(-0.5);
+    expect(Math.abs(leftArm.rotation.z)).toBeGreaterThan(0.4);
+    expect(Math.abs(rightArm.rotation.z)).toBeGreaterThan(0.4);
   });
 
   it("adds deterministic bags without putting them on every adult", () => {

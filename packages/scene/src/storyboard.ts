@@ -121,6 +121,7 @@ export const endingConfidenceAt = (
   return currentConfidence + (nextConfidence - currentConfidence) * eased;
 };
 
+
 export const remainingCameraProgressAt = (
   storyboard: StreetStoryboard,
   elapsedMs: number,
@@ -211,6 +212,6 @@ export const sceneCameraComposition = (
     mode,
     fov: profile[0],
     position: [0, profile[1], profile[2]],
-    lookAt: [0, profile[3], profile[4]],
+    lookAt: [shot === "remaining" ? 0.45 : 0, profile[3], profile[4]],
   };
 };

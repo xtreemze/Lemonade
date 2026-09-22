@@ -49,7 +49,7 @@ import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
-const ACTIVE_SIMULATION_PRESENTATION_MS = 6_000;
+const ACTIVE_SIMULATION_PRESENTATION_MS = 10_000;
 const ENDING_CLOSEUP_PRESENTATION_MS = 2_000;
 const SIMULATION_PRESENTATION_MS =
   ACTIVE_SIMULATION_PRESENTATION_MS + ENDING_CLOSEUP_PRESENTATION_MS;
@@ -455,6 +455,9 @@ export class LemonadeApp {
       if (enabled) this.#audio.play("day:submit");
     });
     this.#schedulePurchaseFeedback(resolution);
+    if (this.#environment.weather.kind === "sunny") {
+      this.#scheduleSunnyBirdsong(ACTIVE_SIMULATION_PRESENTATION_MS);
+    }
     if (this.#environment.weather.kind === "thunderstorm") {
       this.#scheduleStormFeedback(SIMULATION_PRESENTATION_MS);
     }
@@ -620,6 +623,27 @@ export class LemonadeApp {
       this.#emitFeedback(audioCue, hapticCue);
     }, Math.max(0, delayMs));
     this.#feedbackTimers.push(timer);
+  }
+
+
+  #scheduleAudio(delayMs: number, cue: AudioCue): void {
+    const timer = window.setTimeout(() => {
+      this.#feedbackTimers = this.#feedbackTimers.filter(
+        (candidate) => candidate !== timer,
+      );
+      if (this.#disposed) return;
+      void this.#audio.enable().then((enabled) => {
+        if (enabled && !this.#disposed) this.#audio.play(cue);
+      });
+    }, Math.max(0, delayMs));
+    this.#feedbackTimers.push(timer);
+  }
+
+  #scheduleSunnyBirdsong(durationMs: number): void {
+    const duration = Math.max(1, durationMs);
+    for (const progress of [0.14, 0.43, 0.72] as const) {
+      this.#scheduleAudio(duration * progress, "ambient:birdsong");
+    }
   }
 
   #scheduleHaptic(delayMs: number, cue: HapticCue): void {

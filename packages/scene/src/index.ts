@@ -29,11 +29,13 @@ import {
   WORLD_SCALE,
 } from "./world-scale.js";
 import { SELLER_Z } from "./stand-anchors.js";
+import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
 import type { WeatherDetailController } from "./weather-detail.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
+  endingCloseupProgressAt,
   endingConfidenceAt,
   remainingCameraProgressAt,
   remainingCupsAt,
@@ -508,6 +510,7 @@ export const createLemonsvilleScene = (
 
   let state = initialState;
   let crowdMotion: StreetMotion | null = null;
+  let applySellerGesture: SellerGestureApplier | null = null;
   let weatherDetail: WeatherDetailController | null = null;
   let ambientLife:
     | Readonly<{
@@ -668,8 +671,9 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./character-detail.js")
-    .then(({ decorateSceneCharacters }) => {
+    .then(({ applySellerConfidenceGesture, decorateSceneCharacters }) => {
       if (disposed) return;
+      applySellerGesture = applySellerConfidenceGesture;
       decorateSceneCharacters(
         customers,
         buyers,
@@ -884,17 +888,31 @@ export const createLemonsvilleScene = (
   const animateSeller = (seconds: number, elapsedMs: number): void => {
     seller.person.root.visible = state.phase !== "forecast";
     if (state.phase === "forecast") return;
-    applySellerExpression(seller, sellerConfidenceAt(elapsedMs));
+
+    const confidence = sellerConfidenceAt(elapsedMs);
+    applySellerExpression(seller, confidence);
+
+    applySellerGesture?.(
+      seller.person.torso,
+      seller.person.head,
+      seller.person.arms[0].root,
+      seller.person.arms[1].root,
+      endingCloseupProgressAt(storyboard, elapsedMs),
+      confidence,
+    );
+
     if (state.reducedMotion || state.phase === "idle") return;
     const breathing = Math.sin(seconds * 2.1) * 0.025;
-    seller.person.torso.position.y = 1.05 + breathing;
-    seller.person.head.position.y = 1.73 + breathing * 0.7;
+    seller.person.torso.position.y += breathing;
+    seller.person.head.position.y += breathing * 0.7;
     seller.person.arms[0].root.rotation.x += Math.sin(seconds * 1.7) * 0.035;
     seller.person.arms[1].root.rotation.x += Math.sin(seconds * 1.7 + 0.8) * 0.035;
 
-    const serving = storyboard.sales.some(
-      (sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing",
-    );
+    const serving =
+      elapsedMs < storyboard.activeDurationMs &&
+      storyboard.sales.some(
+        (sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing",
+      );
     if (serving) {
       seller.person.arms[1].root.rotation.x = -1.2;
       seller.person.torso.rotation.x -= 0.06;

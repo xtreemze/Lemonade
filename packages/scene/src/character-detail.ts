@@ -427,6 +427,47 @@ export const decorateCharacter = (
   decorateCharacterHead(head, profile, identity, includeMouth);
 };
 
+export type SellerGestureApplier = (
+  torso: Mesh,
+  head: Mesh,
+  leftArm: Group,
+  rightArm: Group,
+  progress: number,
+  confidence: number,
+) => void;
+
+export const applySellerConfidenceGesture: SellerGestureApplier = (
+  torso,
+  head,
+  leftArm,
+  rightArm,
+  progress,
+  confidence,
+): void => {
+  const closeup = Math.min(1, Math.max(0, progress));
+  const gestureProgress = Math.min(
+    1,
+    Math.max(0, (closeup - 0.32) / 0.68),
+  );
+  const strength =
+    gestureProgress * gestureProgress * (3 - 2 * gestureProgress);
+  const normalizedConfidence = Math.min(
+    1,
+    Math.max(0, confidence / 5),
+  );
+  const mix = (low: number, high: number): number =>
+    low + (high - low) * normalizedConfidence;
+
+  torso.position.y += mix(-0.035, 0.055) * strength;
+  head.rotation.x += mix(0.075, -0.05) * strength;
+  const armLift = mix(0.08, -0.62) * strength;
+  const armSpread = mix(0.06, 0.5) * strength;
+  leftArm.rotation.x += armLift;
+  rightArm.rotation.x += armLift;
+  leftArm.rotation.z = -armSpread;
+  rightArm.rotation.z = armSpread;
+};
+
 export const decorateSellerExpression = (
   eyebrows: readonly [Group, Group],
   mouth: readonly [Group, Group],

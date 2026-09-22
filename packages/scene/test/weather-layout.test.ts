@@ -7,7 +7,10 @@ import {
   businessDayProgressAt,
   lightningFlashAt,
 } from "../src/weather-detail.js";
-import { WEATHER_BACKDROP_LAYOUT } from "../src/weather-layout.js";
+import {
+  CLOUDY_TOWN_CLOUD_LAYOUT,
+  WEATHER_BACKDROP_LAYOUT,
+} from "../src/weather-layout.js";
 
 const projectedBackdrop = (
   width: number,
@@ -40,6 +43,21 @@ describe("weather backdrop staging", () => {
     expect(storm.position[2]).toBeGreaterThan(-76);
     expect(storm.position[2]).toBeLessThan(-45);
     expect(storm.scale).toBeGreaterThan(6);
+  });
+
+  it("adds multiple local cloudy-day layers above the town", () => {
+    expect(CLOUDY_TOWN_CLOUD_LAYOUT.length).toBeGreaterThanOrEqual(3);
+    const cloudy = WEATHER_BACKDROP_LAYOUT.cloudy;
+    for (const cloud of CLOUDY_TOWN_CLOUD_LAYOUT) {
+      const worldY = cloudy.position[1] + cloud.position[1] * cloudy.scale;
+      const worldZ = cloudy.position[2] + cloud.position[2] * cloudy.scale;
+      expect(worldY).toBeGreaterThan(9);
+      expect(worldZ).toBeGreaterThan(-70);
+      expect(worldZ).toBeLessThan(-25);
+      expect(cloud.scale).toBeLessThan(0.4);
+    }
+    expect(new Set(CLOUDY_TOWN_CLOUD_LAYOUT.map((cloud) => cloud.driftPhase)).size)
+      .toBe(CLOUDY_TOWN_CLOUD_LAYOUT.length);
   });
 
   it("moves the business simulation from dawn through daylight into night", () => {
