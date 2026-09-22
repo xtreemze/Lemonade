@@ -62,25 +62,37 @@ describe("procedural residential layout", () => {
     expect(layout.shrubs).toHaveLength(20);
     expect(layout.flowers).toHaveLength(12);
 
-    for (const property of [
+    const blockedHouses = [
       ...layout.frontProperties,
       ...layout.middleProperties,
       ...layout.backProperties,
       ...layout.outerProperties,
-    ]) {
+    ].flatMap((property) => {
       const localHalfWidth = (HOUSE_FOOTPRINT_WIDTH * property.scale) / 2;
       const localHalfDepth = (HOUSE_FOOTPRINT_DEPTH * property.scale) / 2;
       const cosine = Math.abs(Math.cos(property.rotationY));
       const sine = Math.abs(Math.sin(property.rotationY));
-      expect(
-        residentialFootprintIntersectsHardscape(
-          { x: property.houseX, z: property.houseZ },
-          layout,
-          localHalfWidth * cosine + localHalfDepth * sine,
-          localHalfWidth * sine + localHalfDepth * cosine,
-        ),
-      ).toBe(false);
-    }
+      const blocked = residentialFootprintIntersectsHardscape(
+        { x: property.houseX, z: property.houseZ },
+        layout,
+        localHalfWidth * cosine + localHalfDepth * sine,
+        localHalfWidth * sine + localHalfDepth * cosine,
+      );
+      return blocked
+        ? [
+            {
+              role: property.role,
+              x: Number(property.houseX.toFixed(2)),
+              z: Number(property.houseZ.toFixed(2)),
+              drivewayX:
+                property.drivewayX === null
+                  ? null
+                  : Number(property.drivewayX.toFixed(2)),
+            },
+          ]
+        : [];
+    });
+    expect(blockedHouses).toEqual([]);
 
     for (const planting of layout.trees) {
       const clearance = 3.5 * planting.scale;
