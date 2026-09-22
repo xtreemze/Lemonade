@@ -169,6 +169,7 @@ describe("street simulation storyboard", () => {
     expect(sceneShotAt(storyboard, 5_500)).toBe("remaining");
     expect(remainingCameraProgressAt(storyboard, 5_000)).toBe(0);
     expect(remainingCameraProgressAt(storyboard, 5_500)).toBeGreaterThan(0);
+    expect(remainingCameraProgressAt(storyboard, 5_700)).toBe(1);
     expect(remainingCameraProgressAt(storyboard, 6_000)).toBe(1);
   });
 
