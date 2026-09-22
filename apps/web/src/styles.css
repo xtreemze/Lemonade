@@ -136,18 +136,38 @@ h2 {
   background: linear-gradient(180deg, #7bc6d6 0 58%, #9cb976 58% 76%, #b99a71 76%);
   box-shadow: 8px 8px 0 #211d14;
   isolation: isolate;
+  --sun-top: 200px;
+  --sun-right: 8%;
 }
 
-.weather-orb {
+.stand-stage::before {
+  content: "";
   position: absolute;
-  top: 34px;
-  right: 8%;
+  top: var(--sun-top);
+  right: var(--sun-right);
   width: 68px;
   height: 68px;
   border: 3px solid #211d14;
   border-radius: 50%;
   background: #f9cc3b;
   box-shadow: 8px 8px 0 rgb(33 29 20 / 18%);
+  z-index: 2;
+  pointer-events: none;
+  transition: top 2s ease-in-out, right 2s ease-in-out;
+}
+
+.weather-orb {
+  position: absolute;
+  top: var(--sun-top);
+  right: var(--sun-right);
+  width: 68px;
+  height: 68px;
+  border: 3px solid #211d14;
+  border-radius: 50%;
+  background: #f9cc3b;
+  box-shadow: 8px 8px 0 rgb(33 29 20 / 18%);
+  z-index: 0;
+  transition: top 2s ease-in-out, right 2s ease-in-out;
 }
 
 .weather-cloudy,
@@ -200,6 +220,7 @@ h2 {
   display: flex;
   align-items: end;
   justify-content: center;
+  z-index: 1;
 }
 
 .house,
@@ -214,6 +235,7 @@ h2 {
   width: 150px;
   height: 112px;
   background: #e37a58;
+  z-index: 5;
 }
 
 .house::before {
@@ -250,6 +272,7 @@ h2 {
   min-width: 0;
   height: 185px;
   background: #f0d285;
+  z-index: 10;
 }
 
 .awning {
@@ -630,6 +653,27 @@ h2 {
   }
 }
 
+/* Sun position through day cycle */
+.game-shell[data-view="forecast"] .stand-stage {
+  --sun-top: 180px;
+  --sun-right: 5%;
+}
+
+.game-shell[data-view="planning"] .stand-stage {
+  --sun-top: 80px;
+  --sun-right: 15%;
+}
+
+.game-shell[data-view="simulation"] .stand-stage {
+  --sun-top: 20px;
+  --sun-right: 35%;
+}
+
+.game-shell[data-view="report"] .stand-stage {
+  --sun-top: 100px;
+  --sun-right: 65%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -638,6 +682,10 @@ h2 {
     transition-duration: 0.001ms;
     animation-duration: 0.001ms;
     animation-iteration-count: 1;
+  }
+
+  .weather-orb {
+    transition: none;
   }
 }
 
@@ -1232,7 +1280,7 @@ body:has(.game-shell[data-view="forecast"]) {
   box-shadow: none;
 }
 
-@media (width >= 640px) {
+@media (width >= 40rem) {
   .game-shell[data-view="report"] .report-panel {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
     grid-template-rows: auto minmax(0, 1fr);
