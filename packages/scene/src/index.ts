@@ -33,7 +33,7 @@ import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
 import { STREET_LAYOUT } from "./street-layout.js";
 import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
-import type { WeatherDetailController } from "./weather-detail.js";
+import { businessDayFrameAt, type WeatherDetailController } from "./weather-detail.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -1032,6 +1032,14 @@ export const createLemonsvilleScene = (
       state.reducedMotion,
     );
 
+    const dayFrame = businessDayFrameAt(
+      state.weather,
+      state.phase,
+      elapsedMs,
+      storyboard.durationMs,
+    );
+    sunlight.position.set(...dayFrame.sunPosition);
+
     render();
     animationFrame = window.requestAnimationFrame(animate);
   };
@@ -1065,6 +1073,14 @@ export const createLemonsvilleScene = (
       animationEpoch = performance.now();
       applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
     }
+
+    const dayFrame = businessDayFrameAt(
+      state.weather,
+      state.phase,
+      0,
+      Math.max(1, state.durationMs),
+    );
+    sunlight.position.set(...dayFrame.sunPosition);
 
     weatherDetail?.update(
       state.weather,
