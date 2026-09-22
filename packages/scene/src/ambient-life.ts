@@ -18,8 +18,20 @@ export type AmbientPopulation = Readonly<{
   vehicles: number;
 }>;
 
+export type AmbientOwnerPose = Readonly<{
+  x: number;
+  z: number;
+  heading: number;
+}>;
+
 export type AmbientLifeController = Readonly<{
-  update(weather: AmbientWeather, phase: AmbientPhase, elapsedMs: number, durationMs: number): void;
+  update(
+    weather: AmbientWeather,
+    phase: AmbientPhase,
+    elapsedMs: number,
+    durationMs: number,
+    owners?: readonly AmbientOwnerPose[],
+  ): void;
 }>;
 
 const material = (color: number): MeshStandardMaterial =>
@@ -44,8 +56,26 @@ export const ambientPopulationFor = (
   }
 };
 
+export const streetHeadingForDirection = (direction: -1 | 1): number =>
+  direction === 1 ? 0 : Math.PI;
+
+export const petFollowerPose = (
+  owner: AmbientOwnerPose,
+  index: number,
+): Readonly<{ x: number; z: number; heading: number }> => {
+  const direction: -1 | 1 = Math.sin(owner.heading) >= 0 ? 1 : -1;
+  const trailingDistance = 0.62 + (index % 3) * 0.16;
+  const lateralOffset = index % 2 === 0 ? 0.28 : -0.28;
+  return Object.freeze({
+    x: owner.x - direction * trailingDistance,
+    z: owner.z + lateralOffset,
+    heading: streetHeadingForDirection(direction),
+  });
+};
+
 const createBird = (color: number): Group => {
   const root = new Group();
+  root.userData["sceneRole"] = "ambient-bird";
   const body = new Mesh(new SphereGeometry(0.12, 7, 5), material(color));
   body.scale.set(1.45, 0.72, 0.72);
   root.add(body);
@@ -60,6 +90,7 @@ const createBird = (color: number): Group => {
 
 const createPet = (color: number): Group => {
   const root = new Group();
+  root.userData["sceneRole"] = "ambient-pet";
   const body = new Mesh(new BoxGeometry(0.5, 0.28, 0.22), material(color));
   body.position.y = 0.3;
   const head = new Mesh(new SphereGeometry(0.16, 8, 6), material(color));
@@ -77,6 +108,7 @@ const createPet = (color: number): Group => {
 
 const createBicycle = (color: number): Group => {
   const root = new Group();
+  root.userData["sceneRole"] = "ambient-bicycle";
   const wheelMaterial = material(0x2f3438);
   for (const x of [-0.42, 0.42]) {
     const wheel = new Mesh(
@@ -103,6 +135,7 @@ const createBicycle = (color: number): Group => {
 
 const createVehicle = (color: number): Group => {
   const root = new Group();
+  root.userData["sceneRole"] = "ambient-vehicle";
   const body = new Mesh(new BoxGeometry(1.65, 0.52, 0.82), material(color));
   body.position.y = 0.48;
   root.add(body);
@@ -123,7 +156,12 @@ const createVehicle = (color: number): Group => {
   return root;
 };
 
-const routeProgress = (elapsedMs: number, durationMs: number, offset: number, speed: number): number => {
+const routeProgress = (
+  elapsedMs: number,
+  durationMs: number,
+  offset: number,
+  speed: number,
+): number => {
   const duration = Math.max(1, durationMs);
   const progress = elapsedMs / duration * speed + offset;
   return progress - Math.floor(progress);
@@ -141,38 +179,66 @@ export const createAmbientLife = (scene: Scene, seed: number): AmbientLifeContro
   }
 
   return Object.freeze({
-    update(weather, phase, elapsedMs, durationMs): void {
+    update(weather, phase, elapsedMs, durationMs, owners = []): void {
       const population = ambientPopulationFor(weather, phase);
       pets.forEach((pet, index) => {
-        pet.visible = index < population.pets;
-        if (!pet.visible) return;
-        const progress = routeProgress(elapsedMs, durationMs, index * 0.31 + (seed & 7) * 0.013, 0.58 + index * 0.08);
-        pet.position.set(-10 + progress * 20, 0, 2.55 + index * 0.34);
-        pet.rotation.y = Math.PI / 2;
-        pet.position.y = Math.abs(Math.sin(progress * Math.PI * 10)) * 0.015;
+        const owner = owners[(index * 3) % owners.length];
+        pet.visible = index < population.pets && owner !== undefined;
+        if (!pet.visible || owner === undefined) return;
+        const pose = petFollowerPose(owner, index);
+        pet.position.set(pose.x, 0, pose.z);
+        pet.rotation.y = pose.heading;
+        pet.position.y =
+          Math.abs(Math.sin((elapsedMs / Math.max(1, durationMs)) * Math.PI * 10 + index)) *
+          0.015;
       });
       wildlife.forEach((bird, index) => {
         bird.visible = index < population.wildlife;
         if (!bird.visible) return;
-        const progress = routeProgress(elapsedMs, durationMs, index * 0.39 + 0.12, 0.62 + index * 0.08);
-        bird.position.set(-16 + progress * 32, 5.8 + index * 0.8 + Math.sin(progress * Math.PI * 4) * 0.25, -3 - index * 3);
-        bird.rotation.y = Math.PI / 2;
+        const progress = routeProgress(
+          elapsedMs,
+          durationMs,
+          index * 0.39 + 0.12,
+          0.62 + index * 0.08,
+        );
+        bird.position.set(
+          -16 + progress * 32,
+          5.8 + index * 0.8 + Math.sin(progress * Math.PI * 4) * 0.25,
+          -3 - index * 3,
+        );
+        bird.rotation.y = streetHeadingForDirection(1);
         bird.rotation.z = Math.sin(progress * Math.PI * 12) * 0.08;
       });
       bicycles.forEach((bike, index) => {
-        const progress = routeProgress(elapsedMs, durationMs, index * 0.47 + 0.18, 0.9 + index * 0.12);
-        bike.visible = index < population.bicycles && progress > 0.08 && progress < 0.78;
+        const progress = routeProgress(
+          elapsedMs,
+          durationMs,
+          index * 0.47 + 0.18,
+          0.9 + index * 0.12,
+        );
+        bike.visible =
+          index < population.bicycles && progress > 0.08 && progress < 0.78;
         if (!bike.visible) return;
         bike.position.set(12 - progress * 24, 0.02, 4.75 + index * 0.42);
-        bike.rotation.y = -Math.PI / 2;
+        bike.rotation.y = streetHeadingForDirection(-1);
       });
       vehicles.forEach((vehicle, index) => {
-        const direction = index % 2 === 0 ? 1 : -1;
-        const progress = routeProgress(elapsedMs, durationMs, index * 0.53 + 0.08, 0.52 + index * 0.09);
-        vehicle.visible = index < population.vehicles && progress > 0.04 && progress < 0.82;
+        const direction: -1 | 1 = index % 2 === 0 ? 1 : -1;
+        const progress = routeProgress(
+          elapsedMs,
+          durationMs,
+          index * 0.53 + 0.08,
+          0.52 + index * 0.09,
+        );
+        vehicle.visible =
+          index < population.vehicles && progress > 0.04 && progress < 0.82;
         if (!vehicle.visible) return;
-        vehicle.position.set(direction * (-18 + progress * 36), 0.02, 5.7 + index * 0.72);
-        vehicle.rotation.y = direction === 1 ? Math.PI / 2 : -Math.PI / 2;
+        vehicle.position.set(
+          direction * (-18 + progress * 36),
+          0.02,
+          5.7 + index * 0.72,
+        );
+        vehicle.rotation.y = streetHeadingForDirection(direction);
       });
     },
   });
