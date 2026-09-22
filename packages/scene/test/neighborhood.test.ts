@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   FRONT_PROPERTY_LAYOUT,
+  blocksFrontHouseFacade,
   populateNeighborhood,
+  staticSceneryPlacementAllowed,
   weatherWindStrength,
 } from "../src/neighborhood.js";
 import { STAND_LAYOUT } from "../src/stand-layout.js";
+import { gardenSignPosition } from "../src/street-layout.js";
 
 describe("neighborhood world scale", () => {
   it("extends the world with LOD scenery beyond the cinematic camera envelope", () => {
@@ -42,6 +45,60 @@ describe("neighborhood world scale", () => {
     expect(standNeighborCount).toBe(1);
     expect(pavedRoadCount).toBe(stats.pavedRoads);
     expect(flowerCount).toBe(stats.flowers);
+  });
+
+  it("keeps scenery and advertising clear of roads, sidewalks, and driveways", () => {
+    const scene = new Scene();
+    populateNeighborhood(scene);
+    const checkedRoles = new Set([
+      "tree",
+      "garden-shrub",
+      "garden-flower",
+      "mailbox",
+    ]);
+    let checkedScenery = 0;
+
+    scene.traverse((object) => {
+      const role = object.userData["sceneRole"];
+      if (typeof role !== "string" || !checkedRoles.has(role)) return;
+      const clearanceRadius =
+        typeof object.userData["clearanceRadius"] === "number"
+          ? object.userData["clearanceRadius"]
+          : 0;
+      expect(
+        staticSceneryPlacementAllowed(
+          object.position.x,
+          object.position.z,
+          clearanceRadius,
+        ),
+      ).toBe(true);
+      if (role === "tree") {
+        expect(
+          blocksFrontHouseFacade(
+            object.position.x,
+            object.position.z,
+            clearanceRadius,
+          ),
+        ).toBe(false);
+      }
+      checkedScenery += 1;
+    });
+
+    expect(checkedScenery).toBeGreaterThanOrEqual(70);
+
+    for (let index = 0; index < 40; index += 1) {
+      const sign = gardenSignPosition(index);
+      expect(staticSceneryPlacementAllowed(sign.x, sign.z, 0.48)).toBe(true);
+    }
+
+    for (const property of FRONT_PROPERTY_LAYOUT) {
+      expect(
+        staticSceneryPlacementAllowed(property.mailboxX, -0.3, 0.3),
+      ).toBe(true);
+      expect(
+        staticSceneryPlacementAllowed(property.drivewayX, -2.55, 0.1),
+      ).toBe(false);
+    }
   });
 
   it("makes storm wind materially stronger than ordinary weather", () => {
