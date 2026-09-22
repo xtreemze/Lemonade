@@ -144,7 +144,7 @@ describe("procedural residential layout", () => {
       const path = layout.exclusions.find(
         (rect) =>
           rect.role === "path" &&
-          Math.abs((rect.minX + rect.maxX) / 2 - property.houseX) < 0.02 &&
+          Math.abs((rect.minX + rect.maxX) / 2 - access.pathCenterX) < 0.02 &&
           Math.abs((rect.minZ + rect.maxZ) / 2 - access.pathCenterZ) < 0.02,
       );
       const driveway = layout.exclusions.find(
