@@ -12,6 +12,7 @@ import {
   buyerPhaseAt,
   buyerSlotForSale,
   completedSalesAt,
+  endingCloseupProgressAt,
   remainingCameraProgressAt,
   remainingCupsAt,
   sceneCameraComposition,
@@ -191,9 +192,9 @@ describe("street simulation storyboard", () => {
     expect(storyboard.priceCents).toBe(175);
   });
 
-  it("holds one stand shot during sales and reserves only the ending for inventory", () => {
+  it("holds six seconds of street activity then a two-second ending closeup", () => {
     const storyboard = createStreetStoryboard({
-      durationMs: 6_000,
+      durationMs: 8_000,
       prepared: 10,
       sold: 4,
       visibleSigns: 2,
@@ -205,16 +206,22 @@ describe("street simulation storyboard", () => {
       "stand",
       "remaining",
     ]);
+    expect(storyboard.activeDurationMs).toBe(6_000);
     expect(storyboard.shots[0]?.startAtMs).toBe(0);
-    expect(storyboard.shots.at(-1)?.endAtMs).toBe(6_000);
+    expect(storyboard.shots.at(-1)?.endAtMs).toBe(8_000);
     expect(sceneShotAt(storyboard, 0)).toBe("stand");
-    expect(sceneShotAt(storyboard, 3_200)).toBe("stand");
-    expect(sceneShotAt(storyboard, 5_000)).toBe("stand");
-    expect(sceneShotAt(storyboard, 5_500)).toBe("remaining");
-    expect(remainingCameraProgressAt(storyboard, 5_000)).toBe(0);
-    expect(remainingCameraProgressAt(storyboard, 5_500)).toBeGreaterThan(0);
-    expect(remainingCameraProgressAt(storyboard, 5_700)).toBe(1);
-    expect(remainingCameraProgressAt(storyboard, 6_000)).toBe(1);
+    expect(sceneShotAt(storyboard, 5_999)).toBe("stand");
+    expect(sceneShotAt(storyboard, 6_000)).toBe("remaining");
+    expect(sceneShotAt(storyboard, 7_999)).toBe("remaining");
+
+    expect(endingCloseupProgressAt(storyboard, 6_000)).toBe(0);
+    expect(endingCloseupProgressAt(storyboard, 7_000)).toBeCloseTo(0.5);
+    expect(endingCloseupProgressAt(storyboard, 8_000)).toBe(1);
+
+    expect(remainingCameraProgressAt(storyboard, 6_000)).toBe(0);
+    expect(remainingCameraProgressAt(storyboard, 6_500)).toBeGreaterThan(0);
+    expect(remainingCameraProgressAt(storyboard, 7_300)).toBe(1);
+    expect(remainingCameraProgressAt(storyboard, 8_000)).toBe(1);
   });
 
   it("uses viewport classes for mobile-first framing that progressively reveals the neighborhood", () => {
