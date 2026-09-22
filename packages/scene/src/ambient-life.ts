@@ -15,6 +15,7 @@ import { updateNeighborhoodWind } from "./neighborhood.js";
 import {
   createNeighborhoodMobilitySystem,
   type MobilityPose,
+  type NeighborhoodMobilitySample,
 } from "./neighborhood-mobility.js";
 import { WORLD_SCALE } from "./world-scale.js";
 import {
@@ -53,7 +54,7 @@ export type AmbientLifeController = Readonly<{
     durationMs: number,
     dayNumber?: number,
     focus?: Readonly<{ x: number; z: number }>,
-  ): void;
+  ): NeighborhoodMobilitySample;
 }>;
 
 const material = (color: number): MeshStandardMaterial =>
@@ -692,6 +693,7 @@ export const createAmbientLife = (
         vehicle.position.set(pose.x, 0.02, pose.z);
         vehicle.rotation.y = -pose.yaw;
       });
+      return sample;
     },
   });
 };
