@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   FRONT_PROPERTY_LAYOUT,
   populateNeighborhood,
+  weatherWindStrength,
 } from "../src/neighborhood.js";
 import { STAND_LAYOUT } from "../src/stand-layout.js";
 
@@ -19,19 +20,35 @@ describe("neighborhood world scale", () => {
     expect(stats.driveways).toBe(stats.frontProperties);
     expect(stats.treeLods).toBeGreaterThanOrEqual(40);
     expect(stats.yardDetails).toBeGreaterThanOrEqual(10);
+    expect(stats.flowers).toBeGreaterThanOrEqual(8);
+    expect(stats.pavedRoads).toBeGreaterThanOrEqual(3);
+    expect(stats.windResponsive).toBeGreaterThanOrEqual(stats.treeLods + stats.shrubs);
     expect(stats.roadSegments).toBeGreaterThanOrEqual(13);
 
     let lodCount = 0;
     let standHomeCount = 0;
     let standNeighborCount = 0;
+    let pavedRoadCount = 0;
+    let flowerCount = 0;
     scene.traverse((object) => {
       if (object.userData["lodMode"] === "distance-two-level") lodCount += 1;
       if (object.userData["sceneRole"] === "stand-home") standHomeCount += 1;
       if (object.userData["sceneRole"] === "stand-neighbor") standNeighborCount += 1;
+      if (object.userData["sceneRole"] === "paved-road") pavedRoadCount += 1;
+      if (object.userData["sceneRole"] === "garden-flower") flowerCount += 1;
     });
     expect(lodCount).toBe(stats.houseLods + stats.treeLods);
     expect(standHomeCount).toBe(1);
     expect(standNeighborCount).toBe(1);
+    expect(pavedRoadCount).toBe(stats.pavedRoads);
+    expect(flowerCount).toBe(stats.flowers);
+  });
+
+  it("makes storm wind materially stronger than ordinary weather", () => {
+    expect(weatherWindStrength("sunny")).toBeGreaterThan(0);
+    expect(weatherWindStrength("thunderstorm")).toBeGreaterThan(
+      weatherWindStrength("cloudy") * 2,
+    );
   });
 
   it("puts the stand in the featured garden beside its driveway and near the next property", () => {

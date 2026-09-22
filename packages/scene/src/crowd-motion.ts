@@ -1,4 +1,13 @@
+import type { Group, Scene } from "three";
+
+import {
+  clampToNearSidewalk,
+  gardenSignPosition,
+  sidewalkLaneZ,
+} from "./street-layout.js";
 import type { PasserbyBeat } from "./storyboard.js";
+
+export { gardenSignPosition, sidewalkLaneZ };
 
 export type CrowdPose = Readonly<{
   x: number;
@@ -18,7 +27,7 @@ const deterministicUnit = (index: number, salt: number): number => {
 };
 
 export const crowdGroundClearance = (heightScale: number): number =>
-  0.225 * Math.max(0.82, Math.min(1.2, Number.isFinite(heightScale) ? heightScale : 1));
+  0.225 * Math.max(0.62, Math.min(1.2, Number.isFinite(heightScale) ? heightScale : 1));
 
 const basePose = (
   beat: PasserbyBeat,
@@ -37,15 +46,14 @@ const basePose = (
   const endX = -startX;
   const x = startX + (endX - startX) * progress;
 
-  const lane = beat.lane % 4;
-  const laneBase = 3.05 + lane * 0.42;
-  const meander = Math.sin(progress * Math.PI * 2 + actorIndex * 0.83) * 0.075;
+  const laneBase = sidewalkLaneZ(beat.lane);
+  const meander = Math.sin(progress * Math.PI * 2 + actorIndex * 0.83) * 0.045;
   const attention = beat.seesAdvertisement
     ? Math.exp(-Math.pow((progress - 0.5) / 0.13, 2))
     : 0;
   const signSide = beat.signIndex >= 0 && beat.signIndex % 2 === 0 ? -1 : 1;
   const signPull = attention * signSide * 0.22;
-  const z = laneBase + meander - attention * 0.34;
+  const z = clampToNearSidewalk(laneBase + meander - attention * 0.07, 0.12);
 
   const baseHeading = direction === -1 ? Math.PI / 2 : -Math.PI / 2;
   const attentionHeading = signSide * 0.48 * attention;
@@ -75,8 +83,8 @@ export const crowdPosesAt = (
     return { ...basePose(beat, index, elapsedMs, durationMs, count) };
   });
 
-  // Local deterministic separation keeps walkers from occupying the same
-  // sidewalk space without introducing a physics dependency or randomness.
+  // Deterministic local separation keeps walkers from occupying the same
+  // sidewalk space without allowing avoidance to spill them into the road.
   for (let pass = 0; pass < 2; pass += 1) {
     for (let left = 0; left < poses.length; left += 1) {
       const a = poses[left];
@@ -90,8 +98,8 @@ export const crowdPosesAt = (
         if (distanceSquared >= 0.46 * 0.46) continue;
         const direction = deterministicUnit(left + right, pass + 71) < 0.5 ? -1 : 1;
         const push = (0.46 - Math.sqrt(Math.max(0.0001, distanceSquared))) * 0.52;
-        a.z -= push * direction;
-        b.z += push * direction;
+        a.z = clampToNearSidewalk(a.z - push * direction, 0.1);
+        b.z = clampToNearSidewalk(b.z + push * direction, 0.1);
       }
     }
   }
@@ -103,4 +111,23 @@ export const walkingBodyLift = (seconds: number, pace: number, strideOffset: num
   const cycle = seconds * 7.2 * pace + strideOffset;
   const stance = Math.abs(Math.sin(cycle));
   return 0.018 + stance * 0.028;
+};
+
+
+export type StreetMotion = Readonly<{
+  crowdPosesAt: typeof crowdPosesAt;
+  sidewalkLaneZ: typeof sidewalkLaneZ;
+}>;
+
+export const initializeStreetMotion = (
+  scene: Scene,
+  signs: readonly Readonly<{ root: Group }>[],
+): StreetMotion => {
+  signs.forEach((sign, index) => {
+    const position = gardenSignPosition(index);
+    sign.root.position.set(position.x, position.y, position.z);
+    sign.root.rotation.y = position.rotationY;
+    scene.add(sign.root);
+  });
+  return Object.freeze({ crowdPosesAt, sidewalkLaneZ });
 };

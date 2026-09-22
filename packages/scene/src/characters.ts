@@ -34,8 +34,10 @@ const pick = <T>(values: readonly T[], value: number): T => {
 };
 
 export const characterProfileFor = (seed: number, index: number): CharacterProfile => {
-  const identity = mix(seed, Number.isFinite(index) ? Math.trunc(index) : 0);
-  const secondary = mix(identity, index + 31);
+  const actorIndex = Number.isFinite(index) ? Math.abs(Math.trunc(index)) : 0;
+  const identity = mix(seed, actorIndex);
+  const secondary = mix(identity, actorIndex + 31);
+  const child = actorIndex < 10_000 && Math.floor(actorIndex / 2) % 3 === 2;
   return Object.freeze({
     clothingColor: pick(clothes, identity),
     skinColor: pick(skins, identity >>> 3),
@@ -43,9 +45,13 @@ export const characterProfileFor = (seed: number, index: number): CharacterProfi
     trouserColor: pick(trousers, identity >>> 11),
     hairStyle: ((identity >>> 15) & 3) as 0 | 1 | 2 | 3,
     accessory: ((identity >>> 17) % 3) as 0 | 1 | 2,
-    heightScale: 0.9 + ((identity >>> 19) & 15) / 75,
-    widthScale: 0.9 + ((identity >>> 23) & 7) / 44,
-    walkPace: 0.88 + ((secondary >>> 3) & 15) / 58,
+    heightScale: child
+      ? 0.66 + ((identity >>> 19) & 7) / 46
+      : 0.9 + ((identity >>> 19) & 15) / 75,
+    widthScale: child
+      ? 0.82 + ((identity >>> 23) & 7) / 54
+      : 0.9 + ((identity >>> 23) & 7) / 44,
+    walkPace: (child ? 1 : 0.88) + ((secondary >>> 3) & 15) / 58,
     gaitAmplitude: 0.48 + ((secondary >>> 8) & 7) / 35,
     strideOffset: (secondary / 0xffff_ffff) * Math.PI * 2,
     eyeSpacing: 0.078 + ((secondary >>> 13) & 7) / 230,

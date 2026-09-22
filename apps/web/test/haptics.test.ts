@@ -7,6 +7,7 @@ const cues: readonly HapticCue[] = [
   "purchase:payment",
   "purchase:drink",
   "storm:thunder",
+  "storm:gust",
 ];
 
 describe("haptic feedback", () => {
@@ -17,6 +18,12 @@ describe("haptic feedback", () => {
       expect(pattern.every((duration) => Number.isInteger(duration) && duration >= 0)).toBe(true);
       expect(pattern.reduce((total, duration) => total + duration, 0)).toBeLessThanOrEqual(500);
     }
+  });
+
+  it("gives storm gusts a softer pattern than thunder", () => {
+    const gust = hapticPattern("storm:gust").reduce((sum, duration) => sum + duration, 0);
+    const thunder = hapticPattern("storm:thunder").reduce((sum, duration) => sum + duration, 0);
+    expect(gust).toBeLessThan(thunder);
   });
 
   it("plays native vibration when active and allowed", () => {

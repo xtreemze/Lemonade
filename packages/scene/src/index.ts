@@ -21,6 +21,7 @@ import {
 } from "three";
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
+import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { LEMON_CENTER_Y, SELLER_Z } from "./stand-anchors.js";
 import {
@@ -120,7 +121,7 @@ type SignModel = Readonly<{
   labelMaterial: MeshStandardMaterial;
 }>;
 
-const createSign = (index: number): SignModel => {
+const createSign = (): SignModel => {
   const root = new Group();
   addBox(root, [0.1, 0.85, 0.1], [0, 0.43, 0], 0x644c34);
   addBox(root, [0.95, 0.62, 0.12], [0, 1.05, 0], 0xf5d34c);
@@ -136,14 +137,6 @@ const createSign = (index: number): SignModel => {
   label.position.set(0, 1.05, 0.066);
   root.add(label);
 
-  const side = index % 2 === 0 ? -1 : 1;
-  const row = Math.floor(index / 2);
-  root.position.set(
-    side * (3.6 + (row % 4) * 1.15),
-    0,
-    1.9 + Math.floor(row / 4) * 1.2,
-  );
-  root.rotation.y = side * 0.18;
   return Object.freeze({ root, labelMaterial });
 };
 
@@ -499,7 +492,7 @@ export const createLemonsvilleScene = (
   const stand = createStand();
   scene.add(stand.root);
 
-  const signs = Array.from({ length: 40 }, (_, index) => createSign(index));
+  const signs = Array.from({ length: 40 }, () => createSign());
   let signTexture: CanvasTexture | null = null;
   let signPriceLabel = "";
   let disposed = false;
@@ -507,8 +500,6 @@ export const createLemonsvilleScene = (
   let signLabelModule:
     | Promise<Readonly<{ createPriceSignSurface(priceLabel: string): HTMLCanvasElement }>>
     | null = null;
-  for (const sign of signs) scene.add(sign.root);
-  const signOrigins = signs.map((sign) => sign.root.rotation.z);
 
   const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) =>
     createPerson(initialState.characterSeed, index),
@@ -554,22 +545,7 @@ export const createLemonsvilleScene = (
   };
 
   let state = initialState;
-  let crowdMotion:
-    | Readonly<{
-        crowdPosesAt(
-          beats: StreetStoryboard["passersBy"],
-          actorCount: number,
-          elapsedMs: number,
-          durationMs: number,
-        ): readonly Readonly<{
-          x: number;
-          z: number;
-          heading: number;
-          pace: number;
-          seesAdvertisement: boolean;
-        }>[];
-      }>
-    | null = null;
+  let crowdMotion: StreetMotion | null = null;
   let ambientLife:
     | Readonly<{
         update(
@@ -667,9 +643,9 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./crowd-motion.js")
-    .then(({ crowdPosesAt }) => {
+    .then(({ initializeStreetMotion }) => {
       if (disposed) return;
-      crowdMotion = Object.freeze({ crowdPosesAt });
+      crowdMotion = initializeStreetMotion(scene, signs);
       resetAnimatedObjects();
       render();
     })
@@ -678,7 +654,11 @@ export const createLemonsvilleScene = (
   void import("./ambient-life.js")
     .then(({ createAmbientLife }) => {
       if (disposed) return;
-      ambientLife = createAmbientLife(scene, initialState.characterSeed);
+      ambientLife = createAmbientLife(
+        scene,
+        initialState.characterSeed,
+        customers.map((customer) => customer.root),
+      );
       ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
       render();
     })
@@ -710,13 +690,15 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./character-detail.js")
-    .then(({ decorateCharacterHead, decorateSellerExpression }) => {
+    .then(({ decorateSceneCharacters }) => {
       if (disposed) return;
-      for (const person of [...customers, ...buyers]) {
-        decorateCharacterHead(person.head, person.profile);
-      }
-      decorateCharacterHead(seller.person.head, seller.person.profile, false);
-      decorateSellerExpression(seller.eyebrows, seller.mouth);
+      decorateSceneCharacters(
+        customers,
+        buyers,
+        seller.person,
+        seller.eyebrows,
+        seller.mouth,
+      );
       render();
     })
     .catch(() => undefined);
@@ -790,8 +772,8 @@ export const createLemonsvilleScene = (
     positionStaticPedestrians();
     applySellerExpression(seller, state.confidence);
     applyPhaseStaging();
-    signs.forEach((sign, index) => {
-      sign.root.rotation.z = signOrigins[index] ?? 0;
+    signs.forEach((sign) => {
+      sign.root.rotation.z = 0;
     });
     lemons.forEach((lemon, index) => {
       lemon.position.y = lemonOrigins[index] ?? lemon.position.y;
@@ -800,6 +782,12 @@ export const createLemonsvilleScene = (
     for (const weather of Object.keys(weatherObjects) as SceneWeather[]) {
       weatherObjects[weather].position.x = weatherOrigins[weather];
     }
+    ambientLife?.update(
+      state.weather,
+      state.phase,
+      0,
+      Math.max(1, storyboard.durationMs)
+    );
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
 
@@ -819,11 +807,11 @@ export const createLemonsvilleScene = (
 
       const streetX = sale.direction === -1 ? -8.4 : 8.4;
       const exitX = -streetX;
-      const streetZ = 4.0 + sale.lane * 0.34;
+      const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
       const counterX = sale.direction === -1 ? -0.72 : 0.72;
-      const counterZ = 1.62;
+      const counterZ = 1.22;
       const drinkX = sale.direction === -1 ? -1.35 : 1.35;
-      const drinkZ = 2.12;
+      const drinkZ = 1.78;
       let x = counterX;
       let z = counterZ;
 
@@ -942,7 +930,12 @@ export const createLemonsvilleScene = (
     const activeBuyerCount = animateBuyers(elapsedMs, seconds);
     animatePassersBy(elapsedMs, seconds, activeBuyerCount);
     animateSeller(seconds, elapsedMs);
-    ambientLife?.update(state.weather, state.phase, elapsedMs, storyboard.durationMs);
+    ambientLife?.update(
+      state.weather,
+      state.phase,
+      elapsedMs,
+      storyboard.durationMs
+    );
 
     cupInventory?.setCount(
       state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs),
@@ -1012,7 +1005,12 @@ export const createLemonsvilleScene = (
     }
 
     applyPhaseStaging();
-    ambientLife?.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
+    ambientLife?.update(
+      state.weather,
+      state.phase,
+      0,
+      Math.max(1, state.durationMs)
+    );
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
     render();

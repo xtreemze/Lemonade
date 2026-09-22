@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { ambientPopulationFor } from "../src/ambient-life.js";
+import {
+  ambientPopulationFor,
+  petFollowPose,
+  xTravelYaw,
+} from "../src/ambient-life.js";
 import { crowdGroundClearance, crowdPosesAt, walkingBodyLift } from "../src/crowd-motion.js";
+import { STREET_LAYOUT, roadLaneZ } from "../src/street-layout.js";
 import type { PasserbyBeat } from "../src/storyboard.js";
 
 const beats: readonly PasserbyBeat[] = Object.freeze(
@@ -19,7 +24,7 @@ const beats: readonly PasserbyBeat[] = Object.freeze(
 );
 
 describe("crowd motion", () => {
-  it("keeps deterministic sidewalk paths separated and bounded", () => {
+  it("keeps deterministic pedestrian paths separated and entirely on the sidewalk", () => {
     const first = crowdPosesAt(beats, 12, 2_750, 6_000);
     const repeated = crowdPosesAt(beats, 12, 2_750, 6_000);
     expect(repeated).toEqual(first);
@@ -27,8 +32,9 @@ describe("crowd motion", () => {
 
     for (const pose of first) {
       expect(Math.abs(pose.x)).toBeLessThanOrEqual(12.8);
-      expect(pose.z).toBeGreaterThan(2.4);
-      expect(pose.z).toBeLessThan(5.1);
+      expect(pose.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
+      expect(pose.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
+      expect(pose.z).toBeLessThan(STREET_LAYOUT.road.minZ);
     }
 
     for (let left = 0; left < first.length; left += 1) {
@@ -43,7 +49,29 @@ describe("crowd motion", () => {
     }
   });
 
-  it("provides enough ground clearance for the full seeded height range", () => {
+  it("keeps bicycles and vehicles in paved-road lanes and faces X-axis travel", () => {
+    for (const kind of ["bicycle", "vehicle"] as const) {
+      for (let index = 0; index < 2; index += 1) {
+        const z = roadLaneZ(kind, index);
+        expect(z).toBeGreaterThan(STREET_LAYOUT.road.minZ);
+        expect(z).toBeLessThan(STREET_LAYOUT.road.maxZ);
+      }
+    }
+    expect(xTravelYaw(1)).toBeCloseTo(0);
+    expect(Math.abs(xTravelYaw(-1))).toBeCloseTo(Math.PI);
+  });
+
+  it("keeps pets behind their pedestrian owner on the same sidewalk", () => {
+    const owner = Object.freeze({ x: 2, z: 1.2, heading: Math.PI / 2 });
+    const pet = petFollowPose(owner, 0);
+    expect(pet.x).toBeLessThan(owner.x);
+    expect(pet.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
+    expect(pet.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
+    expect(pet.yaw).toBeCloseTo(0);
+  });
+
+  it("provides enough ground clearance for adult and child seeded heights", () => {
+    expect(crowdGroundClearance(0.68)).toBeGreaterThan(0.14);
     expect(crowdGroundClearance(0.9)).toBeGreaterThan(0.2);
     expect(crowdGroundClearance(1.2)).toBeGreaterThan(0.26);
     expect(walkingBodyLift(0.5, 1, 0)).toBeGreaterThan(0);
