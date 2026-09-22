@@ -495,8 +495,9 @@ export const residentialAccessLayout = (
 const drivewayRectForProperty = (
   property: ResidentialPropertySpec,
   drivewayX: number,
+  seed: number,
 ): ResidentialRect => {
-  const access = residentialAccessLayout(property);
+  const access = residentialAccessLayout(property, seed);
   const halfDepth = access.drivewayDepth / 2;
   return Object.freeze({
     minX: drivewayX - DRIVEWAY_HALF_WIDTH,
@@ -519,6 +520,7 @@ const rectsHaveClearance = (
 
 const resolveGeneratedAccess = (
   properties: readonly ResidentialPropertySpec[],
+  seed: number,
 ): readonly ResidentialPropertySpec[] => {
   const occupied: ResidentialRect[] = [];
   const resolved = properties.map((property) => {
@@ -533,7 +535,11 @@ const resolveGeneratedAccess = (
       const distance = baseDistance + step * 0.42;
       for (const side of [preferredSide, -preferredSide] as const) {
         const candidateX = property.houseX + side * distance;
-        const candidateRect = drivewayRectForProperty(property, candidateX);
+        const candidateRect = drivewayRectForProperty(
+          property,
+          candidateX,
+          seed,
+        );
         const clearsHouses = properties.every((other) => {
           const footprint = propertyFootprint(other);
           return !footprintIntersectsRect(
@@ -835,6 +841,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       [-46, -35, -24.5, -9.1, 4, 16.5, 29.7, 41.7],
       true,
     ),
+    safeSeed,
   );
   const back = resolveGeneratedAccess(
     rowProperties(
@@ -844,6 +851,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       [-47, -36.5, -25.4, -9.7, 3.5, 16.5, 28.5, 39.6, 52.5],
       true,
     ),
+    safeSeed,
   );
   const outer = resolveGeneratedAccess([
     ...rowProperties(
@@ -860,7 +868,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
       false,
     ),
-  ]);
+  ], safeSeed);
   const allProperties = [...front, ...middle, ...back, ...outer];
   const exclusions = Object.freeze([
     ...baseExclusions(safeSeed),
