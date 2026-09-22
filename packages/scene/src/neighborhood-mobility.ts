@@ -308,39 +308,40 @@ const allProperties = (layout: ResidentialLayout): readonly ResidentialPropertyS
 
 const propertyDoorPoint = (
   property: ResidentialPropertySpec,
+  seed: number,
 ): ResidentialPoint => {
-  const access = residentialAccessLayout(property);
+  const access = residentialAccessLayout(property, seed);
   return Object.freeze({
-    x: property.houseX,
-    z:
-      property.houseZ +
-      access.frontDirection * Math.max(2.35, Math.abs(access.pathCenterZ - property.houseZ) * 0.72),
+    x: access.doorX,
+    z: access.doorZ,
   });
 };
 
 const propertySidewalkPoint = (
   property: ResidentialPropertySpec,
+  seed: number,
 ): ResidentialPoint => {
-  const access = residentialAccessLayout(property);
-  const nearSide =
-    access.frontDirection > 0
-      ? STREET_LAYOUT.nearSidewalk.centerZ
-      : STREET_LAYOUT.farSidewalk.centerZ;
-  return Object.freeze({ x: property.houseX, z: nearSide });
+  const access = residentialAccessLayout(property, seed);
+  return Object.freeze({
+    x: access.pathCenterX,
+    z: access.sidewalkCenterZ,
+  });
 };
 
 const residentRoute = (
   property: ResidentialPropertySpec,
   direction: -1 | 1,
+  seed: number,
 ): Route => {
-  const door = propertyDoorPoint(property);
-  const path = residentialAccessLayout(property);
-  const sidewalk = propertySidewalkPoint(property);
+  const door = propertyDoorPoint(property, seed);
+  const path = residentialAccessLayout(property, seed);
+  const sidewalk = propertySidewalkPoint(property, seed);
   return makeRoute("resident:" + property.role, [
     door,
-    { x: property.houseX, z: path.pathCenterZ },
+    { x: path.entryX, z: path.entryZ },
+    { x: path.pathCenterX, z: path.pathCenterZ },
     sidewalk,
-    { x: property.houseX + direction * 12, z: sidewalk.z },
+    { x: sidewalk.x + direction * 12, z: sidewalk.z },
   ]);
 };
 
@@ -569,7 +570,7 @@ export const createNeighborhoodMobilitySystem = (
     layout.frontProperties[5],
   ].filter((property): property is ResidentialPropertySpec => property !== undefined);
   const residentRoutes = residents.map((property, index) =>
-    residentRoute(property, index % 2 === 0 ? -1 : 1),
+    residentRoute(property, index % 2 === 0 ? -1 : 1, safeSeed),
   );
   const mailboxes = mailboxPoints(layout);
   const gardenerWeekday = Math.floor(deterministicUnit(safeSeed, 901) * 7);
@@ -682,7 +683,7 @@ export const createNeighborhoodMobilitySystem = (
           ) ??
           layout.frontProperties.find((property) => property.drivewayX !== null);
         if (drivewayProperty?.drivewayX !== null && drivewayProperty !== undefined) {
-          const access = residentialAccessLayout(drivewayProperty);
+          const access = residentialAccessLayout(drivewayProperty, safeSeed);
           const t = clamp01(input.elapsedMs / durationMs);
           const roadPoint = Object.freeze({
             x: drivewayProperty.drivewayX,
@@ -690,7 +691,7 @@ export const createNeighborhoodMobilitySystem = (
           });
           const parkPoint = Object.freeze({
             x: drivewayProperty.drivewayX,
-            z: access.drivewayCenterZ,
+            z: access.parkingZ,
           });
           let vehiclePoint = roadPoint;
           let vehicleYaw = 0;
@@ -751,10 +752,10 @@ export const createNeighborhoodMobilitySystem = (
           const driverRoute = makeRoute("resident-driver", [
             parkPoint,
             Object.freeze({
-              x: drivewayProperty.houseX,
-              z: access.pathCenterZ,
+              x: access.entryX,
+              z: access.entryZ,
             }),
-            propertyDoorPoint(drivewayProperty),
+            propertyDoorPoint(drivewayProperty, safeSeed),
           ]);
           const driverReturnRoute = reverseRoute(driverRoute, ":return");
           const driverMovement = driverEntering || driverLeaving;
@@ -869,8 +870,8 @@ export const createNeighborhoodMobilitySystem = (
 
         const weekday = (dayNumber - 1) % 7;
         if (gardenerProperty !== undefined && weekday === gardenerWeekday) {
-          const access = residentialAccessLayout(gardenerProperty);
-          const sidewalk = propertySidewalkPoint(gardenerProperty);
+          const access = residentialAccessLayout(gardenerProperty, safeSeed);
+          const sidewalk = propertySidewalkPoint(gardenerProperty, safeSeed);
           const garden = Object.freeze({
             x: gardenerProperty.houseX + 1.8,
             z: access.pathCenterZ,
