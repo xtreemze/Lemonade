@@ -26,7 +26,7 @@ const postHeight = canopyBottomY - counterTopY;
 const postCenterY = counterTopY + postHeight / 2;
 
 export const STAND_LAYOUT = Object.freeze({
-  body: box([2.65, 0.72, 0.34], [0, 0.36, 0.52]),
+  body: box([2.65, 0.72, 0.34], [0, 0.01, 0.52]),
   counter,
   frontPanel: box([2.45, 0.48, 0.08], [0, 0.42, 0.72]),
   posts: Object.freeze([
