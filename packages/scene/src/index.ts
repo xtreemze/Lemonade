@@ -720,7 +720,7 @@ export const createLemonsvilleScene = (
 
     const visibleCount = Math.min(
       customers.length,
-      Math.max(6, Math.min(18, storyboard.passersBy.length)),
+      Math.max(6, Math.min(36, storyboard.passersBy.length)),
     );
     const poses =
       crowdMotion?.crowdPosesAt(
@@ -927,7 +927,7 @@ export const createLemonsvilleScene = (
 
     const targetCount = Math.min(
       customers.length,
-      Math.max(activeBuyerCount + 1, Math.min(18, storyboard.passersBy.length)),
+      Math.max(activeBuyerCount + 1, Math.min(36, storyboard.passersBy.length)),
     );
     const poses =
       crowdMotion?.crowdPosesAt(
