@@ -477,7 +477,7 @@ export const initializeStreetMotion = (
     elapsedMs,
     durationMs,
   ) => {
-    const safeActorCount = Math.max(0, Math.min(Math.trunc(actorCount), 48));
+    const safeActorCount = Math.max(0, Math.min(Math.trunc(actorCount), 64));
     const safeDurationMs = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
     if (
       cachedSimulation === null ||

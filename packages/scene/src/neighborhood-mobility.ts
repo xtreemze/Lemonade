@@ -947,10 +947,14 @@ export const createNeighborhoodMobilitySystem = (
           addStatistical(counts, gardener);
         }
 
-        const frontProperties = layout.frontProperties.filter((p) => p.drivewayX !== null);
-        for (let i = 0; i < Math.min(2, frontProperties.length); i++) {
-          const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) * frontProperties.length);
-          const property = frontProperties[propertyIndex];
+        const allFrontProperties = layout.frontProperties.filter((p) => p.drivewayX !== null);
+        const midProperties = layout.middleProperties.filter((p) => p.drivewayX !== null);
+        const allDrivewayProperties = [...allFrontProperties, ...midProperties];
+        for (let i = 0; i < Math.min(4, allDrivewayProperties.length); i++) {
+          const hasVehicle = deterministicUnit(safeSeed ^ dayNumber ^ i, 5000 + i) > 0.35;
+          if (!hasVehicle) continue;
+          const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) * allDrivewayProperties.length);
+          const property = allDrivewayProperties[propertyIndex];
           if (property === undefined || property.drivewayX === null) continue;
           const access = residentialAccessLayout(property);
           const parkedVehicle = makePose(
@@ -963,12 +967,15 @@ export const createNeighborhoodMobilitySystem = (
             Math.PI / 2,
             0,
             focus,
-            "none",
-            null,
+            "parking",
+            property.role,
             true,
           );
           actors.push(parkedVehicle);
           addStatistical(counts, parkedVehicle);
+          patchProperty(properties, property.role, {
+            vehicleParked: true,
+          });
         }
 
         const sunny = input.weather === "sunny";
@@ -985,6 +992,47 @@ export const createNeighborhoodMobilitySystem = (
             sprinklerOn: sprinkler,
           });
         });
+      } else if (phase === "idle") {
+        // Night time - show lights in some homes
+        allProperties(layout).forEach((property, index) => {
+          const nightOccupied =
+            deterministicUnit(safeSeed ^ dayNumber, 2300 + index) > 0.3;
+          patchProperty(properties, property.role, {
+            windowActivity: nightOccupied,
+          });
+        });
+
+        // Add parked vehicles during evening/night
+        const allFrontProperties = layout.frontProperties.filter((p) => p.drivewayX !== null);
+        const midProperties = layout.middleProperties.filter((p) => p.drivewayX !== null);
+        const allDrivewayProperties = [...allFrontProperties, ...midProperties];
+        for (let i = 0; i < Math.min(6, allDrivewayProperties.length); i++) {
+          const hasVehicle = deterministicUnit(safeSeed ^ dayNumber ^ i, 5500 + i) > 0.25;
+          if (!hasVehicle) continue;
+          const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4500 + i) * allDrivewayProperties.length);
+          const property = allDrivewayProperties[propertyIndex];
+          if (property === undefined || property.drivewayX === null) continue;
+          const access = residentialAccessLayout(property);
+          const parkedVehicle = makePose(
+            `parked-vehicle-night-${i}`,
+            "vehicle",
+            {
+              x: property.drivewayX,
+              z: access.drivewayCenterZ,
+            },
+            Math.PI / 2,
+            0,
+            focus,
+            "parking",
+            property.role,
+            true,
+          );
+          actors.push(parkedVehicle);
+          addStatistical(counts, parkedVehicle);
+          patchProperty(properties, property.role, {
+            vehicleParked: true,
+          });
+        }
       }
 
       return Object.freeze({
