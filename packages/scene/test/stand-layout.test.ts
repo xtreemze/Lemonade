@@ -22,4 +22,13 @@ describe("lemonade stand staging", () => {
     expect(footprint.maxZ).toBeLessThan(bounds.maxZ);
     expect(STAND_LAYOUT.cupCenterY).toBeGreaterThan(bounds.topY);
   });
+
+  it("reserves a clear central sightline between cups and stock", () => {
+    expect(STAND_LAYOUT.stockFootprint.maxX)
+      .toBeLessThan(STAND_LAYOUT.sellerSightline.minX);
+    expect(STAND_LAYOUT.cupFootprint.minX)
+      .toBeGreaterThan(STAND_LAYOUT.sellerSightline.maxX);
+    expect(STAND_LAYOUT.stockFootprint.maxX)
+      .toBeLessThan(STAND_LAYOUT.cupFootprint.minX);
+  });
 });
