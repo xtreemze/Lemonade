@@ -1,4 +1,5 @@
 import { SELLER_Z } from "./stand-anchors.js";
+import { WORLD_SCALE } from "./world-scale.js";
 
 export type StandBoxSpec = Readonly<{
   size: readonly [number, number, number];
@@ -10,38 +11,48 @@ const box = (
   position: readonly [number, number, number],
 ): StandBoxSpec => Object.freeze({ size, position });
 
-const counter = box([3.55, 0.14, 0.78], [0, 1.28, 0.32]);
-const canopy = box([3.45, 0.14, 0.82], [0, 2.72, 0.18]);
+const counterThickness = 0.1;
+const counter = box(
+  [2.8, counterThickness, 0.76],
+  [0, WORLD_SCALE.stand.counterHeight - counterThickness / 2, 0.28],
+);
+const canopy = box(
+  [2.9, 0.12, 1],
+  [0, WORLD_SCALE.stand.canopyHeight, 0.12],
+);
 const counterTopY = counter.position[1] + counter.size[1] / 2;
+const canopyBottomY = canopy.position[1] - canopy.size[1] / 2;
+const postHeight = canopyBottomY - counterTopY;
+const postCenterY = counterTopY + postHeight / 2;
 
 export const STAND_LAYOUT = Object.freeze({
-  body: box([3.25, 1.18, 1.32], [0, 0.59, 0]),
+  body: box([2.65, 0.72, 0.34], [0, 0.36, 0.52]),
   counter,
-  frontPanel: box([2.95, 0.56, 0.14], [0, 0.68, 0.72]),
+  frontPanel: box([2.45, 0.48, 0.08], [0, 0.42, 0.72]),
   posts: Object.freeze([
-    box([0.14, 1.72, 0.14], [-1.45, 1.9, -0.02]),
-    box([0.14, 1.72, 0.14], [1.45, 1.9, -0.02]),
+    box([0.11, postHeight, 0.11], [-1.18, postCenterY, -0.02]),
+    box([0.11, postHeight, 0.11], [1.18, postCenterY, -0.02]),
   ]),
   canopy,
   sellerZ: SELLER_Z,
-  sellerFrontRadius: 0.42,
+  sellerFrontRadius: 0.27,
   sellerSightline: Object.freeze({
-    minX: -0.32,
-    maxX: 0.32,
+    minX: -0.25,
+    maxX: 0.25,
   }),
   counterTopY,
   cupCenterY: counterTopY + 0.095,
   cupFootprint: Object.freeze({
-    minX: 0.44,
-    maxX: 1.52,
-    minZ: 0.08,
-    maxZ: 0.58,
+    minX: 0.38,
+    maxX: 1.18,
+    minZ: 0.02,
+    maxZ: 0.5,
   }),
   stockFootprint: Object.freeze({
-    minX: -1.52,
-    maxX: -0.38,
+    minX: -1.18,
+    maxX: -0.36,
     minZ: 0.08,
-    maxZ: 0.58,
+    maxZ: 0.5,
   }),
 });
 
