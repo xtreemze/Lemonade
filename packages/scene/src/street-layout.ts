@@ -231,11 +231,24 @@ const straightRoad = (
   streetId: string,
   start: StreetPoint,
   end: StreetPoint,
+  steps: number,
   width: number,
-): readonly StreetStripSpec[] =>
-  Object.freeze([
-    stripBetween("paved-road", streetId, 0, start, end, width),
-  ]);
+): readonly StreetStripSpec[] => {
+  const points = Array.from({ length: steps + 1 }, (_, index) => {
+    const progress = index / steps;
+    return Object.freeze({
+      x: start.x + (end.x - start.x) * progress,
+      z: start.z + (end.z - start.z) * progress,
+    });
+  });
+  return Object.freeze(
+    points.slice(0, -1).map((point, index) => {
+      const next = points[index + 1];
+      if (next === undefined) throw new Error("street line segment invariant failed");
+      return stripBetween("paved-road", streetId, index, point, next, width);
+    }),
+  );
+};
 
 const stripProjectionRadius = (
   strip: StreetStripSpec,
@@ -322,6 +335,7 @@ export const generateStreetNetwork = (
       "main",
       { x: -75, z: mainCenterZ },
       { x: 75, z: mainCenterZ },
+      12,
       width,
     ),
     ...curveRoad(
