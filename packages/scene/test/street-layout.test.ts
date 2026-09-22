@@ -23,6 +23,9 @@ describe("street zoning", () => {
       const position = gardenSignPosition(index);
       expect(position.z).toBeLessThan(STREET_LAYOUT.nearSidewalk.minZ);
       expect(position.z).toBeLessThan(STREET_LAYOUT.road.minZ);
+      expect(position.x).toBeGreaterThan(-13.3);
+      expect(position.x).toBeLessThan(-1.7);
+      expect(position.x < -9.55 || position.x > -7.35).toBe(true);
     }
   });
 });
