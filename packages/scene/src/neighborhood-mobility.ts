@@ -724,10 +724,15 @@ export const createNeighborhoodMobilitySystem = (
               z: roadPoint.z,
             });
           }
+          const driverEntering = t >= 0.42 && t < 0.5;
+          const driverInside = t >= 0.5 && t < 0.64;
+          const driverLeaving = t >= 0.64 && t <= 0.72;
           patchProperty(properties, drivewayProperty.role, {
             vehicleParked: parked,
-            doorOpen: t >= 0.43 && t <= 0.5,
-            windowActivity: t >= 0.48 && t <= 0.72,
+            doorOpen:
+              (driverEntering && t >= 0.46) ||
+              (driverLeaving && t <= 0.69),
+            windowActivity: driverInside,
           });
           const drivewayVehicle = makePose(
             "resident-vehicle",
@@ -742,6 +747,43 @@ export const createNeighborhoodMobilitySystem = (
           );
           actors.push(drivewayVehicle);
           addStatistical(counts, drivewayVehicle);
+
+          const driverRoute = makeRoute("resident-driver", [
+            parkPoint,
+            Object.freeze({
+              x: drivewayProperty.houseX,
+              z: access.pathCenterZ,
+            }),
+            propertyDoorPoint(drivewayProperty),
+          ]);
+          const driverReturnRoute = reverseRoute(driverRoute, ":return");
+          const driverMovement = driverEntering || driverLeaving;
+          const driverSample = driverEntering
+            ? sampleRouteProgress(
+                driverRoute,
+                clamp01((t - 0.42) / 0.08),
+              )
+            : sampleRouteProgress(
+                driverReturnRoute,
+                clamp01((t - 0.64) / 0.08),
+              );
+          const residentDriver = makePose(
+            "resident-driver",
+            "resident",
+            driverSample.point,
+            driverSample.yaw,
+            1.35,
+            focus,
+            "door",
+            drivewayProperty.role,
+            false,
+            driverMovement,
+          );
+          actors.push(residentDriver);
+          if (residentDriver.visible) {
+            pedestrianPoints.push(driverSample.point);
+          }
+          addStatistical(counts, residentDriver);
         }
 
         const trafficRoutes = [
