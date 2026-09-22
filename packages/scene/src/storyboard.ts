@@ -100,6 +100,16 @@ export const sceneShotAt = (
   return shot?.kind ?? "stand";
 };
 
+export const endingCloseupProgressAt = (
+  storyboard: StreetStoryboard,
+  elapsedMs: number,
+): number => {
+  const elapsed = boundedElapsed(storyboard, elapsedMs);
+  if (elapsed <= storyboard.activeDurationMs) return 0;
+  const duration = Math.max(1, storyboard.durationMs - storyboard.activeDurationMs);
+  return Math.min(1, (elapsed - storyboard.activeDurationMs) / duration);
+};
+
 export const remainingCameraProgressAt = (
   storyboard: StreetStoryboard,
   elapsedMs: number,
