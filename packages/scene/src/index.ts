@@ -6,7 +6,6 @@ import {
   CylinderGeometry,
   DirectionalLight,
   DoubleSide,
-  Euler,
   Group,
   HemisphereLight,
   IcosahedronGeometry,
@@ -19,11 +18,9 @@ import {
   type Object3D,
   PerspectiveCamera,
   PlaneGeometry,
-  Quaternion,
   SRGBColorSpace,
   Scene,
   SphereGeometry,
-  Vector3,
   WebGLRenderer,
 } from "three";
 
@@ -539,9 +536,6 @@ const createCupInventory = (): CupInventory => {
   );
 
   const matrix = new Matrix4();
-  const quaternion = new Quaternion();
-  const scale = new Vector3(1, 1, 1);
-  const position = new Vector3();
 
   for (let index = 0; index < MAX_PREPARED_CUPS; index += 1) {
     const column = index % 20;
@@ -556,19 +550,13 @@ const createCupInventory = (): CupInventory => {
     matrix.makeTranslation(x, y - 0.022, z + 0.003);
     liquid.setMatrixAt(index, matrix);
 
-    quaternion.setFromEuler(new Euler(0, -0.28, 0));
-    position.set(x - 0.024, y + 0.025, z + 0.012);
-    matrix.compose(position, quaternion, scale);
+    matrix.makeRotationY(-0.28).setPosition(x - 0.024, y + 0.025, z + 0.012);
     iceA.setMatrixAt(index, matrix);
 
-    quaternion.setFromEuler(new Euler(0, 0.34, 0));
-    position.set(x + 0.027, y + 0.045, z - 0.006);
-    matrix.compose(position, quaternion, scale);
+    matrix.makeRotationY(0.34).setPosition(x + 0.027, y + 0.045, z - 0.006);
     iceB.setMatrixAt(index, matrix);
 
-    quaternion.setFromEuler(new Euler(0, 0, -0.2));
-    position.set(x + 0.028, y + 0.085, z + 0.008);
-    matrix.compose(position, quaternion, scale);
+    matrix.makeRotationZ(-0.2).setPosition(x + 0.028, y + 0.085, z + 0.008);
     straws.setMatrixAt(index, matrix);
   }
 
