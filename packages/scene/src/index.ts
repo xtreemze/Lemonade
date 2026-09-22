@@ -440,7 +440,6 @@ export const createLemonsvilleScene = (
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = SRGBColorSpace;
-  renderer.setClearColor(0x8fa7b8, 1);
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
