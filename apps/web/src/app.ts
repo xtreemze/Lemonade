@@ -48,6 +48,12 @@ import { createHapticEngine, type HapticCue } from "./haptics.js";
 import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 import { isGizmoEnabled, printGizmoHelp } from "./dev-gizmo.js";
+import {
+  isSceneLauncherEnabled,
+  printSceneLauncherHelp,
+  createSceneLauncherUI,
+  type ScenePreset,
+} from "./dev-scene-launcher.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
 const ACTIVE_SIMULATION_PRESENTATION_MS = 10_000;
@@ -334,6 +340,12 @@ export class LemonadeApp {
       printGizmoHelp();
     }
 
+    const sceneLauncherEnabled = isSceneLauncherEnabled();
+    if (sceneLauncherEnabled) {
+      console.log("🎬 Scene launcher enabled - type 'sceneLauncherHelp()' for help");
+      printSceneLauncherHelp();
+    }
+
     this.#scene = createLemonsvilleSceneView(
       {
         canvas: this.#elements.sceneCanvas,
@@ -347,6 +359,36 @@ export class LemonadeApp {
         },
       },
     );
+
+    // Initialize scene launcher if enabled
+    if (sceneLauncherEnabled) {
+      const onPresetSelect = (preset: ScenePreset) => {
+        this.#environment = {
+          ...this.#environment,
+          weather: {
+            kind: preset.weather,
+            temperature: preset.weather === "thunderstorm" ? 55 : 72,
+          },
+        };
+        this.#presentation =
+          preset.phase === "forecast" ? "forecast" : preset.phase === "idle" ? "idle" : "simulation";
+
+        if (preset.confidence !== undefined) {
+          this.#game = {
+            ...this.#game,
+            confidence: preset.confidence,
+          };
+        }
+
+        this.#glasses = preset.prepared ?? 5;
+        this.#signs = preset.visibleSigns ?? 1;
+
+        this.#renderScene();
+      };
+
+      const launcherPanel = createSceneLauncherUI(onPresetSelect);
+      document.body.appendChild(launcherPanel);
+    }
 
     this.#elements.decisionPanel.addEventListener(
       "lemonade-decision-change",
