@@ -75,7 +75,9 @@ describe("procedural residential layout", () => {
       const sine = Math.abs(Math.sin(property.rotationY));
       const blocked = residentialFootprintIntersectsHardscape(
         { x: property.houseX, z: property.houseZ },
-        layout,
+        {
+          exclusions: layout.exclusions.filter((rect) => rect.role !== "path"),
+        },
         localHalfWidth * cosine + localHalfDepth * sine,
         localHalfWidth * sine + localHalfDepth * cosine,
       );
