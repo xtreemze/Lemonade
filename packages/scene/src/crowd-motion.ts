@@ -227,11 +227,9 @@ const basePose = (
   actorIndex: number,
   elapsedMs: number,
   durationMs: number,
-  actorCount: number,
   routes: readonly PedestrianRoute[],
 ): MutableCrowdPose | undefined => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
-  const count = Math.max(1, actorCount);
   const worldSpeed = 1.18 + deterministicUnit(actorIndex, 17) * 0.26;
   const elapsedSeconds =
     Math.max(
@@ -245,7 +243,18 @@ const basePose = (
   );
   const requestedSide: SidewalkSide = actorIndex % 2 === 0 ? "near" : "far";
   const mainRoute =
-    mainRoutes.find((route) => route.side === requestedSide) ??
+    mainRoutes
+      .filter((route) => route.side === requestedSide)
+      .sort((left, right) => {
+        const leftStart = left.points[0]?.x ?? 0;
+        const leftEnd = left.points.at(-1)?.x ?? 0;
+        const rightStart = right.points[0]?.x ?? 0;
+        const rightEnd = right.points.at(-1)?.x ?? 0;
+        return (
+          Math.abs((leftStart + leftEnd) / 2) -
+          Math.abs((rightStart + rightEnd) / 2)
+        );
+      })[0] ??
     mainRoutes[actorIndex % Math.max(1, mainRoutes.length)];
   const neighborhoodRoute =
     neighborhoodRoutes.length === 0
@@ -454,7 +463,7 @@ export const createCrowdSimulation = (
         const beat = beats[(index * 7) % beats.length];
         if (beat === undefined) throw new Error("crowd beat invariant failed");
         if (elapsedMs < beat.startAtMs || elapsedMs >= beat.endAtMs) return undefined;
-        return basePose(beat, index, elapsedMs, safeDuration, count, routes);
+        return basePose(beat, index, elapsedMs, safeDuration, routes);
       });
 
       const neighborChecks = separateCrowd(poses);
