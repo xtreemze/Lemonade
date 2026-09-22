@@ -1,5 +1,6 @@
 import type { Group, Scene } from "three";
 
+import { walkingCycleAtDistance } from "./gait.js";
 import {
   clampToSidewalk,
   gardenSignPosition,
@@ -18,6 +19,7 @@ export type CrowdPose = Readonly<{
   heading: number;
   pace: number;
   worldSpeed: number;
+  travelDistance: number;
   side: SidewalkSide;
   seesAdvertisement: boolean;
 }>;
@@ -58,10 +60,13 @@ const basePose = (
   const count = Math.max(1, actorCount);
   const routeRate = 0.76 + deterministicUnit(actorIndex, 17) * 0.34;
   const phaseOffset = actorIndex / count + deterministicUnit(actorIndex, 29) * 0.11;
-  const progress = fract((Math.max(0, elapsedMs) / safeDuration) * routeRate + phaseOffset);
+  const unwrappedProgress =
+    (Math.max(0, elapsedMs) / safeDuration) * routeRate + phaseOffset;
+  const progress = fract(unwrappedProgress);
   const direction = beat.direction;
   const startX = direction === -1 ? -12.5 : 12.5;
   const endX = -startX;
+  const pathDistance = Math.abs(endX - startX);
   const x = startX + (endX - startX) * progress;
 
   const side = sidewalkSideForActor(beat.pedestrianIndex);
@@ -86,6 +91,7 @@ const basePose = (
     heading: baseHeading + attentionHeading,
     pace,
     worldSpeed,
+    travelDistance: pathDistance * unwrappedProgress,
     side,
     seesAdvertisement: beat.seesAdvertisement,
   });
@@ -97,6 +103,7 @@ interface MutableCrowdPose {
   heading: number;
   pace: number;
   worldSpeed: number;
+  travelDistance: number;
   side: SidewalkSide;
   seesAdvertisement: boolean;
 }
@@ -191,8 +198,18 @@ export const crowdPosesAt = (
 ): readonly CrowdPose[] =>
   createCrowdSimulation(beats, actorCount, durationMs).sample(elapsedMs).poses;
 
-export const walkingBodyLift = (seconds: number, pace: number, strideOffset: number): number => {
-  const cycle = seconds * 7.2 * pace + strideOffset;
+export const walkingBodyLift = (
+  travelDistance: number,
+  heightScale: number,
+  walkPace: number,
+  strideOffset: number,
+): number => {
+  const cycle = walkingCycleAtDistance(
+    travelDistance,
+    heightScale,
+    walkPace,
+    strideOffset,
+  );
   const stance = Math.abs(Math.sin(cycle));
   return 0.018 + stance * 0.028;
 };
