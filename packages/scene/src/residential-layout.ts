@@ -151,6 +151,7 @@ const makeProperty = (
   baseRotation: number,
   facingBack: boolean,
   drivewaySide: -1 | 0 | 1,
+  hardscapeSeed = seed,
 ): ResidentialPropertySpec => {
   const featured = role === "stand-home" || role === "stand-neighbor";
   const candidateHouseX = featured ? baseX : baseX + signed(seed, index * 11 + 1) * 0.82;
@@ -171,7 +172,7 @@ const makeProperty = (
     { x: candidateHouseX, z: candidateHouseZ },
     footprint.halfWidth,
     footprint.halfDepth,
-    seed,
+    hardscapeSeed,
   );
   const houseX = clearHouse.x;
   const houseZ = clearHouse.z;
@@ -191,7 +192,12 @@ const makeProperty = (
   const mailboxX =
     drivewayX === null || drivewaySide === 0
       ? null
-      : mailboxXForDriveway(drivewayX, drivewaySide, mailboxOffset, seed);
+      : mailboxXForDriveway(
+          drivewayX,
+          drivewaySide,
+          mailboxOffset,
+          hardscapeSeed,
+        );
 
   return Object.freeze({
     role,
@@ -253,6 +259,7 @@ const rowProperties = (
         signed(seed, rowSalt + index * 3 + 2) * 0.035,
         backFacing,
         0,
+        seed,
       ),
     ),
   );
