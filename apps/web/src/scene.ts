@@ -74,12 +74,15 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
     input.environment.weather.kind === "hot-and-dry"
       ? "partly cloudy"
       : input.environment.weather.kind.replaceAll("-", " ");
+
+  if (input.phase === "forecast") {
+    return `${weather} early-morning forecast; the lemonade stand is closed; the street and stand are empty before opening.`;
+  }
+
   const activity =
-    input.phase === "forecast"
-      ? "forecast preview"
-      : input.phase === "simulation"
-        ? `${String(input.sold)} sales from ${String(input.prepared)} prepared glasses`
-        : "scene paused";
+    input.phase === "simulation"
+      ? `${String(input.sold)} sales from ${String(input.prepared)} prepared glasses`
+      : "scene paused";
 
   const price =
     input.priceCents < 100

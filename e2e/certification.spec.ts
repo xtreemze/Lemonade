@@ -75,6 +75,13 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "data-presentation-duration-ms",
     String(FORECAST_PRESENTATION_MS),
   );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-stand-state", "closed", {
+    timeout: 4_000,
+  });
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-scene-population", "empty");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-scene-shot", "forecast");
+  await expect(page.locator("#scene-equivalent")).toContainText("stand is closed");
+  await expect(page.locator("#scene-equivalent")).toContainText("empty before opening");
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-cup-visual-style",
     "original-svg-3d",
@@ -83,6 +90,14 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-character-seed",
     /\d+/u,
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-character-rig-style",
+    "articulated-joints-face",
+  );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-neighborhood-detail",
+    "expanded-streets-houses-vegetation",
   );
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-seller-mood",
@@ -177,6 +192,9 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await simulationButton.click();
   await expect(main).toHaveAttribute("data-view", "simulation");
   await expect(page.locator(".stand-stage")).toBeVisible();
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-stand-state", "open");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-scene-population", "active");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-scene-shot", "stand");
   await expect(page.locator("#scene-equivalent")).toContainText("glasses prepared");
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-presentation-duration-ms",
@@ -198,7 +216,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   });
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-shot-history",
-    /^establishing,street,purchase,street(?:,establishing)?$/u,
+    /^stand,remaining(?:,stand)?$/u,
   );
   await expectNoHorizontalOverflow(page);
   await expectNoVerticalOverflow(page);
@@ -237,6 +255,9 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "data-presentation-duration-ms",
     String(FORECAST_PRESENTATION_MS),
   );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-stand-state", "closed");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-scene-population", "empty");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-scene-shot", "forecast");
   await expectPlanningReady(page);
   await expect(page.locator("#status-day")).toHaveText("2");
   await expectNoHorizontalOverflow(page);
