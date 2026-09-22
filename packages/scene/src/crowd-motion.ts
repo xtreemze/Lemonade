@@ -19,7 +19,7 @@ const deterministicUnit = (index: number, salt: number): number => {
 };
 
 export const crowdGroundClearance = (heightScale: number): number =>
-  0.255 * Math.max(0.82, Math.min(1.2, Number.isFinite(heightScale) ? heightScale : 1));
+  0.225 * Math.max(0.82, Math.min(1.2, Number.isFinite(heightScale) ? heightScale : 1));
 
 const basePose = (
   beat: PasserbyBeat,
