@@ -260,6 +260,9 @@ const fenceRun = (x: number, z: number, width: number): Group => {
     box(root, [0.12, 1.2, 0.12], [offset, 0.6, 0], 0xf4ead4);
   }
   root.position.set(x, 0, z);
+  root.userData["sceneRole"] = "fence";
+  root.userData["clearanceHalfWidth"] = width / 2;
+  root.userData["clearanceHalfDepth"] = 0.06;
   return root;
 };
 
@@ -278,6 +281,8 @@ const fenceRunDepth = (x: number, z: number, depth: number): Group => {
   const root = fenceRun(0, 0, depth);
   root.position.set(x, 0, z);
   root.rotation.y = Math.PI / 2;
+  root.userData["clearanceHalfWidth"] = 0.06;
+  root.userData["clearanceHalfDepth"] = depth / 2;
   return root;
 };
 
@@ -446,17 +451,25 @@ const overlapsBand = (
   maximum: number,
 ): boolean => value + radius >= minimum && value - radius <= maximum;
 
-export const staticSceneryPlacementAllowed = (
+export const staticFootprintPlacementAllowed = (
   x: number,
   z: number,
-  radius = 0,
+  halfWidth = 0,
+  halfDepth = 0,
 ): boolean => {
-  const safeRadius = Math.max(0, Number.isFinite(radius) ? radius : 0);
+  const safeHalfWidth = Math.max(
+    0,
+    Number.isFinite(halfWidth) ? halfWidth : 0,
+  );
+  const safeHalfDepth = Math.max(
+    0,
+    Number.isFinite(halfDepth) ? halfDepth : 0,
+  );
 
   if (
     overlapsBand(
       z,
-      safeRadius,
+      safeHalfDepth,
       STREET_LAYOUT.nearSidewalk.minZ,
       STREET_LAYOUT.farSidewalk.maxZ,
     )
@@ -464,12 +477,12 @@ export const staticSceneryPlacementAllowed = (
     return false;
   }
 
-  if (overlapsBand(z, safeRadius, -17.9, -13.1)) return false;
-  if (overlapsBand(z, safeRadius, -39.2, -34.8)) return false;
+  if (overlapsBand(z, safeHalfDepth, -17.9, -13.1)) return false;
+  if (overlapsBand(z, safeHalfDepth, -39.2, -34.8)) return false;
 
   if (
-    overlapsBand(x, safeRadius, -18.6, -12.4) ||
-    overlapsBand(x, safeRadius, 15.4, 21.6)
+    overlapsBand(x, safeHalfWidth, -18.6, -12.4) ||
+    overlapsBand(x, safeHalfWidth, 15.4, 21.6)
   ) {
     return false;
   }
@@ -477,15 +490,29 @@ export const staticSceneryPlacementAllowed = (
   for (const property of FRONT_PROPERTY_LAYOUT) {
     if (
       Math.abs(x - property.drivewayX) <=
-        FRONT_DRIVEWAY_HALF_WIDTH + safeRadius &&
+        FRONT_DRIVEWAY_HALF_WIDTH + safeHalfWidth &&
       Math.abs(z - FRONT_DRIVEWAY_CENTER_Z) <=
-        FRONT_DRIVEWAY_HALF_DEPTH + safeRadius
+        FRONT_DRIVEWAY_HALF_DEPTH + safeHalfDepth
     ) {
       return false;
     }
   }
 
   return true;
+};
+
+export const staticSceneryPlacementAllowed = (
+  x: number,
+  z: number,
+  radius = 0,
+): boolean => {
+  const safeRadius = Math.max(0, Number.isFinite(radius) ? radius : 0);
+  return staticFootprintPlacementAllowed(
+    x,
+    z,
+    safeRadius,
+    safeRadius,
+  );
 };
 
 export const blocksFrontHouseFacade = (
