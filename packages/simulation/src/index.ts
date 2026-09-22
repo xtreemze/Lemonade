@@ -1,3 +1,4 @@
+export * from "./audience.js";
 export * from "./certification.js";
 export * from "./environment.js";
 export * from "./finance.js";
