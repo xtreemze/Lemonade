@@ -159,9 +159,21 @@ const clearHouseFromBaseHardscape = (
 ): ResidentialPoint => {
   let x = point.x;
   let z = point.z;
+  const hardscape = baseHardscape(seed);
+  const isClear = (candidateX: number, candidateZ: number): boolean =>
+    hardscape.every(
+      (rect) =>
+        !footprintIntersectsHardscapeRect(
+          rect,
+          { x: candidateX, z: candidateZ },
+          halfWidth,
+          halfDepth,
+        ),
+    );
+
   for (let pass = 0; pass < 24; pass += 1) {
     let moved = false;
-    for (const rect of baseHardscape(seed)) {
+    for (const rect of hardscape) {
       if (!footprintIntersectsHardscapeRect(rect, { x, z }, halfWidth, halfDepth)) continue;
       const rectWidth = rect.maxX - rect.minX;
       const rectDepth = rect.maxZ - rect.minZ;
@@ -177,6 +189,24 @@ const clearHouseFromBaseHardscape = (
       moved = true;
     }
     if (!moved) break;
+  }
+  if (isClear(x, z)) return Object.freeze({ x, z });
+
+  const step = 0.78;
+  for (let ring = 1; ring <= 32; ring += 1) {
+    for (let offset = -ring; offset <= ring; offset += 1) {
+      const candidates = [
+        { x: point.x + offset * step, z: point.z - ring * step },
+        { x: point.x + offset * step, z: point.z + ring * step },
+        { x: point.x - ring * step, z: point.z + offset * step },
+        { x: point.x + ring * step, z: point.z + offset * step },
+      ] as const;
+      for (const candidate of candidates) {
+        if (isClear(candidate.x, candidate.z)) {
+          return Object.freeze(candidate);
+        }
+      }
+    }
   }
   return Object.freeze({ x, z });
 };
@@ -448,6 +478,9 @@ function baseExclusions(seed: number): ResidentialRect[] {
 const rectCenterZ = (rect: ResidentialRect): number =>
   (rect.minZ + rect.maxZ) / 2;
 
+const horizontalGapToRect = (x: number, rect: ResidentialRect): number =>
+  x < rect.minX ? rect.minX - x : x > rect.maxX ? x - rect.maxX : 0;
+
 const nearestAccessRect = (
   property: ResidentialPropertySpec,
   x: number,
@@ -456,23 +489,62 @@ const nearestAccessRect = (
 ): ResidentialRect | null => {
   const frontDirection: -1 | 1 =
     Math.cos(property.rotationY) >= 0 ? 1 : -1;
-  const candidates = baseExclusions(seed).filter((rect) => {
-    if (rect.role !== role) return false;
-    if (x < rect.minX - 0.5 || x > rect.maxX + 0.5) return false;
-    return (rectCenterZ(rect) - property.houseZ) * frontDirection > 0.15;
-  });
+  const frontCandidates = baseExclusions(seed).filter(
+    (rect) =>
+      rect.role === role &&
+      (rectCenterZ(rect) - property.houseZ) * frontDirection > 0.15,
+  );
+  if (frontCandidates.length === 0) return null;
+
+  const directCandidates = frontCandidates.filter(
+    (rect) => horizontalGapToRect(x, rect) <= 0.5,
+  );
+  const candidates =
+    directCandidates.length > 0 ? directCandidates : frontCandidates;
   const first = candidates[0];
   if (first === undefined) return null;
-  return candidates.reduce((best, candidate) =>
-    Math.abs(rectCenterZ(candidate) - property.houseZ) <
-    Math.abs(rectCenterZ(best) - property.houseZ)
-      ? candidate
-      : best,
-  first);
+
+  return candidates.reduce((best, candidate) => {
+    const candidateScore =
+      Math.abs(rectCenterZ(candidate) - property.houseZ) +
+      horizontalGapToRect(x, candidate) * 2.2;
+    const bestScore =
+      Math.abs(rectCenterZ(best) - property.houseZ) +
+      horizontalGapToRect(x, best) * 2.2;
+    return candidateScore < bestScore ? candidate : best;
+  }, first);
+};
+
+const closestPointOnRectCenterline = (
+  rect: ResidentialRect,
+  point: ResidentialPoint,
+): ResidentialPoint => {
+  if (
+    rect.x === undefined ||
+    rect.z === undefined ||
+    rect.length === undefined ||
+    rect.rotationY === undefined
+  ) {
+    return Object.freeze({
+      x: Math.min(rect.maxX, Math.max(rect.minX, point.x)),
+      z: rectCenterZ(rect),
+    });
+  }
+
+  const tangentX = Math.cos(rect.rotationY);
+  const tangentZ = Math.sin(rect.rotationY);
+  const projection =
+    (point.x - rect.x) * tangentX + (point.z - rect.z) * tangentZ;
+  const bounded = Math.min(rect.length / 2, Math.max(-rect.length / 2, projection));
+  return Object.freeze({
+    x: rect.x + tangentX * bounded,
+    z: rect.z + tangentZ * bounded,
+  });
 };
 
 export type ResidentialAccessLayout = Readonly<{
   frontDirection: -1 | 1;
+  sidewalkX: number;
   sidewalkCenterZ: number;
   sidewalkEdgeZ: number;
   roadEdgeZ: number;
@@ -485,6 +557,7 @@ export type ResidentialAccessLayout = Readonly<{
   drivewayDepth: number;
   pathCenterX: number;
   pathCenterZ: number;
+  pathWidth: number;
   pathDepth: number;
 }>;
 
@@ -512,8 +585,12 @@ export const residentialAccessLayout = (
     frontDirection > 0
       ? STREET_LAYOUT.nearSidewalk
       : STREET_LAYOUT.farSidewalk;
-  const sidewalkCenterZ =
-    sidewalk === null ? fallbackSidewalk.centerZ : rectCenterZ(sidewalk);
+  const sidewalkTarget =
+    sidewalk === null
+      ? Object.freeze({ x: entryX, z: fallbackSidewalk.centerZ })
+      : closestPointOnRectCenterline(sidewalk, { x: entryX, z: entryZ });
+  const sidewalkX = sidewalkTarget.x;
+  const sidewalkCenterZ = sidewalkTarget.z;
   const sidewalkEdgeZ =
     sidewalk === null
       ? frontDirection > 0
@@ -524,10 +601,11 @@ export const residentialAccessLayout = (
         : sidewalk.maxZ;
   const pathDepth = Math.max(
     0.72,
-    Math.abs(sidewalkCenterZ - entryZ) + 0.3,
+    Math.abs(sidewalkCenterZ - entryZ) + 0.24,
   );
-  const pathCenterX = entryX;
+  const pathCenterX = (entryX + sidewalkX) / 2;
   const pathCenterZ = (entryZ + sidewalkCenterZ) / 2;
+  const pathWidth = Math.max(1.04, Math.abs(sidewalkX - entryX) + 1.04);
 
   const drivewayX = property.drivewayX ?? property.houseX;
   const road = nearestAccessRect(property, drivewayX, "road", seed);
@@ -552,6 +630,7 @@ export const residentialAccessLayout = (
 
   return Object.freeze({
     frontDirection,
+    sidewalkX,
     sidewalkCenterZ,
     sidewalkEdgeZ,
     roadEdgeZ,
@@ -564,6 +643,7 @@ export const residentialAccessLayout = (
     drivewayDepth,
     pathCenterX,
     pathCenterZ,
+    pathWidth,
     pathDepth,
   });
 };
@@ -668,8 +748,8 @@ const accessExclusions = (
         role: "driveway" as const,
       },
       {
-        minX: access.pathCenterX - 0.52,
-        maxX: access.pathCenterX + 0.52,
+        minX: access.pathCenterX - access.pathWidth / 2,
+        maxX: access.pathCenterX + access.pathWidth / 2,
         minZ: access.pathCenterZ - pathHalfDepth,
         maxZ: access.pathCenterZ + pathHalfDepth,
         role: "path" as const,
@@ -836,10 +916,10 @@ const generatePropertyPlantings = (
       footprint.halfDepth + (yardZone === "back" ? 3.25 : 1.05);
     const lateralCandidates =
       yardZone === "back"
-        ? [-2.4, 2.4, 0, -3.5, 3.5]
+        ? [-2.4, 2.4, 0, -3.5, 3.5, -4.8, 4.8, -6.2, 6.2]
         : [-2.2, 2.2, -3.05, 3.05];
 
-    for (let attempt = 0; attempt < 28; attempt += 1) {
+    for (let attempt = 0; attempt < (yardZone === "back" ? 90 : 28); attempt += 1) {
       const lateralBase =
         lateralCandidates[attempt % lateralCandidates.length] ?? 0;
       const ring = Math.floor(attempt / lateralCandidates.length);
