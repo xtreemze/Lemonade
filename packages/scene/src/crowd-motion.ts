@@ -310,7 +310,6 @@ const separateCrowd = (poses: MutableCrowdPose[]): number => {
             if (right <= left) continue;
             const b = poses[right];
             if (b === undefined) continue;
-            if (a.routeId !== b.routeId) continue;
             neighborChecks += 1;
 
             const dx = b.x - a.x;
@@ -321,6 +320,14 @@ const separateCrowd = (poses: MutableCrowdPose[]): number => {
             const distance = Math.sqrt(Math.max(0.0001, distanceSquared));
             const deterministicSide =
               deterministicUnit(left + right, 71) < 0.5 ? -1 : 1;
+            if (a.routeId !== b.routeId) {
+              const yieldDistance = (CROWD_SEPARATION - distance) * 0.58;
+              a.x -= a.tangentX * yieldDistance;
+              a.z -= a.tangentZ * yieldDistance;
+              b.x -= b.tangentX * yieldDistance;
+              b.z -= b.tangentZ * yieldDistance;
+              continue;
+            }
             const lateralDelta = b.lateralOffset - a.lateralOffset;
             const separationSide =
               Math.abs(lateralDelta) > 0.01
