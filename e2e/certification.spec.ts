@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const FORECAST_PRESENTATION_MS = 6_000;
-const SIMULATION_PRESENTATION_MS = 8_000;
+const SIMULATION_PRESENTATION_MS = 10_000;
 const PHASE_SETTLE_MARGIN_MS = 2_000;
 
 const expectPlanningReady = async (page: Page): Promise<void> => {
