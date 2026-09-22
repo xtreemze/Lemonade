@@ -91,6 +91,31 @@ describe("unified neighborhood mobility", () => {
     expect(yielding.every((actor) => actor.speed === 0)).toBe(true);
   });
 
+  it("coordinates traffic right-of-way between cars and bicycles", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const samples = Array.from({ length: 80 }, (_, index) =>
+      system.sample({
+        weather: "sunny",
+        phase: "simulation",
+        elapsedMs: index * 175,
+        durationMs: 14_000,
+        dayNumber: 3,
+        focus: { x: 0, z: 0 },
+      }),
+    );
+
+    const trafficYields = samples
+      .flatMap((sample) => sample.actors)
+      .filter(
+        (actor) =>
+          (actor.kind === "vehicle" || actor.kind === "bicycle") &&
+          actor.waiting &&
+          actor.interaction === "traffic",
+      );
+    expect(trafficYields.length).toBeGreaterThan(0);
+    expect(trafficYields.every((actor) => actor.speed === 0)).toBe(true);
+  });
+
   it("cycles residents and a pet through residence doors and window activity", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const samples = Array.from({ length: 28 }, (_, index) =>
@@ -300,11 +325,19 @@ describe("unified neighborhood mobility", () => {
         )
         .every((actor) => actor.speed === 1.42),
     ).toBe(true);
+    const gardenerDays = mailDays.filter((sample) =>
+      sample.actors.some((actor) => actor.kind === "gardener"),
+    );
+    expect(gardenerDays).toHaveLength(1);
     expect(
-      mailDays.filter((sample) =>
-        sample.actors.some((actor) => actor.kind === "gardener"),
-      ),
-    ).toHaveLength(1);
+      gardenerDays
+        .flatMap((sample) => sample.actors)
+        .filter(
+          (actor) =>
+            actor.kind === "gardener" && actor.interaction !== "gardening",
+        )
+        .every((actor) => actor.speed === 1.42),
+    ).toBe(true);
     expect(
       mailDays.some((sample) =>
         sample.properties.some((property) => property.mailServiced),
@@ -326,6 +359,9 @@ describe("unified neighborhood mobility", () => {
     expect(mobilityDetailForDistance(12)).toBe("full");
     expect(mobilityDetailForDistance(50)).toBe("reduced");
     expect(mobilityDetailForDistance(120)).toBe("statistical");
+    expect(mobilityDetailForDistance(Number.POSITIVE_INFINITY)).toBe(
+      "statistical",
+    );
 
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const distant = system.sample({
