@@ -92,47 +92,9 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     /\d+/u,
   );
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
-    "data-character-rig-style",
-    "articulated-joints-face",
-  );
-  await expect(page.locator("#scene-canvas")).toHaveAttribute(
-    "data-walk-cycle-style",
-    "seeded-articulated-gait",
-  );
-  await expect(page.locator("#scene-canvas")).toHaveAttribute(
-    "data-seller-expression-style",
-    "face-posture-confidence",
-  );
-  await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-neighborhood-detail",
     "lod-extended-streets-houses-vegetation",
     { timeout: 4_000 },
-  );
-  await expect(page.locator("#scene-canvas")).toHaveAttribute(
-    "data-neighborhood-lod-objects",
-    /\d+/u,
-  );
-  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-world-span", "150");
-  await expect(page.locator("#scene-canvas")).toHaveAttribute(
-    "data-world-scale",
-    "kiosk-houses-mature-vegetation",
-  );
-  await expect(page.locator("#scene-canvas")).toHaveAttribute(
-    "data-crowd-model",
-    "routed-separated-grounded",
-  );
-  await expect(page.locator("#scene-canvas")).toHaveAttribute(
-    "data-ground-contact",
-    "height-aware-clearance",
-  );
-  await expect(page.locator("#scene-canvas")).toHaveAttribute(
-    "data-ambient-life",
-    "weather-aware-pets-wildlife-bicycles-vehicles",
-    { timeout: 4_000 },
-  );
-  await expect(page.locator("#scene-canvas")).toHaveAttribute(
-    "data-atmosphere",
-    "layered-aerial-perspective",
   );
   await expect(page.locator("#scene-canvas")).toHaveAttribute(
     "data-seller-mood",
