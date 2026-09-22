@@ -335,7 +335,13 @@ describe("crowd motion", () => {
       pets: 0,
       wildlife: 0,
       bicycles: 0,
-      vehicles: 0,
+      vehicles: 2,
+    });
+    expect(ambientPopulationFor("sunny", "idle")).toEqual({
+      pets: 0,
+      wildlife: 0,
+      bicycles: 0,
+      vehicles: 6,
     });
   });
 });
