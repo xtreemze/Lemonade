@@ -19,6 +19,7 @@ describe("neighborhood world scale", () => {
     expect(stats.frontProperties).toBeGreaterThanOrEqual(7);
     expect(stats.driveways).toBe(stats.frontProperties);
     expect(stats.treeLods).toBeGreaterThanOrEqual(40);
+    expect(stats.shrubLods).toBe(stats.shrubs);
     expect(stats.yardDetails).toBeGreaterThanOrEqual(10);
     expect(stats.flowers).toBeGreaterThanOrEqual(8);
     expect(stats.pavedRoads).toBeGreaterThanOrEqual(3);
@@ -30,18 +31,28 @@ describe("neighborhood world scale", () => {
     let standNeighborCount = 0;
     let pavedRoadCount = 0;
     let flowerCount = 0;
+    const treeVariants = new Set<number>();
+    const shrubVariants = new Set<number>();
     scene.traverse((object) => {
       if (object.userData["lodMode"] === "distance-two-level") lodCount += 1;
       if (object.userData["sceneRole"] === "stand-home") standHomeCount += 1;
       if (object.userData["sceneRole"] === "stand-neighbor") standNeighborCount += 1;
       if (object.userData["sceneRole"] === "paved-road") pavedRoadCount += 1;
       if (object.userData["sceneRole"] === "garden-flower") flowerCount += 1;
+      if (object.userData["sceneRole"] === "procedural-tree") {
+        treeVariants.add(Number(object.userData["proceduralVariant"]));
+      }
+      if (object.userData["sceneRole"] === "procedural-shrub") {
+        shrubVariants.add(Number(object.userData["proceduralVariant"]));
+      }
     });
-    expect(lodCount).toBe(stats.houseLods + stats.treeLods);
+    expect(lodCount).toBe(stats.houseLods + stats.treeLods + stats.shrubLods);
     expect(standHomeCount).toBe(1);
     expect(standNeighborCount).toBe(1);
     expect(pavedRoadCount).toBe(stats.pavedRoads);
     expect(flowerCount).toBe(stats.flowers);
+    expect(treeVariants.size).toBeGreaterThanOrEqual(12);
+    expect(shrubVariants.size).toBeGreaterThanOrEqual(6);
   });
 
   it("makes storm wind materially stronger than ordinary weather", () => {
