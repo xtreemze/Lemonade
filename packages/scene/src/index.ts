@@ -287,7 +287,8 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   rightLeg.root.position.set(0.14, 0.72, 0);
   root.add(leftArm.root, rightArm.root, leftLeg.root, rightLeg.root);
 
-  const cup = createLemonadeCup(0.9);
+  const cup = new Group();
+  cup.scale.setScalar(0.9);
   cup.position.set(0, -0.35, 0.08);
   cup.visible = false;
   rightArm.lower.add(cup);
