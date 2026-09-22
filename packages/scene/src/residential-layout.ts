@@ -216,26 +216,8 @@ const frontProperties = (seed: number): readonly ResidentialPropertySpec[] =>
     makeProperty(seed, 0, "west-end", -44.6, -7.1, 0.96, 0.035, false, 1),
     makeProperty(seed, 1, "west-mid", -33.7, -8.4, 1.02, -0.045, false, 1),
     makeProperty(seed, 2, "west-near", -24.0, -6.6, 0.92, 0.06, false, 1),
-    Object.freeze({
-      role: "stand-home",
-      houseX: -4.7,
-      houseZ: -7.9,
-      color: 2,
-      scale: 1.06,
-      rotationY: 0.045,
-      drivewayX: -9.5,
-      mailboxX: -11.15,
-    }),
-    Object.freeze({
-      role: "stand-neighbor",
-      houseX: 8.8,
-      houseZ: -8.6,
-      color: 4,
-      scale: 0.97,
-      rotationY: -0.055,
-      drivewayX: 13.55,
-      mailboxX: 11.9,
-    }),
+    makeProperty(seed, 3, "stand-home", -4.7, -7.9, 1.06, 0.045, false, -1),
+    makeProperty(seed, 4, "stand-neighbor", 8.8, -8.6, 0.97, -0.055, false, 1),
     makeProperty(seed, 5, "east-mid", 29.1, -6.8, 1.01, 0.025, false, -1),
     makeProperty(seed, 6, "east-end", 41.5, -8.3, 0.94, -0.05, false, 1),
   ]);
@@ -345,7 +327,7 @@ const generatePlantings = (
 ): readonly ResidentialPlanting[] => {
   const result: ResidentialPlanting[] = [];
   for (let attempt = 0; attempt < count * 120 && result.length < count; attempt += 1) {
-    const x = -51 + unit(seed, salt + attempt * 5) * 102;
+    const x = -68 + unit(seed, salt + attempt * 5) * 136;
     const z = zMin + unit(seed, salt + attempt * 5 + 1) * (zMax - zMin);
     const scale = 0.78 + unit(seed, salt + attempt * 5 + 2) * 0.34;
     const footprintClearance = clearance * scale;
@@ -426,7 +408,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     safeSeed,
     48,
     3_100,
-    -60,
+    -67,
     0.2,
     partial,
     3.5,
