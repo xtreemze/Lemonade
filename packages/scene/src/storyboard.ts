@@ -109,7 +109,8 @@ export const remainingCameraProgressAt = (
   if (elapsed <= remainingShot.startAtMs) return 0;
   if (elapsed >= remainingShot.endAtMs) return 1;
   const duration = Math.max(1, remainingShot.endAtMs - remainingShot.startAtMs);
-  const progress = (elapsed - remainingShot.startAtMs) / duration;
+  const transitionDuration = Math.max(1, duration * 0.62);
+  const progress = Math.min(1, (elapsed - remainingShot.startAtMs) / transitionDuration);
   return progress * progress * (3 - 2 * progress);
 };
 
