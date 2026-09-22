@@ -461,21 +461,34 @@ export const createLemonsvilleScene = (
   camera.lookAt(0, 1.7, 0);
 
   const hemisphere = new HemisphereLight(0xfff2c6, 0x526b51, 1.9);
+  hemisphere.name = "hemisphere-light";
+  hemisphere.userData["sceneRole"] = "atmosphere-light";
   scene.add(hemisphere);
   const sunlight = new DirectionalLight(0xfff0c9, 1.8);
+  sunlight.name = "sunlight";
+  sunlight.userData["sceneRole"] = "sunlight";
   sunlight.position.set(-5, 10, 7);
   scene.add(sunlight);
 
   const ground = new Mesh(new PlaneGeometry(160, 150), makeMaterial(0x92ad68));
+  ground.name = "ground";
+  ground.userData["sceneRole"] = "ground";
   ground.rotation.x = -Math.PI / 2;
   ground.position.z = -32;
   scene.add(ground);
 
   const stand = createStand();
+  stand.root.name = "lemonade-stand";
+  stand.root.userData["sceneRole"] = "lemonade-stand";
   stand.root.position.z = STAND_WORLD_Z;
   scene.add(stand.root);
 
-  const signs = Array.from({ length: 40 }, () => createSign());
+  const signs = Array.from({ length: 40 }, (_, index) => {
+    const sign = createSign();
+    sign.root.name = `advertising-sign-${String(index)}`;
+    sign.root.userData["sceneRole"] = "advertising-sign";
+    return sign;
+  });
   let signTexture: CanvasTexture | null = null;
   let signPriceLabel = "";
   let disposed = false;
@@ -484,20 +497,31 @@ export const createLemonsvilleScene = (
     | Promise<Readonly<{ createPriceSignSurface(priceLabel: string): HTMLCanvasElement }>>
     | null = null;
 
-  const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) =>
-    createPerson(initialState.characterSeed, index),
-  );
+  const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) => {
+    const customer = createPerson(initialState.characterSeed, index);
+    customer.root.name = `pedestrian-${String(index)}`;
+    customer.root.userData["sceneRole"] = "pedestrian";
+    return customer;
+  });
   for (const customer of customers) scene.add(customer.root);
 
-  const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) =>
-    createPerson(initialState.characterSeed, index + PASSERBY_POOL_SIZE),
-  );
+  const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) => {
+    const buyer = createPerson(
+      initialState.characterSeed,
+      index + PASSERBY_POOL_SIZE,
+    );
+    buyer.root.name = `buyer-${String(index)}`;
+    buyer.root.userData["sceneRole"] = "buyer";
+    return buyer;
+  });
   for (const buyer of buyers) {
     buyer.root.visible = false;
     scene.add(buyer.root);
   }
 
   const seller = createSeller(initialState.characterSeed);
+  seller.person.root.name = "seller";
+  seller.person.root.userData["sceneRole"] = "seller";
   seller.person.root.position.set(
     0,
     personGroundY(seller.person),
@@ -516,7 +540,12 @@ export const createLemonsvilleScene = (
     "hot-and-dry": new Group(),
     thunderstorm: new Group(),
   };
-  for (const weatherObject of Object.values(weatherObjects)) scene.add(weatherObject);
+  for (const [weather, weatherObject] of Object.entries(weatherObjects)) {
+    weatherObject.name = `weather-${weather}`;
+    weatherObject.userData["sceneRole"] = "weather";
+    weatherObject.userData["weather"] = weather;
+    scene.add(weatherObject);
+  }
 
   let state = initialState;
   let crowdMotion: StreetMotion | null = null;
