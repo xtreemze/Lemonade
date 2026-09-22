@@ -1,7 +1,9 @@
+import { Group, Scene } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
   ambientPopulationFor,
+  createAmbientLife,
   petFollowPose,
   xTravelYaw,
 } from "../src/ambient-life.js";
@@ -73,6 +75,38 @@ describe("crowd motion", () => {
     expect(pet.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
     expect(pet.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
     expect(pet.yaw).toBeCloseTo(0);
+  });
+
+  it("keeps pet travel aligned to the street while the owner glances at an ad", () => {
+    const scene = new Scene();
+    const owner = new Group();
+    owner.visible = true;
+    owner.position.set(2, 0, 1.2);
+    owner.rotation.y = Math.PI / 2 + 0.42;
+    scene.add(owner);
+
+    const ambient = createAmbientLife(scene, 17, [owner]);
+    ambient.update("sunny", "simulation", 2_000, 6_000);
+
+    const pet = scene.children.find(
+      (object) => object.userData["sceneRole"] === "ambient-pet",
+    );
+    const bicycle = scene.children.find(
+      (object) => object.userData["sceneRole"] === "ambient-bicycle",
+    );
+    const vehicle = scene.children.find(
+      (object) => object.userData["sceneRole"] === "ambient-vehicle",
+    );
+
+    expect(pet?.visible).toBe(true);
+    expect(pet?.position.x).toBeLessThan(owner.position.x);
+    expect(pet?.rotation.y).toBeCloseTo(0);
+    expect(pet?.position.z).toBeLessThan(STREET_LAYOUT.road.minZ);
+
+    expect(Math.abs(bicycle?.rotation.y ?? 0)).toBeCloseTo(Math.PI);
+    expect(bicycle?.position.z).toBeGreaterThan(STREET_LAYOUT.road.minZ);
+    expect(vehicle?.rotation.y).toBeCloseTo(0);
+    expect(vehicle?.position.z).toBeGreaterThan(STREET_LAYOUT.road.minZ);
   });
 
   it("uses a reusable spatial crowd sampler with travel-aligned gait speed", () => {
