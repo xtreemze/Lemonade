@@ -175,8 +175,8 @@ type PersonRig = Readonly<{
 
 type SellerRig = Readonly<{
   person: PersonRig;
-  eyebrows: readonly [Mesh, Mesh];
-  mouth: readonly [Mesh, Mesh];
+  eyebrows: readonly [Group, Group];
+  mouth: readonly [Group, Group];
 }>;
 
 const createLimb = (
