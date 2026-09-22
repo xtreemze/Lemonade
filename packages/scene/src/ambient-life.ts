@@ -9,6 +9,8 @@ import {
   type Scene,
 } from "three";
 
+import { characterProfileFor } from "./characters.js";
+import { decorateCharacter } from "./character-detail.js";
 import { updateNeighborhoodWind } from "./neighborhood.js";
 import {
   clampToSidewalk,
@@ -59,7 +61,7 @@ export const ambientPopulationFor = (
   }
   switch (weather) {
     case "sunny":
-      return Object.freeze({ pets: 2, wildlife: 2, bicycles: 2, vehicles: 1 });
+      return Object.freeze({ pets: 2, wildlife: 3, bicycles: 2, vehicles: 1 });
     case "hot-and-dry":
       return Object.freeze({ pets: 1, wildlife: 1, bicycles: 1, vehicles: 1 });
     case "cloudy":
@@ -91,14 +93,36 @@ export const petFollowPose = (
 
 const createBird = (color: number): Group => {
   const root = new Group();
+  root.userData["sceneRole"] = "ambient-bird";
   const body = new Mesh(new SphereGeometry(0.12, 7, 5), material(color));
   body.scale.set(1.45, 0.72, 0.72);
   root.add(body);
+
+  const head = new Mesh(new SphereGeometry(0.075, 7, 5), material(color));
+  head.position.set(0.15, 0.035, 0);
+  root.add(head);
+
+  const beak = new Mesh(
+    new CylinderGeometry(0, 0.035, 0.12, 5),
+    material(0xd79b45),
+  );
+  beak.position.set(0.245, 0.025, 0);
+  beak.rotation.z = -Math.PI / 2;
+  root.add(beak);
+
   for (const direction of [-1, 1] as const) {
     const wing = new Mesh(new BoxGeometry(0.34, 0.025, 0.12), material(color));
+    wing.userData["sceneRole"] = "ambient-bird-wing";
     wing.position.set(0, 0.02, direction * 0.16);
     wing.rotation.x = direction * 0.26;
     root.add(wing);
+  }
+
+  for (const direction of [-1, 1] as const) {
+    const tail = new Mesh(new BoxGeometry(0.16, 0.025, 0.07), material(color));
+    tail.position.set(-0.18, -0.015, direction * 0.055);
+    tail.rotation.y = direction * 0.22;
+    root.add(tail);
   }
   return root;
 };
@@ -125,7 +149,74 @@ const createPet = (color: number): Group => {
   return root;
 };
 
-const createBicycle = (color: number): Group => {
+type TransportCharacterRig = Readonly<{
+  root: Group;
+  head: Mesh;
+  arms: readonly [Group, Group];
+  legs: readonly [Group, Group];
+}>;
+
+const createTransportCharacter = (
+  seed: number,
+  index: number,
+): TransportCharacterRig => {
+  const profile = characterProfileFor(seed, index);
+  const root = new Group();
+  root.userData["sceneRole"] = "transport-character";
+
+  const torso = new Mesh(
+    new CylinderGeometry(0.25, 0.34, 0.9, 10),
+    material(profile.clothingColor),
+  );
+  torso.position.y = 1.05;
+  const head = new Mesh(
+    new SphereGeometry(0.27, 12, 8),
+    material(profile.skinColor),
+  );
+  head.position.y = 1.78;
+  root.add(torso, head);
+
+  const arms = [-1, 1].map((direction) => {
+    const arm = new Group();
+    const upper = new Mesh(
+      new CylinderGeometry(0.075, 0.082, 0.42, 8),
+      material(profile.clothingColor),
+    );
+    upper.position.y = -0.21;
+    arm.position.set(direction * 0.34, 1.37, 0);
+    arm.rotation.z = direction * 0.08;
+    arm.add(upper);
+    root.add(arm);
+    return arm;
+  }) as [Group, Group];
+
+  const legs = [-1, 1].map((direction) => {
+    const leg = new Group();
+    const upper = new Mesh(
+      new CylinderGeometry(0.095, 0.105, 0.5, 8),
+      material(profile.trouserColor),
+    );
+    upper.position.y = -0.25;
+    leg.position.set(direction * 0.14, 0.72, 0);
+    leg.add(upper);
+    root.add(leg);
+    return leg;
+  }) as [Group, Group];
+
+  decorateCharacter(root, head, profile, index);
+  return Object.freeze({
+    root,
+    head,
+    arms: Object.freeze(arms),
+    legs: Object.freeze(legs),
+  });
+};
+
+const createBicycle = (
+  color: number,
+  seed: number,
+  index: number,
+): Group => {
   const root = new Group();
   root.userData["sceneRole"] = "ambient-bicycle";
   const wheelMaterial = material(0x2f3438);
@@ -142,28 +233,60 @@ const createBicycle = (color: number): Group => {
   frame.position.y = 0.42;
   frame.rotation.z = 0.08;
   root.add(frame);
-  const rider = new Mesh(new SphereGeometry(0.13, 8, 6), material(0xd5a27d));
-  rider.position.set(0, 1.15, 0);
-  root.add(rider);
-  const torso = new Mesh(new CylinderGeometry(0.14, 0.18, 0.55, 8), material(color));
-  torso.position.set(0, 0.82, 0);
-  torso.rotation.z = -0.18;
-  root.add(torso);
+
+  const rider = createTransportCharacter(seed, 500 + index);
+  rider.root.userData["sceneRole"] = "ambient-rider";
+  rider.root.scale.setScalar(0.58);
+  rider.root.position.set(-0.02, 0.22, 0);
+  rider.root.rotation.z = -0.12;
+  rider.arms[0].rotation.x = -0.92;
+  rider.arms[1].rotation.x = -0.92;
+  rider.legs[0].rotation.x = 0.82;
+  rider.legs[1].rotation.x = -0.52;
+  root.add(rider.root);
   return root;
 };
 
-const createVehicle = (color: number): Group => {
+const createVehicle = (
+  color: number,
+  seed: number,
+  index: number,
+): Group => {
   const root = new Group();
   root.userData["sceneRole"] = "ambient-vehicle";
   const body = new Mesh(new BoxGeometry(1.65, 0.52, 0.82), material(color));
   body.position.y = 0.48;
   root.add(body);
-  const cabin = new Mesh(new BoxGeometry(0.84, 0.42, 0.72), material(0xb9d2d8));
-  cabin.position.set(-0.12, 0.92, 0);
-  root.add(cabin);
+
+  const cabinBase = new Mesh(new BoxGeometry(0.9, 0.18, 0.76), material(color));
+  cabinBase.position.set(-0.12, 0.76, 0);
+  root.add(cabinBase);
+  const roof = new Mesh(new BoxGeometry(0.72, 0.08, 0.76), material(color));
+  roof.position.set(-0.14, 1.14, 0);
+  root.add(roof);
+
+  const glass = new MeshStandardMaterial({
+    color: 0xb9d2d8,
+    transparent: true,
+    opacity: 0.42,
+    roughness: 0.2,
+    depthWrite: false,
+  });
+  for (const z of [-0.385, 0.385]) {
+    const sideWindow = new Mesh(new BoxGeometry(0.7, 0.32, 0.025), glass.clone());
+    sideWindow.position.set(-0.14, 0.96, z);
+    root.add(sideWindow);
+  }
+  for (const x of [-0.49, 0.23]) {
+    const endWindow = new Mesh(new BoxGeometry(0.025, 0.3, 0.65), glass.clone());
+    endWindow.position.set(x, 0.96, 0);
+    root.add(endWindow);
+  }
+
   const hood = new Mesh(new BoxGeometry(0.4, 0.16, 0.7), material(color));
   hood.position.set(0.75, 0.7, 0);
   root.add(hood);
+
   for (const x of [-0.55, 0.55]) {
     for (const z of [-0.36, 0.36]) {
       const wheel = new Mesh(
@@ -175,6 +298,17 @@ const createVehicle = (color: number): Group => {
       root.add(wheel);
     }
   }
+
+  const driver = createTransportCharacter(seed ^ 0x51a7, 10_100 + index);
+  driver.root.userData["sceneRole"] = "ambient-driver";
+  driver.root.scale.setScalar(0.4);
+  driver.root.position.set(-0.12, 0.45, 0.08);
+  driver.arms[0].rotation.x = -0.72;
+  driver.arms[1].rotation.x = -0.72;
+  driver.legs[0].rotation.x = 0.62;
+  driver.legs[1].rotation.x = 0.62;
+  root.add(driver.root);
+
   return root;
 };
 
@@ -195,9 +329,19 @@ export const createAmbientLife = (
   owners: readonly Object3D[] = [],
 ): AmbientLifeController => {
   const pets = [createPet(0xa96f45), createPet(0x3e3a36), createPet(0xd1b48b)];
-  const wildlife = [createBird(0x5d6971), createBird(0x795d4e)];
-  const bicycles = [createBicycle(0x4f7f91), createBicycle(0xb45d4c)];
-  const vehicles = [createVehicle(0x7189a8), createVehicle(0xa65e52)];
+  const wildlife = [
+    createBird(0x5d6971),
+    createBird(0x795d4e),
+    createBird(0x66795a),
+  ];
+  const bicycles = [
+    createBicycle(0x4f7f91, seed, 0),
+    createBicycle(0xb45d4c, seed, 1),
+  ];
+  const vehicles = [
+    createVehicle(0x7189a8, seed, 0),
+    createVehicle(0xa65e52, seed, 1),
+  ];
 
   for (const actor of [...pets, ...wildlife, ...bicycles, ...vehicles]) {
     actor.visible = false;
@@ -240,6 +384,12 @@ export const createAmbientLife = (
         );
         bird.rotation.y = 0;
         bird.rotation.z = Math.sin(progress * Math.PI * 12) * 0.08;
+        for (const child of bird.children) {
+          if (child.userData["sceneRole"] !== "ambient-bird-wing") continue;
+          const side = Math.sign(child.position.z) || 1;
+          child.rotation.x =
+            side * (0.18 + Math.sin(progress * Math.PI * 18 + index) * 0.42);
+        }
       });
       bicycles.forEach((bike, index) => {
         const direction = index % 2 === 0 ? -1 : 1;
