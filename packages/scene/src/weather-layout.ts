@@ -29,3 +29,28 @@ export const WEATHER_BACKDROP_LAYOUT: Readonly<
     scale: 7.8,
   }),
 });
+
+
+export type TownCloudLayout = Readonly<{
+  position: readonly [number, number, number];
+  scale: number;
+  driftPhase: number;
+}>;
+
+export const CLOUDY_TOWN_CLOUD_LAYOUT: readonly TownCloudLayout[] = Object.freeze([
+  Object.freeze({
+    position: [-2.1, 0.72, 4.25] as const,
+    scale: 0.3,
+    driftPhase: 0.25,
+  }),
+  Object.freeze({
+    position: [0.35, 0.95, 5.65] as const,
+    scale: 0.24,
+    driftPhase: 1.7,
+  }),
+  Object.freeze({
+    position: [2.15, 0.56, 3.75] as const,
+    scale: 0.34,
+    driftPhase: 3.05,
+  }),
+] as const);
