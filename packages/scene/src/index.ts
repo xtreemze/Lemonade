@@ -672,7 +672,7 @@ export const createLemonsvilleScene = (
     .then(({ createAmbientLife }) => {
       if (disposed) return;
       ambientLife = createAmbientLife(scene, initialState.characterSeed);
-      canvas.dataset["ambientLife"] = "weather-aware-pets-bicycles-vehicles";
+      canvas.dataset["ambientLife"] = "weather-aware-pets-wildlife-bicycles-vehicles";
       ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
       render();
     })
