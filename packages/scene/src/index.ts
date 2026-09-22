@@ -22,18 +22,16 @@ import {
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import type { StreetMotion } from "./crowd-motion.js";
+import { buyerMotionPoseAt } from "./buyer-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { walkingCycleAtDistance } from "./gait.js";
 import {
   characterGroundClearance,
   WORLD_SCALE,
 } from "./world-scale.js";
-import { updateNeighborhoodWind } from "./neighborhood.js";
 import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
-import { STREET_LAYOUT } from "./street-layout.js";
-import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
-import { businessDayFrameAt, type WeatherDetailController } from "./weather-detail.js";
+import type { WeatherDetailController } from "./weather-detail.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -59,17 +57,23 @@ export type LemonsvilleSceneState = Readonly<{
   confidence: number;
   nextConfidence: number;
   characterSeed: number;
+  dayNumber: number;
   storyboard: StreetStoryboard;
   phase: ScenePhase;
   reducedMotion: boolean;
 }>;
 
+export type LemonsvilleSceneOptions = Readonly<{
+  enableGizmo?: boolean;
+}>;
+
 export interface LemonsvilleSceneController {
   update(state: LemonsvilleSceneState): void;
   resize(width: number, height: number): void;
+  render(): void;
   dispose(): void;
-  scene?: any; // Three.js Scene for dev tools
-  camera?: any; // Three.js Camera for dev tools
+  scene: Scene;
+  camera: PerspectiveCamera;
 }
 
 const PASSERBY_POOL_SIZE = 128;
@@ -431,7 +435,9 @@ const disposeObject = (object: Object3D): void => {
 export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
+  options: LemonsvilleSceneOptions = {},
 ): LemonsvilleSceneController | null => {
+  void options;
   let renderer: WebGLRenderer;
   try {
     renderer = new WebGLRenderer({
@@ -455,21 +461,34 @@ export const createLemonsvilleScene = (
   camera.lookAt(0, 1.7, 0);
 
   const hemisphere = new HemisphereLight(0xfff2c6, 0x526b51, 1.9);
+  hemisphere.name = "hemisphere-light";
+  hemisphere.userData["sceneRole"] = "atmosphere-light";
   scene.add(hemisphere);
   const sunlight = new DirectionalLight(0xfff0c9, 1.8);
+  sunlight.name = "sunlight";
+  sunlight.userData["sceneRole"] = "sunlight";
   sunlight.position.set(-5, 10, 7);
   scene.add(sunlight);
 
   const ground = new Mesh(new PlaneGeometry(160, 150), makeMaterial(0x92ad68));
+  ground.name = "ground";
+  ground.userData["sceneRole"] = "ground";
   ground.rotation.x = -Math.PI / 2;
   ground.position.z = -32;
   scene.add(ground);
 
   const stand = createStand();
+  stand.root.name = "lemonade-stand";
+  stand.root.userData["sceneRole"] = "lemonade-stand";
   stand.root.position.z = STAND_WORLD_Z;
   scene.add(stand.root);
 
-  const signs = Array.from({ length: 40 }, () => createSign());
+  const signs = Array.from({ length: 40 }, (_, index) => {
+    const sign = createSign();
+    sign.root.name = `advertising-sign-${String(index)}`;
+    sign.root.userData["sceneRole"] = "advertising-sign";
+    return sign;
+  });
   let signTexture: CanvasTexture | null = null;
   let signPriceLabel = "";
   let disposed = false;
@@ -478,14 +497,23 @@ export const createLemonsvilleScene = (
     | Promise<Readonly<{ createPriceSignSurface(priceLabel: string): HTMLCanvasElement }>>
     | null = null;
 
-  const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) =>
-    createPerson(initialState.characterSeed, index),
-  );
+  const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) => {
+    const customer = createPerson(initialState.characterSeed, index);
+    customer.root.name = `pedestrian-${String(index)}`;
+    customer.root.userData["sceneRole"] = "pedestrian";
+    return customer;
+  });
   for (const customer of customers) scene.add(customer.root);
 
-  const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) =>
-    createPerson(initialState.characterSeed, index + PASSERBY_POOL_SIZE),
-  );
+  const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) => {
+    const buyer = createPerson(
+      initialState.characterSeed,
+      index + PASSERBY_POOL_SIZE,
+    );
+    buyer.root.name = `buyer-${String(index)}`;
+    buyer.root.userData["sceneRole"] = "buyer";
+    return buyer;
+  });
   const buyerFadeState = new Map<PersonRig, { opacity: number; targetOpacity: number }>();
   for (const buyer of buyers) {
     buyer.root.visible = false;
@@ -506,6 +534,8 @@ export const createLemonsvilleScene = (
   };
 
   const seller = createSeller(initialState.characterSeed);
+  seller.person.root.name = "seller";
+  seller.person.root.userData["sceneRole"] = "seller";
   seller.person.root.position.set(
     0,
     personGroundY(seller.person),
@@ -524,7 +554,12 @@ export const createLemonsvilleScene = (
     "hot-and-dry": new Group(),
     thunderstorm: new Group(),
   };
-  for (const weatherObject of Object.values(weatherObjects)) scene.add(weatherObject);
+  for (const [weather, weatherObject] of Object.entries(weatherObjects)) {
+    weatherObject.name = `weather-${weather}`;
+    weatherObject.userData["sceneRole"] = "weather";
+    weatherObject.userData["weather"] = weather;
+    scene.add(weatherObject);
+  }
 
   let state = initialState;
   let crowdMotion: StreetMotion | null = null;
@@ -536,6 +571,7 @@ export const createLemonsvilleScene = (
           phase: ScenePhase,
           elapsedMs: number,
           durationMs: number,
+          dayNumber?: number,
         ): void;
       }>
     | null = null;
@@ -645,7 +681,13 @@ export const createLemonsvilleScene = (
         initialState.characterSeed,
         customers.map((customer) => customer.root),
       );
-      ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
+      ambientLife.update(
+        state.weather,
+        state.phase,
+        0,
+        Math.max(1, state.durationMs),
+        state.dayNumber,
+      );
       render();
     })
     .catch(() => undefined);
@@ -784,25 +826,14 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, storyboard.durationMs)
+      Math.max(1, storyboard.durationMs),
+      state.dayNumber,
     );
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
 
-  const constrainToBounds = (
-    pos: { x: number; z: number },
-    minZ: number,
-    maxZ: number,
-    minX: number = -12,
-    maxX: number = 12,
-  ): { x: number; z: number } => ({
-    x: Math.max(minX, Math.min(maxX, pos.x)),
-    z: Math.max(minZ, Math.min(maxZ, pos.z)),
-  });
-
   const animateBuyers = (elapsedMs: number): number => {
     const activeBuyerPositions: Array<{ x: number; z: number }> = [];
-    const personRadius = 0.35;
 
     for (const buyer of buyers) {
       const fade = buyerFadeState.get(buyer);
@@ -819,67 +850,14 @@ export const createLemonsvilleScene = (
       const buyer = buyers[buyerSlotForSale(sale, buyers.length)];
       if (buyer === undefined) continue;
 
-      const exitX = sale.direction === -1 ? 18 : -18;
-      const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
-      const exitZ = streetZ + (sale.direction === -1 ? 16 : -16);
-      const counterX = sale.direction === -1 ? -0.72 : 0.72;
-      const counterZ = STAND_WORLD_Z + 1.22;
-      const drinkX = sale.direction === -1 ? -1.35 : 1.35;
-      const drinkZ = STAND_WORLD_Z + 1.78;
-      const approachDurationSeconds =
-        Math.max(1, sale.purchaseAtMs - sale.approachAtMs) / 1_000;
-      const approachTargetDistance = 0.75 * approachDurationSeconds;
-      const approachZDistance = Math.abs(counterZ - streetZ);
-      const approachXDistance = Math.sqrt(
-        Math.max(
-          0.04,
-          approachTargetDistance * approachTargetDistance -
-            approachZDistance * approachZDistance,
-        ),
-      );
-      const streetX =
-        counterX +
-        (sale.direction === -1 ? -approachXDistance : approachXDistance);
-      const approachDistance = Math.hypot(counterX - streetX, counterZ - streetZ);
-      let x = counterX;
-      let z = counterZ;
-      let travelDistance = 0;
-
-      if (phase === "approaching") {
-        const duration = Math.max(1, sale.purchaseAtMs - sale.approachAtMs);
-        const progress = smoothStep((elapsedMs - sale.approachAtMs) / duration);
-        const offscreenZ = streetZ - (sale.direction === -1 ? 20 : -20);
-        x = lerp(streetX, counterX, progress);
-        z = lerp(offscreenZ, counterZ, progress);
-        const actualXDist = Math.abs(counterX - streetX) * progress;
-        const actualZDist = Math.abs(counterZ - offscreenZ) * progress;
-        travelDistance = Math.hypot(actualXDist, actualZDist);
-      } else if (phase === "drinking") {
-        const duration = Math.max(1, sale.drinkEndAtMs - sale.purchaseEndAtMs);
-        const progress = smoothStep((elapsedMs - sale.purchaseEndAtMs) / duration);
-        x = lerp(counterX, drinkX, progress);
-        z = lerp(counterZ, drinkZ, progress);
-      } else if (phase === "departing") {
-        const duration = Math.max(1, sale.departAtMs - sale.drinkEndAtMs);
-        const progress = smoothStep((elapsedMs - sale.drinkEndAtMs) / duration);
-        x = lerp(drinkX, exitX, progress);
-        z = lerp(drinkZ, exitZ, progress);
-        const extendedDepartDistance = Math.hypot(exitX - drinkX, exitZ - drinkZ);
-        travelDistance = approachDistance + extendedDepartDistance * progress;
-      }
-
+      const motion = buyerMotionPoseAt(sale, phase, elapsedMs);
       const fade = buyerFadeState.get(buyer);
       if (fade) {
         fade.targetOpacity = 1;
         updateBuyerOpacity(buyer);
       }
       buyer.root.visible = true;
-      let finalPos = { x, z };
-
-      if (phase === "departing") {
-        const sidewalk = sale.direction === -1 ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
-        finalPos = constrainToBounds(finalPos, sidewalk.minZ, sidewalk.maxZ, -12, 12);
-      }
+      let finalPos = { x: motion.x, z: motion.z };
 
       const pedestrianRadius = 0.4;
       for (const otherPos of activeBuyerPositions) {
@@ -899,15 +877,13 @@ export const createLemonsvilleScene = (
 
       activeBuyerPositions.push(finalPos);
       buyer.root.position.set(finalPos.x, personGroundY(buyer), finalPos.z);
-      buyer.root.rotation.y =
-        phase === "purchasing" || phase === "drinking"
-          ? sale.direction === -1
-            ? -0.22
-            : 0.22
-          : sale.direction === -1
-            ? Math.PI / 2
-            : -Math.PI / 2;
-      applyBuyerPose(buyer, phase, travelDistance, sale.saleNumber);
+      buyer.root.rotation.y = motion.heading;
+      applyBuyerPose(
+        buyer,
+        phase,
+        motion.travelDistance,
+        sale.saleNumber,
+      );
       activeBuyerCount += 1;
     }
     return activeBuyerCount;
@@ -1016,7 +992,8 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       elapsedMs,
-      storyboard.durationMs
+      storyboard.durationMs,
+      state.dayNumber,
     );
 
     const remainingStock =
@@ -1036,14 +1013,6 @@ export const createLemonsvilleScene = (
       storyboard.durationMs,
       state.reducedMotion,
     );
-
-    const dayFrame = businessDayFrameAt(
-      state.weather,
-      state.phase,
-      elapsedMs,
-      storyboard.durationMs,
-    );
-    sunlight.position.set(...dayFrame.sunPosition);
 
     render();
     animationFrame = window.requestAnimationFrame(animate);
@@ -1079,14 +1048,6 @@ export const createLemonsvilleScene = (
       applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
     }
 
-    const dayFrame = businessDayFrameAt(
-      state.weather,
-      state.phase,
-      0,
-      Math.max(1, state.durationMs),
-    );
-    sunlight.position.set(...dayFrame.sunPosition);
-
     weatherDetail?.update(
       state.weather,
       state.phase,
@@ -1100,7 +1061,8 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, state.durationMs)
+      Math.max(1, state.durationMs),
+      state.dayNumber,
     );
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
@@ -1132,7 +1094,7 @@ export const createLemonsvilleScene = (
   };
 
   update(initialState);
-  return Object.freeze({ update, resize, dispose, scene, camera });
+  return Object.freeze({ update, resize, render, dispose, scene, camera });
 };
 
 export { createGizmoController, type GizmoController } from "./gizmo-controller.js";

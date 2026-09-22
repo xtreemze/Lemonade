@@ -32,7 +32,8 @@ export type MobilityInteraction =
   | "door"
   | "mailbox"
   | "gardening"
-  | "parking";
+  | "parking"
+  | "traffic";
 
 export type MobilityPose = Readonly<{
   id: string;
@@ -93,6 +94,7 @@ type RouteConflict = Readonly<{
 
 const fract = (value: number): number => value - Math.floor(value);
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
+const NORMAL_PEDESTRIAN_SPEED = 1.42;
 
 const deterministicUnit = (seed: number, salt: number): number => {
   let value = (seed ^ Math.imul((salt + 1) >>> 0, 0x9e3779b1)) >>> 0;
@@ -286,7 +288,8 @@ const routeIntersections = (
 };
 
 export const mobilityDetailForDistance = (distance: number): MobilityDetail => {
-  const safe = Number.isFinite(distance) ? Math.max(0, distance) : 0;
+  if (!Number.isFinite(distance)) return "statistical";
+  const safe = Math.max(0, distance);
   if (safe <= 28) return "full";
   if (safe <= 72) return "reduced";
   return "statistical";
@@ -464,16 +467,41 @@ const trafficPose = (
   focus: ResidentialPoint,
   conflicts: readonly RouteConflict[],
   pedestrians: readonly ResidentialPoint[],
+  trafficActors: readonly MobilityPose[],
 ): MobilityPose => {
   const progress = fract(
     elapsedMs / Math.max(1, durationMs) * laps + offset,
   );
   const sampled = sampleRouteProgress(route, progress);
-  const conflict = nearestConflict(conflicts, route.id.replace(/:reverse$/, ""), sampled.point);
-  const waiting =
+  const routeId = route.id.replace(/:reverse$/, "");
+  const conflict = nearestConflict(conflicts, routeId, sampled.point);
+  const pedestrianWaiting =
     conflict !== null && hasPedestrianPriority(conflict, pedestrians);
+
+  const tangentX = Math.cos(sampled.yaw);
+  const tangentZ = Math.sin(sampled.yaw);
+  const safetyRadius = kind === "vehicle" ? 5.4 : 3.7;
+  const trafficBlocker = trafficActors.find((actor) => {
+    if (actor.kind !== "vehicle" && actor.kind !== "bicycle") return false;
+
+    const dx = actor.x - sampled.point.x;
+    const dz = actor.z - sampled.point.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance <= safetyRadius) {
+      const ahead = dx * tangentX + dz * tangentZ;
+      return ahead >= -0.35;
+    }
+    if (conflict === null) return false;
+    return (
+      pointDistance({ x: actor.x, z: actor.z }, conflict.point) <= 4.4 &&
+      pointDistance(sampled.point, conflict.point) <= 5.2
+    );
+  });
+
+  const trafficWaiting = !pedestrianWaiting && trafficBlocker !== undefined;
+  const waiting = pedestrianWaiting || trafficWaiting;
   let point = sampled.point;
-  if (waiting) {
+  if (pedestrianWaiting && conflict !== null) {
     const dx = point.x - conflict.point.x;
     const dz = point.z - conflict.point.z;
     const magnitude = Math.max(0.001, Math.hypot(dx, dz));
@@ -481,7 +509,13 @@ const trafficPose = (
       x: conflict.point.x + (dx / magnitude) * 3.4,
       z: conflict.point.z + (dz / magnitude) * 3.4,
     });
+  } else if (trafficWaiting) {
+    point = Object.freeze({
+      x: sampled.point.x - tangentX * (kind === "vehicle" ? 2.8 : 1.8),
+      z: sampled.point.z - tangentZ * (kind === "vehicle" ? 2.8 : 1.8),
+    });
   }
+
   return makePose(
     id,
     kind,
@@ -489,7 +523,7 @@ const trafficPose = (
     sampled.yaw,
     kind === "vehicle" ? 7.8 : 4.2,
     focus,
-    waiting ? "crossing" : "none",
+    pedestrianWaiting ? "crossing" : trafficWaiting ? "traffic" : "none",
     null,
     waiting,
   );
@@ -591,6 +625,7 @@ export const createNeighborhoodMobilitySystem = (
       const pedestrianPoints: ResidentialPoint[] = [
         ...(input.pedestrianObstacles ?? []),
       ];
+      const trafficActors: MobilityPose[] = [];
 
       if (phase === "simulation") {
         residentRoutes.forEach((route, index) => {
@@ -611,7 +646,7 @@ export const createNeighborhoodMobilitySystem = (
             "resident",
             sampled.point,
             sampled.yaw,
-            1.42,
+            NORMAL_PEDESTRIAN_SPEED,
             focus,
             state.doorOpen ? "door" : "none",
             property.role,
@@ -619,7 +654,7 @@ export const createNeighborhoodMobilitySystem = (
             !state.inside,
           );
           actors.push(resident);
-          if (resident.visible) pedestrianPoints.push(sampled.point);
+          if (!state.inside) pedestrianPoints.push(sampled.point);
           addStatistical(counts, resident);
 
           if (index === 0) {
@@ -640,7 +675,7 @@ export const createNeighborhoodMobilitySystem = (
               !state.inside,
             );
             actors.push(pet);
-            if (pet.visible) pedestrianPoints.push(petPoint);
+            if (!state.inside) pedestrianPoints.push(petPoint);
             addStatistical(counts, pet);
           }
         });
@@ -785,6 +820,7 @@ export const createNeighborhoodMobilitySystem = (
             yieldingAtDriveway,
           );
           actors.push(drivewayVehicle);
+          trafficActors.push(drivewayVehicle);
           addStatistical(counts, drivewayVehicle);
 
           const driverRoute = makeRoute("resident-driver", [
@@ -811,7 +847,7 @@ export const createNeighborhoodMobilitySystem = (
             "resident",
             driverSample.point,
             driverSample.yaw,
-            1.35,
+            NORMAL_PEDESTRIAN_SPEED,
             focus,
             "door",
             drivewayProperty.role,
@@ -819,7 +855,7 @@ export const createNeighborhoodMobilitySystem = (
             driverMovement,
           );
           actors.push(residentDriver);
-          if (residentDriver.visible) {
+          if (driverMovement) {
             pedestrianPoints.push(driverSample.point);
           }
           addStatistical(counts, residentDriver);
@@ -830,7 +866,7 @@ export const createNeighborhoodMobilitySystem = (
             const directed =
               index % 2 === 0 ? route : reverseRoute(route, ":reverse");
             const vehicle = trafficPose(
-              "traffic-vehicle:" + route.id + ":v" + vehicleNum,
+              `traffic-vehicle:${route.id}:v${String(vehicleNum)}`,
               "vehicle",
               directed,
               input.elapsedMs,
@@ -840,32 +876,38 @@ export const createNeighborhoodMobilitySystem = (
               focus,
               conflicts,
               pedestrianPoints,
+              trafficActors,
             );
             actors.push(vehicle);
+            trafficActors.push(vehicle);
             addStatistical(counts, vehicle);
           }
         });
 
-        [main, routes.find((route) => route.id === "front-grid") ?? main].forEach(
-          (route, index) => {
-            const directed =
-              index % 2 === 0 ? reverseRoute(route, ":reverse") : route;
-            const bicycle = trafficPose(
-              "traffic-bicycle:" + String(index),
-              "bicycle",
-              directed,
-              input.elapsedMs,
-              durationMs,
-              0.31 + index * 0.41,
-              0.86 + index * 0.11,
-              focus,
-              conflicts,
-              pedestrianPoints,
-            );
-            actors.push(bicycle);
-            addStatistical(counts, bicycle);
-          },
-        );
+        [
+          main,
+          routes.find((route) => route.id === "front-grid") ?? main,
+          routes.find((route) => route.id === "deep-grid") ?? main,
+        ].forEach((route, index) => {
+          const directed =
+            index % 2 === 0 ? reverseRoute(route, ":reverse") : route;
+          const bicycle = trafficPose(
+            `traffic-bicycle:${route.id}`,
+            "bicycle",
+            directed,
+            input.elapsedMs,
+            durationMs,
+            0.31 + index * 0.29,
+            0.86 + index * 0.11,
+            focus,
+            conflicts,
+            pedestrianPoints,
+            trafficActors,
+          );
+          actors.push(bicycle);
+          trafficActors.push(bicycle);
+          addStatistical(counts, bicycle);
+        });
       }
 
       if (phase === "forecast") {
@@ -895,7 +937,7 @@ export const createNeighborhoodMobilitySystem = (
           "mail-carrier",
           mailPoint,
           mailInteraction ? mailboxYaw : walkingYaw,
-          mailInteraction ? 0 : 4.2,
+          mailInteraction ? 0 : NORMAL_PEDESTRIAN_SPEED,
           focus,
           mailInteraction ? "mailbox" : "none",
           nearestMailbox?.propertyRole ?? null,
@@ -938,7 +980,7 @@ export const createNeighborhoodMobilitySystem = (
             "gardener",
             gardenerSample.point,
             gardenerSample.yaw,
-            gardening ? 0 : 1.25,
+            gardening ? 0 : NORMAL_PEDESTRIAN_SPEED,
             focus,
             gardening ? "gardening" : "none",
             gardenerProperty.role,
@@ -955,14 +997,14 @@ export const createNeighborhoodMobilitySystem = (
           if (!hasVehicle) continue;
           const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) * allDrivewayProperties.length);
           const property = allDrivewayProperties[propertyIndex];
-          if (property === undefined || property.drivewayX === null) continue;
-          const access = residentialAccessLayout(property);
+          if (property?.drivewayX == null) continue;
+          const access = residentialAccessLayout(property, safeSeed);
           const parkedVehicle = makePose(
-            `parked-vehicle-${i}`,
+            `parked-vehicle-${String(i)}`,
             "vehicle",
             {
               x: property.drivewayX,
-              z: access.drivewayCenterZ,
+              z: access.parkingZ,
             },
             Math.PI / 2,
             0,
@@ -1011,14 +1053,14 @@ export const createNeighborhoodMobilitySystem = (
           if (!hasVehicle) continue;
           const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4500 + i) * allDrivewayProperties.length);
           const property = allDrivewayProperties[propertyIndex];
-          if (property === undefined || property.drivewayX === null) continue;
-          const access = residentialAccessLayout(property);
+          if (property?.drivewayX == null) continue;
+          const access = residentialAccessLayout(property, safeSeed);
           const parkedVehicle = makePose(
-            `parked-vehicle-night-${i}`,
+            `parked-vehicle-night-${String(i)}`,
             "vehicle",
             {
               x: property.drivewayX,
-              z: access.drivewayCenterZ,
+              z: access.parkingZ,
             },
             Math.PI / 2,
             0,
