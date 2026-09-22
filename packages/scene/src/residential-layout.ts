@@ -576,7 +576,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       3_000,
       -72,
       [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
-      true,
+      false,
     ),
   ]);
   const allProperties = [...front, ...middle, ...back, ...outer];
