@@ -768,10 +768,23 @@ export const createLemonsvilleScene = (
       return;
     }
 
-    const visibleCount = Math.min(
-      customers.length,
-      Math.max(6, Math.min(36, storyboard.passersBy.length)),
-    );
+    const devPedestrianLimit = state.dev?.pedestrianLimit;
+    const visibleCount =
+      devPedestrianLimit === undefined
+        ? Math.min(
+            customers.length,
+            Math.max(6, Math.min(36, storyboard.passersBy.length)),
+          )
+        : Math.min(
+            customers.length,
+            Math.max(
+              0,
+              Math.min(
+                Math.trunc(devPedestrianLimit),
+                storyboard.passersBy.length,
+              ),
+            ),
+          );
     const poses =
       crowdMotion?.crowdPosesAt(
         storyboard.passersBy,
@@ -826,7 +839,7 @@ export const createLemonsvilleScene = (
     weatherDetail?.update(
       state.weather,
       state.phase,
-      0,
+      environmentElapsed(0),
       Math.max(1, storyboard.durationMs),
       state.reducedMotion,
     );
