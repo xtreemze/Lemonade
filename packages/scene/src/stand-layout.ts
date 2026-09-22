@@ -32,7 +32,7 @@ export const STAND_LAYOUT = Object.freeze({
   counterTopY,
   cupCenterY: counterTopY + 0.095,
   cupFootprint: Object.freeze({
-    minX: 0.38,
+    minX: 0.44,
     maxX: 1.52,
     minZ: 0.08,
     maxZ: 0.58,
