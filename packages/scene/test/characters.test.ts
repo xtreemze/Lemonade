@@ -71,12 +71,10 @@ describe("seeded scene characters", () => {
     expect(crown).toBeInstanceOf(Mesh);
     if (!(crown instanceof Mesh)) return;
 
-    crown.geometry.computeBoundingBox();
-    const bounds = crown.geometry.boundingBox;
-    expect(bounds).not.toBeNull();
-    if (bounds === null) return;
-    const crownTop = crown.position.y + bounds.max.y * crown.scale.y;
-    expect(crownTop).toBeGreaterThan(0.3);
+    expect(crown.scale.x).toBeGreaterThan(1);
+    expect(crown.scale.y).toBeGreaterThanOrEqual(0.65);
+    expect(crown.scale.z).toBeGreaterThanOrEqual(0.95);
+    expect(crown.position.y).toBeLessThanOrEqual(0.13);
   });
 
   it("changes character identity when the run seed changes", () => {
