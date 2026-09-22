@@ -36,9 +36,11 @@ export const characterIdentityFor = (
     actorIndex >= 10_000 || Math.floor(actorIndex / 2) % 3 !== 2
       ? "adult"
       : "child";
-  const bagStyle = ageGroup === "child"
-    ? ((actorIndex % 3) + 1) as 1 | 2 | 3
-    : ((identityIndex + actorIndex) & 3) as 0 | 1 | 2 | 3;
+  const bagStyle = actorIndex >= 10_000
+    ? 0
+    : ageGroup === "child"
+      ? ((actorIndex % 3) + 1) as 1 | 2 | 3
+      : ((identityIndex + actorIndex) & 3) as 0 | 1 | 2 | 3;
   return Object.freeze({
     gender: actorIndex % 2 === 0 ? "male" : "female",
     ageGroup,
