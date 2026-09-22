@@ -1205,6 +1205,29 @@ body:has(.game-shell[data-view="forecast"]) {
     height: 54px;
   }
 
+  .game-shell[data-view="report"] .report-panel {
+    padding: 4px 4px 64px;
+  }
+
+  .game-shell[data-view="report"] .panel-heading {
+    margin-bottom: 2px;
+  }
+
+  .game-shell[data-view="report"] .results-grid {
+    gap: 3px;
+    margin: 2px 0 3px;
+  }
+
+  .game-shell[data-view="report"] .ledger-breakdown {
+    margin: 2px 0 3px;
+  }
+
+  .game-shell[data-view="report"] .event-note,
+  .game-shell[data-view="report"] .progression-note {
+    margin: 1px 0 2px;
+    padding: 3px 5px;
+  }
+
 .game-shell[data-view="report"] .results-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   }
