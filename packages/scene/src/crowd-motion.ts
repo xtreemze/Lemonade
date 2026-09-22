@@ -5,8 +5,8 @@ import {
   gardenSignPosition,
   sidewalkLaneZ,
   sidewalkSideForLane,
+  STREET_LAYOUT,
 } from "./street-layout.js";
-import { STREET_LAYOUT } from "./street-layout.js";
 import type { PasserbyBeat } from "./storyboard.js";
 
 export { gardenSignPosition, sidewalkLaneZ };
