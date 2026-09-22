@@ -8,6 +8,7 @@ import {
 } from "three";
 
 import { STAND_LAYOUT } from "./stand-layout.js";
+import { WORLD_SCALE } from "./world-scale.js";
 
 export const STAND_SIGN_CENTER_Y = 2.62;
 const STOCK_LEMONS = 8;
@@ -154,7 +155,7 @@ export const populateStand = (
     const lemon = new Group();
     lemon.userData["sceneRole"] = "stand-stock-lemon";
     const fruit = new Mesh(
-      new SphereGeometry(0.045, 7, 5),
+      new SphereGeometry(WORLD_SCALE.produce.lemonDiameter / 2, 7, 5),
       material(0xf6d33b),
     );
     fruit.scale.set(1.15, 0.9, 0.9);
