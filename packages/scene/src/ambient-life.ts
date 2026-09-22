@@ -213,7 +213,7 @@ export const createAmbientLife = (scene: Scene, seed: number): AmbientLifeContro
         pet.visible = index < population.pets && owner !== undefined;
         if (!pet.visible || owner === undefined) return;
         const pose = petFollowPose(owner, index);
-        const gait = Math.sin(elapsedMs * 0.012 + index * 1.7);
+        const gait = Math.sin(elapsedMs * 0.012 + index * 1.7 + (seed & 15) * 0.21);
         pet.position.set(pose.x, Math.abs(gait) * 0.018, pose.z);
         pet.rotation.y = pose.yaw;
         pet.rotation.z = gait * 0.025;
