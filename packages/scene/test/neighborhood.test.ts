@@ -83,11 +83,11 @@ describe("neighborhood world scale", () => {
     let checkedScenery = 0;
 
     scene.traverse((object) => {
-      const role = object.userData["sceneRole"];
+      const role: unknown = object.userData["sceneRole"];
       if (typeof role !== "string" || !checkedRoles.has(role)) return;
 
-      const halfWidth = object.userData["clearanceHalfWidth"];
-      const halfDepth = object.userData["clearanceHalfDepth"];
+      const halfWidth: unknown = object.userData["clearanceHalfWidth"];
+      const halfDepth: unknown = object.userData["clearanceHalfDepth"];
       if (typeof halfWidth === "number" && typeof halfDepth === "number") {
         expect(
           residentialFootprintIntersectsHardscape(
@@ -98,10 +98,9 @@ describe("neighborhood world scale", () => {
           ),
         ).toBe(false);
       } else {
+        const clearanceRadius: unknown = object.userData["clearanceRadius"];
         const radius =
-          typeof object.userData["clearanceRadius"] === "number"
-            ? object.userData["clearanceRadius"]
-            : 0;
+          typeof clearanceRadius === "number" ? clearanceRadius : 0;
         expect(
           residentialFootprintIntersectsHardscape(
             { x: object.position.x, z: object.position.z },
