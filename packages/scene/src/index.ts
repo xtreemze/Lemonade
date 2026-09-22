@@ -119,51 +119,6 @@ const createStand = (): StandModel => {
   }
   addBox(root, STAND_LAYOUT.canopy.size, STAND_LAYOUT.canopy.position, 0xe6a93b);
 
-  // A slightly crooked lemon badge gives the stand a handmade neighborhood identity.
-  const signBoard = addBox(root, [1.58, 0.56, 0.1], [0, 2.43, 0.65], 0xffe36a);
-  signBoard.rotation.z = -0.055;
-  const lemonBadge = new Mesh(
-    new SphereGeometry(0.2, 10, 8),
-    makeMaterial(0xf6d33b),
-  );
-  lemonBadge.scale.set(1.22, 0.86, 0.24);
-  lemonBadge.position.set(-0.48, 2.43, 0.72);
-  lemonBadge.rotation.z = 0.18;
-  root.add(lemonBadge);
-  const badgeLeaf = new Mesh(
-    new CylinderGeometry(0, 0.07, 0.2, 5),
-    makeMaterial(0x4f8c4a),
-  );
-  badgeLeaf.rotation.z = Math.PI / 2.6;
-  badgeLeaf.position.set(-0.27, 2.58, 0.72);
-  root.add(badgeLeaf);
-  addBox(root, [0.62, 0.07, 0.04], [0.33, 2.5, 0.72], 0x6b573d);
-  addBox(root, [0.76, 0.06, 0.04], [0.25, 2.36, 0.72], 0x6b573d);
-
-  // Counter dressing keeps the kiosk from reading as an empty prop.
-  addBox(
-    root,
-    [0.62, 0.28, 0.48],
-    [-1.1, STAND_LAYOUT.counterTopY + 0.14, 0.34],
-    0x9b6a3c,
-  );
-  const pitcher = new Mesh(
-    new CylinderGeometry(0.2, 0.25, 0.5, 10),
-    new MeshStandardMaterial({
-      color: 0xf0ebd3,
-      transparent: true,
-      opacity: 0.72,
-      roughness: 0.28,
-    }),
-  );
-  pitcher.position.set(1.08, STAND_LAYOUT.counterTopY + 0.25, 0.34);
-  root.add(pitcher);
-  const pitcherLemonade = new Mesh(
-    new CylinderGeometry(0.17, 0.21, 0.3, 10),
-    makeMaterial(0xeac54b),
-  );
-  pitcherLemonade.position.set(1.08, STAND_LAYOUT.counterTopY + 0.17, 0.34);
-  root.add(pitcherLemonade);
 
   const shutter = new Group();
   addBox(shutter, [3.0, 0.82, 0.1], [0, 0.96, 0.78], 0xd39b43);
@@ -720,6 +675,14 @@ export const createLemonsvilleScene = (
     .then(({ populateNeighborhood }) => {
       if (disposed) return;
       populateNeighborhood(scene);
+      render();
+    })
+    .catch(() => undefined);
+
+  void import("./stand-detail.js")
+    .then(({ decorateStand }) => {
+      if (disposed) return;
+      decorateStand(stand.root, STAND_LAYOUT.counterTopY);
       render();
     })
     .catch(() => undefined);
