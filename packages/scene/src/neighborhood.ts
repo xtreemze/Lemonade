@@ -587,9 +587,9 @@ export const populateNeighborhood = (
       );
       addRoad(
         1.04,
-        5.8,
+        4,
         property.houseX,
-        property.houseZ + frontDirection * 3.55,
+        property.houseZ + frontDirection * 6,
         0xd8c9aa,
         0.021,
         "front-path",
