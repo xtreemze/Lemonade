@@ -11,7 +11,8 @@ import {
 
 import { updateNeighborhoodWind } from "./neighborhood.js";
 import {
-  clampToNearSidewalk,
+  clampToSidewalk,
+  closestSidewalkSide,
   roadLaneZ,
 } from "./street-layout.js";
 
