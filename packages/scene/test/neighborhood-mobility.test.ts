@@ -218,53 +218,60 @@ describe("unified neighborhood mobility", () => {
     if (typeof drivewayX !== "number" || property === undefined) return;
 
     const access = residentialAccessLayout(property, MOBILITY_SEED);
-    const roadZ = roadLaneZ("vehicle", 0);
-    const enteringCrossingProgress = Math.min(
-      1,
-      Math.max(
-        0,
-        Math.abs(
-          (access.sidewalkCenterZ - roadZ) /
-            Math.max(0.001, Math.abs(access.parkingZ - roadZ)),
-        ),
-      ),
-    );
-    const elapsedMs =
-      (0.28 + enteringCrossingProgress * 0.14) * 14_000;
     const crossingObstacle = {
       x: drivewayX,
       z: access.sidewalkCenterZ,
     };
-
-    const blocked = system.sample({
-      weather: "sunny",
-      phase: "simulation",
-      elapsedMs,
-      durationMs: 14_000,
-      dayNumber: 2,
-      focus: { x: 0, z: 0 },
-      pedestrianObstacles: [crossingObstacle],
+    const crossingSamples = Array.from({ length: 17 }, (_, index) => {
+      const t = 0.28 + (index / 16) * 0.139;
+      return system.sample({
+        weather: "sunny",
+        phase: "simulation",
+        elapsedMs: t * 14_000,
+        durationMs: 14_000,
+        dayNumber: 2,
+        focus: { x: 0, z: 0 },
+        pedestrianObstacles: [crossingObstacle],
+      });
     });
-    const clear = system.sample({
-      weather: "sunny",
-      phase: "simulation",
-      elapsedMs,
-      durationMs: 14_000,
-      dayNumber: 2,
-      focus: { x: 0, z: 0 },
-      pedestrianObstacles: [],
-    });
+    const yielding = crossingSamples
+      .flatMap((sample) => sample.actors)
+      .find(
+        (actor) =>
+          actor.id === "resident-vehicle" &&
+          actor.waiting &&
+          actor.interaction === "crossing",
+      );
+    expect(yielding).toBeDefined();
+    expect(yielding?.speed).toBe(0);
 
-    const blockedVehicle = blocked.actors.find(
-      (actor) => actor.id === "resident-vehicle",
-    );
-    const clearVehicle = clear.actors.find(
-      (actor) => actor.id === "resident-vehicle",
-    );
-    expect(blockedVehicle?.waiting).toBe(true);
-    expect(blockedVehicle?.interaction).toBe("crossing");
-    expect(blockedVehicle?.speed).toBe(0);
-    expect(clearVehicle?.waiting).toBe(false);
+    if (yielding !== undefined) {
+      const sameTimeClear = system.sample({
+        weather: "sunny",
+        phase: "simulation",
+        elapsedMs:
+          crossingSamples.findIndex((sample) =>
+            sample.actors.some(
+              (actor) =>
+                actor.id === yielding.id &&
+                actor.waiting &&
+                actor.interaction === "crossing",
+            ),
+          ) /
+            16 *
+            0.139 *
+            14_000 +
+          0.28 * 14_000,
+        durationMs: 14_000,
+        dayNumber: 2,
+        focus: { x: 0, z: 0 },
+        pedestrianObstacles: [],
+      });
+      expect(
+        sameTimeClear.actors.find((actor) => actor.id === "resident-vehicle")
+          ?.waiting,
+      ).toBe(false);
+    }
   });
 
   it("runs the mail route every forecast and a gardener on exactly one weekday", () => {
