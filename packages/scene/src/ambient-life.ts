@@ -668,6 +668,7 @@ export const createAmbientLife = (
         const pose = index < population.bicycles ? bicyclePoses[index] : undefined;
         bike.visible = pose !== undefined;
         if (pose === undefined) return;
+        bike.userData["mobilityActorId"] = pose.id;
         bike.position.set(pose.x, 0.02, pose.z);
         bike.rotation.y = -pose.yaw;
       });
@@ -695,6 +696,7 @@ export const createAmbientLife = (
         const pose = vehiclePoses[index];
         vehicle.visible = pose !== undefined;
         if (pose === undefined) return;
+        vehicle.userData["mobilityActorId"] = pose.id;
         vehicle.position.set(pose.x, 0.02, pose.z);
         vehicle.rotation.y = -pose.yaw;
       });
