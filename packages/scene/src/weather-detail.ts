@@ -13,6 +13,8 @@ import type {
 
 import {
   CLOUDY_TOWN_CLOUD_LAYOUT,
+  PARTLY_CLOUD_TOWN_LAYOUT,
+  THUNDERSTORM_TOWN_CLOUD_LAYOUT,
   WEATHER_BACKDROP_LAYOUT,
 } from "./weather-layout.js";
 
@@ -131,6 +133,18 @@ export const businessDayFrameAt = (
   });
 };
 
+export const sunBackdropPositionAt = (
+  progress: number,
+): readonly [number, number, number] => {
+  const p = clamp01(progress);
+  const arc = Math.max(0, Math.sin(p * Math.PI));
+  return Object.freeze([
+    lerp(-5.6, 3.6, p),
+    -0.55 + arc * 2.35,
+    -6.7 - arc * 1.1,
+  ] as const);
+};
+
 const flashPulse = (progress: number, center: number, width: number): number => {
   const distance = Math.abs(progress - center);
   if (distance >= width) return 0;
@@ -233,25 +247,21 @@ export const populateWeatherObjects = (
   weather["hot-and-dry"].add(partlySun);
 
   const partlyCloudGroup = new Group();
-  const cloudPositions = [
-    { position: [-3.5, 1.8, -0.2] as const, scale: 0.85 },
-    { position: [-2.2, 1.2, -0.2] as const, scale: 0.95 },
-    { position: [1.8, 1.6, -0.2] as const, scale: 0.88 },
-  ] as const;
-  for (let i = 0; i < 3; i++) {
-    const partlyCloud = new Group();
-    partlyCloud.userData["sceneRole"] = `partly-cloud-${i}`;
-    const baseLayout = cloudPositions[i];
-    partlyCloud.position.set(...baseLayout.position);
-    partlyCloud.scale.setScalar(baseLayout.scale);
-    addCloud(partlyCloud, 0xd7e0df);
-    partlyCloudGroup.add(partlyCloud);
-  }
+  const partlyClouds = PARTLY_CLOUD_TOWN_LAYOUT.map((layout, index) => {
+    const cloud = new Group();
+    cloud.userData["sceneRole"] = `partly-cloud-${String(index)}`;
+    cloud.userData["driftPhase"] = layout.driftPhase;
+    cloud.userData["baseX"] = layout.position[0];
+    cloud.userData["baseZ"] = layout.position[2];
+    cloud.position.set(...layout.position);
+    cloud.scale.setScalar(layout.scale);
+    addCloud(cloud, 0xd7e0df);
+    partlyCloudGroup.add(cloud);
+    return cloud;
+  });
   weather["hot-and-dry"].add(partlyCloudGroup);
 
-  addCloud(weather.cloudy, 0xd7e0df);
-
-  const cloudyTownClouds = CLOUDY_TOWN_CLOUD_LAYOUT.slice(0, 5).map((layout, index) => {
+  const cloudyTownClouds = CLOUDY_TOWN_CLOUD_LAYOUT.map((layout, index) => {
     const cloud = new Group();
     cloud.userData["sceneRole"] = "town-cloud";
     cloud.userData["driftPhase"] = layout.driftPhase;
@@ -263,11 +273,7 @@ export const populateWeatherObjects = (
     return cloud;
   });
 
-  const thunderstormClouds = [
-    { position: [-1.5, 1.5, -0.3] as const, scale: 1.2, driftPhase: 0 },
-    { position: [0, 0.5, -0.5] as const, scale: 1, driftPhase: 1.5 },
-    { position: [1.5, 1.8, -0.2] as const, scale: 1.1, driftPhase: 3 },
-  ].map((layout) => {
+  const thunderstormClouds = THUNDERSTORM_TOWN_CLOUD_LAYOUT.map((layout) => {
     const cloud = new Group();
     cloud.userData["turbulentCloud"] = true;
     cloud.userData["driftPhase"] = layout.driftPhase;
@@ -275,7 +281,7 @@ export const populateWeatherObjects = (
     cloud.userData["baseY"] = layout.position[1];
     cloud.userData["baseZ"] = layout.position[2];
     addCloud(cloud, 0x657786);
-    cloud.position.set(layout.position[0], layout.position[1], layout.position[2]);
+    cloud.position.set(...layout.position);
     cloud.scale.setScalar(layout.scale);
     weather.thunderstorm.add(cloud);
     return cloud;
@@ -327,7 +333,7 @@ export const populateWeatherObjects = (
     rainGroup.position.set(
       cloud.userData["baseX"] as number,
       cloud.userData["baseY"] as number,
-      0,
+      cloud.userData["baseZ"] as number,
     );
     weather.thunderstorm.add(rainGroup);
     return rainGroup;
@@ -349,6 +355,27 @@ export const populateWeatherObjects = (
       const drift = reducedMotion ? 0 : Math.sin(elapsedMs * 0.00045) *
         (activeWeather === "sunny" ? 0.08 : 0.3);
       active.position.x = origins[activeWeather] + drift;
+
+      partlyClouds.forEach((cloud, index) => {
+        const baseX =
+          typeof cloud.userData["baseX"] === "number"
+            ? cloud.userData["baseX"]
+            : cloud.position.x;
+        const baseZ =
+          typeof cloud.userData["baseZ"] === "number"
+            ? cloud.userData["baseZ"]
+            : cloud.position.z;
+        const phaseOffset =
+          typeof cloud.userData["driftPhase"] === "number"
+            ? cloud.userData["driftPhase"]
+            : index;
+        if (!reducedMotion) {
+          cloud.position.x =
+            baseX + Math.sin(elapsedMs * 0.00012 + phaseOffset) * 0.12;
+          cloud.position.z =
+            baseZ + Math.cos(elapsedMs * 0.00009 + phaseOffset) * 0.08;
+        }
+      });
 
       cloudyTownClouds.forEach((cloud, index) => {
         const baseX =
@@ -375,23 +402,30 @@ export const populateWeatherObjects = (
           typeof cloud.userData["baseY"] === "number"
             ? cloud.userData["baseY"]
             : cloud.position.y;
+        const baseZ =
+          typeof cloud.userData["baseZ"] === "number"
+            ? cloud.userData["baseZ"]
+            : cloud.position.z;
         const phaseOffset =
           typeof cloud.userData["driftPhase"] === "number"
             ? cloud.userData["driftPhase"]
             : 0;
 
         if (!reducedMotion) {
-          const turbulence1 = Math.sin(elapsedMs * 0.0008 + phaseOffset) * 0.6;
-          const turbulence2 = Math.cos(elapsedMs * 0.00063 + phaseOffset * 1.5) * 0.4;
-          const turbulenceY = Math.sin(elapsedMs * 0.0005 + phaseOffset * 2) * 0.3;
+          const turbulence1 = Math.sin(elapsedMs * 0.0008 + phaseOffset) * 0.48;
+          const turbulence2 = Math.cos(elapsedMs * 0.00063 + phaseOffset * 1.5) * 0.3;
+          const turbulenceY = Math.sin(elapsedMs * 0.0005 + phaseOffset * 2) * 0.24;
+          const turbulenceZ = Math.cos(elapsedMs * 0.00038 + phaseOffset * 1.3) * 0.16;
           cloud.position.x = baseX + turbulence1 + turbulence2;
           cloud.position.y = baseY + turbulenceY;
+          cloud.position.z = baseZ + turbulenceZ;
         }
 
         const rainGroup = rainGroups[cloudIndex];
         if (rainGroup) {
           rainGroup.position.x = cloud.position.x;
           rainGroup.position.y = cloud.position.y - 0.8;
+          rainGroup.position.z = cloud.position.z;
         }
       });
 
@@ -432,9 +466,13 @@ export const populateWeatherObjects = (
       );
       sunlight.position.set(...daylight.sunPosition);
 
-      const sunArc = Math.max(0, Math.sin(daylight.progress * Math.PI));
-      sunContainer.position.y = sunArc * 2.5 - 0.8;
-      sunContainer.position.z = -6 - sunArc * 2;
+      const sunBackdrop = sunBackdropPositionAt(daylight.progress);
+      sunContainer.position.set(...sunBackdrop);
+      partlySun.position.set(
+        sunBackdrop[0] * 0.88,
+        sunBackdrop[1] + 0.12,
+        sunBackdrop[2] + 0.35,
+      );
 
       lightning.visible = flash > 0.06;
       for (const boltMaterial of lightningMaterials) {
