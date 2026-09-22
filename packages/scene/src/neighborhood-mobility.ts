@@ -786,17 +786,11 @@ export const createNeighborhoodMobilitySystem = (
           addStatistical(counts, residentDriver);
         }
 
-        const trafficRoutes = [
-          main,
-          routes.find((route) => route.id === "front-grid") ?? main,
-          routes.find((route) => route.id === "deep-grid") ?? main,
-          routes.find((route) => route.id === "middle-curve") ?? main,
-        ];
-        trafficRoutes.forEach((route, index) => {
+        routes.forEach((route, index) => {
           const directed =
             index % 2 === 0 ? route : reverseRoute(route, ":reverse");
           const vehicle = trafficPose(
-            "traffic-vehicle:" + String(index),
+            "traffic-vehicle:" + route.id,
             "vehicle",
             directed,
             input.elapsedMs,
