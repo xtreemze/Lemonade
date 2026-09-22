@@ -325,9 +325,10 @@ const generatePlantings = (
   zMax: number,
   layout: Pick<ResidentialLayout, "exclusions" | "frontProperties" | "middleProperties" | "backProperties">,
   clearance: number,
+  spacing: number,
 ): readonly ResidentialPlanting[] => {
   const result: ResidentialPlanting[] = [];
-  for (let attempt = 0; attempt < count * 80 && result.length < count; attempt += 1) {
+  for (let attempt = 0; attempt < count * 120 && result.length < count; attempt += 1) {
     const x = -51 + unit(seed, salt + attempt * 5) * 102;
     const z = zMin + unit(seed, salt + attempt * 5 + 1) * (zMax - zMin);
     const scale = 0.78 + unit(seed, salt + attempt * 5 + 2) * 0.34;
@@ -338,7 +339,7 @@ const generatePlantings = (
       result.some(
         (existing) =>
           Math.hypot(existing.x - x, existing.z - z) <
-          footprintClearance + clearance * existing.scale + 0.9,
+          spacing * scale + spacing * existing.scale + 0.9,
       )
     ) {
       continue;
@@ -402,8 +403,26 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     backProperties: back,
   } as const;
 
-  const trees = generatePlantings(safeSeed, 48, 3_100, -60, 0.2, partial, 3.5);
-  const shrubs = generatePlantings(safeSeed, 14, 5_100, -33, -1.1, partial, 1.9);
+  const trees = generatePlantings(
+    safeSeed,
+    48,
+    3_100,
+    -60,
+    0.2,
+    partial,
+    3.5,
+    1.3,
+  );
+  const shrubs = generatePlantings(
+    safeSeed,
+    14,
+    5_100,
+    -33,
+    -1.1,
+    partial,
+    1.9,
+    0.65,
+  );
   const flowers = generateFlowers(safeSeed, partial);
 
   return Object.freeze({
