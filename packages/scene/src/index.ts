@@ -828,7 +828,6 @@ export const createLemonsvilleScene = (
 
   const animatePassersBy = (
     elapsedMs: number,
-    seconds: number,
     activeBuyerCount: number,
   ): void => {
     if (
@@ -926,7 +925,7 @@ export const createLemonsvilleScene = (
     }
 
     const activeBuyerCount = animateBuyers(elapsedMs);
-    animatePassersBy(elapsedMs, seconds, activeBuyerCount);
+    animatePassersBy(elapsedMs, activeBuyerCount);
     animateSeller(seconds, elapsedMs);
     ambientLife?.update(
       state.weather,
