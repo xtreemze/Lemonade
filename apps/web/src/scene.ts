@@ -4,6 +4,7 @@ import type {
   LemonsvilleSceneState,
   ScenePhase,
 } from "@lemonade/scene";
+import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
 import type { DayEnvironment } from "@lemonade/simulation";
 
 import type { createLemonsvilleScene } from "./scene-runtime.js";
@@ -16,6 +17,14 @@ const activityForConfidence = (confidence: number): CustomerActivity => {
   return "busy";
 };
 
+const pedestrianCount: Readonly<Record<CustomerActivity, number>> = Object.freeze({
+  quiet: 4,
+  light: 7,
+  steady: 10,
+  lively: 14,
+  busy: 18,
+});
+
 export type LemonsvilleSceneInput = Readonly<{
   environment: DayEnvironment;
   confidence: number;
@@ -23,6 +32,7 @@ export type LemonsvilleSceneInput = Readonly<{
   phase: ScenePhase;
   sold: number;
   prepared: number;
+  priceCents: number;
   durationMs: number;
 }>;
 
@@ -50,7 +60,10 @@ const loadSceneRuntime = (): Promise<SceneRuntime> => {
 };
 
 const describeScene = (input: LemonsvilleSceneInput): string => {
-  const weather = input.environment.weather.kind.replaceAll("-", " ");
+  const weather =
+    input.environment.weather.kind === "hot-and-dry"
+      ? "partly cloudy"
+      : input.environment.weather.kind.replaceAll("-", " ");
   const activity =
     input.phase === "forecast"
       ? "forecast preview"
@@ -58,27 +71,45 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
         ? `${String(input.sold)} sales from ${String(input.prepared)} prepared glasses`
         : "scene paused";
 
-  return `${weather} weather; confidence ${String(input.confidence)}/5; ${String(input.visibleSigns)} advertising signs; ${String(input.prepared)} glasses prepared; ${activity}.`;
+  const price =
+    input.priceCents < 100
+      ? String(Math.max(0, input.priceCents)) + "¢"
+      : "$" + (Math.max(0, input.priceCents) / 100).toFixed(2);
+
+  return `${weather} weather; confidence ${String(input.confidence)}/5; ${String(input.visibleSigns)} advertising signs at ${price} per cup; ${String(input.prepared)} glasses prepared; ${activity}.`;
 };
 
 const createState = (
   input: LemonsvilleSceneInput,
   reducedMotion: boolean,
-): LemonsvilleSceneState =>
-  Object.freeze({
+): LemonsvilleSceneState => {
+  const customerActivity = activityForConfidence(input.confidence);
+  const prepared = Math.max(0, input.prepared);
+  const sold = Math.max(0, input.sold);
+  const priceCents = Math.max(0, input.priceCents);
+  const durationMs = Math.max(0, input.durationMs);
+  return Object.freeze({
     weather: input.environment.weather.kind,
-    customerActivity: activityForConfidence(input.confidence),
+    customerActivity,
     visibleSigns: input.visibleSigns,
-    prepared: Math.max(0, input.prepared),
-    sold: Math.max(0, input.sold),
-    durationMs: Math.max(0, input.durationMs),
+    prepared,
+    sold,
+    priceCents,
+    durationMs,
+    storyboard: createStreetStoryboard({
+      durationMs: Math.max(1, durationMs),
+      prepared,
+      sold: input.phase === "simulation" ? sold : 0,
+      visibleSigns: input.visibleSigns,
+      priceCents,
+      ambientPedestrianCount: pedestrianCount[customerActivity],
+    }),
     sellThroughBasisPoints:
-      input.prepared > 0
-        ? Math.round((Math.max(0, input.sold) / input.prepared) * 10_000)
-        : 0,
+      prepared > 0 ? Math.round((sold / prepared) * 10_000) : 0,
     phase: input.phase,
     reducedMotion,
   });
+};
 
 export const createLemonsvilleSceneView = (elements: SceneElements): LemonsvilleSceneView => {
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -159,6 +190,7 @@ export const createLemonsvilleSceneView = (elements: SceneElements): Lemonsville
     elements.canvas.dataset["presentationDurationMs"] = String(Math.max(0, input.durationMs));
     elements.canvas.dataset["preparedCups"] = String(Math.max(0, input.prepared));
     elements.canvas.dataset["plannedSales"] = String(Math.max(0, input.sold));
+    elements.canvas.dataset["priceCents"] = String(Math.max(0, input.priceCents));
     elements.equivalent.textContent = description;
     elements.fallbackDescription.textContent = description;
 

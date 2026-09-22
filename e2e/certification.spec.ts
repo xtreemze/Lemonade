@@ -147,6 +147,13 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "data-presentation-duration-ms",
     String(SIMULATION_PRESENTATION_MS),
   );
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-price-cents", "150");
+  await expect(page.locator("#scene-equivalent")).toContainText("$1.50 per cup");
+  await expect(page.locator("#scene-canvas")).toHaveAttribute(
+    "data-sign-price-label",
+    "$1.50",
+    { timeout: 4_000 },
+  );
   const simulationStage = await page.locator(".stand-stage").boundingBox();
   if (simulationStage === null) throw new Error("expected simulation stage bounds");
   expect(simulationStage.width).toBeGreaterThanOrEqual(359);

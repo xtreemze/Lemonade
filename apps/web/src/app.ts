@@ -379,6 +379,7 @@ export class LemonadeApp {
       case "price":
         this.#price = event.detail.value;
         this.#renderDecisionState();
+        this.#renderScene();
         break;
     }
   };
@@ -731,6 +732,7 @@ export class LemonadeApp {
       phase: scenePhase,
       sold: resolvedDay === null ? 0 : Number(resolvedDay.sold),
       prepared: resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses),
+      priceCents: resolvedDay === null ? this.#price : Number(resolvedDay.decision.price),
       durationMs:
         scenePhase === "simulation"
           ? SIMULATION_PRESENTATION_MS
