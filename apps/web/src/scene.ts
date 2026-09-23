@@ -9,6 +9,7 @@ import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
 import type { DayEnvironment } from "@lemonade/simulation";
 
 import type { createLemonsvilleScene } from "./scene-runtime.js";
+import { sceneBackendFromStorage } from "./scene-backend.js";
 
 const activityForConfidence = (confidence: number): CustomerActivity => {
   if (confidence <= 0) return "quiet";
@@ -69,11 +70,17 @@ type SceneRuntime = Readonly<{
   createLemonsvilleScene: typeof createLemonsvilleScene;
 }>;
 
-let sceneRuntimePromise: Promise<SceneRuntime> | null = null;
+let threeSceneRuntimePromise: Promise<SceneRuntime> | null = null;
+let babylonSceneRuntimePromise: Promise<SceneRuntime> | null = null;
 
 const loadSceneRuntime = (): Promise<SceneRuntime> => {
-  sceneRuntimePromise ??= import("./scene-runtime.js");
-  return sceneRuntimePromise;
+  const backend = sceneBackendFromStorage(window.localStorage);
+  if (backend === "babylon") {
+    babylonSceneRuntimePromise ??= import("./scene-runtime-babylon.js");
+    return babylonSceneRuntimePromise;
+  }
+  threeSceneRuntimePromise ??= import("./scene-runtime.js");
+  return threeSceneRuntimePromise;
 };
 
 const describeScene = (input: LemonsvilleSceneInput): string => {
@@ -163,7 +170,13 @@ export const createLemonsvilleSceneView = (
 
       const description = describeScene(lastInput);
       const state = createState(lastInput, reducedMotion);
-      const nextController = createLemonsvilleScene(elements.canvas, state, options.sceneOptions);
+      const selectedBackend = sceneBackendFromStorage(window.localStorage);
+      elements.canvas.dataset["rendererBackend"] = selectedBackend;
+      const nextController = createLemonsvilleScene(
+        elements.canvas,
+        state,
+        options.sceneOptions,
+      );
 
       if (nextController === null) {
         showFallback(description);
