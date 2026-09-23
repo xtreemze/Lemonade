@@ -29,10 +29,8 @@ import {
   characterGroundClearance,
   WORLD_SCALE,
 } from "./world-scale.js";
-import { updateNeighborhoodWind } from "./neighborhood.js";
 import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
 import { STREET_LAYOUT } from "./street-layout.js";
-import type { SellerGestureApplier } from "./character-detail.js";
 import type { StandDetailController } from "./stand-detail.js";
 import { businessDayFrameAt, type WeatherDetailController } from "./weather-detail.js";
 import {
@@ -73,8 +71,8 @@ export interface LemonsvilleSceneController {
   update(state: LemonsvilleSceneState): void;
   resize(width: number, height: number): void;
   dispose(): void;
-  scene?: any; // Three.js Scene for dev tools
-  camera?: any; // Three.js Camera for dev tools
+  readonly scene: Scene;
+  readonly camera: PerspectiveCamera;
 }
 
 const PASSERBY_POOL_SIZE = 128;
