@@ -574,6 +574,37 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] =
 
 export type NeighborhoodWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 
+type WindRegistry = Readonly<{
+  rootChildCount: number;
+  objects: readonly Object3D[];
+}>;
+
+const windRegistryByScene = new WeakMap<Scene, WindRegistry>();
+
+const refreshWindRegistry = (scene: Scene): WindRegistry => {
+  const objects: Object3D[] = [];
+  scene.traverse((object) => {
+    if (object.userData["windResponsive"] === true) objects.push(object);
+  });
+  const registry = Object.freeze({
+    rootChildCount: scene.children.length,
+    objects: Object.freeze(objects),
+  });
+  windRegistryByScene.set(scene, registry);
+  return registry;
+};
+
+const windRegistryFor = (scene: Scene): WindRegistry => {
+  const cached = windRegistryByScene.get(scene);
+  if (
+    cached !== undefined &&
+    cached.rootChildCount === scene.children.length
+  ) {
+    return cached;
+  }
+  return refreshWindRegistry(scene);
+};
+
 export const weatherWindStrength = (weather: NeighborhoodWeather): number => {
   switch (weather) {
     case "sunny":
@@ -593,8 +624,7 @@ export const updateNeighborhoodWind = (
   weather: NeighborhoodWeather,
 ): void => {
   const strength = weatherWindStrength(weather);
-  scene.traverse((object) => {
-    if (object.userData["windResponsive"] !== true) return;
+  for (const object of windRegistryFor(scene).objects) {
     const phase =
       typeof object.userData["windPhase"] === "number"
         ? object.userData["windPhase"]
@@ -612,7 +642,7 @@ export const updateNeighborhoodWind = (
       Math.sin(seconds * 2.7 + phase * 1.7) * 0.3;
     object.rotation.x = baseX + gust * strength * 0.24;
     object.rotation.z = baseZ + gust * strength;
-  });
+  }
 };
 
 
@@ -943,6 +973,8 @@ export const populateNeighborhood = (
   distantHill(scene, 104, -100, 30, 12, 0x718967);
   atmosphereBand(scene, -82, 12, 260, 42, 0xb9c8bd, 0.08);
   atmosphereBand(scene, -116, 15, 300, 48, 0xc8d2ca, 0.11);
+
+  refreshWindRegistry(scene);
 
   return Object.freeze({
     houseLods: layout.frontProperties.length + housePositions.length,
