@@ -13,5 +13,8 @@
   },
   "dependencies": {
     "@lemonade/simulation": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.1"
   }
 }
