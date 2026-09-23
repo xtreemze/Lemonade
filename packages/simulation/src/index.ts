@@ -7,6 +7,7 @@ export * from "./finance.js";
 export * from "./legacy.js";
 export * from "./memory.js";
 export type * from "./model.js";
+export * from "./occurrences.js";
 export * from "./primitives.js";
 export * from "./rng.js";
 export * from "./scale.js";
