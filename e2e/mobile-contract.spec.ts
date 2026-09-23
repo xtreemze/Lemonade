@@ -322,6 +322,64 @@ for (const viewport of viewports) {
   });
 }
 
+const bankruptcyViewports: readonly MobileViewport[] = Object.freeze([
+  { name: "bankruptcy compact portrait", width: 320, height: 568 },
+  { name: "bankruptcy compact landscape", width: 568, height: 320 },
+]);
+
+for (const viewport of bankruptcyViewports) {
+  test(`mobile contract: ${viewport.name} keeps the terminal run fully visible`, async ({ browser }, testInfo) => {
+    test.slow();
+
+    const configuredBaseURL = testInfo.project.use.baseURL;
+    if (typeof configuredBaseURL !== "string") {
+      throw new TypeError("Mobile contract requires a configured Playwright baseURL.");
+    }
+
+    const context = await browser.newContext({
+      baseURL: configuredBaseURL,
+      viewport: { width: viewport.width, height: viewport.height },
+      screen: { width: viewport.width, height: viewport.height },
+      deviceScaleFactor: 1,
+      hasTouch: true,
+      isMobile: true,
+      reducedMotion: "reduce",
+    });
+    const page = await context.newPage();
+
+    try {
+      await page.goto("./", { waitUntil: "commit" });
+      const main = page.getByRole("main");
+      await expect(main).toHaveAttribute("data-view", "planning");
+
+      await page.getByRole("spinbutton", { name: "Glasses Exact" }).fill("10");
+      await page.getByRole("spinbutton", { name: "Signs Exact" }).fill("0");
+      await page.getByRole("spinbutton", { name: "Price Exact cents" }).fill("1");
+      await page.getByRole("button", { name: "Sell for the day" }).click();
+
+      await expect(main).toHaveAttribute("data-view", "report");
+      await expect(page.locator("#report-milestone")).toContainText("Bankrupt");
+      await expectViewportContract(page, "report");
+      await expectCenteredBottomAction(
+        page,
+        page.getByRole("button", { name: "Review sales history" }),
+        viewport.height <= 360 ? 18 : 24,
+      );
+
+      await page.getByRole("button", { name: "Review sales history" }).click();
+      await expect(main).toHaveAttribute("data-view", "history");
+      await expectViewportContract(page, "history");
+      await expectCenteredBottomAction(
+        page,
+        page.getByRole("button", { name: "Start a new game" }),
+        viewport.height <= 360 ? 18 : 24,
+      );
+    } finally {
+      await context.close();
+    }
+  });
+}
+
 for (const viewport of desktopViewports) {
   test(`fullscreen contract: ${viewport.name} never falls back to page scrolling`, async ({ browser }, testInfo) => {
     test.slow();
