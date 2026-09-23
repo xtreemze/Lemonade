@@ -218,7 +218,7 @@ describe("procedural residential layout", () => {
         planting.propertyRole !== null && planting.yardZone === "back",
     );
     expect(backyardTrees.length).toBeGreaterThan(
-      layout.trees.length / 3,
+      allProperties.length * 0.6,
     );
     for (const tree of backyardTrees) {
       const property =
