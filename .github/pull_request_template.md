@@ -1,3 +1,14 @@
+## AI execution
+
+<!-- For AI-authored or AI-reviewed work. Human-only PRs may write N/A. -->
+
+- Authoring role/model:
+- Reviewing role/model:
+- Base/integration point:
+- Dependency PRs:
+- High-conflict/serialization-zone files:
+- Overlap check against open PRs completed: [ ] Yes [ ] N/A
+
 ## Outcome
 
 <!-- What user-visible outcome or invariant changes? -->
