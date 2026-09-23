@@ -91,11 +91,12 @@ const footprintIntersectsRect = (
 
 const resolvePropertyOverlaps = (
   properties: readonly ResidentialPropertySpec[],
+  seed: number,
 ): readonly ResidentialPropertySpec[] => {
   const mutable = properties.map((p) => ({ ...p }));
   const minClearance = 0.5;
 
-  for (let pass = 0; pass < 8; pass += 1) {
+  for (let pass = 0; pass < 16; pass += 1) {
     let anyMoved = false;
     for (let i = 0; i < mutable.length; i += 1) {
       const a = mutable[i];
@@ -122,11 +123,26 @@ const resolvePropertyOverlaps = (
       }
 
       if (totalPushX !== 0 || totalPushZ !== 0) {
+        const footprint = propertyFootprint(a);
+        const cleared = clearHouseFromBaseHardscape(
+          {
+            x: a.houseX - totalPushX,
+            z: a.houseZ - totalPushZ,
+          },
+          footprint.halfWidth,
+          footprint.halfDepth,
+          seed,
+        );
+        const deltaX = cleared.x - a.houseX;
         anyMoved = true;
         mutable[i] = {
           ...a,
-          houseX: a.houseX - totalPushX,
-          houseZ: a.houseZ - totalPushZ,
+          houseX: cleared.x,
+          houseZ: cleared.z,
+          drivewayX:
+            a.drivewayX === null ? null : a.drivewayX + deltaX,
+          mailboxX:
+            a.mailboxX === null ? null : a.mailboxX + deltaX,
         };
       }
     }
@@ -710,15 +726,17 @@ export const residentialAccessLayout = (
       : roadCenterZ >= property.houseZ
         ? road.minZ
         : road.maxZ;
-  const drivewayDeltaX = drivewaySidewalkX - drivewayX;
-  const drivewayDeltaZ = drivewaySidewalkZ - parkingZ;
+  const drivewaySurfaceX = drivewaySidewalkX;
+  const drivewaySurfaceZ = sidewalkEdgeZ;
+  const drivewayDeltaX = drivewaySurfaceX - drivewayX;
+  const drivewayDeltaZ = drivewaySurfaceZ - parkingZ;
   const drivewayLength = Math.max(
     3.2,
     Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.3,
   );
   const drivewayDepth = drivewayLength;
-  const drivewayCenterX = (drivewayX + drivewaySidewalkX) / 2;
-  const drivewayCenterZ = (parkingZ + drivewaySidewalkZ) / 2;
+  const drivewayCenterX = (drivewayX + drivewaySurfaceX) / 2;
+  const drivewayCenterZ = (parkingZ + drivewaySurfaceZ) / 2;
   const drivewayRotationY = Math.atan2(drivewayDeltaZ, drivewayDeltaX);
 
   return Object.freeze({
@@ -779,7 +797,7 @@ const drivewayExclusionRectForProperty = (
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.drivewaySidewalkX, z: access.drivewaySidewalkZ },
+    { x: access.drivewaySidewalkX, z: access.sidewalkEdgeZ },
     WORLD_SCALE.vehicle.width,
   );
 };
@@ -1245,7 +1263,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     safeSeed,
   );
   const allPropertiesRaw = [...front, ...middle, ...back, ...outer];
-  const allPropertiesResolved = resolvePropertyOverlaps(allPropertiesRaw);
+  const allPropertiesResolved = resolvePropertyOverlaps(allPropertiesRaw, safeSeed);
 
   const resolvedByRole = new Map(allPropertiesResolved.map((p) => [p.role, p]));
   const resolveProperties = (props: readonly ResidentialPropertySpec[]) =>
@@ -1285,7 +1303,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       7,
     ),
   ];
-  for (const fallbackSalt of [4_050, 4_850] as const) {
+  for (const fallbackSalt of [4_050, 4_850, 5_650, 6_450, 7_250] as const) {
     const assignedRoles = new Set(
       backyardTrees
         .map((planting) => planting.propertyRole)
