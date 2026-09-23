@@ -32,9 +32,35 @@ export const disableSceneViewer = (): void => {
   }
 };
 
+const RENDERER_STRESS_KEY = "LEMONADE_DEV_RENDERER_STRESS";
+
+export const isRendererStressFixtureEnabled = (): boolean =>
+  typeof localStorage !== "undefined" &&
+  localStorage.getItem(RENDERER_STRESS_KEY) === "1";
+
+export const enableRendererStressFixture = (): void => {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(RENDERER_STRESS_KEY, "1");
+  localStorage.setItem("LEMONADE_DEV_SCENE_VIEWER", "1");
+  window.location.reload();
+};
+
+export const disableRendererStressFixture = (): void => {
+  if (typeof localStorage === "undefined") return;
+  localStorage.removeItem(RENDERER_STRESS_KEY);
+  window.location.reload();
+};
+
+export interface SceneViewerOptions {
+  enableGizmo?: boolean;
+  weather?: SceneWeather;
+  phase?: ScenePhase;
+  stress?: boolean;
+}
+
 export const createPersistentSceneViewer = (
   appRoot: HTMLElement,
-  options: { enableGizmo?: boolean; weather?: SceneWeather; phase?: ScenePhase } = {},
+  options: SceneViewerOptions = {},
 ): { scene: ReturnType<typeof createLemonsvilleScene>; dispose: () => void } | null => {
   // Clear app UI
   appRoot.innerHTML = "";
@@ -92,7 +118,10 @@ export const createPersistentSceneViewer = (
 
   const title = document.createElement("div");
   title.style.cssText = "font-weight: bold; margin-bottom: 12px; color: #ffff00; font-size: 14px;";
-  title.textContent = "🎥 Scene Viewer";
+  const stress = options.stress === true;
+  const phase: ScenePhase = stress ? "simulation" : (options.phase ?? "simulation");
+
+  title.textContent = stress ? "🎥 Renderer Stress Fixture" : "🎥 Scene Viewer";
   panel.appendChild(title);
 
   const info = document.createElement("div");
@@ -108,7 +137,7 @@ export const createPersistentSceneViewer = (
   `;
   info.innerHTML = `
     <div><strong>Weather:</strong> ${options.weather ?? "sunny"}</div>
-    <div><strong>Phase:</strong> ${options.phase ?? "simulation"}</div>
+    <div><strong>Phase:</strong> ${phase}</div>\n    <div><strong>Profile:</strong> ${stress ? "maximum-load deterministic" : "interactive"}</div>
     <div><strong>Gizmo:</strong> ${options.enableGizmo ? "✓ Enabled" : "✗ Disabled"}</div>
     <div style="margin-top: 8px; color: #aaa; font-size: 10px;">
       Click scene to select objects<br/>
@@ -158,24 +187,25 @@ export const createPersistentSceneViewer = (
   appRoot.appendChild(container);
 
   // Create scene state
+  const prepared = stress ? 400 : 20;
+  const sold = stress ? 400 : 10;
+  const visibleSigns = stress ? 40 : 5;
+  const ambientPedestrianCount = stress ? 60 : 12;
+  const durationMs = 14_000;
+
   const sceneState: LemonsvilleSceneState = Object.freeze({
     weather: options.weather ?? "sunny",
-    visibleSigns: 5,
-    prepared: 20,
-    durationMs: 14000,
+    visibleSigns,\n    prepared,\n    durationMs,
     confidence: 3,
     nextConfidence: 3,
     characterSeed: 12345,
     dayNumber: 1,
     storyboard: createStreetStoryboard({
-      durationMs: 14000,
-      prepared: 20,
-      sold: 10,
-      visibleSigns: 5,
+      durationMs,\n      prepared,\n      sold,\n      visibleSigns,
       priceCents: 150,
-      ambientPedestrianCount: 12,
+      ambientPedestrianCount,
     }),
-    phase: options.phase ?? "simulation",
+    phase,
     reducedMotion: false,
   });
 
@@ -248,6 +278,9 @@ export const createPersistentSceneViewer = (
       `Geometries: ${String(snapshot.geometries)}`,
       `Textures: ${String(snapshot.textures)}`,
       `Renderer frame: ${String(snapshot.frame)}`,
+      `Fixture: ${stress ? "stress" : "interactive"}`,
+      `Storyboard sales: ${String(sceneState.storyboard.sales.length)}`,
+      `Storyboard passers: ${String(sceneState.storyboard.passersBy.length)}`,
     ].join("\n");
   };
   updateDiagnostics();
@@ -266,6 +299,8 @@ export const createPersistentSceneViewer = (
 interface SceneViewerDevWindow {
   enableSceneViewer: typeof enableSceneViewer;
   disableSceneViewer: typeof disableSceneViewer;
+  enableRendererStressFixture: typeof enableRendererStressFixture;
+  disableRendererStressFixture: typeof disableRendererStressFixture;
 }
 
 // Make globally available
@@ -273,4 +308,6 @@ if (typeof window !== "undefined") {
   const devWindow = window as unknown as SceneViewerDevWindow;
   devWindow.enableSceneViewer = enableSceneViewer;
   devWindow.disableSceneViewer = disableSceneViewer;
+  devWindow.enableRendererStressFixture = enableRendererStressFixture;
+  devWindow.disableRendererStressFixture = disableRendererStressFixture;
 }
