@@ -21,7 +21,8 @@
     "lint:antipatterns": "node scripts/lint-antipatterns.mjs",
     "lint:mobile-contract": "node scripts/lint-mobile-contract.mjs",
     "test:mobile-contract": "playwright test e2e/mobile-contract.spec.ts",
-    "verify:mobile": "pnpm lint:antipatterns && pnpm lint:mobile-contract && pnpm test:mobile-contract"
+    "verify:mobile": "pnpm lint:antipatterns && pnpm lint:mobile-contract && pnpm test:mobile-contract",
+    "test:browser": "playwright test e2e/certification.spec.ts e2e/daily-loop.spec.ts e2e/weekly-report.spec.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
