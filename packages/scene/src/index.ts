@@ -29,6 +29,10 @@ import {
   WORLD_SCALE,
 } from "./world-scale.js";
 import { updateNeighborhoodWind } from "./neighborhood.js";
+import {
+  neighborhoodSeedForCharacterSeed,
+  type SceneNeighborhoodOccurrence,
+} from "./neighborhood-occurrences.js";
 import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
 import { STREET_LAYOUT } from "./street-layout.js";
 import type { SellerGestureApplier } from "./character-detail.js";
@@ -59,6 +63,8 @@ export type LemonsvilleSceneState = Readonly<{
   confidence: number;
   nextConfidence: number;
   characterSeed: number;
+  dayNumber: number;
+  neighborhoodOccurrences: readonly SceneNeighborhoodOccurrence[];
   storyboard: StreetStoryboard;
   phase: ScenePhase;
   reducedMotion: boolean;
@@ -536,6 +542,8 @@ export const createLemonsvilleScene = (
           phase: ScenePhase,
           elapsedMs: number,
           durationMs: number,
+          dayNumber: number,
+          occurrences: readonly SceneNeighborhoodOccurrence[],
         ): void;
       }>
     | null = null;
@@ -612,7 +620,10 @@ export const createLemonsvilleScene = (
   void import("./neighborhood.js")
     .then(({ populateNeighborhood }) => {
       if (disposed) return;
-      populateNeighborhood(scene, initialState.characterSeed ^ 0x4c_45_4d_4f);
+      populateNeighborhood(
+        scene,
+        neighborhoodSeedForCharacterSeed(initialState.characterSeed),
+      );
       render();
     })
     .catch(() => undefined);
@@ -644,8 +655,16 @@ export const createLemonsvilleScene = (
         scene,
         initialState.characterSeed,
         customers.map((customer) => customer.root),
+        neighborhoodSeedForCharacterSeed(initialState.characterSeed),
       );
-      ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
+      ambientLife.update(
+        state.weather,
+        state.phase,
+        0,
+        Math.max(1, state.durationMs),
+        state.dayNumber,
+        state.neighborhoodOccurrences,
+      );
       render();
     })
     .catch(() => undefined);
@@ -784,7 +803,9 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, storyboard.durationMs)
+      Math.max(1, storyboard.durationMs),
+      state.dayNumber,
+      state.neighborhoodOccurrences,
     );
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
@@ -1016,7 +1037,9 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       elapsedMs,
-      storyboard.durationMs
+      storyboard.durationMs,
+      state.dayNumber,
+      state.neighborhoodOccurrences,
     );
 
     const remainingStock =
@@ -1068,7 +1091,10 @@ export const createLemonsvilleScene = (
       state.prepared !== nextState.prepared ||
       state.visibleSigns !== nextState.visibleSigns ||
       state.confidence !== nextState.confidence ||
-      state.nextConfidence !== nextState.nextConfidence;
+      state.nextConfidence !== nextState.nextConfidence ||
+      state.dayNumber !== nextState.dayNumber ||
+      state.weather !== nextState.weather ||
+      state.neighborhoodOccurrences !== nextState.neighborhoodOccurrences;
 
     state = nextState;
     storyboard = state.storyboard;
@@ -1100,7 +1126,9 @@ export const createLemonsvilleScene = (
       state.weather,
       state.phase,
       0,
-      Math.max(1, state.durationMs)
+      Math.max(1, state.durationMs),
+      state.dayNumber,
+      state.neighborhoodOccurrences,
     );
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
@@ -1136,3 +1164,11 @@ export const createLemonsvilleScene = (
 };
 
 export { createGizmoController, type GizmoController } from "./gizmo-controller.js";
+export {
+  activeNeighborhoodOccurrences,
+  neighborhoodSeedForCharacterSeed,
+  neighborhoodSemanticLayoutForCharacterSeed,
+  phaseMinuteAt,
+  type SceneNeighborhoodOccurrence,
+  type SceneNeighborhoodSemanticLayout,
+} from "./neighborhood-occurrences.js";
