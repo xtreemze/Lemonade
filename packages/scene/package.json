@@ -12,7 +12,9 @@
     "./storyboard-create": "./src/storyboard-create.ts",
     "./gizmo-controller": "./src/gizmo-controller.ts",
     "./stand-anchors": "./src/stand-anchors.ts",
-    "./street-layout": "./src/street-layout.ts"
+    "./street-layout": "./src/street-layout.ts",
+    "./residential-layout": "./src/residential-layout.ts",
+    "./world-scale": "./src/world-scale.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -20,7 +22,8 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "three": "^0.186.0"
+    "three": "^0.186.0",
+    "@lemonade/scene-contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/three": "^0.186.0"
