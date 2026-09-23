@@ -1263,12 +1263,12 @@ body:has(.game-shell[data-view="forecast"]) {
   }
 
   .game-shell[data-view="report"] .report-content {
-    align-content: stretch;
+    align-content: start;
     grid-template-areas:
       "metrics ledger"
       "notes ledger";
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-rows: auto auto;
   }
 
   .game-shell[data-view="report"] .report-content:has(.weekly-report) {
@@ -1276,30 +1276,12 @@ body:has(.game-shell[data-view="forecast"]) {
       "metrics weekly"
       "ledger weekly"
       "notes weekly";
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
-  }
-
-  .game-shell[data-view="report"] .ledger-breakdown {
-    align-self: stretch;
-  }
-
-  .game-shell[data-view="report"] .ledger-breakdown table,
-  .game-shell[data-view="report"] .ledger-breakdown tbody {
-    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-rows: auto auto auto;
   }
 
   .game-shell[data-view="report"] .ledger-breakdown tbody {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .game-shell[data-view="report"] .weekly-report {
-    align-self: stretch;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-  }
-
-  .game-shell[data-view="report"] .weekly-results-grid {
-    align-content: stretch;
   }
 
   .game-shell[data-view="report"] .report-content:has(.weekly-report) .ledger-breakdown tbody {
@@ -1307,24 +1289,71 @@ body:has(.game-shell[data-view="forecast"]) {
   }
 
   .game-shell[data-view="report"] .report-notes {
-    align-self: end;
+    align-self: start;
   }
 }
 
 @media (width >= 64rem) {
   .game-shell[data-view="report"] .report-panel {
-    padding-inline: clamp(12px, 2vw, 24px);
+    width: min(100%, 88rem);
+    margin-inline: auto;
+    padding:
+      clamp(10px, 1.5dvh, 16px)
+      clamp(18px, 2.5vw, 36px)
+      74px;
   }
 
   .game-shell[data-view="report"] .report-content,
   .game-shell[data-view="report"] .report-content:has(.weekly-report) {
-    grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
-    gap: clamp(8px, 1.2vw, 14px);
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(12px, 1.5vw, 22px);
+  }
+
+  .game-shell[data-view="report"] .panel-heading h2 {
+    font-size: clamp(1.4rem, 2vw, 1.9rem);
+  }
+
+  .game-shell[data-view="report"] .profit,
+  .game-shell[data-view="report"] .loss {
+    font-size: clamp(1.8rem, 2.6vw, 2.4rem);
   }
 
   .game-shell[data-view="report"] .results-grid > div,
   .game-shell[data-view="report"] .weekly-results-grid > div {
-    padding: 7px 8px;
+    padding: 8px 10px;
+  }
+
+  .game-shell[data-view="report"] .results-grid dt,
+  .game-shell[data-view="report"] .ledger-breakdown h3 {
+    font-size: 0.68rem;
+  }
+
+  .game-shell[data-view="report"] .results-grid dd {
+    font-size: 1rem;
+  }
+
+  .game-shell[data-view="report"] .ledger-breakdown th,
+  .game-shell[data-view="report"] .ledger-breakdown td {
+    padding: 7px 9px;
+    font-size: 0.76rem;
+  }
+
+  .game-shell[data-view="report"] .weekly-report {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .game-shell[data-view="report"] .weekly-report-heading h3 {
+    font-size: 1.15rem;
+  }
+
+  .game-shell[data-view="report"] .weekly-profit,
+  .game-shell[data-view="report"] .weekly-loss {
+    font-size: 1.35rem;
+  }
+
+  .game-shell[data-view="report"] .weekly-results-grid dd {
+    font-size: 0.86rem;
   }
 }
 
