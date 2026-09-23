@@ -45,26 +45,30 @@ export interface GizmoController {
   dispose(): void;
 }
 
-const objectTransform = (object: Object3D): ObjectTransform =>
-  Object.freeze({
+const objectTransform = (object: Object3D): ObjectTransform => {
+  const position: [number, number, number] = [
+    object.position.x,
+    object.position.y,
+    object.position.z,
+  ];
+  const rotation: [number, number, number] = [
+    object.rotation.x,
+    object.rotation.y,
+    object.rotation.z,
+  ];
+  const scale: [number, number, number] = [
+    object.scale.x,
+    object.scale.y,
+    object.scale.z,
+  ];
+  return Object.freeze({
     uuid: object.uuid,
     name: object.name,
-    position: Object.freeze([
-      object.position.x,
-      object.position.y,
-      object.position.z,
-    ]),
-    rotation: Object.freeze([
-      object.rotation.x,
-      object.rotation.y,
-      object.rotation.z,
-    ]),
-    scale: Object.freeze([
-      object.scale.x,
-      object.scale.y,
-      object.scale.z,
-    ]),
+    position: Object.freeze(position),
+    rotation: Object.freeze(rotation),
+    scale: Object.freeze(scale),
   });
+};
 
 const isDescendantOf = (object: Object3D, ancestor: Object3D): boolean => {
   let current: Object3D | null = object;
@@ -166,7 +170,7 @@ export const createGizmoController = (options: GizmoOptions): GizmoController =>
     if (event.button !== 0) return;
     pointerPosition(event);
     raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.intersectObjects(selectableObjects(), false)[0];
+    const hit = raycaster.intersectObjects([...selectableObjects()], false)[0];
     if (hit === undefined) {
       deselectObject();
       return;
