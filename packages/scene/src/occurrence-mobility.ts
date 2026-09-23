@@ -458,7 +458,7 @@ const trafficPoseAtProgress = (
   });
   const trafficWaiting = !pedestrianWaiting && trafficBlocker !== undefined;
   let point = sampled.point;
-  if (pedestrianWaiting && conflict !== null) {
+  if (pedestrianWaiting) {
     const dx = sampled.point.x - conflict.point.x;
     const dz = sampled.point.z - conflict.point.z;
     const magnitude = Math.max(0.001, Math.hypot(dx, dz));
@@ -613,7 +613,7 @@ export const createOccurrenceMobilityProjector = (
 
       for (const [household, events] of vehicleEventsByHousehold) {
         const property = properties[household];
-        if (property === undefined || property.drivewayX === null) continue;
+        if (property?.drivewayX === null || property?.drivewayX === undefined) continue;
         const departure = events.find(
           (event) => event.kind === "vehicle-departure",
         );
