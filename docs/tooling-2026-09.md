@@ -12,8 +12,8 @@ This review rechecks the Lemonade web stack after the MVP, with two goals: use c
 | Build | Vite 8.3.x | Current stable Vite 8 line; Rolldown-based production build remains a good fit for a static GitHub Pages application. |
 | Runtime | Node 24 LTS | Prefer the active LTS line over Node 26 Current for CI and contributor reproducibility. |
 | Package manager | pnpm 12.5.x | Current stable pnpm 12 line. |
-| Language | TypeScript 6.0.x for now | TypeScript 7 is stable, but stable typescript-eslint currently documents support below TypeScript 6.1. Keep supported typed linting rather than forcing an unsupported pairing. |
-| Lint | ESLint 10.11.x + typescript-eslint 8.70.x + repository policy gate | Keeps strict type-aware rules, enforces simulation purity, and rejects responsive/CSS anti-patterns without adding a CSS-tooling dependency. |
+| Language | TypeScript 6.0.x | Strict compiler checking remains an independent gate from linting; upgrade TypeScript separately after repository-wide validation. |
+| Lint / format | Biome 2.5.14 + repository policy gates | Enables all stable rules as errors, project/type/test/Playwright domains, targeted type-safety nursery rules, simulation-purity restrictions, and the existing responsive/CSS policy gates. |
 | Unit/invariant tests | Vitest 5.0.x | Current stable major and aligned with Vite. |
 | Browser acceptance | Playwright 1.63.x | Already current stable and directly certifies the production Pages artifact. |
 | 3D | Three.js 0.186.x | Already current; specialized scene-graph/WebGL complexity justifies the dependency. Align its type package to the same release. |
