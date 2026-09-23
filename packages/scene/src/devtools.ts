@@ -130,9 +130,7 @@ const detailsFor = (object: Object3D): SceneObjectDetails => {
     childCount: object.children.length,
     material:
       object instanceof Mesh
-        ? materialNames(
-            (object as Mesh<BufferGeometry, Material | Material[]>).material,
-          )
+        ? materialNames((object as MaterialObject).material)
         : [],
   });
 };
