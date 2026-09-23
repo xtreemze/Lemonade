@@ -22,6 +22,7 @@ import {
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import { createGizmoController, type GizmoController } from "./gizmo-controller.js";
+import { createSceneDevtools, type SceneDevtoolsController } from "./devtools.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { walkingCycleAtDistance } from "./gait.js";
@@ -73,8 +74,9 @@ export interface LemonsvilleSceneController {
   update(state: LemonsvilleSceneState): void;
   resize(width: number, height: number): void;
   dispose(): void;
-  scene?: any; // Three.js Scene for dev tools
-  camera?: any; // Three.js Camera for dev tools
+  readonly scene: Scene;
+  readonly camera: PerspectiveCamera;
+  readonly devtools: SceneDevtoolsController;
 }
 
 const PASSERBY_POOL_SIZE = 128;
@@ -624,6 +626,15 @@ export const createLemonsvilleScene = (
     renderer.render(scene, camera);
   };
 
+  const devtools = createSceneDevtools({
+    scene,
+    camera,
+    renderer,
+    getState: () => state,
+    render,
+    gizmo: gizmoController,
+  });
+
   void import("./neighborhood.js")
     .then(({ populateNeighborhood }) => {
       if (disposed) return;
@@ -1148,7 +1159,8 @@ export const createLemonsvilleScene = (
   };
 
   update(initialState);
-  return Object.freeze({ update, resize, dispose, scene, camera });
+  return Object.freeze({ update, resize, dispose, scene, camera, devtools });
 };
 
 export { createGizmoController, type GizmoController } from "./gizmo-controller.js";
+export { createSceneDevtools, type SceneDevtoolsController } from "./devtools.js";
