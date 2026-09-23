@@ -1,4 +1,3 @@
-// biome-ignore lint/correctness/noUnresolvedImports: certify builds simulation/dist before loading this module.
 import {
   assertBalanceCertification,
   formatBalanceCertification,
