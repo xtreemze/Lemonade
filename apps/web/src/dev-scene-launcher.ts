@@ -9,7 +9,7 @@
 
 import type { SceneWeather, ScenePhase } from "@lemonade/scene";
 
-export type ScenePreset = {
+export interface ScenePreset {
   name: string;
   weather: SceneWeather;
   phase: ScenePhase;
@@ -17,7 +17,7 @@ export type ScenePreset = {
   prepared?: number;
   sold?: number;
   visibleSigns?: number;
-};
+}
 
 export const SCENE_PRESETS: ScenePreset[] = [
   // Forecast Presets
@@ -279,7 +279,9 @@ export const createSceneLauncherUI = (
   SCENE_PRESETS.forEach((preset) => {
     const btn = document.createElement("button");
     btn.textContent = preset.name;
-    btn.onclick = () => onPresetSelect(preset);
+    btn.onclick = () => {
+      onPresetSelect(preset);
+    };
     btn.style.cssText = `
       padding: 8px 12px;
       background: #1a1a2e;
@@ -428,7 +430,7 @@ export const createSceneLauncherUI = (
       name: "Custom",
       weather: weatherSelect.value as SceneWeather,
       phase: phaseSelect.value as ScenePhase,
-      confidence: parseInt(confidenceSlider.value),
+      confidence: Number.parseInt(confidenceSlider.value, 10),
       prepared: 10,
       sold: 0,
       visibleSigns: 2,
@@ -442,10 +444,19 @@ export const createSceneLauncherUI = (
   return panel;
 };
 
+declare global {
+  interface Window {
+    enableSceneLauncher: typeof enableSceneLauncher;
+    disableSceneLauncher: typeof disableSceneLauncher;
+    sceneLauncherHelp: typeof printSceneLauncherHelp;
+    SCENE_PRESETS: typeof SCENE_PRESETS;
+  }
+}
+
 // Make dev tools globally available
 if (typeof window !== "undefined") {
-  (window as any).enableSceneLauncher = enableSceneLauncher;
-  (window as any).disableSceneLauncher = disableSceneLauncher;
-  (window as any).sceneLauncherHelp = printSceneLauncherHelp;
-  (window as any).SCENE_PRESETS = SCENE_PRESETS;
+  window.enableSceneLauncher = enableSceneLauncher;
+  window.disableSceneLauncher = disableSceneLauncher;
+  window.sceneLauncherHelp = printSceneLauncherHelp;
+  window.SCENE_PRESETS = SCENE_PRESETS;
 }
