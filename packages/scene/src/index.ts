@@ -25,7 +25,11 @@ import {
   attachLemonadeCupToHand,
   type CupInventory,
 } from "./cup-inventory.js";
-import { walkingCycleAtDistance } from "./gait.js";
+import {
+  CHARACTER_ANATOMY,
+  characterPoseAtDistance,
+  sellerConfidencePose,
+} from "./character-model.js";
 import {
   rendererDiagnostics,
   type RendererDiagnostics,
@@ -133,9 +137,6 @@ type PersonRig = Readonly<{
   arms: readonly [LimbRig, LimbRig];
   legs: readonly [LimbRig, LimbRig];
   cup: Group;
-  strideOffset: number;
-  walkPace: number;
-  gaitAmplitude: number;
   profile: CharacterProfile;
 }>;
 
@@ -204,39 +205,47 @@ const createPerson = (
     geometries.torso,
     makeCharacterMaterial(profile.clothingColor),
   );
-  torso.position.y = 1.05;
+  torso.position.y = CHARACTER_ANATOMY.torso.centerY;
 
   const head = new Mesh(
     geometries.head,
     makeCharacterMaterial(profile.skinColor),
   );
   head.scale.set(0.94, 1.04, 0.9);
-  head.position.y = 1.78;
+  head.position.y = CHARACTER_ANATOMY.head.centerY;
   root.add(torso, head);
 
   const leftArm = createLimb(
     geometries,
-    0.38,
-    0.34,
+    CHARACTER_ANATOMY.arm.upperLength,
+    CHARACTER_ANATOMY.arm.lowerLength,
     profile.clothingColor,
     profile.skinColor,
     profile.skinColor,
   );
   const rightArm = createLimb(
     geometries,
-    0.38,
-    0.34,
+    CHARACTER_ANATOMY.arm.upperLength,
+    CHARACTER_ANATOMY.arm.lowerLength,
     profile.clothingColor,
     profile.skinColor,
     profile.skinColor,
   );
-  leftArm.root.position.set(-0.35, 1.38, 0);
-  rightArm.root.position.set(0.35, 1.38, 0);
+  leftArm.root.position.set(
+    -CHARACTER_ANATOMY.arm.shoulderOffsetX,
+    CHARACTER_ANATOMY.torso.shoulderY,
+    0,
+  );
+  rightArm.root.position.set(
+    CHARACTER_ANATOMY.arm.shoulderOffsetX,
+    CHARACTER_ANATOMY.torso.shoulderY,
+    0,
+  );
 
   const leftLeg = createLimb(
     geometries,
-    0.43,
-    0.42,
+    CHARACTER_ANATOMY.leg.upperLength,
+    CHARACTER_ANATOMY.leg.lowerLength,
     profile.trouserColor,
     profile.trouserColor,
     0x30383d,
@@ -244,15 +253,23 @@ const createPerson = (
   );
   const rightLeg = createLimb(
     geometries,
-    0.43,
-    0.42,
+    CHARACTER_ANATOMY.leg.upperLength,
+    CHARACTER_ANATOMY.leg.lowerLength,
     profile.trouserColor,
     profile.trouserColor,
     0x30383d,
     true,
   );
-  leftLeg.root.position.set(-0.14, 0.72, 0);
-  rightLeg.root.position.set(0.14, 0.72, 0);
+  leftLeg.root.position.set(
+    -CHARACTER_ANATOMY.leg.hipOffsetX,
+    CHARACTER_ANATOMY.leg.hipY,
+    0,
+  );
+  rightLeg.root.position.set(
+    CHARACTER_ANATOMY.leg.hipOffsetX,
+    CHARACTER_ANATOMY.leg.hipY,
+    0,
+  );
   root.add(leftArm.root, rightArm.root, leftLeg.root, rightLeg.root);
 
   const cup = new Group();
@@ -272,9 +289,6 @@ const createPerson = (
     arms: [leftArm, rightArm] as const,
     legs: [leftLeg, rightLeg] as const,
     cup,
-    strideOffset: profile.strideOffset,
-    walkPace: profile.walkPace,
-    gaitAmplitude: profile.gaitAmplitude,
     profile,
   });
 };
@@ -301,31 +315,31 @@ const createSeller = (
 };
 
 const applySellerExpression = (seller: SellerRig, confidence: number): void => {
-  const progress = clamp01(confidence / 5);
-  const expression = progress * 2 - 1;
+  const pose = sellerConfidencePose(confidence);
+  const progress = (pose.expression.valence + 1) / 2;
   resetPersonPose(seller.person);
-  seller.person.torso.position.y = 1.05;
+  seller.person.torso.position.y = CHARACTER_ANATOMY.torso.centerY;
   seller.person.head.position.y = 1.73;
 
-  seller.person.head.rotation.x = lerp(0.2, -0.06, progress);
-  seller.person.torso.rotation.x = lerp(0.17, -0.025, progress);
-  seller.eyebrows[0].rotation.z = expression * 0.26;
-  seller.eyebrows[1].rotation.z = -expression * 0.26;
+  seller.person.head.rotation.x = pose.head.rotation.x;
+  seller.person.torso.rotation.x = pose.chest.rotation.x;
+  seller.eyebrows[0].rotation.z = pose.expression.browTilt;
+  seller.eyebrows[1].rotation.z = -pose.expression.browTilt;
   seller.eyebrows[0].position.y = 0.125 + progress * 0.018;
   seller.eyebrows[1].position.y = 0.125 + progress * 0.018;
-  seller.mouth[0].rotation.z = -expression * 0.46;
-  seller.mouth[1].rotation.z = expression * 0.46;
-  seller.mouth[0].position.y = -0.09 + expression * 0.012;
-  seller.mouth[1].position.y = -0.09 + expression * 0.012;
-  seller.person.arms[0].root.rotation.x = lerp(0.28, -0.18, progress);
-  seller.person.arms[1].root.rotation.x = lerp(0.22, -0.14, progress);
+  seller.mouth[0].rotation.z = -pose.expression.mouthCurve;
+  seller.mouth[1].rotation.z = pose.expression.mouthCurve;
+  seller.mouth[0].position.y = -0.09 + pose.expression.valence * 0.012;
+  seller.mouth[1].position.y = -0.09 + pose.expression.valence * 0.012;
+  seller.person.arms[0].root.rotation.x = pose.arms[0].shoulder.rotation.x;
+  seller.person.arms[1].root.rotation.x = pose.arms[1].shoulder.rotation.x;
 };
 
 const resetPersonPose = (person: PersonRig): void => {
   person.torso.rotation.set(0, 0, 0);
   person.head.rotation.set(0, 0, 0);
-  person.torso.position.y = 1.05;
-  person.head.position.y = 1.78;
+  person.torso.position.y = CHARACTER_ANATOMY.torso.centerY;
+  person.head.position.y = CHARACTER_ANATOMY.head.centerY;
   for (const limb of [...person.arms, ...person.legs]) {
     limb.root.rotation.set(0, 0, 0);
     limb.lower.rotation.set(0, 0, 0);
@@ -338,33 +352,52 @@ const applyWalkingPose = (
   travelDistance: number,
   carryingCup: boolean,
 ): void => {
-  const cycle = walkingCycleAtDistance(
-    travelDistance,
-    person.profile.heightScale,
-    person.walkPace,
-    person.strideOffset,
+  const pose = characterPoseAtDistance(person.profile, travelDistance, {
+    carryingCup,
+  });
+
+  person.torso.position.y =
+    CHARACTER_ANATOMY.torso.centerY + pose.chest.lift;
+  person.head.position.y =
+    CHARACTER_ANATOMY.head.centerY + pose.head.lift;
+  person.torso.rotation.set(
+    pose.chest.rotation.x,
+    pose.chest.rotation.y,
+    pose.chest.rotation.z,
   );
-  const stride = Math.sin(cycle) * person.gaitAmplitude;
-  const oppositeStride = Math.sin(cycle + Math.PI) * person.gaitAmplitude;
-  const stance = Math.abs(Math.sin(cycle));
+  person.head.rotation.set(
+    pose.head.rotation.x,
+    pose.head.rotation.y,
+    pose.head.rotation.z,
+  );
 
-  person.torso.position.y = 1.05 + stance * 0.026;
-  person.head.position.y = 1.78 + stance * 0.018;
-  person.torso.rotation.y = Math.sin(cycle) * 0.028;
+  for (const index of [0, 1] as const) {
+    const legPose = pose.legs[index];
+    person.legs[index].root.rotation.set(
+      legPose.hip.rotation.x,
+      legPose.hip.rotation.y,
+      legPose.hip.rotation.z,
+    );
+    person.legs[index].lower.rotation.set(
+      legPose.knee.rotation.x,
+      legPose.knee.rotation.y,
+      legPose.knee.rotation.z,
+    );
 
-  person.legs[0].root.rotation.x = stride;
-  person.legs[1].root.rotation.x = oppositeStride;
-  person.legs[0].lower.rotation.x = Math.max(0, -Math.sin(cycle)) * 0.62;
-  person.legs[1].lower.rotation.x = Math.max(0, Math.sin(cycle)) * 0.62;
+    const armPose = pose.arms[index];
+    person.arms[index].root.rotation.set(
+      armPose.shoulder.rotation.x,
+      armPose.shoulder.rotation.y,
+      armPose.shoulder.rotation.z,
+    );
+    person.arms[index].lower.rotation.set(
+      armPose.elbow.rotation.x,
+      armPose.elbow.rotation.y,
+      armPose.elbow.rotation.z,
+    );
+  }
 
-  person.arms[0].root.rotation.x = -stride * 0.78;
-  person.arms[0].lower.rotation.x = -0.12 - Math.max(0, stride) * 0.22;
-  person.arms[1].root.rotation.x = carryingCup ? -0.54 : stride * 0.78;
-  person.arms[1].lower.rotation.x = carryingCup ? -1.05 : -0.12 - Math.max(0, -stride) * 0.22;
-
-  person.torso.rotation.z = Math.sin(cycle * 0.5) * 0.035;
-  person.head.rotation.z = -person.torso.rotation.z * 0.42;
-  person.cup.visible = carryingCup;
+  person.cup.visible = pose.rightHandOccupancy === "cup";
 };
 
 const applyBuyerPose = (
