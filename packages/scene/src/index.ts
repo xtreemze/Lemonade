@@ -17,7 +17,6 @@ import {
   PlaneGeometry,
   SRGBColorSpace,
   Scene,
-  WebGLRenderer,
 } from "three";
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
@@ -36,6 +35,7 @@ import {
 import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
 import { STREET_LAYOUT } from "./street-layout.js";
 import type { StandDetailController } from "./stand-detail.js";
+import { createThreeRendererBackend } from "./three-renderer-backend.js";
 import { businessDayFrameAt, type WeatherDetailController } from "./weather-detail.js";
 import {
   buyerPhaseAt,
@@ -441,22 +441,12 @@ export const createLemonsvilleScene = (
   initialState: LemonsvilleSceneState,
   options: LemonsvilleSceneOptions = {},
 ): LemonsvilleSceneController | null => {
-  let renderer: WebGLRenderer;
-  try {
-    renderer = new WebGLRenderer({
-      canvas,
-      antialias: true,
-      alpha: false,
-      powerPreference: "high-performance",
-    });
-  } catch {
-    return null;
-  }
-
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.outputColorSpace = SRGBColorSpace;
-  renderer.shadowMap.enabled = false;
-  renderer.setClearColor(0x8fa7b8, 1);
+  const rendererBackend = createThreeRendererBackend(
+    canvas,
+    window.devicePixelRatio,
+  );
+  if (rendererBackend === null) return null;
+  const { renderer } = rendererBackend;
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
@@ -1146,7 +1136,7 @@ export const createLemonsvilleScene = (
     signTexture?.dispose();
     gizmoController?.dispose();
     scene.traverse(disposeObject);
-    renderer.dispose();
+    rendererBackend.dispose();
   };
 
   const diagnostics = (): RendererDiagnostics => rendererDiagnostics(renderer.info);
@@ -1157,3 +1147,9 @@ export const createLemonsvilleScene = (
 
 export { createGizmoController, type GizmoController } from "./gizmo-controller.js";
 export { rendererDiagnostics, type RendererDiagnostics } from "./renderer-diagnostics.js";
+export {
+  createThreeRendererBackend,
+  rendererPixelRatio,
+  type ThreeRendererBackend,
+  type ThreeRendererBackendKind,
+} from "./three-renderer-backend.js";
