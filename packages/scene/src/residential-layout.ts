@@ -127,6 +127,10 @@ const resolvePropertyOverlaps = (
           ...a,
           houseX: a.houseX - totalPushX,
           houseZ: a.houseZ - totalPushZ,
+          drivewayX:
+            a.drivewayX === null ? null : a.drivewayX - totalPushX,
+          mailboxX:
+            a.mailboxX === null ? null : a.mailboxX - totalPushX,
         };
       }
     }
@@ -1275,7 +1279,9 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       7,
     ),
   ];
-  for (const fallbackSalt of [4_050, 4_850, 5_650, 6_450] as const) {
+  for (const fallbackSalt of [
+    4_050, 4_850, 5_650, 6_450, 7_250, 8_050, 8_850, 9_650,
+  ] as const) {
     const assignedRoles = new Set(
       backyardTrees
         .map((planting) => planting.propertyRole)
