@@ -710,15 +710,15 @@ export const residentialAccessLayout = (
       : roadCenterZ >= property.houseZ
         ? road.minZ
         : road.maxZ;
-  const drivewayDeltaX = roadX - drivewayX;
-  const drivewayDeltaZ = roadCenterZ - parkingZ;
+  const drivewayDeltaX = drivewaySidewalkX - drivewayX;
+  const drivewayDeltaZ = drivewaySidewalkZ - parkingZ;
   const drivewayLength = Math.max(
     3.2,
     Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.3,
   );
   const drivewayDepth = drivewayLength;
-  const drivewayCenterX = (drivewayX + roadX) / 2;
-  const drivewayCenterZ = (parkingZ + roadCenterZ) / 2;
+  const drivewayCenterX = (drivewayX + drivewaySidewalkX) / 2;
+  const drivewayCenterZ = (parkingZ + drivewaySidewalkZ) / 2;
   const drivewayRotationY = Math.atan2(drivewayDeltaZ, drivewayDeltaX);
 
   return Object.freeze({
