@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import type { DayEnvironment, DayResolution, GameState } from "@lemonade/simulation";
+import type { DayEnvironment, DayResolution } from "@lemonade/simulation";
 import type { WeeklyReport } from "@lemonade/ui";
 
 export type RunToolsModel = Readonly<{
@@ -180,6 +180,7 @@ export type DecisionPanelModel = Readonly<{
   priceText: string;
   spendText: string;
   affordable: boolean;
+  affordabilityMessage: string | null;
 }>;
 
 const DEFAULT_DECISION_MODEL: DecisionPanelModel = Object.freeze({
@@ -195,6 +196,7 @@ const DEFAULT_DECISION_MODEL: DecisionPanelModel = Object.freeze({
   priceText: "Price $0.10 / glass",
   spendText: "",
   affordable: true,
+  affordabilityMessage: null,
 });
 
 export class LemonadeDecisionPanel extends LitElement {
@@ -440,7 +442,7 @@ export class LemonadeDecisionPanel extends LitElement {
         </div>
 
         <p id="decision-error" class="inline-error" role="alert" ?hidden=${model.affordable}>
-          This plan exceeds available cash and credit. Reduce glasses or signs.
+          ${model.affordabilityMessage ?? ""}
         </p>
         <button
           id="sell-button"
@@ -475,16 +477,20 @@ const moneyFormatter = new Intl.NumberFormat("en-US", {
 
 const formatMoney = (cents: number): string => moneyFormatter.format(cents / 100);
 
+export type ReportMilestoneKind = "progression" | "warning" | "bankruptcy";
+
 export type DayReportModel = Readonly<{
   report: DayResolution | null;
   weeklyReport: WeeklyReport | null;
-  currentTier: GameState["tier"];
+  milestoneMessage: string | null;
+  milestoneKind: ReportMilestoneKind | null;
 }>;
 
 const DEFAULT_REPORT_MODEL: DayReportModel = Object.freeze({
   report: null,
   weeklyReport: null,
-  currentTier: 0,
+  milestoneMessage: null,
+  milestoneKind: null,
 });
 
 export class LemonadeDayReport extends LitElement {
@@ -522,7 +528,7 @@ export class LemonadeDayReport extends LitElement {
   };
 
   protected override render(): ReturnType<typeof html> {
-    const { report, weeklyReport, currentTier } = this.model;
+    const { report, weeklyReport, milestoneMessage, milestoneKind } = this.model;
     if (report === null) {
       return html`<section
         id="report-panel"
@@ -535,7 +541,6 @@ export class LemonadeDayReport extends LitElement {
 
     const entry = report.entry;
     const net = Number(entry.net);
-    const progressed = report.nextState.tier !== currentTier;
 
     return html`
       <section id="report-panel" class="report-panel" aria-live="polite" aria-labelledby="report-title">
@@ -649,10 +654,12 @@ export class LemonadeDayReport extends LitElement {
 
           <div class="report-notes">
             <p id="report-event" class="event-note">${eventLabel[entry.environment.event.kind]}</p>
-            <p id="report-progression" class="progression-note" ?hidden=${!progressed}>
-              ${progressed
-                ? `Tier ${String(report.nextState.tier)} unlocks tomorrow. New finance rules will be shown before you sell.`
-                : ""}
+            <p
+              id="report-milestone"
+              class=${`progression-note milestone-${milestoneKind ?? "progression"}`}
+              ?hidden=${milestoneMessage === null}
+            >
+              ${milestoneMessage ?? ""}
             </p>
           </div>
         </div>
