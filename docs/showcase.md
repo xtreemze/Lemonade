@@ -14,7 +14,7 @@ Desktop uses a 1440×900 Chromium viewport. Mobile uses the project’s certifie
 
 ## Capture policy
 
-Dynamic 3D evidence is captured directly from `#scene-canvas` with `HTMLCanvasElement.captureStream(60)` and `MediaRecorder`. This avoids routing the WebGL scene through Playwright’s generic page-video recorder, preserves the scene’s render surface, and requests 60 fps at capture time. Desktop capture targets 20 Mbps; mobile capture targets 8 Mbps before deterministic FFmpeg encoding.
+Dynamic 3D evidence is captured directly from `#scene-canvas` with `HTMLCanvasElement.captureStream(60)` and a video `MediaRecorder`. In parallel, a showcase-only init script subclasses `AudioContext` and mirrors nodes connected to the normal audio destination into a 48 kHz `MediaStreamAudioDestinationNode`, which is recorded by a separate audio `MediaRecorder`. No showcase capture hooks ship in the production application. The two raw streams are muxed deterministically by FFmpeg into the published H.264/AAC video. This avoids Chromium’s unreliable combined WebM container path, preserves the scene’s render surface, and requests 60 fps at capture time. Desktop video capture targets 20 Mbps; mobile targets 8 Mbps, with a 192 kbps audio target.
 
 Static product states are not recorded as video. Planning, day report, and sales history are captured once as full-viewport PNG screenshots after interactions settle. This keeps text, charts, controls, and report typography crisp instead of converting unchanged pixels into low-frame-rate animation.
 
@@ -22,8 +22,8 @@ Static product states are not recorded as video. Planning, day report, and sales
 
 FFmpeg creates three layers of output:
 
-- source-resolution H.264 MP4 files for each 3D scene at 60 fps;
-- source-resolution H.264 desktop and mobile highlight reels at 60 fps, with static PNGs held as still segments between the moving 3D scenes;
+- source-resolution H.264/AAC MP4 files for each 3D scene at 60 fps with 48 kHz application audio;
+- source-resolution H.264/AAC desktop and mobile highlight reels at 60 fps, with static PNGs held as still segments and silent 48 kHz audio beds between the moving 3D scenes;
 - 30 fps animated WebP derivatives for Markdown/presentation surfaces, plus the untouched PNGs for static states.
 
 The animated WebPs are presentation derivatives, not the canonical recordings. They may be scaled for payload efficiency; the MP4 scene captures and highlight reels retain the full desktop or mobile target resolution.
@@ -63,7 +63,7 @@ README markup is generated from `e2e/showcase/manifest.json` into the CI artifac
 
 Each successful showcase run uploads `artifacts/e2e-media` with:
 
-- four raw canvas WebM captures: forecast and simulation for desktop/mobile;
+- four raw canvas WebM video captures and four parallel Opus/WebM audio captures: forecast and simulation for desktop/mobile;
 - six raw full-viewport PNG screenshots: planning, report, and history for desktop/mobile;
 - per-scene metadata;
 - four full-resolution 60 fps H.264 scene videos;
@@ -84,7 +84,8 @@ The verifier uses FFprobe to assert that:
 - static screenshots match the target viewport resolution;
 - each rendered 3D MP4 matches its desktop/mobile source target;
 - both H.264 highlight reels match their target resolution;
-- source videos and highlight reels report 60 fps;
+- source videos and highlight reels report 60 fps and contain 48 kHz audio streams;
+- dynamic raw captures, rendered scene videos, and highlight reels contain measurable non-silent program audio;
 - the mixed presentation asset set exactly matches the manifest;
 - presentation payload budgets are enforced for individual assets, each form factor, animated reels, and the combined README/presentation payload.
 
