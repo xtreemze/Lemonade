@@ -39,6 +39,26 @@ test("maps MCP tool calls to the browser bridge", async () => {
   assert.deepEqual(reply?.result.structuredContent, { id: "abc", name: "stand" });
 });
 
+test("supports current MCP discovery with result discrimination", async () => {
+  const reply = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "discover",
+      method: "server/discover",
+      params: {
+        _meta: {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        },
+      },
+    },
+    { send: async () => ({}) },
+  );
+
+  assert.equal(reply?.result.resultType, "complete");
+  assert.deepEqual(reply?.result.supportedVersions, ["2026-07-28"]);
+  assert.ok(reply?.result.capabilities.tools);
+});
+
 test("advertises legacy initialization for broad MCP host compatibility", async () => {
   const reply = await handleMcpRequest(
     {
