@@ -80,15 +80,15 @@ export const createDevMcpBrowserBridge = (
   const request = async (
     path: string,
     init: RequestInit = {},
-  ): Promise<Response> =>
-    fetch(`${baseUrl}${path}`, {
+  ): Promise<Response> => {
+    const headers = new Headers(init.headers);
+    headers.set("content-type", "application/json");
+    return fetch(`${baseUrl}${path}`, {
       ...init,
       signal: abortController.signal,
-      headers: {
-        "content-type": "application/json",
-        ...init.headers,
-      },
+      headers,
     });
+  };
 
   const register = async (): Promise<string> => {
     const response = await request("/bridge/register", {
