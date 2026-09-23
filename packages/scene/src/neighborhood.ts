@@ -445,6 +445,11 @@ const flower = (
   return markWindResponsive(root, phase);
 };
 
+// Half-thickness of a fence's end posts (box width 0.12 / 2). The outermost
+// posts are centered at +/-width/2, so they overhang the nominal `width` by
+// this much on each side; callers validating hardscape clearance must add it.
+const FENCE_POST_HALF_THICKNESS = 0.06;
+
 const fenceRun = (x: number, z: number, width: number): Group => {
   const root = new Group();
   box(root, [width, 0.1, 0.1], [0, 0.56, 0], 0xe9dfc7);
@@ -861,7 +866,10 @@ export const populateNeighborhood = (
       if (width >= 1.15) {
         const fence = fenceRun(cursor + width / 2, fenceZ, width);
         fence.userData["propertyRole"] = property.role;
-        addYardDetailIfClear(fence, width / 2, 0.06);
+        // fenceRun's end posts are centered at +/-width/2 with their own
+        // half-thickness (0.06), so the rendered fence is actually
+        // FENCE_POST_HALF_THICKNESS wider than `width` on each side.
+        addYardDetailIfClear(fence, width / 2 + FENCE_POST_HALF_THICKNESS, 0.06);
       }
       cursor = Math.max(cursor, gap.maxX);
     }
@@ -869,7 +877,7 @@ export const populateNeighborhood = (
     if (finalWidth >= 1.15) {
       const fence = fenceRun(cursor + finalWidth / 2, fenceZ, finalWidth);
       fence.userData["propertyRole"] = property.role;
-      addYardDetailIfClear(fence, finalWidth / 2, 0.06);
+      addYardDetailIfClear(fence, finalWidth / 2 + FENCE_POST_HALF_THICKNESS, 0.06);
     }
   }
   for (const detail of yardDetails) scene.add(detail);

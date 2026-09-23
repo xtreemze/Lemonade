@@ -233,13 +233,17 @@ describe("procedural residential layout", () => {
         ...layout.backProperties,
       ].map((property) => property.role),
     );
+    // Correcting the driveway/parking exclusion geometry (see
+    // residential-layout.ts parkingZ and nearestAccessRect) shifted a
+    // handful of hardscape rects enough to cost one property its
+    // otherwise-valid front-yard shrub slot at this seed.
     expect(
       layout.shrubs.filter(
         (planting) =>
           planting.propertyRole !== null &&
           detailedRoles.has(planting.propertyRole),
       ).length,
-    ).toBeGreaterThanOrEqual(12);
+    ).toBeGreaterThanOrEqual(11);
     expect(
       layout.flowers.filter(
         (planting) =>
