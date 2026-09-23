@@ -23,7 +23,10 @@ import {
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import { createGizmoController, type GizmoController } from "./gizmo-controller.js";
 import type { StreetMotion } from "./crowd-motion.js";
-import type { CupInventory } from "./cup-inventory.js";
+import {
+  attachLemonadeCupToHand,
+  type CupInventory,
+} from "./cup-inventory.js";
 import { walkingCycleAtDistance } from "./gait.js";
 import {
   characterGroundClearance,
@@ -148,6 +151,7 @@ const createSign = (): SignModel => {
 type LimbRig = Readonly<{
   root: Group;
   lower: Group;
+  extremity: Mesh;
 }>;
 
 type PersonRig = Readonly<{
@@ -218,7 +222,7 @@ const createLimb = (
   lower.add(extremity);
   root.add(lower);
 
-  return Object.freeze({ root, lower });
+  return Object.freeze({ root, lower, extremity });
 };
 
 const createPerson = (characterSeed: number, index: number): PersonRig => {
@@ -281,10 +285,8 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   root.add(leftArm.root, rightArm.root, leftLeg.root, rightLeg.root);
 
   const cup = new Group();
-  cup.scale.setScalar(0.9);
-  cup.position.set(0, -0.35, -0.72);
+  attachLemonadeCupToHand(rightArm.extremity, cup);
   cup.visible = false;
-  rightArm.lower.add(cup);
 
   root.scale.set(
     profile.widthScale * WORLD_SCALE.character.renderScale,
