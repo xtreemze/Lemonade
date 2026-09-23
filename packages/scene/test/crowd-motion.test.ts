@@ -73,10 +73,14 @@ describe("crowd motion", () => {
     expect(new Set(first.map((pose) => pose?.side).filter(Boolean))).toEqual(
       new Set(["near", "far"]),
     );
-    const routeIds = new Set(first.map((pose) => pose?.routeId).filter(Boolean));
+    const routeIds = new Set(
+      first
+        .map((pose) => pose?.routeId)
+        .filter((routeId): routeId is string => routeId !== undefined),
+    );
     expect(routeIds.size).toBeGreaterThan(4);
-    expect(routeIds.has("main:0")).toBe(true);
-    expect(routeIds.has("main:1")).toBe(true);
+    expect([...routeIds].some((routeId) => routeId.startsWith("main:0"))).toBe(true);
+    expect([...routeIds].some((routeId) => routeId.startsWith("main:1"))).toBe(true);
     const generatedRouteIds = new Set(
       neighborhoodSidewalkRoutes().map((route) => route.id),
     );
@@ -328,6 +332,30 @@ describe("crowd motion", () => {
     }
   });
 
+  it("starts late pedestrians at a route boundary and moves them immediately", () => {
+    const lateBeat: PasserbyBeat = Object.freeze({
+      pedestrianIndex: 0,
+      startAtMs: 1_000,
+      endAtMs: 5_000,
+      direction: -1,
+      lane: 0,
+      seesAdvertisement: true,
+      signIndex: 0,
+    });
+    const simulation = createCrowdSimulation([lateBeat], 1, 6_000);
+
+    expect(simulation.sample(999).poses[0]).toBeUndefined();
+    const spawned = simulation.sample(1_000).poses[0];
+    const moved = simulation.sample(1_100).poses[0];
+    expect(spawned).toBeDefined();
+    expect(moved).toBeDefined();
+    if (spawned === undefined || moved === undefined) return;
+
+    expect(spawned.travelDistance).toBeCloseTo(0, 6);
+    expect(moved.travelDistance).toBeCloseTo(moved.worldSpeed * 0.1, 5);
+    expect(Math.hypot(moved.x - spawned.x, moved.z - spawned.z)).toBeGreaterThan(0.08);
+  });
+
   it("provides enough ground clearance for adult and child seeded heights", () => {
     expect(crowdGroundClearance(0.68)).toBeGreaterThan(0.11);
     expect(crowdGroundClearance(0.9)).toBeGreaterThan(0.15);
@@ -365,4 +393,38 @@ describe("crowd motion", () => {
       vehicles: 2,
     });
   });
+
+  it("never teleports an active pedestrian between sidewalk samples", () => {
+    const simulation = createCrowdSimulation(beats, 12, 12_000);
+    let previous = simulation.sample(0).poses;
+
+    for (let elapsedMs = 50; elapsedMs <= 12_000; elapsedMs += 50) {
+      const current = simulation.sample(elapsedMs).poses;
+      for (let index = 0; index < current.length; index += 1) {
+        const before = previous[index];
+        const after = current[index];
+        if (before === undefined || after === undefined) continue;
+        const displacement = Math.hypot(after.x - before.x, after.z - before.z);
+        const expectedTravel = Math.max(before.worldSpeed, after.worldSpeed) * 0.05;
+        expect(displacement).toBeLessThanOrEqual(expectedTravel + 0.28);
+      }
+      previous = current;
+    }
+  });
+
+  it("keeps ordinary pedestrians within a normal walking-speed envelope", () => {
+    const simulation = createCrowdSimulation(beats, 12, 12_000);
+    const sampled = [
+      ...simulation.sample(1_000).poses,
+      ...simulation.sample(6_000).poses,
+      ...simulation.sample(11_000).poses,
+    ].filter((pose) => pose !== undefined);
+
+    expect(sampled.length).toBeGreaterThan(0);
+    for (const pose of sampled) {
+      expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.2);
+      expect(pose.worldSpeed).toBeLessThanOrEqual(1.5);
+    }
+  });
+
 });
