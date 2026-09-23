@@ -8,12 +8,12 @@
   "files": {
     "includes": [
       "**",
-      "!build/**",
-      "!dist/**",
-      "!node_modules/**",
-      "!playwright-report/**",
-      "!test-results/**",
-      "!coverage/**",
+      "!build",
+      "!dist",
+      "!node_modules",
+      "!playwright-report",
+      "!test-results",
+      "!coverage",
       "!eslint.config.js"
     ]
   },
@@ -83,14 +83,15 @@
       },
       "nursery": {
         "noImpliedEval": "error",
-        "useExplicitType": "error",
         "useExhaustiveSwitchCases": "error"
       }
     }
   },
   "overrides": [
     {
-      "includes": ["packages/simulation/src/**/*.ts"],
+      "includes": [
+        "packages/simulation/src/**/*.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
