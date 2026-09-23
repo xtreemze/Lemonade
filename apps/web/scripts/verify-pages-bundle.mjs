@@ -14,28 +14,57 @@ if (entryMatch?.[1] === undefined) {
 }
 
 const assets = await readdir(assetsUrl);
-const sceneChunks = assets.filter((name) => /^scene-runtime-[^/]+\.js$/u.test(name));
-if (sceneChunks.length !== 1) {
-  throw new Error(`Expected one lazy scene runtime chunk, found ${String(sceneChunks.length)}.`);
+const threeSceneChunks = assets.filter((name) =>
+  /^scene-runtime-(?!babylon-)[^/]+\.js$/u.test(name),
+);
+const babylonSceneChunks = assets.filter((name) =>
+  /^scene-runtime-babylon-[^/]+\.js$/u.test(name),
+);
+if (threeSceneChunks.length !== 1) {
+  throw new Error(
+    `Expected one lazy Three scene runtime chunk, found ${String(threeSceneChunks.length)}.`,
+  );
+}
+if (babylonSceneChunks.length !== 1) {
+  throw new Error(
+    `Expected one lazy Babylon scene runtime chunk, found ${String(babylonSceneChunks.length)}.`,
+  );
 }
 
 const entryBytes = (await stat(new URL(entryMatch[1], assetsUrl))).size;
-const sceneBytes = (await stat(new URL(sceneChunks[0], assetsUrl))).size;
+const threeSceneBytes = (
+  await stat(new URL(threeSceneChunks[0], assetsUrl))
+).size;
+const babylonSceneBytes = (
+  await stat(new URL(babylonSceneChunks[0], assetsUrl))
+).size;
 
 const ENTRY_BUDGET_BYTES = 100_000;
-const SCENE_BUDGET_BYTES = 550_000;
+const THREE_SCENE_BUDGET_BYTES = 550_000;
+// Migration-only ceiling: Babylon is not the default runtime yet. #200 must
+// establish the final production Babylon payload budget before cutover.
+const BABYLON_MIGRATION_BUDGET_BYTES = 1_100_000;
 
 if (entryBytes > ENTRY_BUDGET_BYTES) {
   throw new Error(
     `Critical entry chunk is ${String(entryBytes)} bytes; budget is ${String(ENTRY_BUDGET_BYTES)}.`,
   );
 }
-if (sceneBytes > SCENE_BUDGET_BYTES) {
+if (threeSceneBytes > THREE_SCENE_BUDGET_BYTES) {
   throw new Error(
-    `Lazy scene chunk is ${String(sceneBytes)} bytes; budget is ${String(SCENE_BUDGET_BYTES)}.`,
+    `Lazy Three scene chunk is ${String(threeSceneBytes)} bytes; budget is ${String(THREE_SCENE_BUDGET_BYTES)}.`,
+  );
+}
+if (babylonSceneBytes > BABYLON_MIGRATION_BUDGET_BYTES) {
+  throw new Error(
+    `Lazy Babylon migration chunk is ${String(babylonSceneBytes)} bytes; migration ceiling is ${String(BABYLON_MIGRATION_BUDGET_BYTES)}.`,
   );
 }
 
 console.log(
-  `Bundle budgets passed: entry ${String(entryBytes)} B, lazy scene ${String(sceneBytes)} B.`,
+  [
+    `Bundle budgets passed: entry ${String(entryBytes)} B`,
+    `Three scene ${String(threeSceneBytes)} B`,
+    `Babylon migration scene ${String(babylonSceneBytes)} B`,
+  ].join(", "),
 );
