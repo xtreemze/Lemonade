@@ -437,4 +437,48 @@ describe("unified neighborhood mobility", () => {
       ),
     ).toBeGreaterThan(0);
   });
+
+  it("keeps through-traffic displacement bounded through yields and releases", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const previous = new Map<string, { x: number; z: number; speed: number }>();
+    let sawYield = false;
+
+    for (let elapsedMs = 0; elapsedMs <= 14_000; elapsedMs += 100) {
+      const sample = system.sample({
+        weather: "sunny",
+        phase: "simulation",
+        elapsedMs,
+        durationMs: 14_000,
+        dayNumber: 2,
+        focus: { x: 0, z: 0 },
+      });
+
+      for (const actor of sample.actors) {
+        if (
+          !actor.id.startsWith("traffic-") ||
+          (actor.kind !== "vehicle" && actor.kind !== "bicycle")
+        ) {
+          continue;
+        }
+        if (actor.waiting) sawYield = true;
+
+        const prior = previous.get(actor.id);
+        if (prior !== undefined) {
+          const displacement = Math.hypot(actor.x - prior.x, actor.z - prior.z);
+          const maxObservedSpeed = Math.max(prior.speed, actor.speed);
+          expect(displacement).toBeLessThanOrEqual(
+            maxObservedSpeed * 0.1 + 0.55,
+          );
+        }
+        previous.set(actor.id, {
+          x: actor.x,
+          z: actor.z,
+          speed: actor.speed,
+        });
+      }
+    }
+
+    expect(sawYield).toBe(true);
+  });
+
 });
