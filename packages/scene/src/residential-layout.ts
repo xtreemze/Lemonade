@@ -1344,7 +1344,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       3_050,
       "back",
       partial,
-      4.2,
+      3.5,
       1.45,
       7,
     ),
@@ -1367,7 +1367,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       fallbackSalt,
       "back",
       partial,
-      4.2,
+      3.5,
       1.45,
       7,
     );
