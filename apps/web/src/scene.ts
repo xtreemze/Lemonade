@@ -151,7 +151,7 @@ export const createLemonsvilleSceneView = (
 
   const initializeController = async (): Promise<void> => {
     try {
-      const { createLemonsvilleScene } = await loadSceneRuntime();
+      const { createLemonsvilleScene: createRuntimeScene } = await loadSceneRuntime();
       if (
         disposed ||
         controller !== null ||
@@ -163,7 +163,7 @@ export const createLemonsvilleSceneView = (
 
       const description = describeScene(lastInput);
       const state = createState(lastInput, reducedMotion);
-      const nextController = createLemonsvilleScene(elements.canvas, state, options.sceneOptions);
+      const nextController = createRuntimeScene(elements.canvas, state, options.sceneOptions);
 
       if (nextController === null) {
         showFallback(description);
