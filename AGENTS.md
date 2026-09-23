@@ -190,3 +190,19 @@ A PR should answer:
 - Are there follow-up tasks deliberately excluded from scope?
 
 Prefer explicit code and narrow platform boundaries over clever generalization. A future executor should be able to understand why the code exists from types, tests, names, and nearby documentation without reconstructing hidden context.
+
+
+## Specialist agent orchestration
+
+For multi-agent development, read `docs/ai-agent-team.md` before assigning or implementing work. It defines specialist roles, default Codex/Claude routing, cross-model review, serialization zones, stack discipline, the green-baseline rule, and release stewardship.
+
+Key requirements:
+
+- assign one primary specialist role per issue/PR;
+- identify the authoritative package/boundary before editing;
+- inspect active overlapping PRs before touching high-conflict surfaces;
+- land shared contracts before parallel downstream implementations;
+- use a dedicated Verification owner for red-baseline repairs instead of duplicating fixes across feature branches;
+- keep routine PR stacks at no more than two dependent PRs;
+- use the other model family for independent review of material AI-authored changes when available;
+- let the Release & Repository Steward coordinate merge order and issue truth for overlapping work.
