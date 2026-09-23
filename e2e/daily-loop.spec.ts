@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 
+// biome-ignore lint/correctness/noUnresolvedImports: Biome 2.5 misses Playwright's Page type re-export.
 import { expect, test, type Page } from "@playwright/test";
 
 const openPlanningView = async (page: Page): Promise<void> => {
