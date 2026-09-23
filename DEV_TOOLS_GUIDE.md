@@ -1,6 +1,6 @@
 # Developer Tools Guide
 
-Complete guide to Lemonsville's two powerful dev tools for interactive scene development and testing.
+Complete guide to Lemonsville's interactive scene editor, scenario launcher, and scene/game MCP diagnostics.
 
 ---
 
@@ -28,19 +28,45 @@ enableSceneLauncher()
 
 **Panel**: Bottom-right corner with cyan border
 
-### Using Both Together
+### 3. Enable Scene/Game MCP
 
-Enable both tools for the ultimate dev experience:
+Start the local MCP server from the repository root:
+
+```bash
+pnpm mcp:scene
+```
+
+Then enable the browser relay:
+
 ```javascript
-enableGizmo()
-enableSceneLauncher()
+enableMcpBridge()
+enableGizmo() // optional, required for remote selection/mode changes
 // Refresh page
 ```
 
-Now you can:
-1. Launch different scenes with the launcher
-2. Manipulate objects with the gizmo in each scenario
-3. Export final positions when satisfied
+The MCP reads the same authoritative game state and live Three.js scene used by
+the app. It exposes scene hierarchy/object inspection, camera and renderer
+diagnostics, transforms/visibility, gizmo selection/mode, planning-draft edits,
+and developer-only scene presentation overrides.
+
+See `docs/scene-game-mcp.md` for host configuration and the complete tool
+contract.
+
+### Using the Tools Together
+
+```javascript
+enableGizmo()
+enableSceneLauncher()
+enableMcpBridge()
+// Refresh page
+```
+
+This gives one shared editing surface:
+1. Launch or override weather/phase scenarios.
+2. Inspect the same live scene through MCP diagnostics.
+3. Select and manipulate objects locally or through MCP.
+4. Compare WebGL renderer/object metrics while editing.
+5. Export final transforms through the existing gizmo workflow.
 
 ---
 
