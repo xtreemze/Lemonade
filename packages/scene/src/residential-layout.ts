@@ -91,6 +91,7 @@ const footprintIntersectsRect = (
 
 const resolvePropertyOverlaps = (
   properties: readonly ResidentialPropertySpec[],
+  seed: number,
 ): readonly ResidentialPropertySpec[] => {
   const mutable = properties.map((p) => ({ ...p }));
   const minClearance = 0.5;
@@ -120,14 +121,25 @@ const resolvePropertyOverlaps = (
       }
 
       if (totalPushX !== 0) {
-        anyMoved = true;
-        const deltaX = -totalPushX;
-        mutable[i] = {
-          ...a,
-          houseX: a.houseX + deltaX,
-          drivewayX: a.drivewayX === null ? null : a.drivewayX + deltaX,
-          mailboxX: a.mailboxX === null ? null : a.mailboxX + deltaX,
-        };
+        const requestedX = a.houseX - totalPushX;
+        const clearHouse = clearHouseFromBaseHardscape(
+          { x: requestedX, z: a.houseZ },
+          aFootprint.halfWidth,
+          aFootprint.halfDepth,
+          seed,
+        );
+        const deltaX = clearHouse.x - a.houseX;
+        const deltaZ = clearHouse.z - a.houseZ;
+        if (deltaX !== 0 || deltaZ !== 0) {
+          anyMoved = true;
+          mutable[i] = {
+            ...a,
+            houseX: clearHouse.x,
+            houseZ: clearHouse.z,
+            drivewayX: a.drivewayX === null ? null : a.drivewayX + deltaX,
+            mailboxX: a.mailboxX === null ? null : a.mailboxX + deltaX,
+          };
+        }
       }
     }
     if (!anyMoved) break;
@@ -1183,18 +1195,38 @@ const restoreFrontMailboxes = (
       if (property.drivewayX === null) return property;
       const drivewaySide: -1 | 1 =
         property.drivewayX < property.houseX ? -1 : 1;
-      const offset =
+      const preferredOffset =
         DRIVEWAY_HALF_WIDTH +
         MAILBOX_CLEARANCE_FROM_DRIVEWAY +
         unit(seed, index * 17 + 31) * 0.18;
+      const driveway = drivewayExclusionRectForProperty(
+        property,
+        property.drivewayX,
+        seed,
+      );
+
+      let mailboxX: number | null = null;
+      for (let step = 0; step <= 16 && mailboxX === null; step += 1) {
+        const offset = preferredOffset + step * 0.24;
+        for (const side of [drivewaySide, -drivewaySide] as const) {
+          const candidate = property.drivewayX + side * offset;
+          const clearOfStreet = mailboxAnchorIsClear(candidate, seed);
+          const clearOfDriveway = !footprintIntersectsHardscapeRect(
+            driveway,
+            { x: candidate, z: -0.3 },
+            0.3,
+            0.3,
+          );
+          if (clearOfStreet && clearOfDriveway) {
+            mailboxX = candidate;
+            break;
+          }
+        }
+      }
+
       return Object.freeze({
         ...property,
-        mailboxX: mailboxXForDriveway(
-          property.drivewayX,
-          drivewaySide,
-          offset,
-          seed,
-        ),
+        mailboxX,
       });
     }),
   );
@@ -1245,7 +1277,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     safeSeed,
   );
   const allPropertiesRaw = [...front, ...middle, ...back, ...outer];
-  const allPropertiesResolved = resolvePropertyOverlaps(allPropertiesRaw);
+  const allPropertiesResolved = resolvePropertyOverlaps(allPropertiesRaw, safeSeed);
 
   const resolvedByRole = new Map(allPropertiesResolved.map((p) => [p.role, p]));
   const resolveProperties = (props: readonly ResidentialPropertySpec[]) =>
