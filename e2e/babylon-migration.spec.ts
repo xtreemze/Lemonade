@@ -12,11 +12,12 @@ test("Babylon migration runtime boots through the lazy scene boundary", async ({
     pageErrors.push(error.message);
   });
 
-  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
     window.localStorage.setItem("LEMONADE_SCENE_BACKEND", "babylon");
   });
   await page.goto("./");
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
+  await page.getByRole("button", { name: "Sell for the day" }).click();
 
   const canvas = page.locator("#scene-canvas");
   await expect(canvas).toHaveAttribute("data-renderer-backend", "babylon", {
