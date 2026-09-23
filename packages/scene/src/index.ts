@@ -14,6 +14,10 @@ import {
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import {
+  createCharacterGeometryPool,
+  type CharacterGeometryPool,
+} from "./character-geometry-pool.js";
+import {
   createCharacterGeometrySet,
   type CharacterGeometrySet,
 } from "./character-geometry.js";
@@ -402,6 +406,7 @@ export const createLemonsvilleScene = (
   const { renderer } = rendererBackend;
 
   const scene = new Scene();
+  const characterGeometryPool = createCharacterGeometryPool();
   const characterGeometries = createCharacterGeometrySet();
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
   camera.position.set(0, 6.8, 13.5);
