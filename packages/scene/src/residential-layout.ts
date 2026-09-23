@@ -1274,67 +1274,68 @@ const restoreFrontMailboxes = (
 
 export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): ResidentialLayout => {
   const safeSeed = Number.isFinite(seed) ? Math.trunc(seed) >>> 0 : DEFAULT_RESIDENTIAL_SEED;
-  const front = restoreFrontMailboxes(
-    resolveGeneratedAccess(frontProperties(safeSeed), safeSeed),
+  const rawFront = frontProperties(safeSeed);
+  const rawMiddle = rowProperties(
     safeSeed,
+    1_100,
+    -26,
+    [-46, -35, -24.5, -9.1, 4, 16.5, 29.7, 41.7],
+    true,
   );
-  const middle = resolveGeneratedAccess(
-    rowProperties(
+  const rawBack = rowProperties(
+    safeSeed,
+    2_300,
+    -49.5,
+    [-47, -36.5, -25.4, -9.7, 3.5, 16.5, 28.5, 39.6, 52.5],
+    true,
+  );
+  const rawOuter = [
+    ...rowProperties(
       safeSeed,
-      1_100,
-      -26,
-      [-46, -35, -24.5, -9.1, 4, 16.5, 29.7, 41.7],
-      true,
+      2_900,
+      16.8,
+      [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
+      false,
     ),
-    safeSeed,
-  );
-  const back = resolveGeneratedAccess(
-    rowProperties(
+    ...rowProperties(
       safeSeed,
-      2_300,
-      -49.5,
-      [-47, -36.5, -25.4, -9.7, 3.5, 16.5, 28.5, 39.6, 52.5],
-      true,
+      3_000,
+      -72,
+      [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
+      false,
     ),
-    safeSeed,
-  );
-  const outer = resolveGeneratedAccess(
-    [
-      ...rowProperties(
-        safeSeed,
-        2_900,
-        16.8,
-        [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
-        false,
-      ),
-      ...rowProperties(
-        safeSeed,
-        3_000,
-        -72,
-        [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
-        false,
-      ),
-    ],
-    safeSeed,
-  );
-  const allPropertiesRaw = [...front, ...middle, ...back, ...outer];
-  const allPropertiesResolved = resolvePropertyOverlaps(allPropertiesRaw, safeSeed);
+  ];
 
+  // First settle house footprints, then generate every access strip against
+  // those final positions. Generating driveways before overlap resolution can
+  // leave a moved house intersecting access that was valid for its old pose.
+  const settledProperties = resolvePropertyOverlaps(
+    [...rawFront, ...rawMiddle, ...rawBack, ...rawOuter],
+    safeSeed,
+  );
+  const allPropertiesResolved = resolveGeneratedAccess(
+    settledProperties,
+    safeSeed,
+  );
   const resolvedByRole = new Map(allPropertiesResolved.map((p) => [p.role, p]));
   const resolveProperties = (props: readonly ResidentialPropertySpec[]) =>
     Object.freeze(props.map((p) => resolvedByRole.get(p.role) ?? p));
 
-  const allProperties = allPropertiesResolved;
+  const front = restoreFrontMailboxes(resolveProperties(rawFront), safeSeed);
+  const middle = resolveProperties(rawMiddle);
+  const back = resolveProperties(rawBack);
+  const outer = resolveProperties(rawOuter);
+  const allProperties = [...front, ...middle, ...back, ...outer];
   const exclusions = Object.freeze([
     ...baseExclusions(safeSeed),
     ...accessExclusions(allProperties, safeSeed),
   ]);
   const partial = {
     exclusions,
-    frontProperties: resolveProperties(front),
-    middleProperties: resolveProperties(middle),
-    backProperties: resolveProperties(back),
-    outerProperties: resolveProperties(outer),
+    frontProperties: front,
+    middleProperties: middle,
+    backProperties: back,
+    outerProperties: outer,
   } as const;
 
   const backyardTrees: ResidentialPlanting[] = [
@@ -1382,11 +1383,11 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
   }
   const frontYardTrees: readonly ResidentialPlanting[] = generatePropertyPlantings(
     safeSeed,
-    [...front, ...middle],
+    [...partial.frontProperties, ...partial.middleProperties],
     3_150,
     "front",
     partial,
-    2.8,
+    3.5,
     4.2,
     3,
   );
