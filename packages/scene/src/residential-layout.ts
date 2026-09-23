@@ -711,14 +711,14 @@ export const residentialAccessLayout = (
         ? road.minZ
         : road.maxZ;
   const drivewayDeltaX = roadX - drivewayX;
-  const drivewayDeltaZ = roadCenterZ - parkingZ;
+  const drivewayDeltaZ = roadEdgeZ - parkingZ;
   const drivewayLength = Math.max(
     3.2,
     Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.24,
   );
   const drivewayDepth = drivewayLength;
   const drivewayCenterX = (drivewayX + roadX) / 2;
-  const drivewayCenterZ = (parkingZ + roadCenterZ) / 2;
+  const drivewayCenterZ = (parkingZ + roadEdgeZ) / 2;
   const drivewayRotationY = Math.atan2(drivewayDeltaZ, drivewayDeltaX);
 
   return Object.freeze({
@@ -762,7 +762,7 @@ const drivewayRectForProperty = (
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.roadX, z: access.roadCenterZ },
+    { x: access.roadX, z: access.roadEdgeZ },
     WORLD_SCALE.vehicle.width,
   );
 };
@@ -779,7 +779,7 @@ const drivewayExclusionRectForProperty = (
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.roadX, z: access.roadCenterZ },
+    { x: access.roadX, z: access.roadEdgeZ },
     WORLD_SCALE.vehicle.width,
   );
 };
