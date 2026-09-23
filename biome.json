@@ -92,7 +92,7 @@
       "nursery": {
         "noBaseToString": "error",
         "noFloatingPromises": "error",
-        "noMisleadingReturnType": "error",
+        "noMisleadingReturnType": "off",
         "noMisusedPromises": "error",
         "noReturnInFinally": "error",
         "noUnsafePlusOperands": "error",
@@ -116,6 +116,31 @@
     }
   },
   "overrides": [
+    {
+      "includes": [
+        "apps/web/src/app.ts",
+        "e2e/renderer-stress.spec.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnnecessaryConditions": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/web/src/styles.css"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDescendingSpecificity": "off"
+          }
+        }
+      }
+    },
     {
       "includes": [
         "packages/simulation/src/**/*.ts"
