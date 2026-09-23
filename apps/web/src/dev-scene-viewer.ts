@@ -117,6 +117,21 @@ export const createPersistentSceneViewer = (
   `;
   panel.appendChild(info);
 
+  const diagnostics = document.createElement("div");
+  diagnostics.style.cssText = `
+    background: #111;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 16px;
+    font-size: 11px;
+    color: #9cff9c;
+    line-height: 1.5;
+    white-space: pre;
+  `;
+  diagnostics.textContent = "Renderer diagnostics: initializing…";
+  panel.appendChild(diagnostics);
+
   const closeBtn = document.createElement("button");
   closeBtn.textContent = "✕ Exit";
   closeBtn.style.cssText = `
@@ -223,10 +238,26 @@ export const createPersistentSceneViewer = (
   // Initial render
   scene.update(sceneState);
 
+  const updateDiagnostics = (): void => {
+    const snapshot = scene.diagnostics();
+    diagnostics.textContent = [
+      `Draw calls: ${String(snapshot.drawCalls)}`,
+      `Triangles: ${String(snapshot.triangles)}`,
+      `Lines: ${String(snapshot.lines)}`,
+      `Points: ${String(snapshot.points)}`,
+      `Geometries: ${String(snapshot.geometries)}`,
+      `Textures: ${String(snapshot.textures)}`,
+      `Renderer frame: ${String(snapshot.frame)}`,
+    ].join("\n");
+  };
+  updateDiagnostics();
+  const diagnosticsInterval = window.setInterval(updateDiagnostics, 500);
+
   return {
     scene,
     dispose: () => {
       window.removeEventListener("resize", handleResize);
+      window.clearInterval(diagnosticsInterval);
       scene.dispose();
     },
   };
