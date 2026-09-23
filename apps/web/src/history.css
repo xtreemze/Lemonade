@@ -330,6 +330,58 @@
   }
 }
 
+@media (width >= 64rem) {
+  .game-shell[data-view="history"] .ledger-history {
+    grid-template-rows: auto auto auto;
+    align-content: start;
+    width: min(100%, 88rem);
+    height: fit-content;
+    margin-inline: auto;
+    padding: clamp(12px, 1.4vw, 18px);
+    gap: clamp(10px, 1.2vw, 16px);
+  }
+
+  .game-shell[data-view="history"] .history-heading h2 {
+    font-size: clamp(1.6rem, 2.1vw, 2rem);
+  }
+
+  .game-shell[data-view="history"] .history-heading > p {
+    font-size: 0.8rem;
+  }
+
+  .game-shell[data-view="history"] .chart-grid {
+    grid-template-rows: auto;
+    gap: clamp(12px, 1.4vw, 20px);
+  }
+
+  .game-shell[data-view="history"] .chart-card {
+    grid-template-rows: auto auto auto;
+    padding: clamp(10px, 1vw, 14px);
+  }
+
+  .game-shell[data-view="history"] .chart-card figcaption {
+    font-size: 1rem;
+  }
+
+  .game-shell[data-view="history"] .history-chart {
+    height: clamp(14rem, 34dvh, 20rem);
+  }
+
+  .game-shell[data-view="history"] .chart-legend {
+    font-size: 0.78rem;
+  }
+
+  .game-shell[data-view="history"] .history-table th,
+  .game-shell[data-view="history"] .history-table td {
+    padding: 7px 9px;
+    font-size: 0.78rem;
+  }
+
+  .game-shell[data-view="history"] .history-table thead th {
+    font-size: 0.66rem;
+  }
+}
+
 @media (width >= 70rem) {
   .game-shell[data-view="history"] .history-table th,
   .game-shell[data-view="history"] .history-table td {
