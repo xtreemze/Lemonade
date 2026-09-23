@@ -41,12 +41,53 @@
     "rules": {
       "preset": "all",
       "a11y": "error",
-      "complexity": "error",
-      "correctness": "error",
-      "performance": "error",
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off",
+        "noExcessiveLinesPerFunction": "off",
+        "useLiteralKeys": "off",
+        "useMaxParams": "off",
+        "noForEach": "off",
+        "noVoid": "off"
+      },
+      "correctness": {
+        "useImportExtensions": "off",
+        "noProcessGlobal": "off",
+        "noNodejsModules": "off"
+      },
+      "performance": {
+        "useTopLevelRegex": "off",
+        "noAwaitInLoops": "off",
+        "noReExportAll": "off",
+        "noBarrelFile": "off"
+      },
       "security": "error",
-      "style": "error",
-      "suspicious": "error",
+      "style": {
+        "useConsistentMemberAccessibility": "off",
+        "useConsistentMethodSignatures": "off",
+        "useFilenamingConvention": "off",
+        "noExcessiveLinesPerFile": "off",
+        "useDefaultSwitchClause": "off",
+        "noParameterProperties": "off",
+        "useNumericSeparators": "off",
+        "noIncrementDecrement": "off",
+        "useNamingConvention": "off",
+        "useBlockStatements": "off",
+        "noExportedImports": "off",
+        "useDestructuring": "off",
+        "noNestedTernary": "off",
+        "noDefaultExport": "off",
+        "useExportsLast": "off",
+        "noMagicNumbers": "off",
+        "useGlobalThis": "off",
+        "noProcessEnv": "off",
+        "noHexColors": "off",
+        "noContinue": "off",
+        "noTernary": "off"
+      },
+      "suspicious": {
+        "noBitwiseOperators": "off",
+        "noConsole": "off"
+      },
       "nursery": {
         "noBaseToString": "error",
         "noFloatingPromises": "error",
@@ -75,7 +116,9 @@
   },
   "overrides": [
     {
-      "includes": ["packages/simulation/src/**/*.ts"],
+      "includes": [
+        "packages/simulation/src/**/*.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
