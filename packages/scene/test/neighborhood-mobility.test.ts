@@ -169,6 +169,74 @@ describe("unified neighborhood mobility", () => {
     ).toBe(true);
   });
 
+  it("advances residents and pets with bounded physical movement from residence doors", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const layout = generateResidentialLayout(MOBILITY_SEED);
+    const property = layout.frontProperties[1];
+    expect(property).toBeDefined();
+    if (property === undefined) return;
+
+    const access = residentialAccessLayout(property, MOBILITY_SEED);
+    const door = { x: access.doorX, z: access.doorZ };
+    const previous = new Map<
+      string,
+      { x: number; z: number; visible: boolean }
+    >();
+    let sawResidentEntry = false;
+    let sawPetEntry = false;
+    let sawResidentMotion = false;
+    let sawPetMotion = false;
+
+    for (let elapsedMs = 0; elapsedMs <= 14_000; elapsedMs += 50) {
+      const sample = system.sample({
+        weather: "cloudy",
+        phase: "simulation",
+        elapsedMs,
+        durationMs: 14_000,
+        dayNumber: 5,
+        focus: door,
+      });
+
+      for (const id of ["resident:0", "resident-pet"] as const) {
+        const actor = sample.actors.find((candidate) => candidate.id === id);
+        expect(actor).toBeDefined();
+        if (actor === undefined) continue;
+
+        const prior = previous.get(id);
+        if (actor.visible && (prior === undefined || !prior.visible)) {
+          expect(Math.hypot(actor.x - door.x, actor.z - door.z)).toBeLessThan(
+            0.15,
+          );
+          if (id === "resident:0") sawResidentEntry = true;
+          else sawPetEntry = true;
+        }
+
+        if (prior !== undefined && prior.visible && actor.visible) {
+          const displacement = Math.hypot(
+            actor.x - prior.x,
+            actor.z - prior.z,
+          );
+          expect(displacement).toBeLessThanOrEqual(0.09);
+          if (displacement > 0.005) {
+            if (id === "resident:0") sawResidentMotion = true;
+            else sawPetMotion = true;
+          }
+        }
+
+        previous.set(id, {
+          x: actor.x,
+          z: actor.z,
+          visible: actor.visible,
+        });
+      }
+    }
+
+    expect(sawResidentEntry).toBe(true);
+    expect(sawPetEntry).toBe(true);
+    expect(sawResidentMotion).toBe(true);
+    expect(sawPetMotion).toBe(true);
+  });
+
   it("drives a resident vehicle into a driveway, parks, and later departs", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const parked = system.sample({
