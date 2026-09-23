@@ -5,7 +5,10 @@ import type {
   ScenePhase,
   LemonsvilleSceneOptions,
 } from "@lemonade/scene";
-import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
+import {
+  createStreetStoryboard,
+  MIN_STREET_PEDESTRIANS,
+} from "@lemonade/scene/storyboard-create";
 import type { DayEnvironment } from "@lemonade/simulation";
 
 import type { createLemonsvilleScene } from "./scene-runtime.js";
@@ -28,11 +31,11 @@ const sellerMoodForConfidence = (confidence: number): string => {
 };
 
 const pedestrianCount: Readonly<Record<CustomerActivity, number>> = Object.freeze({
-  quiet: 4,
-  light: 7,
-  steady: 10,
-  lively: 14,
-  busy: 54,
+  quiet: MIN_STREET_PEDESTRIANS,
+  light: 24,
+  steady: 28,
+  lively: 32,
+  busy: 36,
 });
 
 export type LemonsvilleSceneInput = Readonly<{

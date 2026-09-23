@@ -250,8 +250,16 @@ const basePose = (
       Math.min(elapsedMs - beat.startAtMs, safeDuration * 8),
     ) / 1_000;
 
-  const mainRoutes = routes.filter((route) => route.streetId === "main");
-  const neighborhoodRoutes = routes.filter(
+  const remainingSeconds =
+    Math.max(0, safeDuration - Math.max(0, beat.startAtMs)) / 1_000;
+  const requiredTravelDistance = remainingSeconds * worldSpeed + 0.25;
+  const supportsFullTraversal = (route: PedestrianRoute): boolean =>
+    route.total >= requiredTravelDistance;
+  const viableRoutes = routes.filter(supportsFullTraversal);
+  const mainRoutes = viableRoutes.filter(
+    (route) => route.streetId === "main",
+  );
+  const neighborhoodRoutes = viableRoutes.filter(
     (route) => route.streetId !== "main" && routeSupportsSideEntry(route),
   );
   const requestedSide: SidewalkSide = actorIndex % 2 === 0 ? "near" : "far";
@@ -280,21 +288,31 @@ const basePose = (
             ) * neighborhoodRoutes.length,
           )
         ];
+  const fallbackRoutes = viableRoutes.length > 0 ? viableRoutes : routes;
   const route =
     (beat.seesAdvertisement ? mainRoute : neighborhoodRoute) ??
-    routes[actorIndex % Math.max(1, routes.length)];
+    fallbackRoutes[actorIndex % Math.max(1, fallbackRoutes.length)];
   if (route === undefined) {
     throw new Error("crowd motion requires generated sidewalk routes");
   }
 
-  const requestedEntryOffset = beat.seesAdvertisement
-    ? 10 + deterministicUnit(actorIndex, 29) * 6
-    : 38 + deterministicUnit(actorIndex, 29) * 18;
-  const sideEntryOffset = Math.min(route.total * 0.42, requestedEntryOffset);
+  const availableStartDistance = Math.max(
+    0,
+    route.total - requiredTravelDistance,
+  );
+  const initialDistribution = deterministicUnit(
+    actorIndex,
+    293 + beat.pedestrianIndex * 19,
+  );
+  const entersAfterSimulationStart = beat.startAtMs > 0;
   const spawnDistance =
     beat.direction === -1
-      ? Math.max(0, route.total / 2 - sideEntryOffset)
-      : Math.min(route.total, route.total / 2 + sideEntryOffset);
+      ? entersAfterSimulationStart
+        ? 0
+        : availableStartDistance * initialDistribution
+      : entersAfterSimulationStart
+        ? route.total
+        : route.total - availableStartDistance * initialDistribution;
   const distanceTravelled = elapsedSeconds * worldSpeed;
   const routeDistance =
     beat.direction === -1
@@ -410,11 +428,40 @@ const separateCrowd = (poses: (MutableCrowdPose | undefined)[]): number => {
             const deterministicSide =
               deterministicUnit(left + right, 71) < 0.5 ? -1 : 1;
             if (a.routeId !== b.routeId) {
-              const yieldDistance = (CROWD_SEPARATION - distance) * 0.58;
-              a.x -= a.tangentX * yieldDistance;
-              a.z -= a.tangentZ * yieldDistance;
-              b.x -= b.tangentX * yieldDistance;
-              b.z -= b.tangentZ * yieldDistance;
+              const separationSide =
+                deterministicSide === -1 ? -1 : 1;
+              const push = (CROWD_SEPARATION - distance) * 0.52;
+              const previousAOffset = a.lateralOffset;
+              const previousBOffset = b.lateralOffset;
+              a.lateralOffset = Math.max(
+                -a.lateralLimit,
+                Math.min(
+                  a.lateralLimit,
+                  a.lateralOffset - push * separationSide,
+                ),
+              );
+              b.lateralOffset = Math.max(
+                -b.lateralLimit,
+                Math.min(
+                  b.lateralLimit,
+                  b.lateralOffset + push * separationSide,
+                ),
+              );
+              a.x = a.centerX + a.normalX * a.lateralOffset;
+              a.z = a.centerZ + a.normalZ * a.lateralOffset;
+              b.x = b.centerX + b.normalX * b.lateralOffset;
+              b.z = b.centerZ + b.normalZ * b.lateralOffset;
+
+              const lateralResolved =
+                Math.abs(a.lateralOffset - previousAOffset) +
+                Math.abs(b.lateralOffset - previousBOffset);
+              if (lateralResolved < push * 0.7) {
+                const yielder = deterministicSide < 0 ? a : b;
+                const yieldDistance =
+                  (CROWD_SEPARATION - distance) * 0.16;
+                yielder.x -= yielder.tangentX * yieldDistance;
+                yielder.z -= yielder.tangentZ * yieldDistance;
+              }
               continue;
             }
             const lateralDelta = b.lateralOffset - a.lateralOffset;
@@ -475,7 +522,7 @@ export const createCrowdSimulation = (
       const poses: (MutableCrowdPose | undefined)[] = Array.from({ length: count }, (_, index) => {
         const beat = beats[(index * 7) % beats.length];
         if (beat === undefined) throw new Error("crowd beat invariant failed");
-        if (elapsedMs < beat.startAtMs || elapsedMs >= beat.endAtMs) return undefined;
+        if (elapsedMs < beat.startAtMs) return undefined;
         return basePose(beat, index, elapsedMs, safeDuration, routes);
       });
 

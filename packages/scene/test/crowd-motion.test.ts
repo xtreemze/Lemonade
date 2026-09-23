@@ -24,6 +24,7 @@ import {
   type StreetStripSpec,
 } from "../src/street-layout.js";
 import type { PasserbyBeat } from "../src/storyboard.js";
+import { createStreetStoryboard } from "../src/storyboard-create.js";
 
 const beats: readonly PasserbyBeat[] = Object.freeze(
   Array.from({ length: 12 }, (_, index) =>
@@ -535,6 +536,89 @@ describe("crowd motion", () => {
       expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.18);
       expect(pose.worldSpeed).toBeLessThanOrEqual(1.44);
     }
+  });
+
+
+  it("keeps at least twenty ordinary pedestrians active and moving for the full street simulation", () => {
+    const storyboard = createStreetStoryboard({
+      durationMs: 14_000,
+      prepared: 20,
+      sold: 0,
+      visibleSigns: 0,
+      priceCents: 150,
+      ambientPedestrianCount: 4,
+    });
+    expect(storyboard.passersBy.length).toBeGreaterThanOrEqual(20);
+
+    const simulation = createCrowdSimulation(
+      storyboard.passersBy,
+      20,
+      storyboard.activeDurationMs,
+    );
+    let previous = simulation.sample(0).poses;
+    expect(previous.filter((pose) => pose !== undefined).length).toBeGreaterThanOrEqual(20);
+
+    for (
+      let elapsedMs = 250;
+      elapsedMs < storyboard.activeDurationMs;
+      elapsedMs += 250
+    ) {
+      const current = simulation.sample(elapsedMs).poses;
+      expect(
+        current.filter((pose) => pose !== undefined).length,
+      ).toBeGreaterThanOrEqual(20);
+
+      for (let index = 0; index < 20; index += 1) {
+        const before = previous[index];
+        const after = current[index];
+        expect(before).toBeDefined();
+        expect(after).toBeDefined();
+        if (before === undefined || after === undefined) continue;
+
+        expect(
+          Math.hypot(after.x - before.x, after.z - before.z),
+        ).toBeGreaterThan(0.04);
+        expect(after.travelDistance).toBeGreaterThan(before.travelDistance);
+      }
+      previous = current;
+    }
+  });
+
+  it("does not expire a pedestrian mid-route only because its beat window ended", () => {
+    const shortBeat: PasserbyBeat = Object.freeze({
+      pedestrianIndex: 0,
+      startAtMs: 0,
+      endAtMs: 900,
+      direction: -1,
+      lane: 0,
+      seesAdvertisement: false,
+      signIndex: -1,
+    });
+    const simulation = createCrowdSimulation([shortBeat], 1, 12_000);
+    const beforeBeatEnd = simulation.sample(800).poses[0];
+    const afterBeatEnd = simulation.sample(1_200).poses[0];
+    const muchLater = simulation.sample(8_000).poses[0];
+
+    expect(beforeBeatEnd).toBeDefined();
+    expect(afterBeatEnd).toBeDefined();
+    expect(muchLater).toBeDefined();
+    if (
+      beforeBeatEnd === undefined ||
+      afterBeatEnd === undefined ||
+      muchLater === undefined
+    ) {
+      return;
+    }
+
+    expect(
+      Math.hypot(
+        afterBeatEnd.x - beforeBeatEnd.x,
+        afterBeatEnd.z - beforeBeatEnd.z,
+      ),
+    ).toBeGreaterThan(0.1);
+    expect(muchLater.travelDistance).toBeGreaterThan(
+      afterBeatEnd.travelDistance,
+    );
   });
 
 });
