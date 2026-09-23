@@ -1,6 +1,7 @@
 import {
   generateResidentialLayout,
   residentialAccessLayout,
+  residentialFootprintIntersectsHardscape,
   type ResidentialLayout,
   type ResidentialPoint,
   type ResidentialPropertySpec,
@@ -300,6 +301,11 @@ const detailForPoint = (
   focus: ResidentialPoint,
 ): MobilityDetail => mobilityDetailForDistance(pointDistance(point, focus));
 
+const hasDrivewayX = (
+  property: ResidentialPropertySpec | undefined,
+): property is ResidentialPropertySpec & { drivewayX: number } =>
+  property?.drivewayX !== undefined && property.drivewayX !== null;
+
 const allProperties = (layout: ResidentialLayout): readonly ResidentialPropertySpec[] =>
   Object.freeze([
     ...layout.frontProperties,
@@ -307,6 +313,25 @@ const allProperties = (layout: ResidentialLayout): readonly ResidentialPropertyS
     ...layout.backProperties,
     ...layout.outerProperties,
   ]);
+
+// Single source of truth for which property indices get a rendered
+// sprinkler: neighborhood.ts's placement loop and this module's activity
+// sampling both call this so "sprinklerOn" can never be true for a property
+// that has no sprinkler mesh in the scene (every third property, skipping
+// any whose sprinkler position would land on hardscape).
+export const sprinklerEligibleAt = (
+  index: number,
+  property: ResidentialPropertySpec,
+  layout: ResidentialLayout,
+  seed: number,
+): boolean => {
+  if (index % 3 !== 0) return false;
+  const access = residentialAccessLayout(property, seed);
+  const lateral = index % 2 === 0 ? 2.15 : -2.15;
+  const x = property.houseX + lateral;
+  const z = access.pathCenterZ;
+  return !residentialFootprintIntersectsHardscape({ x, z }, layout, 0.28, 0.28);
+};
 
 const propertyDoorPoint = (
   property: ResidentialPropertySpec,
@@ -997,8 +1022,7 @@ export const createNeighborhoodMobilitySystem = (
           if (!hasVehicle) continue;
           const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) * allDrivewayProperties.length);
           const property = allDrivewayProperties[propertyIndex];
-          if (property === undefined) continue;
-          if (property.drivewayX === null) continue;
+          if (!hasDrivewayX(property)) continue;
           const access = residentialAccessLayout(property, safeSeed);
           const parkedVehicle = makePose(
             `parked-vehicle-${String(i)}`,
@@ -1025,7 +1049,9 @@ export const createNeighborhoodMobilitySystem = (
         allProperties(layout).forEach((property, index) => {
           const morningOccupied =
             deterministicUnit(safeSeed ^ dayNumber, 1300 + index) > 0.48;
+          const hasSprinkler = sprinklerEligibleAt(index, property, layout, safeSeed);
           const sprinkler =
+            hasSprinkler &&
             sunny &&
             ((index + dayNumber + (safeSeed & 3)) % 4 === 0) &&
             morning > 0.08 &&
@@ -1054,8 +1080,7 @@ export const createNeighborhoodMobilitySystem = (
           if (!hasVehicle) continue;
           const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4500 + i) * allDrivewayProperties.length);
           const property = allDrivewayProperties[propertyIndex];
-          if (property === undefined) continue;
-          if (property.drivewayX === null) continue;
+          if (!hasDrivewayX(property)) continue;
           const access = residentialAccessLayout(property, safeSeed);
           const parkedVehicle = makePose(
             `parked-vehicle-night-${String(i)}`,

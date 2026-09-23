@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ambientPopulationFor,
+  birdFlightProfileFor,
   createAmbientLife,
   petFollowPose,
   vehicleVariantSpec,
@@ -294,6 +295,32 @@ describe("crowd motion", () => {
       expect(roles.has("hair-cover")).toBe(true);
       expect(roles.has("hair-detail")).toBe(true);
       expect(roles.has("garment-detail")).toBe(true);
+    }
+  });
+
+  it("derives deterministic varied bird flight profiles from the scene seed", () => {
+    const first = Array.from({ length: 4 }, (_, index) =>
+      birdFlightProfileFor(0x1ead2026, index),
+    );
+    const repeated = Array.from({ length: 4 }, (_, index) =>
+      birdFlightProfileFor(0x1ead2026, index),
+    );
+    const alternate = Array.from({ length: 4 }, (_, index) =>
+      birdFlightProfileFor(0x1ead2027, index),
+    );
+
+    expect(repeated).toEqual(first);
+    expect(alternate).not.toEqual(first);
+    expect(new Set(first.map((profile) => profile.direction))).toEqual(
+      new Set([-1, 1]),
+    );
+    expect(new Set(first.map((profile) => profile.depth)).size).toBe(4);
+    expect(new Set(first.map((profile) => profile.altitude)).size).toBe(4);
+    for (const profile of first) {
+      expect(profile.speed).toBeGreaterThanOrEqual(0.54);
+      expect(profile.speed).toBeLessThanOrEqual(0.88);
+      expect(profile.scale).toBeGreaterThanOrEqual(0.88);
+      expect(profile.scale).toBeLessThanOrEqual(1.16);
     }
   });
 

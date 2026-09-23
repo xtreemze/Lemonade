@@ -5,6 +5,7 @@ import {
   FRONT_PROPERTY_LAYOUT,
   populateNeighborhood,
   updateNeighborhoodActivity,
+  weatherWindGustAt,
   weatherWindStrength,
 } from "../src/neighborhood.js";
 import {
@@ -16,6 +17,22 @@ import {
 import { STAND_WORLD_Z } from "../src/stand-anchors.js";
 import { STAND_LAYOUT } from "../src/stand-layout.js";
 import { gardenSignPosition, STREET_LAYOUT } from "../src/street-layout.js";
+
+// Three.js's `Object3D.userData` is typed as `Record<string, any>`; these
+// helpers isolate that boundary so callers deal in validated, narrow types
+// instead of propagating `any` through map/filter callbacks.
+const proceduralSeedOf = (object: Object3D): number => {
+  const seed: unknown = object.userData["proceduralSeed"];
+  return typeof seed === "number" ? seed : Number.NaN;
+};
+
+const meshGeometryUuid = (object: Object3D): string | null => {
+  if (!(object instanceof Mesh)) return null;
+  const geometry: unknown = object.geometry;
+  if (geometry === null || typeof geometry !== "object") return null;
+  const uuid: unknown = (geometry as Record<string, unknown>)["uuid"];
+  return typeof uuid === "string" ? uuid : null;
+};
 
 describe("neighborhood world scale", () => {
   it("extends the world with LOD scenery beyond the cinematic camera envelope", () => {
@@ -87,6 +104,52 @@ describe("neighborhood world scale", () => {
     ).toBe(true);
     expect(treeVariants.size).toBeGreaterThan(8);
     expect(shrubVariants.size).toBeGreaterThan(4);
+
+    const proceduralPlants = scene.children.filter((object) =>
+      object.userData["sceneRole"] === "procedural-tree" ||
+      object.userData["sceneRole"] === "procedural-shrub",
+    );
+    expect(
+      proceduralPlants.every(
+        (plant) =>
+          plant.userData["proceduralTechnique"] === "seeded-distance-lod" &&
+          typeof plant.userData["proceduralSeed"] === "number",
+      ),
+    ).toBe(true);
+    expect(
+      new Set(
+        proceduralPlants.map((plant) => proceduralSeedOf(plant)),
+      ).size,
+    ).toBeGreaterThan(16);
+
+    const reusesGeometryWithinPlant = proceduralPlants.some((plant) => {
+      const geometryIds: string[] = [];
+      plant.traverse((object) => {
+        const uuid = meshGeometryUuid(object);
+        if (uuid !== null) geometryIds.push(uuid);
+      });
+      return (
+        geometryIds.length > 3 &&
+        new Set(geometryIds).size < geometryIds.length
+      );
+    });
+    expect(reusesGeometryWithinPlant).toBe(true);
+
+    expect(
+      flowerBeds.every(
+        (bed) => typeof bed.userData["proceduralSeed"] === "number",
+      ),
+    ).toBe(true);
+    const firstFlowerBed = flowerBeds[0];
+    expect(firstFlowerBed).toBeDefined();
+    if (firstFlowerBed !== undefined) {
+      const geometryIds: string[] = [];
+      firstFlowerBed.traverse((object) => {
+        const uuid = meshGeometryUuid(object);
+        if (uuid !== null) geometryIds.push(uuid);
+      });
+      expect(new Set(geometryIds).size).toBeLessThan(geometryIds.length);
+    }
 
     const residentialHomes = scene.children.filter((object) => {
       const role: unknown = object.userData["sceneRole"];
@@ -238,11 +301,16 @@ describe("neighborhood world scale", () => {
     expect(sprinkler?.visible).toBe(false);
   });
 
-  it("makes storm wind materially stronger than ordinary weather", () => {
+  it("makes storm wind materially stronger and gustier than ordinary weather", () => {
     expect(weatherWindStrength("sunny")).toBeGreaterThan(0);
     expect(weatherWindStrength("thunderstorm")).toBeGreaterThan(
-      weatherWindStrength("cloudy") * 2,
+      weatherWindStrength("cloudy") * 4,
     );
+
+    const ordinary = weatherWindGustAt("cloudy", 2.4, 0.7);
+    const storm = weatherWindGustAt("thunderstorm", 2.4, 0.7);
+    expect(Math.abs(storm)).toBeGreaterThanOrEqual(Math.abs(ordinary));
+    expect(weatherWindGustAt("thunderstorm", 2.4, 0.7)).toBe(storm);
   });
 
   it("puts the stand in the featured garden beside its driveway and near the next property", () => {

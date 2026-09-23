@@ -5,6 +5,7 @@ import {
   OPERATING_SCALE_THRESHOLDS_CENTS,
   createInitialState,
   glassCount,
+  isLegacyBankrupt,
   moneyCents,
   neutralEnvironment,
   operatingScaleForEquity,
@@ -56,6 +57,23 @@ describe("operating-scale progression", () => {
     expect(operatingScaleForEquity(49_999).level).toBe(2);
     expect(operatingScaleForEquity(10_000).level).toBe(2);
     expect(operatingScaleForEquity(9_999).level).toBe(1);
+  });
+
+  it("treats the original $10 operating reserve as the bankruptcy boundary", () => {
+    const initial = createInitialState();
+    expect(isLegacyBankrupt(initial)).toBe(false);
+
+    const losingDay = simulateDay(
+      initial,
+      Object.freeze({
+        glasses: glassCount(10),
+        signs: signCount(0),
+        price: moneyCents(1),
+      }),
+      neutralEnvironment(),
+    );
+
+    expect(isLegacyBankrupt(losingDay.nextState)).toBe(true);
   });
 
   it("derives stand scale from the 2017 operating ledger, not later finance cash", () => {

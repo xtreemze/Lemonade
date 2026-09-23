@@ -234,6 +234,11 @@ const basePose = (
   routes: readonly PedestrianRoute[],
 ): MutableCrowdPose | undefined => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
+  // Spacing is deliberately keyed to the fixed visual pool capacity, not the
+  // number of currently active actors: that count fluctuates frame to frame
+  // (e.g. as buyers arrive/leave and animatePassersBy raises its target
+  // count), and dividing by it would instantly shift every visible
+  // pedestrian's position along their route whenever it changed.
   const worldSpeed = 1.18 + deterministicUnit(actorIndex, 17) * 0.26;
   const elapsedSeconds =
     Math.max(

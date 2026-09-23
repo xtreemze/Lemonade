@@ -20,10 +20,17 @@ import {
 import {
   generateStreetNetwork,
   STREET_LAYOUT,
-  type StreetStripSpec,
 } from "./street-layout.js";
+import { createStreetSurfaceField } from "./street-surface-field.js";
+import {
+  createPropertyAccessSurfaceField,
+  type PropertyAccessSurfaceSpec,
+} from "./property-access-surface-field.js";
 import { WORLD_SCALE } from "./world-scale.js";
-import type { PropertyActivity } from "./neighborhood-mobility.js";
+import {
+  sprinklerEligibleAt,
+  type PropertyActivity,
+} from "./neighborhood-mobility.js";
 
 const material = (color: number, flatShading = true): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading, roughness: 0.92 });
@@ -54,46 +61,6 @@ const road = (
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(x, y, z);
   if (role !== undefined) mesh.userData["sceneRole"] = role;
-  scene.add(mesh);
-  return mesh;
-};
-
-const streetStrip = (
-  scene: Scene,
-  strip: StreetStripSpec,
-  color: number,
-): Mesh => {
-  const mesh = new Mesh(
-    new BoxGeometry(strip.length, 0.022, strip.width),
-    material(color),
-  );
-  mesh.position.set(strip.x, strip.role === "sidewalk" ? 0.022 : 0.012, strip.z);
-  mesh.rotation.y = -strip.rotationY;
-  mesh.userData["sceneRole"] = strip.role;
-  mesh.userData["streetId"] = strip.streetId;
-  mesh.userData["streetSegment"] = strip.segmentIndex;
-  scene.add(mesh);
-  return mesh;
-};
-
-const accessStrip = (
-  scene: Scene,
-  length: number,
-  width: number,
-  x: number,
-  z: number,
-  rotationY: number,
-  color: number,
-  y: number,
-  role: string,
-): Mesh => {
-  const mesh = new Mesh(
-    new BoxGeometry(length, 0.018, width),
-    material(color),
-  );
-  mesh.position.set(x, y, z);
-  mesh.rotation.y = -rotationY;
-  mesh.userData["sceneRole"] = role;
   scene.add(mesh);
   return mesh;
 };
@@ -240,6 +207,7 @@ const plantUnit = (seed: number, salt: number): number => {
 
 const detailedTree = (color: number, seed: number): Group => {
   const root = new Group();
+  const woodMaterial = material(0x765232);
   const trunkHeight = 2.35 + plantUnit(seed, 11) * 0.75;
   const trunk = new Mesh(
     new CylinderGeometry(
@@ -248,18 +216,17 @@ const detailedTree = (color: number, seed: number): Group => {
       trunkHeight,
       7,
     ),
-    material(0x765232),
+    woodMaterial,
   );
   trunk.position.y = trunkHeight / 2;
   trunk.rotation.z = (plantUnit(seed, 19) - 0.5) * 0.1;
   root.add(trunk);
 
+  const branchGeometry = new CylinderGeometry(0.06, 0.14, 1, 12);
   for (const direction of [-1, 1] as const) {
     const branchLength = 0.82 + plantUnit(seed, 23 + direction) * 0.52;
-    const branch = new Mesh(
-      new CylinderGeometry(0.06, 0.14, branchLength, 12),
-      material(0x765232),
-    );
+    const branch = new Mesh(branchGeometry, woodMaterial);
+    branch.scale.y = branchLength;
     branch.position.set(
       direction * (0.2 + plantUnit(seed, 29 + direction) * 0.18),
       trunkHeight * (0.62 + plantUnit(seed, 31 + direction) * 0.12),
@@ -270,19 +237,18 @@ const detailedTree = (color: number, seed: number): Group => {
     root.add(branch);
   }
 
+  const crownGeometry = new SphereGeometry(1.25, 10, 7);
+  const foliageMaterial = material(color);
   const crownCount = 3 + Math.floor(plantUnit(seed, 47) * 3);
   for (let index = 0; index < crownCount; index += 1) {
     const angle = plantUnit(seed, 53 + index * 7) * Math.PI * 2;
     const radius = index === 0 ? 0 : 0.35 + plantUnit(seed, 59 + index * 5) * 0.65;
     const size = 0.88 + plantUnit(seed, 61 + index * 11) * 0.72;
-    const crown = new Mesh(
-      new SphereGeometry(1.25 * size, 10, 7),
-      material(color),
-    );
+    const crown = new Mesh(crownGeometry, foliageMaterial);
     crown.scale.set(
-      0.84 + plantUnit(seed, 67 + index) * 0.36,
-      0.9 + plantUnit(seed, 71 + index) * 0.34,
-      0.82 + plantUnit(seed, 73 + index) * 0.32,
+      size * (0.84 + plantUnit(seed, 67 + index) * 0.36),
+      size * (0.9 + plantUnit(seed, 71 + index) * 0.34),
+      size * (0.82 + plantUnit(seed, 73 + index) * 0.32),
     );
     crown.position.set(
       Math.cos(angle) * radius,
@@ -331,21 +297,25 @@ const treeLod = (
   );
   root.userData["sceneRole"] = "procedural-tree";
   root.userData["plantVariant"] = variant;
+  root.userData["proceduralSeed"] = seed >>> 0;
+  root.userData["proceduralTechnique"] = "seeded-distance-lod";
   return markWindResponsive(root, phase);
 };
 
 const detailedShrub = (color: number, seed: number): Group => {
   const root = new Group();
+  const crownGeometry = new SphereGeometry(1, 8, 6);
+  const crownMaterial = material(color);
   const lobeCount = 3 + Math.floor(plantUnit(seed, 107) * 3);
   for (let index = 0; index < lobeCount; index += 1) {
     const angle = plantUnit(seed, 109 + index * 7) * Math.PI * 2;
     const radius = 0.16 + plantUnit(seed, 113 + index * 5) * 0.48;
     const size = 0.52 + plantUnit(seed, 127 + index * 11) * 0.48;
-    const crown = new Mesh(new SphereGeometry(size, 8, 6), material(color));
+    const crown = new Mesh(crownGeometry, crownMaterial);
     crown.scale.set(
-      0.9 + plantUnit(seed, 131 + index) * 0.32,
-      0.82 + plantUnit(seed, 137 + index) * 0.3,
-      0.88 + plantUnit(seed, 139 + index) * 0.28,
+      size * (0.9 + plantUnit(seed, 131 + index) * 0.32),
+      size * (0.82 + plantUnit(seed, 137 + index) * 0.3),
+      size * (0.88 + plantUnit(seed, 139 + index) * 0.28),
     );
     crown.position.set(
       Math.cos(angle) * radius,
@@ -385,6 +355,8 @@ const shrubLod = (
   );
   root.userData["sceneRole"] = "procedural-shrub";
   root.userData["plantVariant"] = Math.floor(plantUnit(seed, 151) * 1_000);
+  root.userData["proceduralSeed"] = seed >>> 0;
+  root.userData["proceduralTechnique"] = "seeded-distance-lod";
   return markWindResponsive(root, phase);
 };
 
@@ -393,57 +365,59 @@ const flower = (
   z: number,
   color: number,
   phase: number,
+  seed: number,
 ): Group => {
   const root = new Group();
-  const offsets = [
-    [0, 0],
-    [-0.22, 0.06],
-    [0.21, -0.05],
-    [-0.11, 0.2],
-    [0.13, 0.19],
-  ] as const;
+  const stemGeometry = new CylinderGeometry(0.018, 0.025, 1, 5);
+  const blossomGeometry = new SphereGeometry(0.055, 7, 5);
+  const stemMaterial = material(0x4f8246);
+  const centerMaterial = material(0xe1ad35);
+  const petalMaterial = material(color);
+  const flowerCount = 5;
 
-  offsets.forEach(([offsetX, offsetZ], flowerIndex) => {
+  for (let flowerIndex = 0; flowerIndex < flowerCount; flowerIndex += 1) {
     const cluster = new Group();
-    const height = 0.34 + (flowerIndex % 3) * 0.035;
-    const stem = new Mesh(
-      new CylinderGeometry(0.018, 0.025, height, 5),
-      material(0x4f8246),
-    );
+    const radius =
+      flowerIndex === 0 ? 0 : 0.12 + plantUnit(seed, 157 + flowerIndex * 11) * 0.18;
+    const angle = plantUnit(seed, 163 + flowerIndex * 13) * Math.PI * 2;
+    const height = 0.32 + plantUnit(seed, 167 + flowerIndex * 17) * 0.11;
+    const stem = new Mesh(stemGeometry, stemMaterial);
+    stem.scale.y = height;
     stem.position.y = height / 2;
     cluster.add(stem);
 
     const centerY = height + 0.035;
-    const center = new Mesh(
-      new SphereGeometry(0.055, 7, 5),
-      material(0xe1ad35),
-    );
+    const center = new Mesh(blossomGeometry, centerMaterial);
     center.position.y = centerY;
     cluster.add(center);
 
+    const petalPhase = plantUnit(seed, 173 + flowerIndex * 19) * Math.PI * 2;
     for (let petalIndex = 0; petalIndex < 5; petalIndex += 1) {
-      const angle = (petalIndex / 5) * Math.PI * 2;
-      const petal = new Mesh(
-        new SphereGeometry(0.055, 7, 5),
-        material(color),
-      );
+      const petalAngle = petalPhase + (petalIndex / 5) * Math.PI * 2;
+      const petal = new Mesh(blossomGeometry, petalMaterial);
       petal.scale.set(1.3, 0.7, 0.55);
       petal.position.set(
-        Math.cos(angle) * 0.075,
-        centerY + Math.sin(angle) * 0.075,
+        Math.cos(petalAngle) * 0.075,
+        centerY + Math.sin(petalAngle) * 0.075,
         0.012,
       );
       cluster.add(petal);
     }
-    cluster.position.set(offsetX, 0, offsetZ);
+    cluster.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
     root.add(cluster);
-  });
+  }
 
   root.position.set(x, 0, z);
   root.userData["sceneRole"] = "garden-flower";
-  root.userData["flowerCount"] = offsets.length;
+  root.userData["flowerCount"] = flowerCount;
+  root.userData["proceduralSeed"] = seed >>> 0;
   return markWindResponsive(root, phase);
 };
+
+// Half-thickness of a fence's end posts (box width 0.12 / 2). The outermost
+// posts are centered at +/-width/2, so they overhang the nominal `width` by
+// this much on each side; callers validating hardscape clearance must add it.
+const FENCE_POST_HALF_THICKNESS = 0.06;
 
 const fenceRun = (x: number, z: number, width: number): Group => {
   const root = new Group();
@@ -574,17 +548,60 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] =
 
 export type NeighborhoodWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 
+type WindRegistry = Readonly<{
+  rootChildCount: number;
+  objects: readonly Object3D[];
+}>;
+
+const windRegistryByScene = new WeakMap<Scene, WindRegistry>();
+
+const refreshWindRegistry = (scene: Scene): WindRegistry => {
+  const objects: Object3D[] = [];
+  scene.traverse((object) => {
+    if (object.userData["windResponsive"] === true) objects.push(object);
+  });
+  const registry = Object.freeze({
+    rootChildCount: scene.children.length,
+    objects: Object.freeze(objects),
+  });
+  windRegistryByScene.set(scene, registry);
+  return registry;
+};
+
+const windRegistryFor = (scene: Scene): WindRegistry => {
+  const cached = windRegistryByScene.get(scene);
+  if (cached?.rootChildCount === scene.children.length) {
+    return cached;
+  }
+  return refreshWindRegistry(scene);
+};
+
 export const weatherWindStrength = (weather: NeighborhoodWeather): number => {
   switch (weather) {
     case "sunny":
       return 0.012;
     case "cloudy":
-      return 0.018;
+      return 0.022;
     case "hot-and-dry":
-      return 0.026;
+      return 0.034;
     case "thunderstorm":
-      return 0.064;
+      return 0.11;
   }
+};
+
+export const weatherWindGustAt = (
+  weather: NeighborhoodWeather,
+  seconds: number,
+  phase = 0,
+): number => {
+  const primary = Math.sin(seconds * 1.25 + phase) * 0.62;
+  const secondary = Math.sin(seconds * 2.7 + phase * 1.7) * 0.26;
+  const flutter = Math.sin(seconds * 5.1 + phase * 0.73) * 0.12;
+  if (weather !== "thunderstorm") return primary + secondary + flutter;
+
+  const gustWindow = Math.max(0, Math.sin(seconds * 0.72 + phase * 0.31 + 0.8));
+  const burst = gustWindow * gustWindow * gustWindow * gustWindow;
+  return (primary + secondary + flutter) * (1 + burst * 0.75);
 };
 
 export const updateNeighborhoodWind = (
@@ -593,8 +610,7 @@ export const updateNeighborhoodWind = (
   weather: NeighborhoodWeather,
 ): void => {
   const strength = weatherWindStrength(weather);
-  scene.traverse((object) => {
-    if (object.userData["windResponsive"] !== true) return;
+  for (const object of windRegistryFor(scene).objects) {
     const phase =
       typeof object.userData["windPhase"] === "number"
         ? object.userData["windPhase"]
@@ -607,12 +623,17 @@ export const updateNeighborhoodWind = (
       typeof object.userData["windBaseRotationZ"] === "number"
         ? object.userData["windBaseRotationZ"]
         : 0;
-    const gust =
-      Math.sin(seconds * 1.25 + phase) * 0.7 +
-      Math.sin(seconds * 2.7 + phase * 1.7) * 0.3;
-    object.rotation.x = baseX + gust * strength * 0.24;
-    object.rotation.z = baseZ + gust * strength;
-  });
+    const gust = weatherWindGustAt(weather, seconds, phase);
+    const sceneRole: unknown = object.userData["sceneRole"];
+    const response =
+      sceneRole === "garden-flower"
+        ? 1.65
+        : sceneRole === "procedural-shrub"
+          ? 1.3
+          : 1;
+    object.rotation.x = baseX + gust * strength * response * 0.32;
+    object.rotation.z = baseZ + gust * strength * response;
+  }
 };
 
 
@@ -681,12 +702,12 @@ export const populateNeighborhood = (
   let roadSegments = streetNetwork.roads.length + streetNetwork.sidewalks.length;
   const pavedRoads = streetNetwork.roads.length;
 
-  for (const strip of streetNetwork.roads) {
-    streetStrip(scene, strip, strip.streetId === "main" ? 0x596065 : 0x62686b);
-  }
-  for (const strip of streetNetwork.sidewalks) {
-    streetStrip(scene, strip, 0xd4d0c6);
-  }
+  const streetSurfaces = createStreetSurfaceField(
+    streetNetwork.roads,
+    streetNetwork.sidewalks,
+  );
+  for (const anchor of streetSurfaces.anchors) scene.add(anchor);
+  for (const mesh of streetSurfaces.meshes) scene.add(mesh);
 
   for (let x = -115; x <= 115; x += 7.5) {
     road(
@@ -707,30 +728,27 @@ export const populateNeighborhood = (
     ...layout.backProperties,
     ...layout.outerProperties,
   ];
+  const propertyAccessSurfaces: PropertyAccessSurfaceSpec[] = [];
   for (const property of allProperties) {
     const access = residentialAccessLayout(property, seed);
     if (property.drivewayX !== null) {
-      accessStrip(
-        scene,
-        access.drivewayLength,
-        WORLD_SCALE.vehicle.width,
-        access.drivewayCenterX,
-        access.drivewayCenterZ,
-        access.drivewayRotationY,
-        0xc9b995,
-        0.019,
-        "driveway",
-      );
-      accessStrip(
-        scene,
-        access.pathLength,
-        access.pathWidth,
-        access.pathCenterX,
-        access.pathCenterZ,
-        access.pathRotationY,
-        0xd8c9aa,
-        0.021,
-        "front-path",
+      propertyAccessSurfaces.push(
+        Object.freeze({
+          role: "driveway",
+          length: access.drivewayLength,
+          width: WORLD_SCALE.vehicle.width,
+          x: access.drivewayCenterX,
+          z: access.drivewayCenterZ,
+          rotationY: access.drivewayRotationY,
+        }),
+        Object.freeze({
+          role: "front-path",
+          length: access.pathLength,
+          width: access.pathWidth,
+          x: access.pathCenterX,
+          z: access.pathCenterZ,
+          rotationY: access.pathRotationY,
+        }),
       );
       roadSegments += 2;
     }
@@ -749,6 +767,11 @@ export const populateNeighborhood = (
     home.name = "building-" + property.role;
     scene.add(home);
   }
+
+  const propertyAccessField =
+    createPropertyAccessSurfaceField(propertyAccessSurfaces);
+  for (const anchor of propertyAccessField.anchors) scene.add(anchor);
+  for (const mesh of propertyAccessField.meshes) scene.add(mesh);
 
   const housePositions = [
     ...layout.middleProperties,
@@ -861,7 +884,10 @@ export const populateNeighborhood = (
       if (width >= 1.15) {
         const fence = fenceRun(cursor + width / 2, fenceZ, width);
         fence.userData["propertyRole"] = property.role;
-        addYardDetailIfClear(fence, width / 2, 0.06);
+        // fenceRun's end posts are centered at +/-width/2 with their own
+        // half-thickness (0.06), so the rendered fence is actually
+        // FENCE_POST_HALF_THICKNESS wider than `width` on each side.
+        addYardDetailIfClear(fence, width / 2 + FENCE_POST_HALF_THICKNESS, 0.06);
       }
       cursor = Math.max(cursor, gap.maxX);
     }
@@ -869,27 +895,17 @@ export const populateNeighborhood = (
     if (finalWidth >= 1.15) {
       const fence = fenceRun(cursor + finalWidth / 2, fenceZ, finalWidth);
       fence.userData["propertyRole"] = property.role;
-      addYardDetailIfClear(fence, finalWidth / 2, 0.06);
+      addYardDetailIfClear(fence, finalWidth / 2 + FENCE_POST_HALF_THICKNESS, 0.06);
     }
   }
   for (const detail of yardDetails) scene.add(detail);
 
   allProperties.forEach((property, index) => {
-    if (index % 3 !== 0) return;
+    if (!sprinklerEligibleAt(index, property, layout, seed)) return;
     const access = residentialAccessLayout(property, seed);
     const lateral = index % 2 === 0 ? 2.15 : -2.15;
     const x = property.houseX + lateral;
     const z = access.pathCenterZ;
-    if (
-      residentialFootprintIntersectsHardscape(
-        { x, z },
-        layout,
-        0.28,
-        0.28,
-      )
-    ) {
-      return;
-    }
     scene.add(sprinkler(x, z, property.role));
   });
 
@@ -930,6 +946,7 @@ export const populateNeighborhood = (
       planting.z,
       color,
       40 + index * 0.91,
+      seed ^ Math.imul(index + 1, 0x165667b1),
     );
     bed.userData["propertyRole"] = planting.propertyRole;
     bed.userData["yardZone"] = planting.yardZone;
@@ -943,6 +960,8 @@ export const populateNeighborhood = (
   distantHill(scene, 104, -100, 30, 12, 0x718967);
   atmosphereBand(scene, -82, 12, 260, 42, 0xb9c8bd, 0.08);
   atmosphereBand(scene, -116, 15, 300, 48, 0xc8d2ca, 0.11);
+
+  refreshWindRegistry(scene);
 
   return Object.freeze({
     houseLods: layout.frontProperties.length + housePositions.length,

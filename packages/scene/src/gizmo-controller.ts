@@ -1,464 +1,530 @@
 import {
-  Box3,
-  type Camera,
-  Mesh,
-  type Object3D,
-  Raycaster,
-  type Scene,
-  Vector2,
   Vector3,
+  Vector2,
+  Raycaster,
+  PerspectiveCamera,
+  BufferGeometry,
+  BufferAttribute,
+  LineBasicMaterial,
+  Line,
+  ConeGeometry,
+  MeshBasicMaterial,
+  Mesh,
+  BoxGeometry,
+  Group,
+  BoxHelper,
+  Euler,
 } from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import type { Camera, Scene, Object3D } from "three";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 export type TransformMode = "translate" | "rotate" | "scale";
-export type SceneEditorView =
-  | "perspective"
-  | "front"
-  | "back"
-  | "left"
-  | "right"
-  | "top";
 
-export type ObjectTransform = Readonly<{
-  key: string;
+export interface GizmoState {
+  selectedObject: Object3D | null;
+  mode: TransformMode;
+  isDragging: boolean;
+  savedPositions: Map<string, { position: Vector3; rotation: Euler; scale: Vector3 }>;
+}
+
+export interface ObjectTransform {
+  uuid: string;
   name: string;
-  position: readonly [number, number, number];
-  rotation: readonly [number, number, number];
-  scale: readonly [number, number, number];
-}>;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: [number, number, number];
+}
 
-export type SceneEditorCameraState = Readonly<{
-  position: readonly [number, number, number];
-  target: readonly [number, number, number];
-  fov: number | null;
-}>;
+// TransformControls ships no .d.ts under three/examples/jsm; TypeScript structurally infers its
+// Object3D-derived shape from the .js source, but not the extra `gizmoGroup` field it sets at
+// runtime. This intersection is the single documented boundary for that gap.
+type TransformControlsInstance = TransformControls & { gizmoGroup?: Object3D };
 
-export type SceneObjectSelection = Readonly<{
-  key: string;
-  name: string;
-  role: string | null;
-}>;
+const createTransformControls = (camera: Camera, container: HTMLElement): TransformControlsInstance =>
+  new TransformControls(camera, container);
 
-export type GizmoControllerOptions = Readonly<{
+const getVerticalFovRadians = (camera: Camera): number => {
+  const fovDegrees = camera instanceof PerspectiveCamera ? camera.fov : 50;
+  return fovDegrees * (Math.PI / 180);
+};
+
+const readAxis = (obj: Object3D): "x" | "y" | "z" | null => {
+  const axis: unknown = obj.userData["axis"];
+  return axis === "x" || axis === "y" || axis === "z" ? axis : null;
+};
+
+const raycaster = new Raycaster();
+const mouse = new Vector2();
+
+let selectedObject: Object3D | null = null;
+let selectedHelper: BoxHelper | null = null;
+let currentMode: TransformMode = "translate";
+let isDragging = false;
+let dragAxis: "x" | "y" | "z" | null = null;
+const dragStartWorldPos = new Vector3();
+const initialPosition = new Vector3();
+const initialRotation = new Euler();
+const initialScale = new Vector3();
+
+interface GizmoOptions {
   camera: Camera;
   scene: Scene;
   container: HTMLElement;
-  onSelectionChanged?: (selection: SceneObjectSelection | null) => void;
-  onTransformChanged?: (transform: ObjectTransform) => void;
-  onCameraChanged?: (state: SceneEditorCameraState) => void;
-}>;
+  selectableObjects?: Object3D[];
+  onTransformChanged?: () => void;
+}
 
-const stringMetadata = (object: Object3D, key: string): string | null => {
-  const value: unknown = object.userData[key];
-  return typeof value === "string" && value.length > 0 ? value : null;
-};
+export interface GizmoController {
+  selectObject: (obj: Object3D) => void;
+  deselectObject: () => void;
+  saveTransform: () => void;
+  getSavedTransforms: () => ObjectTransform[];
+  exportAsJSON: () => string;
+  exportAsCode: () => string;
+  getState: () => GizmoState;
+  setMode: (mode: TransformMode) => void;
+  getMode: () => TransformMode;
+  getSelectedObject: () => Object3D | null;
+  dispose: () => void;
+}
 
-const semanticRole = (object: Object3D): string | null =>
-  stringMetadata(object, "sceneRole");
-
-const occurrenceFor = (
-  scene: Scene,
-  object: Object3D,
-  predicate: (candidate: Object3D) => boolean,
-): number => {
-  let occurrence = 0;
-  let result = 0;
-  let found = false;
-  scene.traverse((candidate) => {
-    if (found || !predicate(candidate)) return;
-    if (candidate === object) {
-      result = occurrence;
-      found = true;
-      return;
-    }
-    occurrence += 1;
-  });
-  return result;
-};
-
-export const sceneEditorObjectKey = (
-  scene: Scene,
-  object: Object3D,
-): string => {
-  if (object.name.length > 0) return `name:${object.name}`;
-
-  const role = semanticRole(object);
-  const propertyRole = stringMetadata(object, "propertyRole");
-  if (role !== null && propertyRole !== null) {
-    return `role:${role}:property:${propertyRole}`;
-  }
-
-  const streetId = stringMetadata(object, "streetId");
-  const streetSegment: unknown = object.userData["streetSegment"];
-  if (role !== null && streetId !== null && typeof streetSegment === "number") {
-    return `role:${role}:street:${streetId}:${String(streetSegment)}`;
-  }
-
-  if (role !== null) {
-    const occurrence = occurrenceFor(
-      scene,
-      object,
-      (candidate) => semanticRole(candidate) === role,
-    );
-    return `role:${role}:${String(occurrence)}`;
-  }
-
-  const occurrence = occurrenceFor(
-    scene,
-    object,
-    (candidate) => candidate.type === object.type && candidate.parent === object.parent,
-  );
-  return `object:${object.type}:${String(occurrence)}`;
-};
-
-export const captureObjectTransform = (
-  scene: Scene,
-  object: Object3D,
-): ObjectTransform =>
-  Object.freeze({
-    key: sceneEditorObjectKey(scene, object),
-    name:
-      object.name.length > 0
-        ? object.name
-        : (semanticRole(object) ?? object.type),
-    position: Object.freeze([
-      object.position.x,
-      object.position.y,
-      object.position.z,
-    ] as const),
-    rotation: Object.freeze([
-      object.rotation.x,
-      object.rotation.y,
-      object.rotation.z,
-    ] as const),
-    scale: Object.freeze([
-      object.scale.x,
-      object.scale.y,
-      object.scale.z,
-    ] as const),
-  });
-
-export const applyObjectTransform = (
-  object: Object3D,
-  transform: ObjectTransform,
-): void => {
-  object.position.set(...transform.position);
-  object.rotation.set(...transform.rotation);
-  object.scale.set(...transform.scale);
-  object.updateMatrix();
-  object.updateMatrixWorld(true);
-};
-
-export const indexSceneEditorObjects = (
-  scene: Scene,
-): ReadonlyMap<string, Object3D> => {
-  const index = new Map<string, Object3D>();
-  scene.traverse((object) => {
-    if (object === scene) return;
-    index.set(sceneEditorObjectKey(scene, object), object);
-  });
-  return index;
-};
-
-const isMesh = (object: Object3D): object is Mesh => object instanceof Mesh;
-
-const editorHelper = (object: Object3D): boolean =>
-  Boolean(object.userData["sceneEditorHelper"]);
-
-const selectableRoot = (scene: Scene, hit: Object3D): Object3D => {
-  let current: Object3D = hit;
-  while (current.parent !== null && current.parent !== scene) {
-    if (current.name.length > 0 || semanticRole(current) !== null) return current;
-    current = current.parent;
-  }
-  return current;
-};
-
-const cameraFov = (camera: Camera): number | null => {
-  const candidate = camera as Camera & { fov?: number };
-  return typeof candidate.fov === "number" ? candidate.fov : null;
-};
-
-const setCameraFov = (camera: Camera, fov: number): void => {
-  const candidate = camera as Camera & {
-    fov?: number;
-    updateProjectionMatrix?: () => void;
-  };
-  if (typeof candidate.fov !== "number") return;
-  candidate.fov = Math.min(100, Math.max(10, fov));
-  candidate.updateProjectionMatrix?.();
-};
-
-export type GizmoController = Readonly<{
-  selectObject(object: Object3D): void;
-  deselectObject(): void;
-  setMode(mode: TransformMode): void;
-  getMode(): TransformMode;
-  getSelectedObject(): Object3D | null;
-  getSelection(): SceneObjectSelection | null;
-  captureSelectedTransform(): ObjectTransform | null;
-  setOrbitEnabled(enabled: boolean): void;
-  getCameraState(): SceneEditorCameraState;
-  applyCameraState(state: SceneEditorCameraState): void;
-  setView(view: SceneEditorView): void;
-  focusSelected(): void;
-  saveTransform(): ObjectTransform | null;
-  getSavedTransforms(): readonly ObjectTransform[];
-  exportAsJSON(): string;
-  exportAsCode(): string;
-  setFov(fov: number): void;
-  dispose(): void;
-}>;
-
-export const createGizmoController = (
-  options: GizmoControllerOptions,
-): GizmoController => {
-  const { camera, scene, container } = options;
-  const raycaster = new Raycaster();
-  const pointer = new Vector2();
-  const orbit = new OrbitControls(camera, container);
-  orbit.enableDamping = false;
-  orbit.screenSpacePanning = true;
-  orbit.target.set(0, 1.7, 0);
-
-  const transform = new TransformControls(camera, container);
-  const transformHelper = transform.getHelper();
-  transformHelper.userData["sceneEditorHelper"] = true;
-  scene.add(transformHelper);
-
-  let selected: Object3D | null = null;
-  let mode: TransformMode = "translate";
-  let orbitRequested = true;
+export const createGizmoController = (options: GizmoOptions): GizmoController => {
+  const { camera, scene, container, selectableObjects, onTransformChanged } = options;
   const savedTransforms = new Map<string, ObjectTransform>();
 
-  const cameraState = (): SceneEditorCameraState =>
-    Object.freeze({
-      position: Object.freeze([
-        camera.position.x,
-        camera.position.y,
-        camera.position.z,
-      ] as const),
-      target: Object.freeze([
-        orbit.target.x,
-        orbit.target.y,
-        orbit.target.z,
-      ] as const),
-      fov: cameraFov(camera),
-    });
+  // Create TransformControls for visual 3D gizmo
+  const transformControls = createTransformControls(camera, container);
+  transformControls.setSpace("world");
 
-  const notifyCamera = (): void => {
-    options.onCameraChanged?.(cameraState());
-  };
+  // Add the gizmo visual group to the scene so it renders
+  if (transformControls.gizmoGroup) {
+    scene.add(transformControls.gizmoGroup);
+  }
 
-  const selection = (): SceneObjectSelection | null =>
-    selected === null
-      ? null
-      : Object.freeze({
-          key: sceneEditorObjectKey(scene, selected),
-          name:
-            selected.name.length > 0
-              ? selected.name
-              : (semanticRole(selected) ?? selected.type),
-          role: semanticRole(selected),
-        });
+  // Listen for changes to update the UI
+  transformControls.addEventListener("change", () => {
+    onTransformChanged?.();
+  });
 
-  const notifySelection = (): void => {
-    options.onSelectionChanged?.(selection());
-  };
-
-  const notifyTransform = (): void => {
-    if (selected === null) return;
-    options.onTransformChanged?.(captureObjectTransform(scene, selected));
-  };
-
-  const deselectObject = (): void => {
-    if (selected === null) return;
-    transform.detach();
-    selected = null;
-    notifySelection();
-  };
-
-  const selectObject = (object: Object3D): void => {
-    if (editorHelper(object)) return;
-    selected = object;
-    transform.attach(object);
-    transform.setMode(mode);
-    notifySelection();
-  };
-
-  const setMode = (nextMode: TransformMode): void => {
-    mode = nextMode;
-    transform.setMode(nextMode);
-  };
-
-  const setOrbitEnabled = (enabled: boolean): void => {
-    orbitRequested = enabled;
-    orbit.enabled = enabled && !(transform as unknown as { dragging?: boolean }).dragging;
-  };
-
-  const applyCameraState = (state: SceneEditorCameraState): void => {
-    camera.position.set(...state.position);
-    orbit.target.set(...state.target);
-    if (state.fov !== null) setCameraFov(camera, state.fov);
-    camera.lookAt(orbit.target);
-    orbit.update();
-    notifyCamera();
-  };
-
-  const setView = (view: SceneEditorView): void => {
-    const target = orbit.target.clone();
-    const distance = Math.max(3, camera.position.distanceTo(target));
-    const offset =
-      view === "front"
-        ? new Vector3(0, 0, distance)
-        : view === "back"
-          ? new Vector3(0, 0, -distance)
-          : view === "left"
-            ? new Vector3(-distance, 0, 0)
-            : view === "right"
-              ? new Vector3(distance, 0, 0)
-              : view === "top"
-                ? new Vector3(0, distance, 0.001)
-                : new Vector3(distance * 0.55, distance * 0.42, distance * 0.78);
-    camera.position.copy(target).add(offset);
-    camera.lookAt(target);
-    orbit.update();
-    notifyCamera();
-  };
-
-  const focusSelected = (): void => {
-    if (selected === null) return;
-    const bounds = new Box3().setFromObject(selected);
-    if (bounds.isEmpty()) return;
-    const center = bounds.getCenter(new Vector3());
-    const size = bounds.getSize(new Vector3());
-    const distance = Math.max(2.5, size.length() * 1.8);
-    orbit.target.copy(center);
-    camera.position.set(
-      center.x + distance * 0.55,
-      center.y + distance * 0.35,
-      center.z + distance * 0.72,
-    );
-    camera.lookAt(center);
-    orbit.update();
-    notifyCamera();
-  };
-
-  const pointerPosition = (event: PointerEvent): void => {
-    const rect = container.getBoundingClientRect();
-    const width = Math.max(1, rect.width);
-    const height = Math.max(1, rect.height);
-    pointer.x = ((event.clientX - rect.left) / width) * 2 - 1;
-    pointer.y = -((event.clientY - rect.top) / height) * 2 + 1;
-  };
-
-  const onPointerDown = (event: PointerEvent): void => {
-    if (event.button !== 0) return;
-    const activeAxis = (transform as unknown as { axis?: string | null }).axis;
-    if (activeAxis) return;
-
-    pointerPosition(event);
-    raycaster.setFromCamera(pointer, camera);
-    const meshes: Object3D[] = [];
-    scene.traverse((object) => {
+  const getSelectableObjects = (): Object3D[] => {
+    if (selectableObjects) return selectableObjects;
+    const objects: Object3D[] = [];
+    scene.traverse((obj) => {
       if (
-        object.visible &&
-        !editorHelper(object) &&
-        isMesh(object)
+        obj !== scene &&
+        obj.name &&
+        !obj.name.startsWith("Gizmo") &&
+        !(obj instanceof Group && obj.children.length === 0)
       ) {
-        meshes.push(object);
+        objects.push(obj);
       }
     });
-    const hit = raycaster.intersectObjects(meshes, false)[0]?.object;
-    if (hit === undefined) {
+    return objects;
+  };
+
+  const createMoveGizmo = (): Group => {
+    const gizmo = new Group();
+    gizmo.name = "GizmoVisuals";
+    const axisLength = 3;
+    const coneRadius = 0.15;
+    const coneHeight = 0.5;
+
+    // X axis (red)
+    const xCone = new Mesh(new ConeGeometry(coneRadius, coneHeight, 8), new MeshBasicMaterial({ color: 0xff0000 }));
+    xCone.position.x = axisLength;
+    xCone.rotation.z = Math.PI / 2;
+    xCone.name = "gizmo-x";
+    xCone.userData["axis"] = "x";
+    gizmo.add(xCone);
+
+    const xLineGeom = new BufferGeometry();
+    xLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, axisLength - coneHeight / 2, 0, 0]), 3));
+    const xLine = new Line(xLineGeom, new LineBasicMaterial({ color: 0xff0000, linewidth: 3 }));
+    xLine.name = "gizmo-x";
+    xLine.userData["axis"] = "x";
+    gizmo.add(xLine);
+
+    // Y axis (green)
+    const yCone = new Mesh(new ConeGeometry(coneRadius, coneHeight, 8), new MeshBasicMaterial({ color: 0x00ff00 }));
+    yCone.position.y = axisLength;
+    yCone.name = "gizmo-y";
+    yCone.userData["axis"] = "y";
+    gizmo.add(yCone);
+
+    const yLineGeom = new BufferGeometry();
+    yLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, axisLength - coneHeight / 2, 0]), 3));
+    const yLine = new Line(yLineGeom, new LineBasicMaterial({ color: 0x00ff00, linewidth: 3 }));
+    yLine.name = "gizmo-y";
+    yLine.userData["axis"] = "y";
+    gizmo.add(yLine);
+
+    // Z axis (blue)
+    const zCone = new Mesh(new ConeGeometry(coneRadius, coneHeight, 8), new MeshBasicMaterial({ color: 0x0000ff }));
+    zCone.position.z = axisLength;
+    zCone.rotation.x = Math.PI / 2;
+    zCone.name = "gizmo-z";
+    zCone.userData["axis"] = "z";
+    gizmo.add(zCone);
+
+    const zLineGeom = new BufferGeometry();
+    zLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, 0, axisLength - coneHeight / 2]), 3));
+    const zLine = new Line(zLineGeom, new LineBasicMaterial({ color: 0x0000ff, linewidth: 3 }));
+    zLine.name = "gizmo-z";
+    zLine.userData["axis"] = "z";
+    gizmo.add(zLine);
+
+    return gizmo;
+  };
+
+  const createRotateGizmo = (): Group => {
+    const gizmo = new Group();
+    gizmo.name = "GizmoVisuals";
+    const radius = 2.5;
+
+    const createArc = (color: number, axis: 'x' | 'y' | 'z') => {
+      const points = [];
+      const segments = 16;
+      const range = Math.PI * 1.5;
+      for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * range - range / 2;
+        if (axis === 'x') {
+          points.push(new Vector3(0, Math.cos(angle) * radius, Math.sin(angle) * radius));
+        } else if (axis === 'y') {
+          points.push(new Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius));
+        } else {
+          points.push(new Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius, 0));
+        }
+      }
+      const arcGeom = new BufferGeometry().setFromPoints(points);
+      return new Line(arcGeom, new LineBasicMaterial({ color, linewidth: 2 }));
+    };
+
+    gizmo.add(createArc(0xff0000, 'x'));
+    gizmo.add(createArc(0x00ff00, 'y'));
+    gizmo.add(createArc(0x0000ff, 'z'));
+
+    return gizmo;
+  };
+
+  const createScaleGizmo = (): Group => {
+    const gizmo = new Group();
+    gizmo.name = "GizmoVisuals";
+    const axisLength = 3;
+    const boxSize = 0.3;
+
+    // X axis (red box)
+    const xBox = new Mesh(new BoxGeometry(boxSize, boxSize, boxSize), new MeshBasicMaterial({ color: 0xff0000 }));
+    xBox.position.x = axisLength;
+    gizmo.add(xBox);
+
+    const xLineGeom = new BufferGeometry();
+    xLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, axisLength - boxSize / 2, 0, 0]), 3));
+    gizmo.add(new Line(xLineGeom, new LineBasicMaterial({ color: 0xff0000, linewidth: 2 })));
+
+    // Y axis (green box)
+    const yBox = new Mesh(new BoxGeometry(boxSize, boxSize, boxSize), new MeshBasicMaterial({ color: 0x00ff00 }));
+    yBox.position.y = axisLength;
+    gizmo.add(yBox);
+
+    const yLineGeom = new BufferGeometry();
+    yLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, axisLength - boxSize / 2, 0]), 3));
+    gizmo.add(new Line(yLineGeom, new LineBasicMaterial({ color: 0x00ff00, linewidth: 2 })));
+
+    // Z axis (blue box)
+    const zBox = new Mesh(new BoxGeometry(boxSize, boxSize, boxSize), new MeshBasicMaterial({ color: 0x0000ff }));
+    zBox.position.z = axisLength;
+    gizmo.add(zBox);
+
+    const zLineGeom = new BufferGeometry();
+    zLineGeom.setAttribute("position", new BufferAttribute(new Float32Array([0, 0, 0, 0, 0, axisLength - boxSize / 2]), 3));
+    gizmo.add(new Line(zLineGeom, new LineBasicMaterial({ color: 0x0000ff, linewidth: 2 })));
+
+    return gizmo;
+  };
+
+  const createGizmoForMode = (mode: TransformMode): Group => {
+    switch (mode) {
+      case "translate":
+        return createMoveGizmo();
+      case "rotate":
+        return createRotateGizmo();
+      case "scale":
+        return createScaleGizmo();
+    }
+  };
+
+  const onMouseMove = (event: MouseEvent) => {
+    const rect = container.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    if (isDragging && selectedObject && dragAxis) {
+      raycaster.setFromCamera(mouse, camera);
+
+      // Calculate world position at current mouse
+      const distance = camera.position.z - selectedObject.position.z;
+      const vFOV = getVerticalFovRadians(camera);
+      const height = 2 * Math.tan(vFOV / 2) * distance;
+      const width = height * (container.clientWidth / container.clientHeight);
+
+      const worldPos = new Vector3(
+        (mouse.x * width) / 2,
+        (mouse.y * height) / 2,
+        selectedObject.position.z,
+      );
+
+      // Calculate delta from drag start
+      const delta = worldPos.clone().sub(dragStartWorldPos);
+
+      // Apply delta only on the selected axis
+      if (currentMode === "translate") {
+        if (dragAxis === "x") selectedObject.position.x = initialPosition.x + delta.x;
+        else if (dragAxis === "y") selectedObject.position.y = initialPosition.y + delta.y;
+        else selectedObject.position.z = initialPosition.z - delta.y; // Z uses vertical mouse movement
+      } else if (currentMode === "scale") {
+        const scaleFactor = 1 + delta.x * 2;
+        if (dragAxis === "x") selectedObject.scale.x = Math.max(0.1, initialScale.x * scaleFactor);
+        else if (dragAxis === "y") selectedObject.scale.y = Math.max(0.1, initialScale.y * scaleFactor);
+        else selectedObject.scale.z = Math.max(0.1, initialScale.z * (1 - delta.y * 2));
+      }
+
+      onTransformChanged?.();
+      return;
+    }
+
+    raycaster.setFromCamera(mouse, camera);
+    const objects = getSelectableObjects();
+    const intersects = raycaster.intersectObjects(objects, true);
+
+    if (selectedObject && selectedHelper) {
+      selectedHelper.update();
+    }
+
+    if (intersects.length > 0 && !isDragging) {
+      container.style.cursor = "pointer";
+    } else if (!isDragging) {
+      container.style.cursor = "default";
+    }
+  };
+
+  const onMouseDown = (event: MouseEvent) => {
+    if (event.button !== 0) return;
+
+    const rect = container.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const objects = getSelectableObjects();
+    const intersects = raycaster.intersectObjects(objects, true);
+
+    const firstIntersect = intersects[0];
+    if (firstIntersect) {
+      let target = firstIntersect.object;
+      let foundAxis: "x" | "y" | "z" | null = readAxis(target);
+
+      if (!foundAxis) {
+        // Traverse up to find a gizmo part
+        let current = target;
+        while (current.parent && !foundAxis) {
+          foundAxis = readAxis(current);
+          current = current.parent;
+        }
+      }
+
+      // Find the main selectable object (not a gizmo)
+      while (target.parent && target.parent !== scene) {
+        if (target.name && !target.name.startsWith("gizmo-") && !target.name.includes("GizmoVisuals")) {
+          break;
+        }
+        target = target.parent;
+      }
+
+      // If we don't have a selected object, select one; otherwise, start dragging on the selected axis
+      if (!selectedObject) {
+        selectObject(target);
+      } else if (foundAxis) {
+        isDragging = true;
+        dragAxis = foundAxis;
+        initialPosition.copy(selectedObject.position);
+        initialRotation.copy(selectedObject.rotation);
+        initialScale.copy(selectedObject.scale);
+
+        // Store world position at drag start
+        const distance = camera.position.z - selectedObject.position.z;
+        const vFOV = getVerticalFovRadians(camera);
+        const height = 2 * Math.tan(vFOV / 2) * distance;
+        const width = height * (container.clientWidth / container.clientHeight);
+        dragStartWorldPos.set(
+          (mouse.x * width) / 2,
+          (mouse.y * height) / 2,
+          selectedObject.position.z,
+        );
+
+        container.style.cursor = "grabbing";
+      }
+    }
+  };
+
+  const onMouseUp = () => {
+    isDragging = false;
+    dragAxis = null;
+    container.style.cursor = "default";
+  };
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    const updateMode = (mode: TransformMode) => {
+      currentMode = mode;
+      transformControls.setMode(mode);
+
+      // Update gizmo visuals if an object is selected
+      if (selectedObject) {
+        const oldGizmo = selectedObject.getObjectByName("GizmoVisuals");
+        if (oldGizmo) {
+          selectedObject.remove(oldGizmo);
+        }
+        const newGizmo = createGizmoForMode(mode);
+        selectedObject.add(newGizmo);
+      }
+    };
+
+    if (event.key === "g" || event.key === "G") {
+      updateMode("translate");
+      event.preventDefault();
+    } else if (event.key === "r" || event.key === "R") {
+      updateMode("rotate");
+      event.preventDefault();
+    } else if (event.key === "s" || event.key === "S") {
+      updateMode("scale");
+      event.preventDefault();
+    } else if (event.key === "Escape") {
       deselectObject();
-      return;
     }
-    selectObject(selectableRoot(scene, hit));
   };
 
-  const onKeyDown = (event: KeyboardEvent): void => {
-    const target = event.target;
-    if (
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLSelectElement
-    ) {
-      return;
+  const selectObject = (obj: Object3D) => {
+    deselectObject();
+    selectedObject = obj;
+
+    if (selectedHelper) {
+      scene.remove(selectedHelper);
+    }
+    selectedHelper = new BoxHelper(obj, 0xff00ff);
+    selectedHelper.name = "GizmoHelper";
+    scene.add(selectedHelper);
+
+    // Add mode-specific gizmo to the selected object
+    const gizmo = createGizmoForMode(currentMode);
+    obj.add(gizmo);
+
+    // Attach TransformControls to the selected object
+    transformControls.attach(obj);
+    transformControls.setMode(currentMode);
+  };
+
+  const deselectObject = () => {
+    if (selectedObject) {
+      // Remove gizmo visuals
+      const gizmo = selectedObject.getObjectByName("GizmoVisuals");
+      if (gizmo) {
+        selectedObject.remove(gizmo);
+      }
+    }
+    if (selectedHelper) {
+      scene.remove(selectedHelper);
+      selectedHelper = null;
+    }
+    // Detach from TransformControls
+    transformControls.detach();
+    selectedObject = null;
+  };
+
+  const saveTransform = () => {
+    if (!selectedObject) return;
+
+    const uuid = selectedObject.uuid;
+    const transform: ObjectTransform = {
+      uuid,
+      name: selectedObject.name,
+      position: [selectedObject.position.x, selectedObject.position.y, selectedObject.position.z],
+      rotation: [selectedObject.rotation.x, selectedObject.rotation.y, selectedObject.rotation.z],
+      scale: [selectedObject.scale.x, selectedObject.scale.y, selectedObject.scale.z],
+    };
+
+    savedTransforms.set(uuid, transform);
+    console.log("Saved transform for", selectedObject.name, transform);
+  };
+
+  const getSavedTransforms = (): ObjectTransform[] => {
+    return Array.from(savedTransforms.values());
+  };
+
+  const exportAsJSON = (): string => {
+    const transforms = getSavedTransforms();
+    return JSON.stringify(transforms, null, 2);
+  };
+
+  const exportAsCode = (): string => {
+    const transforms = getSavedTransforms();
+    let code = "// Scene object positions and transforms\n\n";
+
+    for (const transform of transforms) {
+      code += `// ${transform.name} (${transform.uuid})\n`;
+      code += `object.position.set(${transform.position.join(", ")});\n`;
+      code += `object.rotation.set(${transform.rotation.join(", ")});\n`;
+      code += `object.scale.set(${transform.scale.join(", ")});\n\n`;
     }
 
-    const key = event.key.toLowerCase();
-    if (key === "g") setMode("translate");
-    else if (key === "r") setMode("rotate");
-    else if (key === "s") setMode("scale");
-    else if (key === "f") focusSelected();
-    else if (event.key === "Escape") deselectObject();
-    else return;
-    event.preventDefault();
+    return code;
   };
 
-  const onOrbitChange = (): void => {
-    notifyCamera();
-  };
-  orbit.addEventListener("change", onOrbitChange);
-
-  transform.addEventListener("change", notifyTransform);
-  transform.addEventListener("dragging-changed", (event) => {
-    const dragging = (event as unknown as { value?: boolean }).value === true;
-    orbit.enabled = orbitRequested && !dragging;
-    if (!dragging) notifyTransform();
+  const getState = (): GizmoState => ({
+    selectedObject,
+    mode: currentMode,
+    isDragging,
+    savedPositions: new Map(),
   });
 
-  container.addEventListener("pointerdown", onPointerDown);
-  container.addEventListener("keydown", onKeyDown);
+  // Attach event listeners
+  container.addEventListener("mousemove", onMouseMove);
+  container.addEventListener("mousedown", onMouseDown);
+  container.addEventListener("mouseup", onMouseUp);
+  document.addEventListener("keydown", onKeyDown);
 
-  return Object.freeze({
+  return {
     selectObject,
     deselectObject,
-    setMode,
-    getMode: (): TransformMode => mode,
-    getSelectedObject: (): Object3D | null => selected,
-    getSelection: selection,
-    captureSelectedTransform: (): ObjectTransform | null =>
-      selected === null ? null : captureObjectTransform(scene, selected),
-    setOrbitEnabled,
-    getCameraState: cameraState,
-    applyCameraState,
-    setView,
-    focusSelected,
-    saveTransform(): ObjectTransform | null {
-      if (selected === null) return null;
-      const captured = captureObjectTransform(scene, selected);
-      savedTransforms.set(captured.key, captured);
-      return captured;
-    },
-    getSavedTransforms(): readonly ObjectTransform[] {
-      return Object.freeze([...savedTransforms.values()]);
-    },
-    exportAsJSON(): string {
-      return JSON.stringify([...savedTransforms.values()], null, 2);
-    },
-    exportAsCode(): string {
-      return `export const sceneTransforms = ${JSON.stringify(
-        [...savedTransforms.values()],
-        null,
-        2,
-      )} as const;\n`;
-    },
-    setFov(fov: number): void {
-      setCameraFov(camera, fov);
-      notifyCamera();
-    },
-    dispose(): void {
-      container.removeEventListener("pointerdown", onPointerDown);
-      container.removeEventListener("keydown", onKeyDown);
-      orbit.removeEventListener("change", onOrbitChange);
-      deselectObject();
-      scene.remove(transformHelper);
-      transform.dispose();
-      orbit.dispose();
-    },
-  });
-};
+    saveTransform,
+    getSavedTransforms,
+    exportAsJSON,
+    exportAsCode,
+    getState,
+    setMode: (mode: TransformMode) => {
+      currentMode = mode;
+      transformControls.setMode(mode);
 
+      // Update gizmo visuals if an object is selected
+      if (selectedObject) {
+        const oldGizmo = selectedObject.getObjectByName("GizmoVisuals");
+        if (oldGizmo) {
+          selectedObject.remove(oldGizmo);
+        }
+        const newGizmo = createGizmoForMode(mode);
+        selectedObject.add(newGizmo);
+      }
+    },
+    getMode: () => currentMode,
+    getSelectedObject: () => selectedObject,
+    dispose: () => {
+      container.removeEventListener("mousemove", onMouseMove);
+      container.removeEventListener("mousedown", onMouseDown);
+      container.removeEventListener("mouseup", onMouseUp);
+      document.removeEventListener("keydown", onKeyDown);
+      deselectObject();
+      if (transformControls.gizmoGroup) {
+        scene.remove(transformControls.gizmoGroup);
+      }
+      transformControls.dispose();
+    },
+  };
+};

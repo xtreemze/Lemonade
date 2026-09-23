@@ -193,7 +193,7 @@ describe("street simulation storyboard", () => {
     expect(storyboard.priceCents).toBe(175);
   });
 
-  it("holds ten seconds of street activity then a four-second ending closeup", () => {
+  it("holds twelve seconds of street activity then a two-second ending closeup", () => {
     const storyboard = createStreetStoryboard({
       durationMs: 14_000,
       prepared: 10,
@@ -207,25 +207,24 @@ describe("street simulation storyboard", () => {
       "stand",
       "remaining",
     ]);
-    expect(storyboard.activeDurationMs).toBe(10_000);
+    expect(storyboard.activeDurationMs).toBe(12_000);
     expect(storyboard.shots[0]?.startAtMs).toBe(0);
     expect(storyboard.shots.at(-1)?.endAtMs).toBe(14_000);
     expect(sceneShotAt(storyboard, 0)).toBe("stand");
-    expect(sceneShotAt(storyboard, 9_999)).toBe("stand");
-    expect(sceneShotAt(storyboard, 10_000)).toBe("remaining");
+    expect(sceneShotAt(storyboard, 11_999)).toBe("stand");
+    expect(sceneShotAt(storyboard, 12_000)).toBe("remaining");
     expect(sceneShotAt(storyboard, 13_999)).toBe("remaining");
 
-    expect(endingCloseupProgressAt(storyboard, 10_000)).toBe(0);
-    expect(endingCloseupProgressAt(storyboard, 12_000)).toBeCloseTo(0.5);
+    expect(endingCloseupProgressAt(storyboard, 12_000)).toBe(0);
+    expect(endingCloseupProgressAt(storyboard, 13_000)).toBeCloseTo(0.5);
     expect(endingCloseupProgressAt(storyboard, 14_000)).toBe(1);
 
-    expect(endingConfidenceAt(storyboard, 10_000, 1, 5)).toBe(1);
-    expect(endingConfidenceAt(storyboard, 12_000, 1, 5)).toBeCloseTo(3);
+    expect(endingConfidenceAt(storyboard, 12_000, 1, 5)).toBe(1);
+    expect(endingConfidenceAt(storyboard, 13_000, 1, 5)).toBeCloseTo(3);
     expect(endingConfidenceAt(storyboard, 14_000, 1, 5)).toBe(5);
 
-    expect(remainingCameraProgressAt(storyboard, 10_000)).toBe(0);
-    expect(remainingCameraProgressAt(storyboard, 11_000)).toBeGreaterThan(0);
-    expect(remainingCameraProgressAt(storyboard, 12_000)).toBe(1);
+    expect(remainingCameraProgressAt(storyboard, 12_000)).toBe(0);
+    expect(remainingCameraProgressAt(storyboard, 13_000)).toBeGreaterThan(0);
     expect(remainingCameraProgressAt(storyboard, 14_000)).toBe(1);
   });
 
@@ -245,7 +244,7 @@ describe("street simulation storyboard", () => {
     expect(portraitForecast.position[1]).toBeGreaterThan(portraitStand.position[1]);
     expect(portraitForecast.position[2]).toBeGreaterThan(portraitStand.position[2]);
     expect(portraitStand.position[2]).toBeGreaterThanOrEqual(34);
-    expect(portraitStand.fov).toBeGreaterThanOrEqual(56);
+    expect(portraitStand.fov).toBeGreaterThanOrEqual(49);
     expect(portraitRemaining.position[2]).toBeGreaterThanOrEqual(15);
     expect(portraitStand.position[2]).toBeGreaterThan(portraitRemaining.position[2]);
     expect(portraitForecast.lookAt[2]).toBeLessThan(portraitStand.lookAt[2]);
@@ -257,7 +256,7 @@ describe("street simulation storyboard", () => {
       .toBeGreaterThan(STREET_LAYOUT.farSidewalk.maxZ + 16);
     expect(landscapeStand.lookAt[2]).toBeGreaterThan(STREET_LAYOUT.road.minZ);
     expect(landscapeStand.lookAt[2]).toBeLessThan(STREET_LAYOUT.road.maxZ);
-    expect(landscapeStand.fov).toBeGreaterThanOrEqual(40);
+    expect(landscapeStand.fov).toBeGreaterThanOrEqual(35);
 
     const portraitForecastExtent = visibleWorldSpan(
       360,

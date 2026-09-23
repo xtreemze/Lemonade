@@ -22,6 +22,80 @@ The goal is not to turn Lemonade into a spreadsheet. The goal is to make three v
 
 Weather and sentiment are conditions to reason about, not additional controls. Progression adds taxes, bank charges, interest, supplier costs, and other responsibilities without expanding the primary operating interface beyond three controls plus one submit action.
 
+## Product in motion
+
+CI records these views from the real application in Chromium. Desktop and mobile demonstrate the same five product capabilities with interactions appropriate to each layout.
+
+### Desktop
+
+#### Weather forecast
+
+Read the day’s weather and neighborhood conditions before opening the stand.
+
+<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/01-weather-forecast.gif" alt="Lemonade weather forecast over the Lemonsville neighborhood" width="760" />
+
+#### Three-decision planning
+
+Set glasses, advertising signs, and price on the compact daily planning surface.
+
+<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/02-three-decision-plan.gif" alt="Lemonade daily planning controls for glasses, signs, and price" width="760" />
+
+#### Live Lemonsville simulation
+
+Watch the stand, neighborhood, customers, weather, and inventory resolve the business day.
+
+<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/03-lemonsville-simulation.gif" alt="Lemonsville 3D neighborhood simulation around the lemonade stand" width="760" />
+
+#### Day report
+
+See sold glasses, revenue, costs, profit or loss, and ending assets immediately after the day.
+
+<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/04-day-report.gif" alt="Lemonade end-of-day financial report" width="760" />
+
+#### Sales history
+
+Review accessible trends and ledger history before planning the next day.
+
+<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/05-sales-history.gif" alt="Lemonade sales history charts and ledger" width="760" />
+
+[Watch the desktop highlight reel](https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-desktop-highlight.mp4)
+
+### Mobile
+
+#### Weather forecast
+
+Read the day’s weather and neighborhood conditions before opening the stand.
+
+<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/01-weather-forecast.gif" alt="Lemonade weather forecast over the Lemonsville neighborhood" width="320" />
+
+#### Three-decision planning
+
+Set glasses, advertising signs, and price on the compact daily planning surface.
+
+<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/02-three-decision-plan.gif" alt="Lemonade daily planning controls for glasses, signs, and price" width="320" />
+
+#### Live Lemonsville simulation
+
+Watch the stand, neighborhood, customers, weather, and inventory resolve the business day.
+
+<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/03-lemonsville-simulation.gif" alt="Lemonsville 3D neighborhood simulation around the lemonade stand" width="320" />
+
+#### Day report
+
+See sold glasses, revenue, costs, profit or loss, and ending assets immediately after the day.
+
+<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/04-day-report.gif" alt="Lemonade end-of-day financial report" width="320" />
+
+#### Sales history
+
+Review accessible trends and ledger history before planning the next day.
+
+<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/05-sales-history.gif" alt="Lemonade sales history charts and ledger" width="320" />
+
+[Watch the mobile highlight reel](https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-mobile-highlight.mp4)
+
+The capture, rendering, size-budget, and publication contract is documented in [`docs/showcase.md`](docs/showcase.md).
+
 ## Why the classic works
 
 The original game compresses business strategy into a few understandable tensions:
@@ -39,7 +113,7 @@ See [`docs/game-design.md`](docs/game-design.md) for the reverse-engineered mode
 
 ## Presentation
 
-The presentation should feel like a remembered Apple II game rather than a literal pixel-art clone.
+The presentation should feel like a remembered Apple II game rather than a literal pixel-art clone. The CI-authored desktop and mobile media above is the durable visual evidence for this presentation surface.
 
 - **Vector 3D Lemonsville:** a lightweight low-poly neighborhood and lemonade stand communicate weather, customer traffic, signs, inventory, and sales activity.
 - **Procedural audio:** weather reports preserve the Apple II game's recognizable historical motifs exactly; no notes are added unless they are extracted from a cited MIDI/score source. Purchase/weather effects are synthesized with Web Audio. See [`docs/weather-audio.md`](docs/weather-audio.md). Optional MIDI/SoundFont capability stays behind platform adapters.

@@ -62,6 +62,57 @@ export type AmbientLifeController = Readonly<{
 const material = (color: number): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, roughness: 0.88 });
 
+const ambientUnit = (seed: number, salt: number): number => {
+  let value = Math.imul((seed ^ salt) >>> 0, 0x9e3779b1);
+  value = Math.imul(value ^ (value >>> 16), 0x21f0aaad);
+  return ((value ^ (value >>> 15)) >>> 0) / 0xffff_ffff;
+};
+
+export type BirdFlightProfile = Readonly<{
+  color: number;
+  direction: -1 | 1;
+  routeOffset: number;
+  speed: number;
+  altitude: number;
+  depth: number;
+  verticalAmplitude: number;
+  wingBeat: number;
+  phase: number;
+  scale: number;
+}>;
+
+const BIRD_PALETTE = [
+  0x343a40,
+  0x454b52,
+  0x5d6971,
+  0x66795a,
+  0x795d4e,
+  0x6f7890,
+] as const;
+
+export const birdFlightProfileFor = (
+  seed: number,
+  index: number,
+): BirdFlightProfile => {
+  const salt = 20_000 + index * 97;
+  return Object.freeze({
+    color:
+      BIRD_PALETTE[
+        Math.floor(ambientUnit(seed, salt) * BIRD_PALETTE.length) %
+          BIRD_PALETTE.length
+      ] ?? BIRD_PALETTE[0],
+    direction: index % 2 === 0 ? 1 : -1,
+    routeOffset: ambientUnit(seed, salt + 1),
+    speed: 0.54 + ambientUnit(seed, salt + 2) * 0.34,
+    altitude: 5.5 + ambientUnit(seed, salt + 3) * 2.5,
+    depth: -2.5 - ambientUnit(seed, salt + 4) * 8.5,
+    verticalAmplitude: 0.12 + ambientUnit(seed, salt + 5) * 0.28,
+    wingBeat: 14 + ambientUnit(seed, salt + 6) * 8,
+    phase: ambientUnit(seed, salt + 7) * Math.PI * 2,
+    scale: 0.88 + ambientUnit(seed, salt + 8) * 0.28,
+  });
+};
+
 export const ambientPopulationFor = (
   weather: AmbientWeather,
   phase: AmbientPhase,
@@ -104,14 +155,21 @@ export const petFollowPose = (
   });
 };
 
-const createBird = (color: number): Group => {
+const createBird = (profile: BirdFlightProfile): Group => {
   const root = new Group();
   root.userData["sceneRole"] = "ambient-bird";
-  const body = new Mesh(new SphereGeometry(0.12, 7, 5), material(color));
+  root.userData["proceduralFlightProfile"] = profile;
+  root.scale.setScalar(profile.scale);
+
+  const plumage = material(profile.color);
+  const wingGeometry = new BoxGeometry(0.34, 0.025, 0.12);
+  const tailGeometry = new BoxGeometry(0.16, 0.025, 0.07);
+
+  const body = new Mesh(new SphereGeometry(0.12, 7, 5), plumage);
   body.scale.set(1.45, 0.72, 0.72);
   root.add(body);
 
-  const head = new Mesh(new SphereGeometry(0.075, 7, 5), material(color));
+  const head = new Mesh(new SphereGeometry(0.075, 7, 5), plumage);
   head.position.set(0.15, 0.035, 0);
   root.add(head);
 
@@ -124,7 +182,7 @@ const createBird = (color: number): Group => {
   root.add(beak);
 
   for (const direction of [-1, 1] as const) {
-    const wing = new Mesh(new BoxGeometry(0.34, 0.025, 0.12), material(color));
+    const wing = new Mesh(wingGeometry, plumage);
     wing.userData["sceneRole"] = "ambient-bird-wing";
     wing.position.set(0, 0.02, direction * 0.16);
     wing.rotation.x = direction * 0.26;
@@ -132,7 +190,7 @@ const createBird = (color: number): Group => {
   }
 
   for (const direction of [-1, 1] as const) {
-    const tail = new Mesh(new BoxGeometry(0.16, 0.025, 0.07), material(color));
+    const tail = new Mesh(tailGeometry, plumage);
     tail.position.set(-0.18, -0.015, direction * 0.055);
     tail.rotation.y = direction * 0.22;
     root.add(tail);
@@ -555,12 +613,10 @@ export const createAmbientLife = (
   mobilitySeed = seed,
 ): AmbientLifeController => {
   const pets = [createPet(0xa96f45), createPet(0x3e3a36), createPet(0xd1b48b)];
-  const wildlife = [
-    createBird(0x5d6971),
-    createBird(0x795d4e),
-    createBird(0x66795a),
-    createBird(0x6f7890),
-  ];
+  const wildlifeProfiles = Array.from({ length: 4 }, (_, index) =>
+    birdFlightProfileFor(seed ^ 0x42495244, index),
+  );
+  const wildlife = wildlifeProfiles.map((profile) => createBird(profile));
   const bicycles = [
     createBicycle(0x4f7f91, seed, 0),
     createBicycle(0xb45d4c, seed, 1),
@@ -689,29 +745,39 @@ export const createAmbientLife = (
       wildlife.forEach((bird, index) => {
         bird.visible = index < population.wildlife;
         if (!bird.visible) return;
+        const profile = wildlifeProfiles[index];
+        if (profile === undefined) return;
         const progress = routeProgress(
           elapsedMs,
           durationMs,
-          index * 0.39 + 0.12,
-          0.62 + index * 0.08,
+          profile.routeOffset,
+          profile.speed,
         );
-        const direction = index % 2 === 0 ? 1 : -1;
-        const x = direction === 1
-          ? -18 + progress * 36
-          : 18 - progress * 36;
+        const x = profile.direction === 1
+          ? -20 + progress * 40
+          : 20 - progress * 40;
         bird.position.set(
           x,
-          5.8 + index * 0.65 + Math.sin(progress * Math.PI * 4) * 0.25,
-          -3 - index * 2.4,
+          profile.altitude +
+            Math.sin(progress * Math.PI * 4 + profile.phase) *
+              profile.verticalAmplitude,
+          profile.depth,
         );
-        bird.rotation.y = xTravelYaw(direction);
+        bird.rotation.y = xTravelYaw(profile.direction);
         bird.rotation.z =
-          direction * Math.sin(progress * Math.PI * 12) * 0.08;
+          profile.direction *
+          Math.sin(progress * Math.PI * 12 + profile.phase) *
+          0.08;
         for (const child of bird.children) {
           if (child.userData["sceneRole"] !== "ambient-bird-wing") continue;
           const side = Math.sign(child.position.z) || 1;
           child.rotation.x =
-            side * (0.18 + Math.sin(progress * Math.PI * 18 + index) * 0.42);
+            side *
+            (0.18 +
+              Math.sin(
+                progress * Math.PI * profile.wingBeat + profile.phase,
+              ) *
+                0.42);
         }
       });
 
