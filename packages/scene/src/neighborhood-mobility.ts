@@ -48,7 +48,7 @@ export type MobilityPose = Readonly<{
   z: number;
   yaw: number;
   speed: number;
-  travelDistance: number;
+  travelDistance: number | null;
   visible: boolean;
   waiting: boolean;
   detail: MobilityDetail;
@@ -464,7 +464,7 @@ const pedestrianRoutePose = (
     point: sampled.point,
     yaw: sampled.yaw,
     speed: visible ? clock.velocity : 0,
-    travelDistance: clock.distance,
+    travelDistance: clock.travelDistance,
     visible,
     inside,
     doorOpen: visible && doorDistance <= 0.9,
@@ -498,7 +498,7 @@ const makePose = (
   propertyRole: string | null = null,
   waiting = false,
   visible = true,
-  travelDistance = 0,
+  travelDistance: number | null = null,
 ): MobilityPose => {
   const detail = detailForPoint(point, focus);
   return Object.freeze({
@@ -508,10 +508,7 @@ const makePose = (
     z: point.z,
     yaw,
     speed: waiting ? 0 : speed,
-    travelDistance: Math.max(
-      0,
-      Number.isFinite(travelDistance) ? travelDistance : 0,
-    ),
+    travelDistance,
     visible: visible && detail !== "statistical",
     waiting,
     detail,
@@ -654,7 +651,7 @@ const trafficPose = (
     null,
     waiting,
     clock.lifecycle === "active",
-    clock.distance,
+    clock.travelDistance,
   );
 };
 
@@ -871,10 +868,6 @@ export const createNeighborhoodMobilitySystem = (
             null,
             false,
             active,
-            Math.abs(
-              STREET_LAYOUT.farSidewalk.centerZ -
-                STREET_LAYOUT.nearSidewalk.centerZ,
-            ) * crossingProgress,
           );
           actors.push(crossingActor);
           if (active) pedestrianPoints.push(crossingPoint);
@@ -1023,7 +1016,6 @@ export const createNeighborhoodMobilitySystem = (
             drivewayProperty.role,
             false,
             driverMovement,
-            driverSample.distance,
           );
           actors.push(residentDriver);
           if (driverMovement) {
@@ -1114,9 +1106,6 @@ export const createNeighborhoodMobilitySystem = (
           focus,
           mailInteraction ? "mailbox" : "none",
           nearestMailbox?.propertyRole ?? null,
-          false,
-          true,
-          Math.abs(mailPoint.x - routeStart),
         );
         actors.push(mailCarrier);
         addStatistical(counts, mailCarrier);
@@ -1160,9 +1149,6 @@ export const createNeighborhoodMobilitySystem = (
             focus,
             gardening ? "gardening" : "none",
             gardenerProperty.role,
-            false,
-            true,
-            gardenerSample.distance,
           );
           actors.push(gardener);
           addStatistical(counts, gardener);

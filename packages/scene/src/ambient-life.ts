@@ -659,11 +659,17 @@ const placeRig = (
   rig.root.position.set(pose.x, 0, pose.z);
   rig.root.rotation.y = -pose.yaw;
   rig.root.rotation.z = 0;
-  applyTransportWalk(
-    rig,
-    pose.travelDistance,
-    pose.interaction !== "gardening" && pose.interaction !== "mailbox",
-  );
+  // Clock-driven actors expose authoritative locomotion distance. Legacy
+  // service/crossing actors remain on a temporary renderer fallback until #212
+  // migrates their motion to the same actor-owned clock.
+  const travelDistance =
+    pose.travelDistance ??
+    (Math.max(0, elapsedMs) / 1_000) * Math.max(0, pose.speed);
+  const preserveLocomotionPose =
+    (pose.travelDistance !== null || pose.speed > 0) &&
+    pose.interaction !== "gardening" &&
+    pose.interaction !== "mailbox";
+  applyTransportWalk(rig, travelDistance, preserveLocomotionPose);
   if (pose.interaction === "gardening") {
     rig.arms[0].root.rotation.x = -1.05;
     rig.arms[1].root.rotation.x = -0.72;

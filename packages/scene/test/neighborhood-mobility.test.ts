@@ -229,6 +229,40 @@ describe("unified neighborhood mobility", () => {
     expect(moved).toEqual(new Set(["resident:0", "resident-pet"]));
   });
 
+  it("projects accumulated locomotion distance only from actor-owned clocks", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const sample = system.sample({
+      weather: "cloudy",
+      phase: "simulation",
+      elapsedMs: 5_000,
+      durationMs: 14_000,
+      dayNumber: 5,
+      focus: { x: 0, z: 0 },
+    });
+
+    const clockDriven = sample.actors.filter(
+      (actor) =>
+        actor.id.startsWith("traffic-") ||
+        actor.id === "resident:0" ||
+        actor.id === "resident:1" ||
+        actor.id === "resident-pet",
+    );
+    expect(clockDriven.length).toBeGreaterThan(0);
+    expect(
+      clockDriven.every(
+        (actor) =>
+          actor.travelDistance !== null &&
+          Number.isFinite(actor.travelDistance) &&
+          actor.travelDistance >= 0,
+      ),
+    ).toBe(true);
+
+    const legacyDrivewayActor = sample.actors.find(
+      (actor) => actor.id === "resident-vehicle",
+    );
+    expect(legacyDrivewayActor?.travelDistance).toBeNull();
+  });
+
   it("drives a resident vehicle into a driveway, parks, and later departs", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const parked = system.sample({
@@ -539,54 +573,6 @@ describe("unified neighborhood mobility", () => {
     }
 
     expect(sawYield).toBe(true);
-  });
-
-  it("exposes actor-owned travel distance and holds it while traffic is waiting", () => {
-    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
-    const previous = new Map<
-      string,
-      { travelDistance: number; waiting: boolean }
-    >();
-    let sawHeldWait = false;
-
-    for (let elapsedMs = 0; elapsedMs <= 14_000; elapsedMs += 50) {
-      const sample = system.sample({
-        weather: "sunny",
-        phase: "simulation",
-        elapsedMs,
-        durationMs: 14_000,
-        dayNumber: 2,
-        focus: { x: 0, z: 0 },
-      });
-
-      for (const actor of sample.actors) {
-        if (
-          !actor.id.startsWith("traffic-") ||
-          (actor.kind !== "vehicle" && actor.kind !== "bicycle")
-        ) {
-          continue;
-        }
-
-        const prior = previous.get(actor.id);
-        if (prior !== undefined) {
-          expect(actor.travelDistance).toBeGreaterThanOrEqual(
-            prior.travelDistance - 0.000_001,
-          );
-          if (prior.waiting && actor.waiting) {
-            expect(
-              actor.travelDistance - prior.travelDistance,
-            ).toBeLessThanOrEqual(0.02);
-            sawHeldWait = true;
-          }
-        }
-        previous.set(actor.id, {
-          travelDistance: actor.travelDistance,
-          waiting: actor.waiting,
-        });
-      }
-    }
-
-    expect(sawHeldWait).toBe(true);
   });
 
 });

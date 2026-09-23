@@ -18,6 +18,7 @@ describe("actor-owned mobility clock", () => {
 
     expect(afterHalfSecond.velocity).toBeCloseTo(1, 6);
     expect(afterHalfSecond.distance).toBeCloseTo(0.25, 6);
+    expect(afterHalfSecond.travelDistance).toBeCloseTo(0.25, 6);
 
     const afterOneSecond = advanceMobilityClock(afterHalfSecond, {
       deltaMs: 500,
@@ -25,6 +26,7 @@ describe("actor-owned mobility clock", () => {
     });
     expect(afterOneSecond.velocity).toBeCloseTo(1.4, 6);
     expect(afterOneSecond.distance).toBeCloseTo(0.91, 6);
+    expect(afterOneSecond.travelDistance).toBeCloseTo(0.91, 6);
   });
 
   it("decelerates while yielding and resumes from the held route distance without catch-up", () => {
@@ -35,13 +37,17 @@ describe("actor-owned mobility clock", () => {
       initialVelocity: 1.4,
     });
 
+    expect(state.travelDistance).toBe(0);
+
     state = advanceMobilityClock(state, {
       deltaMs: 500,
       desiredSpeed: 1.4,
       motion: "yield",
     });
     expect(state.velocity).toBeCloseTo(0, 6);
+    expect(state.travelDistance).toBeCloseTo(0.35, 6);
     const heldDistance = state.distance;
+    const heldTravelDistance = state.travelDistance;
 
     for (let index = 0; index < 20; index += 1) {
       state = advanceMobilityClock(state, {
@@ -52,6 +58,7 @@ describe("actor-owned mobility clock", () => {
     }
 
     expect(state.distance).toBeCloseTo(heldDistance, 6);
+    expect(state.travelDistance).toBeCloseTo(heldTravelDistance, 6);
 
     const resumed = advanceMobilityClock(state, {
       deltaMs: 100,
@@ -59,6 +66,8 @@ describe("actor-owned mobility clock", () => {
       motion: "move",
     });
     expect(resumed.distance - heldDistance).toBeLessThan(0.03);
+    expect(resumed.travelDistance - heldTravelDistance).toBeLessThan(0.03);
+    expect(resumed.travelDistance).toBeGreaterThan(heldTravelDistance);
     expect(resumed.velocity).toBeCloseTo(0.28, 6);
   });
 
@@ -75,6 +84,7 @@ describe("actor-owned mobility clock", () => {
     });
 
     expect(dwell.distance).toBe(8.25);
+    expect(dwell.travelDistance).toBe(0);
     expect(dwell.velocity).toBe(0);
     expect(dwell.lifecycle).toBe("active");
   });
@@ -92,6 +102,7 @@ describe("actor-owned mobility clock", () => {
     });
 
     expect(completed.distance).toBe(10);
+    expect(completed.travelDistance).toBeCloseTo(0.2, 9);
     expect(completed.velocity).toBe(0);
     expect(completed.lifecycle).toBe("completed");
 
@@ -125,5 +136,6 @@ describe("actor-owned mobility clock", () => {
 
     expect(fine.velocity).toBeCloseTo(coarse.velocity, 9);
     expect(fine.distance).toBeCloseTo(coarse.distance, 9);
+    expect(fine.travelDistance).toBeCloseTo(coarse.travelDistance, 9);
   });
 });
