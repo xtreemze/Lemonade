@@ -1,0 +1,23 @@
+name: issue-139-residential-diagnostic
+
+on:
+  push:
+    branches: [fix/issue-139-residential-invariants]
+
+permissions:
+  contents: read
+
+jobs:
+  residential:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - name: Run residential layout regression suite
+        run: pnpm --filter @lemonade/scene exec vitest run test/residential-layout.test.ts
