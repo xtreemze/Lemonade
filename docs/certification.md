@@ -51,9 +51,10 @@ A revision is release-certified only when all of the following pass for the same
    - the Pages publisher successfully builds and pushes that revision to `gh-pages`.
 6. Visual showcase evidence
    - `pnpm test:showcase-contract` protects media configuration and normal-E2E isolation;
-   - the dedicated `Visual Showcase` workflow records 5/5 desktop and 5/5 mobile scenes from real Chromium;
-   - ten raw videos, ten screenshots, five desktop GIFs, five mobile GIFs, and both H.264 highlight reels are verified before artifact upload;
-   - GIF payload budgets are reported and enforced;
+   - the dedicated `Visual Showcase` workflow captures 5/5 desktop and 5/5 mobile capabilities from real Chromium using source-appropriate media;
+   - forecast and simulation are captured directly from the WebGL canvas at a requested 60 fps, while planning/report/history use full-viewport PNG screenshots;
+   - four full-resolution 60 fps H.264 scene videos, six static PNGs, four animated WebPs, two full-resolution 60 fps H.264 highlight reels, and two animated WebP presentation reels are verified before artifact upload;
+   - FFprobe resolution/frame-rate checks and presentation payload budgets are reported and enforced;
    - Pages publishes the verified media beneath `/Lemonade/showcase/` at stable URLs used by the README and presentation documentation.
 
 The exact `master` and deployment revisions for a certification event are recorded on the certification issue so the evidence cannot become ambiguous as development continues.

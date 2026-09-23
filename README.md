@@ -24,77 +24,89 @@ Weather and sentiment are conditions to reason about, not additional controls. P
 
 ## Product in motion
 
-CI records these views from the real application in Chromium. Desktop and mobile demonstrate the same five product capabilities with interactions appropriate to each layout.
+CI captures the real application in Chromium with media chosen for the content rather than forcing every state through video. Forecast and simulation are recorded directly from the WebGL canvas at source resolution with a requested 60 fps capture rate, then encoded as high-quality H.264. Planning, day report, and sales history remain lossless PNG screenshots. Animated WebP derivatives provide compact motion for Markdown and presentation surfaces without degrading the source video.
 
 ### Desktop
 
+<img src="https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-desktop-highlight.webp" alt="Lemonade desktop visual highlight reel" width="960" />
+
 #### Weather forecast
 
 Read the day’s weather and neighborhood conditions before opening the stand.
 
-<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/01-weather-forecast.gif" alt="Lemonade weather forecast over the Lemonsville neighborhood" width="760" />
+<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/01-weather-forecast.webp" alt="Lemonade weather forecast over the Lemonsville neighborhood" width="960" />
+
+[Watch the source-resolution 60 fps weather scene](https://xtreemze.github.io/Lemonade/showcase/videos/desktop/01-weather-forecast.mp4)
 
 #### Three-decision planning
 
 Set glasses, advertising signs, and price on the compact daily planning surface.
 
-<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/02-three-decision-plan.gif" alt="Lemonade daily planning controls for glasses, signs, and price" width="760" />
+<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/02-three-decision-plan.png" alt="Lemonade daily planning controls for glasses, signs, and price" width="960" />
 
 #### Live Lemonsville simulation
 
 Watch the stand, neighborhood, customers, weather, and inventory resolve the business day.
 
-<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/03-lemonsville-simulation.gif" alt="Lemonsville 3D neighborhood simulation around the lemonade stand" width="760" />
+<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/03-lemonsville-simulation.webp" alt="Lemonsville 3D neighborhood simulation around the lemonade stand" width="960" />
+
+[Watch the source-resolution 60 fps simulation](https://xtreemze.github.io/Lemonade/showcase/videos/desktop/03-lemonsville-simulation.mp4)
 
 #### Day report
 
 See sold glasses, revenue, costs, profit or loss, and ending assets immediately after the day.
 
-<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/04-day-report.gif" alt="Lemonade end-of-day financial report" width="760" />
+<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/04-day-report.png" alt="Lemonade end-of-day financial report" width="960" />
 
 #### Sales history
 
 Review accessible trends and ledger history before planning the next day.
 
-<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/05-sales-history.gif" alt="Lemonade sales history charts and ledger" width="760" />
+<img src="https://xtreemze.github.io/Lemonade/showcase/desktop/05-sales-history.png" alt="Lemonade sales history charts and ledger" width="960" />
 
-[Watch the desktop highlight reel](https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-desktop-highlight.mp4)
+[Watch the source-resolution 60 fps desktop highlight reel](https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-desktop-highlight.mp4)
 
 ### Mobile
 
+<img src="https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-mobile-highlight.webp" alt="Lemonade mobile visual highlight reel" width="390" />
+
 #### Weather forecast
 
 Read the day’s weather and neighborhood conditions before opening the stand.
 
-<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/01-weather-forecast.gif" alt="Lemonade weather forecast over the Lemonsville neighborhood" width="320" />
+<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/01-weather-forecast.webp" alt="Lemonade weather forecast over the Lemonsville neighborhood" width="390" />
+
+[Watch the source-resolution 60 fps weather scene](https://xtreemze.github.io/Lemonade/showcase/videos/mobile/01-weather-forecast.mp4)
 
 #### Three-decision planning
 
 Set glasses, advertising signs, and price on the compact daily planning surface.
 
-<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/02-three-decision-plan.gif" alt="Lemonade daily planning controls for glasses, signs, and price" width="320" />
+<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/02-three-decision-plan.png" alt="Lemonade daily planning controls for glasses, signs, and price" width="390" />
 
 #### Live Lemonsville simulation
 
 Watch the stand, neighborhood, customers, weather, and inventory resolve the business day.
 
-<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/03-lemonsville-simulation.gif" alt="Lemonsville 3D neighborhood simulation around the lemonade stand" width="320" />
+<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/03-lemonsville-simulation.webp" alt="Lemonsville 3D neighborhood simulation around the lemonade stand" width="390" />
+
+[Watch the source-resolution 60 fps simulation](https://xtreemze.github.io/Lemonade/showcase/videos/mobile/03-lemonsville-simulation.mp4)
 
 #### Day report
 
 See sold glasses, revenue, costs, profit or loss, and ending assets immediately after the day.
 
-<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/04-day-report.gif" alt="Lemonade end-of-day financial report" width="320" />
+<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/04-day-report.png" alt="Lemonade end-of-day financial report" width="390" />
 
 #### Sales history
 
 Review accessible trends and ledger history before planning the next day.
 
-<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/05-sales-history.gif" alt="Lemonade sales history charts and ledger" width="320" />
+<img src="https://xtreemze.github.io/Lemonade/showcase/mobile/05-sales-history.png" alt="Lemonade sales history charts and ledger" width="390" />
 
-[Watch the mobile highlight reel](https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-mobile-highlight.mp4)
+[Watch the source-resolution 60 fps mobile highlight reel](https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-mobile-highlight.mp4)
 
-The capture, rendering, size-budget, and publication contract is documented in [`docs/showcase.md`](docs/showcase.md).
+The capture, rendering, frame-rate, resolution, payload-budget, and publication contract is documented in [`docs/showcase.md`](docs/showcase.md).
 
 ## Why the classic works
 
