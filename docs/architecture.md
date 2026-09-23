@@ -6,7 +6,7 @@ Lemonade is a **web-first deterministic simulation** with optional platform capa
 
 The browser application owns composition and user experience. A pure TypeScript simulation package owns business rules. Rendering, audio, persistence, charts, and any future Tauri shell are consumers/adapters around that package.
 
-The default implementation rule is **standards first**: use semantic HTML, CSS, native form controls, SVG, Web Audio, and browser lifecycle APIs directly when they solve the problem cleanly. Lit is used selectively for interactive presentation components where declarative rendering materially reduces repetitive DOM synchronization; Three.js remains isolated to the low-poly 3D scene.
+The default implementation rule is **standards first**: use semantic HTML, CSS, native form controls, SVG, Web Audio, and browser lifecycle APIs directly when they solve the problem cleanly. Lit is used selectively for interactive presentation components where declarative rendering materially reduces repetitive DOM synchronization. Renderer-neutral scene contracts are isolated from engine code; Babylon.js is the target production 3D engine while Three.js remains a temporary compatibility/reference renderer during migration.
 
 Tauri is deliberately not the foundation. It may package the web app and expose native capabilities when those capabilities have a clear benefit, but the game remains fully playable in a browser.
 
@@ -23,7 +23,9 @@ apps/
 packages/
   simulation/      deterministic business model
   ui/              ledger projections + native DOM/SVG reporting
-  scene/           typed Three.js renderer
+  scene-contracts/ renderer-neutral scene/storyboard/layout contracts
+  scene/           temporary Three.js compatibility renderer
+  scene-babylon/   target Babylon.js renderer
   audio/           procedural Web Audio engine
 ```
 
@@ -45,7 +47,7 @@ Forbidden dependency directions:
 
 - `simulation -> DOM/browser APIs`
 - `simulation -> UI framework/runtime`
-- `simulation -> Three.js`
+- `simulation -> scene engine (Three.js/Babylon.js)`
 - `simulation -> Web Audio`
 - `simulation -> Tauri`
 - `simulation -> IndexedDB/localStorage`
@@ -217,11 +219,13 @@ Charts consume projections of the immutable ledger. Prefer native SVG first beca
 
 Avoid adding a general chart dependency until required interaction or scale exceeds what a small SVG renderer can express safely.
 
-## Scene package
+## Scene packages
 
-The 3D scene consumes a compact typed render model. It may interpolate values for animation, but it cannot decide how many glasses were sold.
+The 3D scene consumes compact renderer-neutral contracts from `@lemonade/scene-contracts`. A renderer may interpolate presentation values, but it cannot decide how many glasses were sold or schedule authoritative occurrences.
 
-Three.js is intentionally retained here. Scene graphs, cameras, materials, geometry, device-pixel-ratio handling, and WebGL resource disposal are meaningful specialized complexity; replacing them with hand-written WebGL would not make the application more native in any useful architectural sense.
+Babylon.js is the production target. `@lemonade/scene-babylon` owns Babylon engine/scene resources and progressively replaces the Three projection. `@lemonade/scene` remains temporarily as the Three compatibility/reference renderer and re-exports shared contracts where required by existing callers. It will be removed after Babylon passes parity, browser, mobile, accessibility and performance gates.
+
+Neither engine belongs in the critical application entry: both runtimes are lazy. New renderer-specific implementation targets Babylon unless it is strictly required to maintain the Three reference during migration.
 
 Performance strategy:
 
@@ -263,7 +267,7 @@ The workspace baseline as of September 2026 is:
 - Vitest 5;
 - Playwright;
 - ESLint flat configuration with typed rules;
-- Three.js for the 3D renderer;
+- Babylon.js for the target 3D renderer, with Three.js temporarily retained as a migration reference;
 - Tauri/Rust only when native capability work begins.
 
 CI uses `pnpm/setup@v1`, which provisions the standalone pnpm executable and Node runtime in one action. Dependency installation is frozen against the generated lockfile.
