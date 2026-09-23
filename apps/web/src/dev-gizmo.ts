@@ -88,9 +88,16 @@ EXAMPLE:
   `);
 };
 
-// Make dev tools globally available
+declare global {
+  interface Window {
+    enableGizmo?: typeof enableGizmo;
+    disableGizmo?: typeof disableGizmo;
+    gizmoHelp?: typeof printGizmoHelp;
+  }
+}
+
 if (typeof window !== "undefined") {
-  (window as any).enableGizmo = enableGizmo;
-  (window as any).disableGizmo = disableGizmo;
-  (window as any).gizmoHelp = printGizmoHelp;
+  window.enableGizmo = enableGizmo;
+  window.disableGizmo = disableGizmo;
+  window.gizmoHelp = printGizmoHelp;
 }
