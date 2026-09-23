@@ -1,6 +1,7 @@
 import type { Group, Scene } from "three";
 
 import { walkingCycleAtDistance } from "./gait.js";
+import { PASSERBY_FOREGROUND_TARGET } from "./scene-capacity.js";
 import { characterGroundClearance } from "./world-scale.js";
 import {
   DEFAULT_STREET_SEED,
@@ -227,6 +228,11 @@ const deterministicUnit = (index: number, salt: number): number => {
   return ((value ^ (value >>> 15)) >>> 0) / 0xffff_ffff;
 };
 
+const routeFocusDistance = (route: PedestrianRoute): number => {
+  const midpoint = samplePedestrianRoute(route, route.total / 2);
+  return Math.hypot(midpoint.x, midpoint.z);
+};
+
 export const crowdGroundClearance = (heightScale: number): number =>
   characterGroundClearance(
     Math.max(
@@ -259,9 +265,17 @@ const basePose = (
   const mainRoutes = viableRoutes.filter(
     (route) => route.streetId === "main",
   );
-  const neighborhoodRoutes = viableRoutes.filter(
-    (route) => route.streetId !== "main" && routeSupportsSideEntry(route),
+  const sideEntryRoutes = viableRoutes.filter(routeSupportsSideEntry);
+  const neighborhoodRoutes = sideEntryRoutes.filter(
+    (route) => route.streetId !== "main",
   );
+  const foregroundRoutes = [...sideEntryRoutes]
+    .sort(
+      (left, right) =>
+        routeFocusDistance(left) - routeFocusDistance(right) ||
+        left.id.localeCompare(right.id),
+    )
+    .slice(0, Math.min(6, sideEntryRoutes.length));
   const requestedSide: SidewalkSide = actorIndex % 2 === 0 ? "near" : "far";
   const mainRoute =
     mainRoutes
@@ -288,9 +302,33 @@ const basePose = (
             ) * neighborhoodRoutes.length,
           )
         ];
+  const foregroundSideRoutes = foregroundRoutes.filter(
+    (route) => route.side === requestedSide,
+  );
+  const foregroundPool =
+    foregroundSideRoutes.length > 0 ? foregroundSideRoutes : foregroundRoutes;
+  const foregroundRoute =
+    foregroundPool.length === 0
+      ? undefined
+      : foregroundPool[
+          Math.floor(
+            deterministicUnit(
+              actorIndex,
+              431 + beat.pedestrianIndex * 23,
+            ) * foregroundPool.length,
+          )
+        ];
   const fallbackRoutes = viableRoutes.length > 0 ? viableRoutes : routes;
+  const usesForegroundCohort =
+    actorIndex < PASSERBY_FOREGROUND_TARGET && beat.startAtMs === 0;
   const route =
-    (beat.seesAdvertisement ? mainRoute : neighborhoodRoute) ??
+    (usesForegroundCohort
+      ? beat.seesAdvertisement
+        ? mainRoute ?? foregroundRoute
+        : foregroundRoute ?? mainRoute
+      : beat.seesAdvertisement
+        ? mainRoute
+        : neighborhoodRoute) ??
     fallbackRoutes[actorIndex % Math.max(1, fallbackRoutes.length)];
   if (route === undefined) {
     throw new Error("crowd motion requires generated sidewalk routes");
@@ -305,14 +343,36 @@ const basePose = (
     293 + beat.pedestrianIndex * 19,
   );
   const entersAfterSimulationStart = beat.startAtMs > 0;
+  const minimumStartDistance =
+    beat.direction === -1 ? 0 : requiredTravelDistance;
+  const maximumStartDistance =
+    beat.direction === -1
+      ? route.total - requiredTravelDistance
+      : route.total;
+  const foregroundSpread = Math.min(
+    28,
+    Math.max(0, maximumStartDistance - minimumStartDistance),
+  );
+  const centeredStartDistance = Math.max(
+    minimumStartDistance,
+    Math.min(
+      maximumStartDistance,
+      route.total / 2 +
+        (initialDistribution - 0.5) * foregroundSpread,
+    ),
+  );
   const spawnDistance =
     beat.direction === -1
       ? entersAfterSimulationStart
         ? 0
-        : availableStartDistance * initialDistribution
+        : usesForegroundCohort
+          ? centeredStartDistance
+          : availableStartDistance * initialDistribution
       : entersAfterSimulationStart
         ? route.total
-        : route.total - availableStartDistance * initialDistribution;
+        : usesForegroundCohort
+          ? centeredStartDistance
+          : route.total - availableStartDistance * initialDistribution;
   const distanceTravelled = elapsedSeconds * worldSpeed;
   const routeDistance =
     beat.direction === -1
