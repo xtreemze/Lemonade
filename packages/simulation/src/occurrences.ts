@@ -451,7 +451,7 @@ const gardenerOccurrence = (
     households[weeklyRandom.nextInt(0, households.length)] ?? households[0];
   if (household === undefined) return null;
 
-  const start = 9 * 60 + weeklyRandom.nextInt(0, 121);
+  const start = 7 * 60 + weeklyRandom.nextInt(0, 76);
   return occurrence(input.runSeed, {
     id: `day:${String(Number(input.day))}:gardening:${String(household)}`,
     kind: "gardening",
@@ -459,7 +459,7 @@ const gardenerOccurrence = (
     actorId: "gardener",
     household,
     startMinute: start,
-    endMinute: Math.min(13 * 60, start + weeklyRandom.nextInt(45, 91)),
+    endMinute: Math.min(9 * 60 + 25, start + weeklyRandom.nextInt(45, 76)),
     anchors: [
       anchor("sidewalk", household),
       anchor("front-yard", household),
@@ -526,16 +526,65 @@ const sprinklerOccurrences = (
   );
 };
 
+const passThroughVehicleOccurrences = (
+  input: NeighborhoodOccurrenceInput,
+): readonly NeighborhoodOccurrence[] => {
+  const count =
+    input.weather === "thunderstorm"
+      ? 10
+      : input.weather === "hot-and-dry"
+        ? 16
+        : input.weather === "cloudy"
+          ? 18
+          : 22;
+  const result: NeighborhoodOccurrence[] = [];
+  const startOfDay = 9 * 60 + 30;
+  const span = 8 * 60 + 30;
+
+  for (let index = 0; index < count; index += 1) {
+    const random = randomFor(
+      input.runSeed,
+      "vehicle",
+      input.day,
+      String(index),
+    );
+    const slot = Math.floor((index * span) / Math.max(1, count));
+    const start = Math.min(
+      17 * 60 + 20,
+      startOfDay + slot + random.nextInt(0, 13),
+    );
+    result.push(
+      occurrence(input.runSeed, {
+        id: `day:${String(Number(input.day))}:vehicle-pass:${String(index)}`,
+        kind: "vehicle-pass-through",
+        actorKind: "vehicle",
+        actorId: `traffic-vehicle:${String(index)}`,
+        household: null,
+        startMinute: start,
+        endMinute: Math.min(18 * 60, start + random.nextInt(38, 61)),
+        anchors: [
+          anchor("street", null),
+          anchor("crossing", null),
+          anchor("street", null),
+        ],
+        motion: "normal",
+      }),
+    );
+  }
+
+  return Object.freeze(result);
+};
+
 const bicycleOccurrences = (
   input: NeighborhoodOccurrenceInput,
 ): readonly NeighborhoodOccurrence[] => {
   const count =
     input.weather === "sunny"
-      ? 3
+      ? 8
       : input.weather === "hot-and-dry"
-        ? 2
+        ? 5
         : input.weather === "cloudy"
-          ? 1
+          ? 4
           : 0;
   const result: NeighborhoodOccurrence[] = [];
 
@@ -546,7 +595,10 @@ const bicycleOccurrences = (
       input.day,
       String(index),
     );
-    const start = 10 * 60 + random.nextInt(0, 8 * 60);
+    const start =
+      10 * 60 +
+      Math.floor((index * 7 * 60) / Math.max(1, count)) +
+      random.nextInt(0, 21);
     result.push(
       occurrence(input.runSeed, {
         id: `day:${String(Number(input.day))}:bicycle:${String(index)}`,
@@ -555,7 +607,7 @@ const bicycleOccurrences = (
         actorId: `bicycle:${String(index)}`,
         household: null,
         startMinute: start,
-        endMinute: start + 8,
+        endMinute: Math.min(18 * 60, start + random.nextInt(35, 51)),
         anchors: [
           anchor("street", null),
           anchor("crossing", null),
@@ -578,6 +630,7 @@ export const generateNeighborhoodOccurrences = (
     ...residentOccurrences(input),
     ...mailOccurrences(input),
     ...sprinklerOccurrences(input),
+    ...passThroughVehicleOccurrences(input),
     ...bicycleOccurrences(input),
   ];
   const gardening = gardenerOccurrence(input);
