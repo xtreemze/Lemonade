@@ -3,7 +3,7 @@ import {
   type OperatingScaleRules,
 } from "@lemonade/simulation";
 
-const formatMoney = (cents: number): string => `${(cents / 100).toFixed(2)}`;
+const formatMoney = (cents: number): string => "$" + (cents / 100).toFixed(2);
 
 export const affordabilityShortfallMessage = (
   spendCents: number,
