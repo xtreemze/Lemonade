@@ -47,10 +47,10 @@ jobs:
       - name: Verify showcase contracts
         run: pnpm test:showcase-contract
 
-      - name: Record desktop and mobile showcase
+      - name: Capture source-quality showcase media
         run: pnpm showcase:capture
 
-      - name: Render showcase media
+      - name: Render showcase videos, graphics, and reels
         run: pnpm showcase:render
 
       - name: Verify showcase media
@@ -65,10 +65,14 @@ jobs:
           set -euo pipefail
           mkdir -p apps/web/dist/showcase/desktop
           mkdir -p apps/web/dist/showcase/mobile
+          mkdir -p apps/web/dist/showcase/videos/desktop
+          mkdir -p apps/web/dist/showcase/videos/mobile
           mkdir -p apps/web/dist/showcase/reels
-          cp artifacts/e2e-media/gifs/desktop/*.gif apps/web/dist/showcase/desktop/
-          cp artifacts/e2e-media/gifs/mobile/*.gif apps/web/dist/showcase/mobile/
-          cp artifacts/e2e-media/reels/*.mp4 apps/web/dist/showcase/reels/
+          cp artifacts/e2e-media/graphics/desktop/* apps/web/dist/showcase/desktop/
+          cp artifacts/e2e-media/graphics/mobile/* apps/web/dist/showcase/mobile/
+          cp artifacts/e2e-media/videos/desktop/*.mp4 apps/web/dist/showcase/videos/desktop/
+          cp artifacts/e2e-media/videos/mobile/*.mp4 apps/web/dist/showcase/videos/mobile/
+          cp artifacts/e2e-media/reels/* apps/web/dist/showcase/reels/
 
       - name: Verify deployment bundle
         run: pnpm --filter @lemonade/web verify:pages-bundle

@@ -19,6 +19,7 @@ export default defineConfig({
     baseURL: `${previewOrigin}${basePath}`,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    video: "off",
   },
   projects: [
     {
@@ -29,10 +30,6 @@ export default defineConfig({
         deviceScaleFactor: 1,
         hasTouch: false,
         isMobile: false,
-        video: {
-          mode: "on",
-          size: { width: 1440, height: 900 },
-        },
       },
     },
     {
@@ -43,10 +40,6 @@ export default defineConfig({
         deviceScaleFactor: 1,
         hasTouch: true,
         isMobile: true,
-        video: {
-          mode: "on",
-          size: { width: 390, height: 844 },
-        },
       },
     },
   ],
