@@ -215,6 +215,51 @@ describe("crowd motion", () => {
     expect(Math.abs(farPet.yaw)).toBeCloseTo(Math.PI);
   });
 
+
+  it("does not rebind a visible pet to another pedestrian when its owner disappears", () => {
+    const scene = new Scene();
+    const firstOwner = new Group();
+    firstOwner.visible = true;
+    firstOwner.position.set(-12, 0, STREET_LAYOUT.nearSidewalk.centerZ);
+    firstOwner.rotation.y = Math.PI / 2;
+    const secondOwner = new Group();
+    secondOwner.visible = true;
+    secondOwner.position.set(12, 0, STREET_LAYOUT.nearSidewalk.centerZ);
+    secondOwner.rotation.y = Math.PI / 2;
+    scene.add(firstOwner, secondOwner);
+
+    const ambient = createAmbientLife(scene, 0x51a7, [
+      firstOwner,
+      secondOwner,
+    ]);
+    ambient.update("sunny", "simulation", 2_000, 14_000);
+
+    const firstPet = scene.children
+      .filter((object) => object.userData["sceneRole"] === "ambient-pet")
+      .find(
+        (pet) =>
+          pet.visible &&
+          Math.abs(pet.position.x - firstOwner.position.x) < 2,
+      );
+    const secondPet = scene.children
+      .filter((object) => object.userData["sceneRole"] === "ambient-pet")
+      .find(
+        (pet) =>
+          pet.visible &&
+          Math.abs(pet.position.x - secondOwner.position.x) < 2,
+      );
+    expect(firstPet).toBeDefined();
+    expect(secondPet).toBeDefined();
+    if (firstPet === undefined || secondPet === undefined) return;
+
+    firstOwner.visible = false;
+    ambient.update("sunny", "simulation", 2_016, 14_000);
+
+    expect(firstPet.visible).toBe(false);
+    expect(secondPet.visible).toBe(true);
+    expect(Math.abs(secondPet.position.x - secondOwner.position.x)).toBeLessThan(2);
+  });
+
   it("keeps pets on sidewalks and traffic on generated roads as neighborhood routes turn", () => {
     const scene = new Scene();
     const owner = new Group();
