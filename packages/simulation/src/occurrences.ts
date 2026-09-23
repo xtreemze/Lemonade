@@ -34,6 +34,7 @@ export type NeighborhoodOccurrenceKind =
   | "gardening"
   | "sprinkler"
   | "window-activity"
+  | "vehicle-pass-through"
   | "bicycle-pass-through";
 
 export type NeighborhoodActorKind =
@@ -83,6 +84,7 @@ type NeighborhoodRandomStream =
   | "gardener"
   | "sprinkler"
   | "window"
+  | "vehicle"
   | "bicycle"
   | "visual";
 
