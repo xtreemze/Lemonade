@@ -23,7 +23,7 @@ export interface PersistentSceneViewer {
 }
 
 export const isSceneViewerEnabled = (): boolean =>
-  globalThis.localStorage?.getItem("LEMONADE_DEV_SCENE_VIEWER") === "1";
+  localStorage.getItem("LEMONADE_DEV_SCENE_VIEWER") === "1";
 
 export const enableSceneViewer = (): void => {
   localStorage.setItem("LEMONADE_DEV_SCENE_VIEWER", "1");
