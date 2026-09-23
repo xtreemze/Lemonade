@@ -121,7 +121,7 @@ export const ambientPopulationFor = (
     return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 2 });
   }
   if (phase !== "simulation") {
-    return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 6 });
+    return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 0 });
   }
   switch (weather) {
     case "sunny":
