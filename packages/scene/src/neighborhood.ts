@@ -596,10 +596,7 @@ const refreshWindRegistry = (scene: Scene): WindRegistry => {
 
 const windRegistryFor = (scene: Scene): WindRegistry => {
   const cached = windRegistryByScene.get(scene);
-  if (
-    cached !== undefined &&
-    cached.rootChildCount === scene.children.length
-  ) {
+  if (cached?.rootChildCount === scene.children.length) {
     return cached;
   }
   return refreshWindRegistry(scene);
