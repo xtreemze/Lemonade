@@ -539,7 +539,7 @@ describe("crowd motion", () => {
   });
 
 
-  it("keeps at least twenty ordinary pedestrians active for the full street simulation", () => {
+  it("keeps at least twenty ordinary pedestrians active and moving for the full street simulation", () => {
     const storyboard = createStreetStoryboard({
       durationMs: 14_000,
       prepared: 20,
@@ -555,15 +555,32 @@ describe("crowd motion", () => {
       20,
       storyboard.activeDurationMs,
     );
+    let previous = simulation.sample(0).poses;
+    expect(previous.filter((pose) => pose !== undefined).length).toBeGreaterThanOrEqual(20);
+
     for (
-      let elapsedMs = 0;
+      let elapsedMs = 250;
       elapsedMs < storyboard.activeDurationMs;
       elapsedMs += 250
     ) {
-      const visible = simulation
-        .sample(elapsedMs)
-        .poses.filter((pose) => pose !== undefined);
-      expect(visible.length).toBeGreaterThanOrEqual(20);
+      const current = simulation.sample(elapsedMs).poses;
+      expect(
+        current.filter((pose) => pose !== undefined).length,
+      ).toBeGreaterThanOrEqual(20);
+
+      for (let index = 0; index < 20; index += 1) {
+        const before = previous[index];
+        const after = current[index];
+        expect(before).toBeDefined();
+        expect(after).toBeDefined();
+        if (before === undefined || after === undefined) continue;
+
+        expect(
+          Math.hypot(after.x - before.x, after.z - before.z),
+        ).toBeGreaterThan(0.04);
+        expect(after.travelDistance).toBeGreaterThan(before.travelDistance);
+      }
+      previous = current;
     }
   });
 
