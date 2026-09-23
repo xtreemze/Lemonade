@@ -685,7 +685,8 @@ export const createLemonsvilleScene = (
 
     const visibleCount = Math.min(
       customers.length,
-      Math.max(6, Math.min(PASSERBY_ACTIVE_LIMIT, storyboard.passersBy.length)),
+      PASSERBY_ACTIVE_LIMIT,
+      Math.max(MIN_STREET_PEDESTRIANS, storyboard.passersBy.length),
     );
     const poses =
       crowdMotion?.crowdPosesAt(
