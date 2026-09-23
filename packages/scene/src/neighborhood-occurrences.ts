@@ -23,6 +23,7 @@ export type SceneNeighborhoodOccurrenceKind =
   | "gardening"
   | "sprinkler"
   | "window-activity"
+  | "vehicle-pass-through"
   | "bicycle-pass-through";
 
 export type SceneNeighborhoodOccurrence = Readonly<{
