@@ -1,14 +1,11 @@
 import {
-  BoxGeometry,
   CanvasTexture,
   DirectionalLight,
-  DoubleSide,
   Group,
   HemisphereLight,
   LinearFilter,
   Mesh,
   MeshStandardMaterial,
-  type Object3D,
   PerspectiveCamera,
   PlaneGeometry,
   SRGBColorSpace,
@@ -36,6 +33,7 @@ import {
 import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
 import { STREET_LAYOUT } from "./street-layout.js";
 import type { StandDetailController } from "./stand-detail.js";
+import { createAdvertisingSignField } from "./sign-field.js";
 import { createThreeRendererBackend } from "./three-renderer-backend.js";
 import {
   BUYER_PROFILE_INDEX_OFFSET,
@@ -103,18 +101,6 @@ const makeMaterial = (color: number): MeshStandardMaterial =>
 const makeCharacterMaterial = (color: number): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading: false, roughness: 0.88 });
 
-const addBox = (
-  parent: Object3D,
-  size: readonly [number, number, number],
-  position: readonly [number, number, number],
-  color: number,
-): Mesh => {
-  const mesh = new Mesh(new BoxGeometry(...size), makeMaterial(color));
-  mesh.position.set(...position);
-  parent.add(mesh);
-  return mesh;
-};
-
 type StandModel = Readonly<{
   root: Group;
   shutter: Group;
@@ -126,30 +112,6 @@ const createStand = (): StandModel => {
   shutter.visible = false;
   root.add(shutter);
   return Object.freeze({ root, shutter });
-};
-
-type SignModel = Readonly<{
-  root: Group;
-  labelMaterial: MeshStandardMaterial;
-}>;
-
-const createSign = (): SignModel => {
-  const root = new Group();
-  addBox(root, [0.1, 0.85, 0.1], [0, 0.43, 0], 0x644c34);
-  addBox(root, [0.95, 0.62, 0.12], [0, 1.05, 0], 0xf5d34c);
-
-  const labelMaterial = new MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0xffffff,
-    emissiveIntensity: 0.35,
-    roughness: 0.9,
-    side: DoubleSide,
-  });
-  const label = new Mesh(new PlaneGeometry(0.86, 0.52), labelMaterial);
-  label.position.set(0, 1.05, 0.066);
-  root.add(label);
-
-  return Object.freeze({ root, labelMaterial });
 };
 
 type LimbRig = Readonly<{
@@ -469,7 +431,9 @@ export const createLemonsvilleScene = (
   stand.root.position.z = STAND_WORLD_Z;
   scene.add(stand.root);
 
-  const signs = Array.from({ length: 40 }, () => createSign());
+  const signField = createAdvertisingSignField(40);
+  const signs = signField.signs;
+  for (const mesh of signField.meshes) scene.add(mesh);
   let signTexture: CanvasTexture | null = null;
   let signPriceLabel = "";
   let disposed = false;
@@ -600,10 +564,8 @@ export const createLemonsvilleScene = (
       nextTexture.minFilter = LinearFilter;
       nextTexture.magFilter = LinearFilter;
       signTexture = nextTexture;
-      for (const sign of signs) {
-        sign.labelMaterial.map = nextTexture;
-        sign.labelMaterial.needsUpdate = true;
-      }
+      signField.labelMaterial.map = nextTexture;
+      signField.labelMaterial.needsUpdate = true;
       previousTexture?.dispose();
       render();
     });
@@ -764,6 +726,7 @@ export const createLemonsvilleScene = (
     signs.forEach((sign, index) => {
       sign.root.visible = index < signLimit;
     });
+    signField.sync();
 
     const remaining = forecast ? 0 : storyboard.prepared;
     cupInventory?.setStock(remaining, storyboard.prepared);
@@ -777,6 +740,7 @@ export const createLemonsvilleScene = (
     signs.forEach((sign) => {
       sign.root.rotation.z = 0;
     });
+    signField.sync();
     weatherDetail?.update(
       state.weather,
       state.phase,
@@ -1035,6 +999,7 @@ export const createLemonsvilleScene = (
         sign.root.rotation.z = Math.sin(seconds * 1.7 + index * 0.55) * 0.035;
       }
     });
+    signField.sync();
     weatherDetail?.update(
       state.weather,
       state.phase,
