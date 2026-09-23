@@ -137,7 +137,8 @@ export const createPersistentSceneViewer = (
   `;
   info.innerHTML = `
     <div><strong>Weather:</strong> ${options.weather ?? "sunny"}</div>
-    <div><strong>Phase:</strong> ${phase}</div>\n    <div><strong>Profile:</strong> ${stress ? "maximum-load deterministic" : "interactive"}</div>
+    <div><strong>Phase:</strong> ${phase}</div>
+    <div><strong>Profile:</strong> ${stress ? "maximum-load deterministic" : "interactive"}</div>
     <div><strong>Gizmo:</strong> ${options.enableGizmo ? "✓ Enabled" : "✗ Disabled"}</div>
     <div style="margin-top: 8px; color: #aaa; font-size: 10px;">
       Click scene to select objects<br/>
@@ -195,13 +196,18 @@ export const createPersistentSceneViewer = (
 
   const sceneState: LemonsvilleSceneState = Object.freeze({
     weather: options.weather ?? "sunny",
-    visibleSigns,\n    prepared,\n    durationMs,
+    visibleSigns,
+    prepared,
+    durationMs,
     confidence: 3,
     nextConfidence: 3,
     characterSeed: 12345,
     dayNumber: 1,
     storyboard: createStreetStoryboard({
-      durationMs,\n      prepared,\n      sold,\n      visibleSigns,
+      durationMs,
+      prepared,
+      sold,
+      visibleSigns,
       priceCents: 150,
       ambientPedestrianCount,
     }),
