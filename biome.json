@@ -90,6 +90,18 @@
   "overrides": [
     {
       "includes": [
+        "apps/web/src/app.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnnecessaryConditions": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
         "packages/simulation/src/**/*.ts"
       ],
       "linter": {
