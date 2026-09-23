@@ -806,16 +806,15 @@ export const createLemonsvilleScene = (
     pos: { x: number; z: number },
     minZ: number,
     maxZ: number,
-    minX: number = -12,
-    maxX: number = 12,
+    minX = -12,
+    maxX = 12,
   ): { x: number; z: number } => ({
     x: Math.max(minX, Math.min(maxX, pos.x)),
     z: Math.max(minZ, Math.min(maxZ, pos.z)),
   });
 
   const animateBuyers = (elapsedMs: number): number => {
-    const activeBuyerPositions: Array<{ x: number; z: number }> = [];
-    const personRadius = 0.35;
+    const activeBuyerPositions: { x: number; z: number }[] = [];
 
     for (const buyer of buyers) {
       const fade = buyerFadeState.get(buyer);
