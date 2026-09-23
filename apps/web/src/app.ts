@@ -712,9 +712,20 @@ export class LemonadeApp {
 
   #scheduleStormFeedback(durationMs: number): void {
     const duration = Math.max(700, durationMs);
-    this.#scheduleFeedback(180, "storm:thunder", "storm:thunder");
-    this.#scheduleHaptic(Math.min(duration - 180, duration * 0.34), "storm:gust");
-    this.#scheduleHaptic(Math.min(duration - 90, duration * 0.72), "storm:gust");
+    for (const progress of [0.2, 0.57, 0.78] as const) {
+      this.#scheduleFeedback(
+        Math.min(duration - 90, duration * progress + 110),
+        "storm:thunder",
+        "storm:thunder",
+      );
+    }
+    for (const progress of [0.34, 0.72] as const) {
+      this.#scheduleFeedback(
+        Math.min(duration - 90, duration * progress),
+        "storm:gust",
+        "storm:gust",
+      );
+    }
   }
 
   #playWeatherForecastCue(weather: DayEnvironment["weather"]["kind"]): void {
