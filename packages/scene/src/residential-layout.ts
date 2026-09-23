@@ -1269,10 +1269,25 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
   const resolveProperties = (props: readonly ResidentialPropertySpec[]) =>
     Object.freeze(props.map((p) => resolvedByRole.get(p.role) ?? p));
 
-  const resolvedFront = resolveProperties(front);
-  const resolvedMiddle = resolveProperties(middle);
-  const resolvedBack = resolveProperties(back);
-  const resolvedOuter = resolveProperties(outer);
+  // House overlap resolution can move a lot after its access was first
+  // generated. Re-resolve access from the final house coordinates so
+  // driveways, paths, mailboxes, and returned properties share one geometry.
+  const resolvedFront = resolveFrontAccess(
+    safeSeed,
+    resolveProperties(front),
+  );
+  const resolvedMiddle = resolveGeneratedAccess(
+    resolveProperties(middle),
+    safeSeed,
+  );
+  const resolvedBack = resolveGeneratedAccess(
+    resolveProperties(back),
+    safeSeed,
+  );
+  const resolvedOuter = resolveGeneratedAccess(
+    resolveProperties(outer),
+    safeSeed,
+  );
   const allProperties = [
     ...resolvedFront,
     ...resolvedMiddle,
