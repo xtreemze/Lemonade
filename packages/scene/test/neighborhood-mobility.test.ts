@@ -229,6 +229,40 @@ describe("unified neighborhood mobility", () => {
     expect(moved).toEqual(new Set(["resident:0", "resident-pet"]));
   });
 
+  it("projects accumulated locomotion distance only from actor-owned clocks", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const sample = system.sample({
+      weather: "cloudy",
+      phase: "simulation",
+      elapsedMs: 5_000,
+      durationMs: 14_000,
+      dayNumber: 5,
+      focus: { x: 0, z: 0 },
+    });
+
+    const clockDriven = sample.actors.filter(
+      (actor) =>
+        actor.id.startsWith("traffic-") ||
+        actor.id === "resident:0" ||
+        actor.id === "resident:1" ||
+        actor.id === "resident-pet",
+    );
+    expect(clockDriven.length).toBeGreaterThan(0);
+    expect(
+      clockDriven.every(
+        (actor) =>
+          actor.travelDistance !== null &&
+          Number.isFinite(actor.travelDistance) &&
+          actor.travelDistance >= 0,
+      ),
+    ).toBe(true);
+
+    const legacyDrivewayActor = sample.actors.find(
+      (actor) => actor.id === "resident-vehicle",
+    );
+    expect(legacyDrivewayActor?.travelDistance).toBeNull();
+  });
+
   it("drives a resident vehicle into a driveway, parks, and later departs", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const parked = system.sample({

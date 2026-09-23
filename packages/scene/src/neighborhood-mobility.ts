@@ -48,6 +48,7 @@ export type MobilityPose = Readonly<{
   z: number;
   yaw: number;
   speed: number;
+  travelDistance: number | null;
   visible: boolean;
   waiting: boolean;
   detail: MobilityDetail;
@@ -400,6 +401,7 @@ const pedestrianRoutePose = (
   point: ResidentialPoint;
   yaw: number;
   speed: number;
+  travelDistance: number;
   visible: boolean;
   inside: boolean;
   doorOpen: boolean;
@@ -462,6 +464,7 @@ const pedestrianRoutePose = (
     point: sampled.point,
     yaw: sampled.yaw,
     speed: visible ? clock.velocity : 0,
+    travelDistance: clock.travelDistance,
     visible,
     inside,
     doorOpen: visible && doorDistance <= 0.9,
@@ -495,6 +498,7 @@ const makePose = (
   propertyRole: string | null = null,
   waiting = false,
   visible = true,
+  travelDistance: number | null = null,
 ): MobilityPose => {
   const detail = detailForPoint(point, focus);
   return Object.freeze({
@@ -504,6 +508,7 @@ const makePose = (
     z: point.z,
     yaw,
     speed: waiting ? 0 : speed,
+    travelDistance,
     visible: visible && detail !== "statistical",
     waiting,
     detail,
@@ -646,6 +651,7 @@ const trafficPose = (
     null,
     waiting,
     clock.lifecycle === "active",
+    clock.travelDistance,
   );
 };
 
@@ -799,6 +805,7 @@ export const createNeighborhoodMobilitySystem = (
             property.role,
             false,
             state.visible,
+            state.travelDistance,
           );
           actors.push(resident);
           if (state.visible) pedestrianPoints.push(state.point);
@@ -828,6 +835,7 @@ export const createNeighborhoodMobilitySystem = (
               property.role,
               false,
               petState.visible,
+              petState.travelDistance,
             );
             actors.push(pet);
             if (petState.visible) pedestrianPoints.push(petState.point);
