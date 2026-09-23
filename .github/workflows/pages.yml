@@ -18,7 +18,7 @@ jobs:
   build:
     name: Build Pages artifact
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -36,8 +36,39 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Verify showcase contracts
+        run: pnpm test:showcase-contract
+
+      - name: Record desktop and mobile showcase
+        run: pnpm showcase:capture
+
+      - name: Render showcase media
+        run: pnpm showcase:render
+
+      - name: Verify showcase media
+        run: pnpm showcase:verify
+
       - name: Build project-page bundle
         run: pnpm --filter @lemonade/web exec vite build --base=/Lemonade/
+
+      - name: Publish showcase into Pages bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p apps/web/dist/showcase/desktop
+          mkdir -p apps/web/dist/showcase/mobile
+          mkdir -p apps/web/dist/showcase/reels
+          cp artifacts/e2e-media/gifs/desktop/*.gif apps/web/dist/showcase/desktop/
+          cp artifacts/e2e-media/gifs/mobile/*.gif apps/web/dist/showcase/mobile/
+          cp artifacts/e2e-media/reels/*.mp4 apps/web/dist/showcase/reels/
 
       - name: Verify deployment bundle
         run: pnpm --filter @lemonade/web verify:pages-bundle

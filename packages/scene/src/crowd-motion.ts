@@ -1,6 +1,7 @@
 import type { Group, Scene } from "three";
 
 import { walkingCycleAtDistance } from "./gait.js";
+import { PASSERBY_ACTIVE_LIMIT } from "./scene-capacity.js";
 import { characterGroundClearance } from "./world-scale.js";
 import {
   DEFAULT_STREET_SEED,
@@ -236,7 +237,14 @@ const basePose = (
   routes: readonly PedestrianRoute[],
 ): MutableCrowdPose | undefined => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
-  const worldSpeed = 1.24 + deterministicUnit(actorIndex, 17) * 0.22;
+  // Spacing is deliberately keyed to the fixed visual pool capacity, not the
+  // number of currently active actors: that count fluctuates frame to frame
+  // (e.g. as buyers arrive/leave and animatePassersBy raises its target
+  // count), and dividing by it would instantly shift every visible
+  // pedestrian's position along their route whenever it changed.
+  const worldSpeed = 1.28 + deterministicUnit(actorIndex, 17) * 0.54;
+  const phaseOffset =
+    actorIndex / PASSERBY_ACTIVE_LIMIT + deterministicUnit(actorIndex, 29) * 0.11;
   const elapsedSeconds =
     Math.max(
       0,
@@ -267,7 +275,13 @@ const basePose = (
     throw new Error("crowd motion requires generated sidewalk routes");
   }
 
-  const traveled = elapsedSeconds * worldSpeed;
+  // phaseOffset spreads actors' starting position along the route (so a
+  // batch of pedestrians spawned together doesn't visibly bunch up); it is
+  // folded into the starting distance rather than wrapped with `fract()`,
+  // which would snap a pedestrian instantly from the route's end back to
+  // its start. Instead the pedestrian simply despawns once it reaches the
+  // route boundary, same as one that spawned with no phase offset at all.
+  const traveled = phaseOffset * route.total + elapsedSeconds * worldSpeed;
   const forwardDistance = traveled;
   if (forwardDistance > route.total) return undefined;
   const progress = forwardDistance / route.total;
@@ -301,7 +315,7 @@ const basePose = (
     x: sampled.x + normalX * lateralOffset + (route.streetId === "main" ? signPull : 0),
     z: sampled.z + normalZ * lateralOffset,
     heading,
-    pace: Math.max(0.88, Math.min(1.14, worldSpeed / 1.3)),
+    pace: Math.max(0.72, Math.min(1.35, worldSpeed / 1.55)),
     worldSpeed,
     travelDistance: traveled,
     side: route.side,

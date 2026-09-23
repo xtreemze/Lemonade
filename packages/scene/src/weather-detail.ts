@@ -13,6 +13,7 @@ import type {
 
 import {
   CLOUDY_TOWN_CLOUD_LAYOUT,
+  THUNDERSTORM_TOWN_CLOUD_LAYOUT,
   WEATHER_BACKDROP_LAYOUT,
 } from "./weather-layout.js";
 
@@ -138,6 +139,18 @@ const flashPulse = (progress: number, center: number, width: number): number => 
   return normalized * normalized;
 };
 
+export const sunVisualPositionAt = (
+  progress: number,
+): readonly [number, number, number] => {
+  const clampedProgress = clamp01(progress);
+  const daylightArc = Math.max(0, Math.sin(clampedProgress * Math.PI));
+  return Object.freeze([
+    lerp(-4.8, 4.8, clampedProgress),
+    -0.15 + daylightArc * 1.85,
+    -2.55 - daylightArc * 0.35,
+  ] as const);
+};
+
 export const lightningFlashAt = (
   elapsedMs: number,
   durationMs: number,
@@ -223,6 +236,7 @@ export const populateWeatherObjects = (
   }
 
   const sunContainer = new Group();
+  sunContainer.userData["sceneRole"] = "sun-disc";
   addSun(sunContainer, 0.82);
   weather.sunny.add(sunContainer);
 
@@ -240,7 +254,7 @@ export const populateWeatherObjects = (
   ] as const;
   for (const [i, baseLayout] of cloudPositions.entries()) {
     const partlyCloud = new Group();
-    partlyCloud.userData["sceneRole"] = `partly-cloud-${i}`;
+    partlyCloud.userData["sceneRole"] = `partly-cloud-${String(i)}`;
     partlyCloud.position.set(baseLayout.position[0], baseLayout.position[1], baseLayout.position[2]);
     partlyCloud.scale.setScalar(baseLayout.scale);
     addCloud(partlyCloud, 0xd7e0df);
@@ -248,9 +262,7 @@ export const populateWeatherObjects = (
   }
   weather["hot-and-dry"].add(partlyCloudGroup);
 
-  addCloud(weather.cloudy, 0xd7e0df);
-
-  const cloudyTownClouds = CLOUDY_TOWN_CLOUD_LAYOUT.slice(0, 5).map((layout, index) => {
+  const cloudyTownClouds = CLOUDY_TOWN_CLOUD_LAYOUT.map((layout, index) => {
     const cloud = new Group();
     cloud.userData["sceneRole"] = "town-cloud";
     cloud.userData["driftPhase"] = layout.driftPhase;
@@ -262,11 +274,7 @@ export const populateWeatherObjects = (
     return cloud;
   });
 
-  const thunderstormClouds = [
-    { position: [-1.5, 1.5, -0.3] as const, scale: 1.2, driftPhase: 0 },
-    { position: [0, 0.5, -0.5] as const, scale: 1, driftPhase: 1.5 },
-    { position: [1.5, 1.8, -0.2] as const, scale: 1.1, driftPhase: 3 },
-  ].map((layout) => {
+  const thunderstormClouds = THUNDERSTORM_TOWN_CLOUD_LAYOUT.map((layout) => {
     const cloud = new Group();
     cloud.userData["turbulentCloud"] = true;
     cloud.userData["driftPhase"] = layout.driftPhase;
@@ -432,8 +440,11 @@ export const populateWeatherObjects = (
       sunlight.position.set(...daylight.sunPosition);
 
       const sunArc = Math.max(0, Math.sin(daylight.progress * Math.PI));
-      sunContainer.position.y = sunArc * 2.5 - 0.8;
-      sunContainer.position.z = -6 - sunArc * 2;
+      const visualSunPosition = sunVisualPositionAt(daylight.progress);
+      sunContainer.position.set(...visualSunPosition);
+      partlySun.position.x = lerp(-3.8, 3.6, daylight.progress);
+      partlySun.position.y = 0.2 + sunArc * 1.55;
+      partlySun.position.z = -2.35 - sunArc * 0.3;
 
       lightning.visible = flash > 0.06;
       for (const boltMaterial of lightningMaterials) {
