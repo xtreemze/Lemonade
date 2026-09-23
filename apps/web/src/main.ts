@@ -6,10 +6,9 @@ import "./persistence.css";
 
 import { LemonadeApp, createFreshRunSnapshot } from "./app.js";
 import {
-  createPersistentSceneViewer,
   isRendererStressFixtureEnabled,
   isSceneViewerEnabled,
-} from "./dev-scene-viewer.js";
+} from "./dev-scene-flags.js";
 import { RunPersistenceError, clearCurrentRun, loadCurrentRun } from "./persistence.js";
 
 const root = document.querySelector("#root");
@@ -89,12 +88,19 @@ if (isSceneViewerEnabled()) {
       ? "Renderer stress fixture activated"
       : "Scene Viewer mode activated - launching persistent 3D scene",
   );
-  createPersistentSceneViewer(root, {
-    enableGizmo: true,
-    weather: "hot-and-dry",
-    phase: "forecast",
-    stress,
-  });
+  void import("./dev-scene-viewer.js")
+    .then(({ createPersistentSceneViewer }) => {
+      createPersistentSceneViewer(root, {
+        enableGizmo: true,
+        weather: "hot-and-dry",
+        phase: "forecast",
+        stress,
+      });
+    })
+    .catch((error: unknown) => {
+      console.error("Unable to load the development scene viewer.", error);
+      void start();
+    });
 } else {
   void start();
 }
