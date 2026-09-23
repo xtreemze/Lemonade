@@ -830,7 +830,7 @@ export const createNeighborhoodMobilitySystem = (
             const directed =
               index % 2 === 0 ? route : reverseRoute(route, ":reverse");
             const vehicle = trafficPose(
-              "traffic-vehicle:" + String(route.id) + ":v" + String(vehicleNum),
+              "traffic-vehicle:" + route.id + ":v" + String(vehicleNum),
               "vehicle",
               directed,
               input.elapsedMs,
