@@ -72,3 +72,28 @@ Revisit TypeScript 7 when typescript-eslint officially supports it, strict typed
 - Major UI migrations require a narrow architecture issue with rollback criteria.
 
 Revisit this decision after a substantial UI expansion or when a native/platform limitation becomes concrete; do not migrate frameworks on cadence alone.
+
+
+## CI feedback tiers for AI and draft work
+
+Pull-request CI uses two explicit tiers so iteration can be fast without weakening release evidence.
+
+### Draft preflight
+
+A pull request that is still a draft runs only the `preflight` job on open, synchronize, reopen, or conversion back to draft. Preflight installs the frozen dependency graph, runs the complete TypeScript typecheck, and runs ESLint plus the repository policy/mobile static lint gates. It deliberately does not install Playwright browsers, run unit/build certification, run the deterministic balance certification, or build the GitHub Pages artifact.
+
+This tier is feedback only. A draft cannot use preflight as merge evidence.
+
+### Ready and master certification
+
+The existing merge-facing job names remain stable:
+
+- `check`: `pnpm check`, deterministic `pnpm certify`, and GitHub Pages bundle verification;
+- `browser`: full Playwright E2E plus browser certification evidence upload;
+- `mobile-contract`: the complete `pnpm verify:mobile` contract.
+
+These three jobs run when a pull request becomes ready for review, on every subsequent synchronization while it remains ready, and on pushes to `master`. The `ready_for_review` activity is explicitly subscribed so moving a green draft to ready always produces a fresh full-certification run for that exact head SHA.
+
+PR workflow runs use per-PR concurrency with cancellation of superseded runs. Pushes to `master` are not cancelled. This avoids spending CI capacity on obsolete draft/PR commits while preserving complete evidence for the current merge candidate.
+
+Branch/ruleset protection tracked in #61 must require the stable `check`, `browser`, and `mobile-contract` contexts. `preflight` is intentionally not a merge requirement.
