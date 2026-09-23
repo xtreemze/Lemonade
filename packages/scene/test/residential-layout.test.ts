@@ -91,6 +91,17 @@ describe("procedural residential layout", () => {
                 property.drivewayX === null
                   ? null
                   : Number(property.drivewayX.toFixed(2)),
+              blockers: layout.exclusions
+                .filter((rect) => rect.role !== "path")
+                .filter((rect) =>
+                  residentialFootprintIntersectsHardscape(
+                    { x: property.houseX, z: property.houseZ },
+                    { exclusions: [rect] },
+                    localHalfWidth * cosine + localHalfDepth * sine,
+                    localHalfWidth * sine + localHalfDepth * cosine,
+                  ),
+                )
+                .map((rect) => rect.role),
             },
           ]
         : [];
