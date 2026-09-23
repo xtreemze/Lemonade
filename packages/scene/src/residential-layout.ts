@@ -1080,6 +1080,7 @@ const generatePropertyPlantings = (
   clearance: number,
   spacing: number,
   paletteSize: number,
+  avoidHouseFront: boolean,
 ): readonly ResidentialPlanting[] => {
   const allProperties = [
     ...layout.frontProperties,
@@ -1142,7 +1143,10 @@ const generatePropertyPlantings = (
       if (blockedByHouseFootprint(candidate, allProperties, footprintClearance)) {
         continue;
       }
-      if (blockedByHouseFront(candidate, allProperties, footprintClearance)) {
+      if (
+        avoidHouseFront &&
+        blockedByHouseFront(candidate, allProperties, footprintClearance)
+      ) {
         continue;
       }
       if (
@@ -1325,6 +1329,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       3.5,
       1.45,
       7,
+      true,
     ),
   ];
   for (const fallbackSalt of [4_050, 4_850] as const) {
@@ -1346,6 +1351,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       3.5,
       1.45,
       7,
+      true,
     );
     for (const candidate of fallback) {
       const clearsExistingTrees = backyardTrees.every(
@@ -1365,6 +1371,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     2.8,
     4.2,
     3,
+    true,
   );
   const trees = Object.freeze([
     ...backyardTrees,
@@ -1391,6 +1398,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     1.9,
     0.72,
     7,
+    false,
   );
   const shrubs = Object.freeze([
     ...yardShrubs,
@@ -1415,6 +1423,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     0.38,
     0.48,
     5,
+    false,
   );
   const flowers = Object.freeze([
     ...flowerBeds,
