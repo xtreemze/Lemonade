@@ -60,9 +60,9 @@ describe("scene state occurrence composition", () => {
     const state = createLemonsvilleSceneState(input(2), false);
 
     expect(
-      state.neighborhoodOccurrences.every(
-        (occurrence) => occurrence.economicEffect === "none",
+      state.neighborhoodOccurrences.map(
+        (occurrence) => occurrence.economicEffect,
       ),
-    ).toBe(true);
+    ).toEqual(state.neighborhoodOccurrences.map(() => "none"));
   });
 });
