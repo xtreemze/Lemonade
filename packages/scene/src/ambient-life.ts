@@ -11,7 +11,11 @@ import {
 
 import { characterProfileFor } from "./characters.js";
 import { decorateCharacter } from "./character-detail.js";
-import { updateNeighborhoodWind } from "./neighborhood.js";
+import {
+  updateNeighborhoodActivity,
+  updateNeighborhoodWind,
+} from "./neighborhood.js";
+import type { SceneNeighborhoodOccurrence } from "./neighborhood-occurrences.js";
 import {
   createNeighborhoodMobilitySystem,
   type MobilityPose,
@@ -52,6 +56,7 @@ export type AmbientLifeController = Readonly<{
     elapsedMs: number,
     durationMs: number,
     dayNumber?: number,
+    occurrences?: readonly SceneNeighborhoodOccurrence[],
     focus?: Readonly<{ x: number; z: number }>,
   ): NeighborhoodMobilitySample;
 }>;
@@ -64,7 +69,7 @@ export const ambientPopulationFor = (
   phase: AmbientPhase,
 ): AmbientPopulation => {
   if (phase === "forecast") {
-    return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 2 });
+    return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 6 });
   }
   if (phase !== "simulation") {
     return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 0 });
@@ -480,6 +485,51 @@ const applyTransportWalk = (
   rig.root.position.y = Math.abs(Math.sin(cycle)) * 0.018;
 };
 
+const REDUCED_DETAIL_ROLES = new Set([
+  "face-expression",
+  "eye-white",
+  "eye-pupil",
+  "hair-detail",
+  "garment-detail",
+  "character-bag",
+]);
+
+const applyMobilityRenderDetail = (
+  root: Object3D,
+  detail: MobilityPose["detail"],
+): void => {
+  root.userData["mobilityDetail"] = detail;
+  root.traverse((child) => {
+    const role: unknown = child.userData["sceneRole"];
+    if (typeof role !== "string" || !REDUCED_DETAIL_ROLES.has(role)) return;
+    child.visible = detail === "full";
+  });
+};
+
+const distributedTrafficPoses = (
+  poses: readonly MobilityPose[],
+  limit: number,
+): readonly MobilityPose[] => {
+  const safeLimit = Math.max(0, Math.trunc(limit));
+  if (safeLimit === 0) return Object.freeze([]);
+
+  const primaryByRoute = new Map<string, MobilityPose>();
+  const extras: MobilityPose[] = [];
+  for (const pose of poses) {
+    const match = /^(?:traffic-vehicle|bicycle):([^:]+)(?::|$)/.exec(pose.id);
+    const routeKey = match?.[1] ?? pose.id;
+    if (!primaryByRoute.has(routeKey)) {
+      primaryByRoute.set(routeKey, pose);
+    } else {
+      extras.push(pose);
+    }
+  }
+
+  return Object.freeze(
+    [...primaryByRoute.values(), ...extras].slice(0, safeLimit),
+  );
+};
+
 const placeRig = (
   rig: TransportCharacterRig,
   pose: MobilityPose | undefined,
@@ -487,6 +537,7 @@ const placeRig = (
 ): void => {
   rig.root.visible = pose?.visible === true;
   if (!pose?.visible) return;
+  applyMobilityRenderDetail(rig.root, pose.detail);
   rig.root.position.set(pose.x, 0, pose.z);
   rig.root.rotation.y = -pose.yaw;
   applyTransportWalk(rig, elapsedMs, pose.speed);
@@ -564,6 +615,7 @@ export const createAmbientLife = (
       elapsedMs,
       durationMs,
       dayNumber = 1,
+      occurrences = Object.freeze([]),
       focus = Object.freeze({ x: 0, z: 0 }),
     ): NeighborhoodMobilitySample {
       updateNeighborhoodWind(scene, elapsedMs / 1000, weather);
@@ -602,11 +654,15 @@ export const createAmbientLife = (
         elapsedMs,
         durationMs,
         dayNumber,
+        occurrences,
         focus,
         pedestrianObstacles,
       });
+      updateNeighborhoodActivity(scene, sample.properties, elapsedMs);
 
-      const residentPet = sample.actors.find((actor) => actor.id === "resident-pet");
+      const residentPet = sample.actors.find(
+        (actor) => actor.kind === "pet" && actor.visible,
+      );
       const homePet = pets[2];
       if (homePet !== undefined) {
         homePet.visible = residentPet?.visible === true;
@@ -672,6 +728,7 @@ export const createAmbientLife = (
         bike.visible = pose !== undefined;
         if (pose === undefined) return;
         bike.userData["mobilityActorId"] = pose.id;
+        applyMobilityRenderDetail(bike, pose.detail);
         bike.position.set(pose.x, 0.02, pose.z);
         bike.rotation.y = -pose.yaw;
       });
@@ -679,20 +736,21 @@ export const createAmbientLife = (
       const allVehiclePoses = sample.actors.filter(
         (actor) => actor.kind === "vehicle" && actor.visible,
       );
-      const residentVehicle = allVehiclePoses.find(
-        (actor) => actor.id === "resident-vehicle",
+      const householdVehicles = allVehiclePoses.filter(
+        (actor) => actor.propertyRole !== null,
       );
       const throughTraffic = allVehiclePoses.filter(
-        (actor) => actor.id !== "resident-vehicle",
+        (actor) => actor.propertyRole === null,
+      );
+      const prioritizedHouseholdVehicles = householdVehicles.slice(
+        0,
+        population.vehicles,
       );
       const vehiclePoses = [
-        ...(residentVehicle === undefined ? [] : [residentVehicle]),
-        ...throughTraffic.slice(
-          0,
-          Math.max(
-            0,
-            population.vehicles - (residentVehicle === undefined ? 0 : 1),
-          ),
+        ...prioritizedHouseholdVehicles,
+        ...distributedTrafficPoses(
+          throughTraffic,
+          Math.max(0, population.vehicles - prioritizedHouseholdVehicles.length),
         ),
       ];
       vehicles.forEach((vehicle, index) => {
@@ -700,6 +758,7 @@ export const createAmbientLife = (
         vehicle.visible = pose !== undefined;
         if (pose === undefined) return;
         vehicle.userData["mobilityActorId"] = pose.id;
+        applyMobilityRenderDetail(vehicle, pose.detail);
         vehicle.position.set(pose.x, 0.02, pose.z);
         vehicle.rotation.y = -pose.yaw;
       });

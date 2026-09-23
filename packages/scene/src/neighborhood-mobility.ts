@@ -6,11 +6,17 @@ import {
   type ResidentialPropertySpec,
 } from "./residential-layout.js";
 import {
+  activeNeighborhoodOccurrences,
+  phaseMinuteAt,
+  type SceneNeighborhoodOccurrence,
+} from "./neighborhood-occurrences.js";
+import {
   generateStreetNetwork,
   STREET_LAYOUT,
   type GeneratedStreetNetwork,
   type StreetStripSpec,
 } from "./street-layout.js";
+import { createOccurrenceMobilityProjector } from "./occurrence-mobility.js";
 
 export type MobilityWeather =
   | "sunny"
@@ -32,7 +38,8 @@ export type MobilityInteraction =
   | "door"
   | "mailbox"
   | "gardening"
-  | "parking";
+  | "parking"
+  | "traffic";
 
 export type MobilityPose = Readonly<{
   id: string;
@@ -70,6 +77,7 @@ export type NeighborhoodMobilitySampleInput = Readonly<{
   elapsedMs: number;
   durationMs: number;
   dayNumber: number;
+  occurrences?: readonly SceneNeighborhoodOccurrence[];
   focus?: ResidentialPoint;
   pedestrianObstacles?: readonly ResidentialPoint[];
 }>;
@@ -286,7 +294,8 @@ const routeIntersections = (
 };
 
 export const mobilityDetailForDistance = (distance: number): MobilityDetail => {
-  const safe = Number.isFinite(distance) ? Math.max(0, distance) : 0;
+  if (!Number.isFinite(distance)) return "statistical";
+  const safe = Math.max(0, distance);
   if (safe <= 28) return "full";
   if (safe <= 72) return "reduced";
   return "statistical";
@@ -497,20 +506,32 @@ const trafficPose = (
 
 const mailboxPoints = (
   layout: ResidentialLayout,
-): readonly Readonly<{ propertyRole: string; point: ResidentialPoint }>[] =>
+  seed: number,
+): readonly Readonly<{
+  household: number;
+  propertyRole: string;
+  point: ResidentialPoint;
+}>[] =>
   Object.freeze(
-    layout.frontProperties
-      .filter((property) => property.mailboxX !== null)
-      .map((property) =>
-        Object.freeze({
-          propertyRole: property.role,
-          point: Object.freeze({
-            x: property.mailboxX ?? property.houseX,
-            z: STREET_LAYOUT.nearSidewalk.centerZ,
+    allProperties(layout)
+      .flatMap((property, household) => {
+        if (property.mailboxX === null) return [];
+        const sidewalk = propertySidewalkPoint(property, seed);
+        return [
+          Object.freeze({
+            household,
+            propertyRole: property.role,
+            point: Object.freeze({
+              x: property.mailboxX,
+              z: sidewalk.z,
+            }),
           }),
-        }),
-      )
-      .sort((left, right) => left.point.x - right.point.x),
+        ];
+      })
+      .sort(
+        (left, right) =>
+          left.point.z - right.point.z || left.point.x - right.point.x,
+      ),
   );
 
 const propertyActivityDefaults = (
@@ -571,12 +592,14 @@ export const createNeighborhoodMobilitySystem = (
   const residentRoutes = residents.map((property, index) =>
     residentRoute(property, index % 2 === 0 ? -1 : 1, safeSeed),
   );
-  const mailboxes = mailboxPoints(layout);
+  const householdProperties = allProperties(layout);
+  const mailboxes = mailboxPoints(layout, safeSeed);
   const gardenerWeekday = Math.floor(deterministicUnit(safeSeed, 901) * 7);
   const gardenerProperty =
     layout.frontProperties[
       Math.floor(deterministicUnit(safeSeed, 907) * layout.frontProperties.length)
     ] ?? layout.frontProperties[0];
+  const occurrenceProjector = createOccurrenceMobilityProjector(safeSeed);
 
   return Object.freeze({
     seed: safeSeed,
@@ -588,6 +611,20 @@ export const createNeighborhoodMobilitySystem = (
       const actors: MobilityPose[] = [];
       const properties = propertyActivityDefaults(layout);
       const counts = emptyCounts();
+      const occurrenceSchedule = input.occurrences ?? Object.freeze([]);
+      const usesOccurrenceSchedule = occurrenceSchedule.length > 0;
+      if (usesOccurrenceSchedule) return occurrenceProjector.sample(input);
+      const currentMinute = phaseMinuteAt(
+        phase,
+        input.elapsedMs,
+        durationMs,
+      );
+      const activeOccurrences = activeNeighborhoodOccurrences(
+        occurrenceSchedule,
+        phase,
+        input.elapsedMs,
+        durationMs,
+      );
       const pedestrianPoints: ResidentialPoint[] = [
         ...(input.pedestrianObstacles ?? []),
       ];
@@ -870,129 +907,343 @@ export const createNeighborhoodMobilitySystem = (
 
       if (phase === "forecast") {
         const morning = clamp01(input.elapsedMs / durationMs);
-        const routeStart = -96;
-        const routeEnd = 96;
-        const x = routeStart + (routeEnd - routeStart) * morning;
-        const nearestMailbox = mailboxes.reduce<
-          (typeof mailboxes)[number] | null
-        >((best, candidate) => {
-          if (best === null) return candidate;
-          return Math.abs(candidate.point.x - x) < Math.abs(best.point.x - x)
-            ? candidate
-            : best;
-        }, null);
-        const mailInteraction =
-          nearestMailbox !== null &&
-          Math.abs(nearestMailbox.point.x - x) < 1.7;
-        const mailPoint = Object.freeze({
-          x: mailInteraction ? nearestMailbox.point.x : x,
-          z: STREET_LAYOUT.nearSidewalk.centerZ,
-        });
-        const walkingYaw = -Math.PI / 2;
-        const mailboxYaw = nearestMailbox ? Math.atan2(nearestMailbox.point.z - mailPoint.z, nearestMailbox.point.x - mailPoint.x) : walkingYaw;
-        const mailCarrier = makePose(
-          "mail-carrier",
-          "mail-carrier",
-          mailPoint,
-          mailInteraction ? mailboxYaw : walkingYaw,
-          mailInteraction ? 0 : 4.2,
-          focus,
-          mailInteraction ? "mailbox" : "none",
-          nearestMailbox?.propertyRole ?? null,
+
+        const scheduledMail = occurrenceSchedule
+          .filter((event) => event.kind === "mail-delivery")
+          .sort(
+            (left, right) =>
+              left.startMinute - right.startMinute ||
+              left.endMinute - right.endMinute ||
+              left.id.localeCompare(right.id),
+          );
+        const activeMail = activeOccurrences.find(
+          (event) => event.kind === "mail-delivery",
         );
-        actors.push(mailCarrier);
-        addStatistical(counts, mailCarrier);
+        const firstMail = scheduledMail[0];
+        const lastMail = scheduledMail[scheduledMail.length - 1];
+        const scheduledMailRouteActive =
+          firstMail !== undefined &&
+          lastMail !== undefined &&
+          currentMinute >= firstMail.startMinute &&
+          currentMinute < lastMail.endMinute;
+
+        let routeX = -96 + 192 * morning;
+        if (!usesOccurrenceSchedule || scheduledMailRouteActive) {
+          if (
+            usesOccurrenceSchedule &&
+            firstMail !== undefined &&
+            lastMail !== undefined
+          ) {
+            const span = Math.max(1, lastMail.endMinute - firstMail.startMinute);
+            const progress = clamp01(
+              (currentMinute - firstMail.startMinute) / span,
+            );
+            routeX = -96 + 192 * progress;
+          }
+
+          let nearestMailbox = mailboxes.reduce<
+            (typeof mailboxes)[number] | null
+          >((best, candidate) => {
+            if (best === null) return candidate;
+            return Math.abs(candidate.point.x - routeX) <
+              Math.abs(best.point.x - routeX)
+              ? candidate
+              : best;
+          }, null);
+
+          if (usesOccurrenceSchedule && activeMail?.household !== null) {
+            nearestMailbox =
+              mailboxes.find(
+                (mailbox) => mailbox.household === activeMail?.household,
+              ) ?? nearestMailbox;
+          }
+
+          const mailInteraction =
+            nearestMailbox !== null &&
+            (usesOccurrenceSchedule
+              ? activeMail !== undefined
+              : Math.abs(nearestMailbox.point.x - routeX) < 1.7);
+          const mailPoint = Object.freeze({
+            x:
+              mailInteraction && nearestMailbox !== null
+                ? nearestMailbox.point.x
+                : routeX,
+            z:
+              mailInteraction && nearestMailbox !== null
+                ? nearestMailbox.point.z
+                : STREET_LAYOUT.nearSidewalk.centerZ,
+          });
+          const walkingYaw = -Math.PI / 2;
+          const mailboxYaw =
+            nearestMailbox === null
+              ? walkingYaw
+              : Math.atan2(
+                  nearestMailbox.point.z - mailPoint.z,
+                  nearestMailbox.point.x - mailPoint.x,
+                );
+          const mailCarrier = makePose(
+            "mail-carrier",
+            "mail-carrier",
+            mailPoint,
+            mailInteraction ? mailboxYaw : walkingYaw,
+            mailInteraction ? 0 : 1.42,
+            focus,
+            mailInteraction ? "mailbox" : "none",
+            nearestMailbox?.propertyRole ?? null,
+          );
+          actors.push(mailCarrier);
+          addStatistical(counts, mailCarrier);
+        }
+
         for (const mailbox of mailboxes) {
-          if (mailbox.point.x <= x + 1.5) {
+          const serviced = usesOccurrenceSchedule
+            ? scheduledMail.some(
+                (event) =>
+                  event.household === mailbox.household &&
+                  event.endMinute <= currentMinute,
+              )
+            : mailbox.point.x <= routeX + 1.5;
+          if (serviced) {
             patchProperty(properties, mailbox.propertyRole, {
               mailServiced: true,
             });
           }
         }
 
-        const weekday = (dayNumber - 1) % 7;
-        if (gardenerProperty !== undefined && weekday === gardenerWeekday) {
-          const access = residentialAccessLayout(gardenerProperty, safeSeed);
-          const sidewalk = propertySidewalkPoint(gardenerProperty, safeSeed);
-          const garden = Object.freeze({
-            x: gardenerProperty.houseX + 1.8,
-            z: access.pathCenterZ,
-          });
-          const gardenerRoute = makeRoute("gardener", [sidewalk, garden]);
-          const gardenerProgress =
-            morning < 0.28
-              ? morning / 0.28
-              : morning < 0.82
-                ? 1
-                : 1 - (morning - 0.82) / 0.18;
-          const gardenerSample = sampleRouteProgress(
-            gardenerRoute,
-            clamp01(gardenerProgress),
-          );
-          const gardening = morning >= 0.28 && morning < 0.82;
-          patchProperty(properties, gardenerProperty.role, {
-            gardenerPresent: gardening,
-          });
-          const gardener = makePose(
-            "gardener",
-            "gardener",
-            gardenerSample.point,
-            gardenerSample.yaw,
-            gardening ? 0 : 1.25,
-            focus,
-            gardening ? "gardening" : "none",
-            gardenerProperty.role,
-          );
-          actors.push(gardener);
-          addStatistical(counts, gardener);
-        }
+        if (usesOccurrenceSchedule) {
+          for (const event of activeOccurrences) {
+            if (event.household === null) continue;
+            const property = householdProperties[event.household];
+            if (property === undefined) continue;
 
-        const allFrontProperties = layout.frontProperties.filter((p) => p.drivewayX !== null);
-        const midProperties = layout.middleProperties.filter((p) => p.drivewayX !== null);
-        const allDrivewayProperties = [...allFrontProperties, ...midProperties];
-        for (let i = 0; i < Math.min(4, allDrivewayProperties.length); i++) {
-          const hasVehicle = deterministicUnit(safeSeed ^ dayNumber ^ i, 5000 + i) > 0.35;
-          if (!hasVehicle) continue;
-          const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4000 + i) * allDrivewayProperties.length);
-          const property = allDrivewayProperties[propertyIndex];
-          const drivewayX = property?.drivewayX;
-          if (property === undefined || drivewayX === undefined || drivewayX === null) continue;
-          const access = residentialAccessLayout(property);
-          const parkedVehicle = makePose(
-            `parked-vehicle-${String(i)}`,
-            "vehicle",
-            {
-              x: drivewayX,
-              z: access.drivewayCenterZ,
-            },
-            Math.PI / 2,
-            0,
-            focus,
-            "parking",
-            property.role,
-            true,
+            if (event.kind === "gardening") {
+              const access = residentialAccessLayout(property, safeSeed);
+              const sidewalk = propertySidewalkPoint(property, safeSeed);
+              const garden = Object.freeze({
+                x: property.houseX + 1.8,
+                z: access.pathCenterZ,
+              });
+              const gardenerRoute = makeRoute("gardener", [sidewalk, garden]);
+              const eventProgress = clamp01(
+                (currentMinute - event.startMinute) /
+                  Math.max(1, event.endMinute - event.startMinute),
+              );
+              const approachProgress = Math.min(1, eventProgress / 0.18);
+              const sampled = sampleRouteProgress(
+                gardenerRoute,
+                eventProgress < 0.82
+                  ? approachProgress
+                  : 1 - (eventProgress - 0.82) / 0.18,
+              );
+              const gardening = eventProgress >= 0.18 && eventProgress < 0.82;
+              patchProperty(properties, property.role, {
+                gardenerPresent: gardening,
+              });
+              const gardener = makePose(
+                event.actorId,
+                "gardener",
+                sampled.point,
+                sampled.yaw,
+                gardening ? 0 : 1.25,
+                focus,
+                gardening ? "gardening" : "none",
+                property.role,
+              );
+              actors.push(gardener);
+              addStatistical(counts, gardener);
+            } else if (
+              event.kind === "resident-departure" ||
+              event.kind === "resident-arrival"
+            ) {
+              const outward = residentRoute(property, 1, safeSeed);
+              const route =
+                event.kind === "resident-departure"
+                  ? outward
+                  : reverseRoute(outward, ":arrival");
+              const progress = clamp01(
+                (currentMinute - event.startMinute) /
+                  Math.max(1, event.endMinute - event.startMinute),
+              );
+              const sampled = sampleRouteProgress(route, progress);
+              const doorOpen = progress < 0.2 || progress > 0.8;
+              patchProperty(properties, property.role, {
+                doorOpen,
+                windowActivity: event.kind === "resident-arrival" && progress > 0.82,
+              });
+              const resident = makePose(
+                event.actorId,
+                "resident",
+                sampled.point,
+                sampled.yaw,
+                event.motion === "hurried" ? 1.62 : 1.42,
+                focus,
+                doorOpen ? "door" : "none",
+                property.role,
+              );
+              actors.push(resident);
+              if (resident.visible) pedestrianPoints.push(sampled.point);
+              addStatistical(counts, resident);
+            } else if (event.kind === "sprinkler") {
+              patchProperty(properties, property.role, {
+                sprinklerOn: true,
+              });
+            } else if (event.kind === "window-activity") {
+              patchProperty(properties, property.role, {
+                windowActivity: true,
+              });
+            }
+          }
+
+          const parkedHouseholds = new Set<number>();
+          for (const event of occurrenceSchedule) {
+            if (
+              event.household === null ||
+              (event.kind !== "vehicle-departure" &&
+                event.kind !== "vehicle-arrival")
+            ) {
+              continue;
+            }
+            if (
+              event.kind === "vehicle-departure" &&
+              currentMinute < event.startMinute
+            ) {
+              parkedHouseholds.add(event.household);
+            } else if (
+              event.kind === "vehicle-arrival" &&
+              currentMinute >= event.endMinute
+            ) {
+              parkedHouseholds.add(event.household);
+            }
+          }
+
+          [...parkedHouseholds].slice(0, 4).forEach((household, index) => {
+            const property = householdProperties[household];
+            if (property?.drivewayX === null || property === undefined) return;
+            const access = residentialAccessLayout(property, safeSeed);
+            const parkedVehicle = makePose(
+              `parked-vehicle:${String(household)}:${String(index)}`,
+              "vehicle",
+              {
+                x: property.drivewayX,
+                z: access.drivewayCenterZ,
+              },
+              Math.PI / 2,
+              0,
+              focus,
+              "parking",
+              property.role,
+              true,
+            );
+            actors.push(parkedVehicle);
+            addStatistical(counts, parkedVehicle);
+            patchProperty(properties, property.role, {
+              vehicleParked: true,
+            });
+          });
+        } else {
+          const weekday = (dayNumber - 1) % 7;
+          if (gardenerProperty !== undefined && weekday === gardenerWeekday) {
+            const access = residentialAccessLayout(gardenerProperty, safeSeed);
+            const sidewalk = propertySidewalkPoint(gardenerProperty, safeSeed);
+            const garden = Object.freeze({
+              x: gardenerProperty.houseX + 1.8,
+              z: access.pathCenterZ,
+            });
+            const gardenerRoute = makeRoute("gardener", [sidewalk, garden]);
+            const gardenerProgress =
+              morning < 0.28
+                ? morning / 0.28
+                : morning < 0.82
+                  ? 1
+                  : 1 - (morning - 0.82) / 0.18;
+            const gardenerSample = sampleRouteProgress(
+              gardenerRoute,
+              clamp01(gardenerProgress),
+            );
+            const gardening = morning >= 0.28 && morning < 0.82;
+            patchProperty(properties, gardenerProperty.role, {
+              gardenerPresent: gardening,
+            });
+            const gardener = makePose(
+              "gardener",
+              "gardener",
+              gardenerSample.point,
+              gardenerSample.yaw,
+              gardening ? 0 : 1.25,
+              focus,
+              gardening ? "gardening" : "none",
+              gardenerProperty.role,
+            );
+            actors.push(gardener);
+            addStatistical(counts, gardener);
+          }
+
+          const allFrontProperties = layout.frontProperties.filter(
+            (property) => property.drivewayX !== null,
           );
-          actors.push(parkedVehicle);
-          addStatistical(counts, parkedVehicle);
-          patchProperty(properties, property.role, {
-            vehicleParked: true,
+          const midProperties = layout.middleProperties.filter(
+            (property) => property.drivewayX !== null,
+          );
+          const allDrivewayProperties = [
+            ...allFrontProperties,
+            ...midProperties,
+          ];
+          for (
+            let index = 0;
+            index < Math.min(4, allDrivewayProperties.length);
+            index += 1
+          ) {
+            const hasVehicle =
+              deterministicUnit(
+                safeSeed ^ dayNumber ^ index,
+                5000 + index,
+              ) > 0.35;
+            if (!hasVehicle) continue;
+            const propertyIndex = Math.floor(
+              deterministicUnit(
+                safeSeed ^ dayNumber ^ index,
+                4000 + index,
+              ) * allDrivewayProperties.length,
+            );
+            const property = allDrivewayProperties[propertyIndex];
+            if (property === undefined || property.drivewayX === null) continue;
+            const access = residentialAccessLayout(property, safeSeed);
+            const parkedVehicle = makePose(
+              `parked-vehicle-${String(index)}`,
+              "vehicle",
+              {
+                x: property.drivewayX,
+                z: access.drivewayCenterZ,
+              },
+              Math.PI / 2,
+              0,
+              focus,
+              "parking",
+              property.role,
+              true,
+            );
+            actors.push(parkedVehicle);
+            addStatistical(counts, parkedVehicle);
+            patchProperty(properties, property.role, {
+              vehicleParked: true,
+            });
+          }
+
+          const sunny = input.weather === "sunny";
+          allProperties(layout).forEach((property, index) => {
+            const morningOccupied =
+              deterministicUnit(safeSeed ^ dayNumber, 1300 + index) > 0.48;
+            const sprinkler =
+              sunny &&
+              (index + dayNumber + (safeSeed & 3)) % 4 === 0 &&
+              morning > 0.08 &&
+              morning < 0.74;
+            patchProperty(properties, property.role, {
+              windowActivity: morningOccupied,
+              sprinklerOn: sprinkler,
+            });
           });
         }
-
-        const sunny = input.weather === "sunny";
-        allProperties(layout).forEach((property, index) => {
-          const morningOccupied =
-            deterministicUnit(safeSeed ^ dayNumber, 1300 + index) > 0.48;
-          const sprinkler =
-            sunny &&
-            ((index + dayNumber + (safeSeed & 3)) % 4 === 0) &&
-            morning > 0.08 &&
-            morning < 0.74;
-          patchProperty(properties, property.role, {
-            windowActivity: morningOccupied,
-            sprinklerOn: sprinkler,
-          });
-        });
       } else if (phase === "idle") {
         // Night time - show lights in some homes
         allProperties(layout).forEach((property, index) => {
@@ -1012,14 +1263,13 @@ export const createNeighborhoodMobilitySystem = (
           if (!hasVehicle) continue;
           const propertyIndex = Math.floor(deterministicUnit(safeSeed ^ dayNumber ^ i, 4500 + i) * allDrivewayProperties.length);
           const property = allDrivewayProperties[propertyIndex];
-          const drivewayX = property?.drivewayX;
-          if (property === undefined || drivewayX === undefined || drivewayX === null) continue;
+          if (property === undefined || property.drivewayX === null) continue;
           const access = residentialAccessLayout(property);
           const parkedVehicle = makePose(
             `parked-vehicle-night-${String(i)}`,
             "vehicle",
             {
-              x: drivewayX,
+              x: property.drivewayX,
               z: access.drivewayCenterZ,
             },
             Math.PI / 2,

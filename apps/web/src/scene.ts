@@ -1,12 +1,18 @@
-import type {
-  CustomerActivity,
-  LemonsvilleSceneController,
-  LemonsvilleSceneState,
-  ScenePhase,
-  LemonsvilleSceneOptions,
+import {
+  neighborhoodSemanticLayoutForCharacterSeed,
+  type CustomerActivity,
+  type LemonsvilleSceneController,
+  type LemonsvilleSceneState,
+  type ScenePhase,
+  type LemonsvilleSceneOptions,
 } from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
-import type { DayEnvironment } from "@lemonade/simulation";
+import {
+  dayNumber,
+  generateNeighborhoodOccurrences,
+  seed,
+  type DayEnvironment,
+} from "@lemonade/simulation";
 
 import type { createLemonsvilleScene } from "./scene-runtime.js";
 
@@ -99,7 +105,7 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
   return `${weather} weather; the seller looks ${sellerMoodForConfidence(input.confidence)}; ${String(input.visibleSigns)} advertising signs at ${price} per cup; ${String(input.prepared)} glasses prepared; ${activity}.`;
 };
 
-const createState = (
+export const createLemonsvilleSceneState = (
   input: LemonsvilleSceneInput,
   reducedMotion: boolean,
 ): LemonsvilleSceneState => {
@@ -108,6 +114,15 @@ const createState = (
   const sold = Math.max(0, input.sold);
   const priceCents = Math.max(0, input.priceCents);
   const durationMs = Math.max(0, input.durationMs);
+  const characterSeed = input.characterSeed >>> 0;
+  const currentDay = Math.max(1, Math.trunc(input.dayNumber));
+  const neighborhoodOccurrences = generateNeighborhoodOccurrences({
+    runSeed: seed(characterSeed),
+    day: dayNumber(currentDay),
+    weather: input.environment.weather.kind,
+    layout: neighborhoodSemanticLayoutForCharacterSeed(characterSeed),
+  });
+
   return Object.freeze({
     weather: input.environment.weather.kind,
     visibleSigns: input.visibleSigns,
@@ -115,8 +130,9 @@ const createState = (
     durationMs,
     confidence: Math.max(0, Math.min(5, input.confidence)),
     nextConfidence: Math.max(0, Math.min(5, input.nextConfidence)),
-    characterSeed: input.characterSeed >>> 0,
-    dayNumber: Math.max(1, Math.trunc(input.dayNumber)),
+    characterSeed,
+    dayNumber: currentDay,
+    neighborhoodOccurrences,
     storyboard: createStreetStoryboard({
       durationMs: Math.max(1, durationMs),
       prepared,
@@ -162,7 +178,7 @@ export const createLemonsvilleSceneView = (
       }
 
       const description = describeScene(lastInput);
-      const state = createState(lastInput, reducedMotion);
+      const state = createLemonsvilleSceneState(lastInput, reducedMotion);
       const nextController = createLemonsvilleScene(elements.canvas, state, options.sceneOptions);
 
       if (nextController === null) {
@@ -207,7 +223,7 @@ export const createLemonsvilleSceneView = (
     lastInput = input;
 
     const description = describeScene(input);
-    const state = createState(input, reducedMotion);
+    const state = createLemonsvilleSceneState(input, reducedMotion);
     elements.canvas.setAttribute("aria-label", description);
     elements.canvas.dataset["presentationDurationMs"] = String(Math.max(0, input.durationMs));
     elements.canvas.dataset["preparedCups"] = String(Math.max(0, input.prepared));
