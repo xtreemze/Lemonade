@@ -6,7 +6,7 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 
-import type { StreetStripSpec } from "@lemonade/scene/street-layout";
+import type { StreetStripSpec } from "@lemonade/scene-contracts/street-layout";
 
 export interface BabylonStreetSurfaceBatch {
   readonly role: "main-road" | "road" | "sidewalk";
