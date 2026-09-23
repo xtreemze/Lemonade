@@ -5,6 +5,7 @@ import type {
   ScenePhase,
   LemonsvilleSceneOptions,
 } from "@lemonade/scene";
+import type { SceneDevtoolsController } from "@lemonade/scene/devtools";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
 import type { DayEnvironment } from "@lemonade/simulation";
 
@@ -55,6 +56,7 @@ export type LemonsvilleSceneViewOptions = Readonly<{
 
 export type LemonsvilleSceneView = Readonly<{
   update(input: LemonsvilleSceneInput): void;
+  devtools(): SceneDevtoolsController | null;
   dispose(): void;
 }>;
 
@@ -235,6 +237,7 @@ export const createLemonsvilleSceneView = (
 
   return Object.freeze({
     update,
+    devtools: () => controller?.devtools ?? null,
     dispose(): void {
       if (disposed) return;
       disposed = true;
