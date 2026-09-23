@@ -710,15 +710,15 @@ export const residentialAccessLayout = (
       : roadCenterZ >= property.houseZ
         ? road.minZ
         : road.maxZ;
-  const drivewayDeltaX = drivewaySidewalkX - drivewayX;
-  const drivewayDeltaZ = drivewaySidewalkZ - parkingZ;
+  const drivewayDeltaX = roadX - drivewayX;
+  const drivewayDeltaZ = roadCenterZ - parkingZ;
   const drivewayLength = Math.max(
     3.2,
-    Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.3,
+    Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.24,
   );
   const drivewayDepth = drivewayLength;
-  const drivewayCenterX = (drivewayX + drivewaySidewalkX) / 2;
-  const drivewayCenterZ = (parkingZ + drivewaySidewalkZ) / 2;
+  const drivewayCenterX = (drivewayX + roadX) / 2;
+  const drivewayCenterZ = (parkingZ + roadCenterZ) / 2;
   const drivewayRotationY = Math.atan2(drivewayDeltaZ, drivewayDeltaX);
 
   return Object.freeze({
@@ -1256,12 +1256,16 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     ...baseExclusions(safeSeed),
     ...accessExclusions(allProperties, safeSeed),
   ]);
+  const resolvedFront = resolveProperties(front);
+  const resolvedMiddle = resolveProperties(middle);
+  const resolvedBack = resolveProperties(back);
+  const resolvedOuter = resolveProperties(outer);
   const partial = {
     exclusions,
-    frontProperties: resolveProperties(front),
-    middleProperties: resolveProperties(middle),
-    backProperties: resolveProperties(back),
-    outerProperties: resolveProperties(outer),
+    frontProperties: resolvedFront,
+    middleProperties: resolvedMiddle,
+    backProperties: resolvedBack,
+    outerProperties: resolvedOuter,
   } as const;
 
   const backyardTrees: ResidentialPlanting[] = [
@@ -1307,7 +1311,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
   }
   const frontYardTrees: readonly ResidentialPlanting[] = generatePropertyPlantings(
     safeSeed,
-    [...front, ...middle],
+    [...resolvedFront, ...resolvedMiddle],
     3_150,
     "front",
     partial,
@@ -1330,7 +1334,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     ),
   ]);
 
-  const detailedProperties = [...front, ...middle, ...back];
+  const detailedProperties = [...resolvedFront, ...resolvedMiddle, ...resolvedBack];
   const yardShrubs = generatePropertyPlantings(
     safeSeed,
     detailedProperties,
@@ -1375,10 +1379,10 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
 
   return Object.freeze({
     seed: safeSeed,
-    frontProperties: front,
-    middleProperties: middle,
-    backProperties: back,
-    outerProperties: outer,
+    frontProperties: resolvedFront,
+    middleProperties: resolvedMiddle,
+    backProperties: resolvedBack,
+    outerProperties: resolvedOuter,
     trees,
     shrubs,
     flowers,
