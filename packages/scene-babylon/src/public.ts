@@ -2,7 +2,7 @@ import type {
   LemonsvilleSceneController,
   LemonsvilleSceneOptions,
   LemonsvilleSceneState,
-} from "@lemonade/scene";
+} from "@lemonade/scene-contracts/scene-state";
 
 export declare const createBabylonLemonsvilleScene: (
   canvas: HTMLCanvasElement,
