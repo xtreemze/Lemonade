@@ -352,9 +352,19 @@ for (const viewport of bankruptcyViewports) {
       const main = page.getByRole("main");
       await expect(main).toHaveAttribute("data-view", "planning");
 
-      await page.getByRole("spinbutton", { name: "Glasses Exact" }).fill("10");
-      await page.getByRole("spinbutton", { name: "Signs Exact" }).fill("0");
-      await page.getByRole("spinbutton", { name: "Price Exact cents" }).fill("1");
+      for (const [selector, value] of [
+        ["#glasses", 10],
+        ["#signs", 0],
+        ["#price", 1],
+      ] as const) {
+        await page.locator(selector).evaluate((element, nextValue) => {
+          if (!(element instanceof HTMLInputElement)) {
+            throw new TypeError("Expected planning range input.");
+          }
+          element.value = String(nextValue);
+          element.dispatchEvent(new Event("input", { bubbles: true }));
+        }, value);
+      }
       await page.getByRole("button", { name: "Sell for the day" }).click();
 
       await expect(main).toHaveAttribute("data-view", "report");
