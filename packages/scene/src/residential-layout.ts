@@ -727,7 +727,7 @@ export const residentialAccessLayout = (
         ? road.minZ
         : road.maxZ;
   const drivewaySurfaceX = drivewaySidewalkX;
-  const drivewaySurfaceZ = sidewalkEdgeZ;
+  const drivewaySurfaceZ = drivewaySidewalkZ;
   const drivewayDeltaX = drivewaySurfaceX - drivewayX;
   const drivewayDeltaZ = drivewaySurfaceZ - parkingZ;
   const drivewayLength = Math.max(
@@ -797,8 +797,62 @@ const drivewayExclusionRectForProperty = (
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.drivewaySidewalkX, z: access.sidewalkEdgeZ },
+    { x: access.drivewaySidewalkX, z: access.drivewaySidewalkZ },
     WORLD_SCALE.vehicle.width,
+  );
+};
+
+const assignFrontMailboxes = (
+  seed: number,
+  front: readonly ResidentialPropertySpec[],
+  allProperties: readonly ResidentialPropertySpec[],
+): readonly ResidentialPropertySpec[] => {
+  const driveways = allProperties.flatMap((property) =>
+    property.drivewayX === null
+      ? []
+      : [
+          drivewayExclusionRectForProperty(
+            property,
+            property.drivewayX,
+            seed,
+          ),
+        ],
+  );
+
+  return Object.freeze(
+    front.map((property, index) => {
+      if (property.drivewayX === null) return property;
+      const drivewaySide: -1 | 1 =
+        property.drivewayX < property.houseX ? -1 : 1;
+      const preferredOffset =
+        DRIVEWAY_HALF_WIDTH +
+        MAILBOX_CLEARANCE_FROM_DRIVEWAY +
+        unit(seed, index * 17 + 9) * 0.18;
+      let mailboxX: number | null = null;
+
+      for (let step = 0; step <= 12 && mailboxX === null; step += 1) {
+        const offset = preferredOffset + step * 0.24;
+        for (const side of [drivewaySide, -drivewaySide] as const) {
+          const candidate = property.drivewayX + side * offset;
+          const clearOfStreet = mailboxAnchorIsClear(candidate, seed);
+          const clearOfDriveways = driveways.every(
+            (driveway) =>
+              !footprintIntersectsHardscapeRect(
+                driveway,
+                { x: candidate, z: -0.3 },
+                0.3,
+                0.3,
+              ),
+          );
+          if (clearOfStreet && clearOfDriveways) {
+            mailboxX = candidate;
+            break;
+          }
+        }
+      }
+
+      return Object.freeze({ ...property, mailboxX });
+    }),
   );
 };
 
@@ -1269,24 +1323,31 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
   const resolveProperties = (props: readonly ResidentialPropertySpec[]) =>
     Object.freeze(props.map((p) => resolvedByRole.get(p.role) ?? p));
 
-  // House overlap resolution can move a lot after its access was first
-  // generated. Re-resolve access from the final house coordinates so
-  // driveways, paths, mailboxes, and returned properties share one geometry.
-  const resolvedFront = resolveFrontAccess(
-    safeSeed,
-    resolveProperties(front),
-  );
-  const resolvedMiddle = resolveGeneratedAccess(
-    resolveProperties(middle),
+  // House overlap resolution can move a lot after access was first
+  // generated. Resolve every driveway against every final house so access
+  // from one row cannot cut through a neighboring row or front property.
+  const accessResolved = resolveGeneratedAccess(
+    allPropertiesResolved,
     safeSeed,
   );
-  const resolvedBack = resolveGeneratedAccess(
-    resolveProperties(back),
+  const accessByRole = new Map(accessResolved.map((property) => [property.role, property]));
+  const resolveAccessProperties = (props: readonly ResidentialPropertySpec[]) =>
+    Object.freeze(props.map((property) => accessByRole.get(property.role) ?? property));
+
+  const unresolvedFront = resolveAccessProperties(front);
+  const resolvedMiddle = resolveAccessProperties(middle);
+  const resolvedBack = resolveAccessProperties(back);
+  const resolvedOuter = resolveAccessProperties(outer);
+  const allWithoutMailboxes = [
+    ...unresolvedFront,
+    ...resolvedMiddle,
+    ...resolvedBack,
+    ...resolvedOuter,
+  ];
+  const resolvedFront = assignFrontMailboxes(
     safeSeed,
-  );
-  const resolvedOuter = resolveGeneratedAccess(
-    resolveProperties(outer),
-    safeSeed,
+    unresolvedFront,
+    allWithoutMailboxes,
   );
   const allProperties = [
     ...resolvedFront,
@@ -1318,7 +1379,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       7,
     ),
   ];
-  for (const fallbackSalt of [4_050, 4_850, 5_650, 6_450, 7_250] as const) {
+  for (const fallbackSalt of [4_050, 4_850] as const) {
     const assignedRoles = new Set(
       backyardTrees
         .map((planting) => planting.propertyRole)
