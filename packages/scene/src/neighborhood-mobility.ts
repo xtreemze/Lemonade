@@ -382,45 +382,90 @@ const residentRoute = (
   ]);
 };
 
-const residentProgress = (
+const residentRoundTripRoute = (route: Route): Route =>
+  makeRoute(`${route.id}:round-trip`, [
+    ...route.points,
+    ...[...route.points].reverse().slice(1),
+  ]);
+
+const pedestrianRoutePose = (
+  id: string,
+  route: Route,
   elapsedMs: number,
-  durationMs: number,
-  offset: number,
-): Readonly<{ routeProgress: number; inside: boolean; doorOpen: boolean }> => {
-  const t = clamp01(elapsedMs / Math.max(1, durationMs));
-  const shifted = fract(t + offset);
-  if (shifted < 0.08) {
-    return Object.freeze({ routeProgress: 0, inside: true, doorOpen: false });
-  }
-  if (shifted < 0.18) {
-    return Object.freeze({
-      routeProgress: (shifted - 0.08) / 0.1 * 0.1,
-      inside: false,
-      doorOpen: true,
+  startAtMs: number,
+  desiredSpeed: number,
+  maxAcceleration: number,
+  clocks: Map<string, TrafficClockRecord>,
+): Readonly<{
+  point: ResidentialPoint;
+  yaw: number;
+  speed: number;
+  visible: boolean;
+  inside: boolean;
+  doorOpen: boolean;
+}> => {
+  let record = clocks.get(id);
+  if (
+    record === undefined ||
+    elapsedMs < record.lastElapsedMs ||
+    Math.abs(record.clock.routeLength - route.total) > 0.001
+  ) {
+    record = Object.freeze({
+      clock: createMobilityClock({
+        routeLength: route.total,
+        maxAcceleration,
+      }),
+      lastElapsedMs: 0,
     });
   }
-  if (shifted < 0.5) {
-    return Object.freeze({
-      routeProgress: 0.1 + (shifted - 0.18) / 0.32 * 0.9,
-      inside: false,
-      doorOpen: false,
+
+  let clock = record.clock;
+  let cursorMs = record.lastElapsedMs;
+  const targetElapsedMs = Math.max(cursorMs, elapsedMs);
+  while (cursorMs < targetElapsedMs && clock.lifecycle === "active") {
+    if (cursorMs < startAtMs) {
+      const deltaMs = Math.min(50, targetElapsedMs - cursorMs, startAtMs - cursorMs);
+      clock = advanceMobilityClock(clock, {
+        deltaMs,
+        desiredSpeed,
+        motion: "dwell",
+      });
+      cursorMs += deltaMs;
+      continue;
+    }
+
+    const deltaMs = Math.min(50, targetElapsedMs - cursorMs);
+    clock = advanceMobilityClock(clock, {
+      deltaMs,
+      desiredSpeed,
+      motion: "move",
     });
+    cursorMs += deltaMs;
   }
-  if (shifted < 0.82) {
-    return Object.freeze({
-      routeProgress: 1 - (shifted - 0.5) / 0.32 * 0.9,
-      inside: false,
-      doorOpen: false,
-    });
-  }
-  if (shifted < 0.92) {
-    return Object.freeze({
-      routeProgress: 0.1 - (shifted - 0.82) / 0.1 * 0.1,
-      inside: false,
-      doorOpen: true,
-    });
-  }
-  return Object.freeze({ routeProgress: 0, inside: true, doorOpen: false });
+
+  clocks.set(
+    id,
+    Object.freeze({
+      clock,
+      lastElapsedMs: targetElapsedMs,
+    }),
+  );
+
+  const sampled = sampleRouteDistance(route, clock.distance);
+  const visible = elapsedMs >= startAtMs && clock.lifecycle === "active";
+  const inside = !visible;
+  const doorDistance = Math.min(
+    clock.distance,
+    Math.max(0, route.total - clock.distance),
+  );
+  return Object.freeze({
+    point: sampled.point,
+    yaw: sampled.yaw,
+    speed: visible ? clock.velocity : 0,
+    visible,
+    inside,
+    doorOpen: visible && doorDistance <= 0.9,
+  });
 };
 
 const emptyCounts = (): Record<MobilityActorKind, number> => ({
@@ -678,7 +723,9 @@ export const createNeighborhoodMobilitySystem = (
     layout.frontProperties[5],
   ].filter((property): property is ResidentialPropertySpec => property !== undefined);
   const residentRoutes = residents.map((property, index) =>
-    residentRoute(property, index % 2 === 0 ? -1 : 1, safeSeed),
+    residentRoundTripRoute(
+      residentRoute(property, index % 2 === 0 ? -1 : 1, safeSeed),
+    ),
   );
   const mailboxes = mailboxPoints(layout);
   const gardenerWeekday = Math.floor(deterministicUnit(safeSeed, 901) * 7);
@@ -687,6 +734,8 @@ export const createNeighborhoodMobilitySystem = (
       Math.floor(deterministicUnit(safeSeed, 907) * layout.frontProperties.length)
     ] ?? layout.frontProperties[0];
   const trafficClocks = new Map<string, TrafficClockRecord>();
+  const residentClocks = new Map<string, TrafficClockRecord>();
+  const petClocks = new Map<string, TrafficClockRecord>();
   let trafficContextKey: string | null = null;
   let lastTrafficElapsedMs = 0;
 
@@ -702,6 +751,8 @@ export const createNeighborhoodMobilitySystem = (
         input.elapsedMs < lastTrafficElapsedMs
       ) {
         trafficClocks.clear();
+        residentClocks.clear();
+        petClocks.clear();
       }
       trafficContextKey = contextKey;
       lastTrafficElapsedMs = input.elapsedMs;
@@ -718,51 +769,70 @@ export const createNeighborhoodMobilitySystem = (
         residentRoutes.forEach((route, index) => {
           const property = residents[index];
           if (property === undefined) return;
-          const state = residentProgress(
+          const residentId = "resident:" + String(index);
+          const startAtMs =
+            durationMs *
+            (0.04 +
+              index * 0.12 +
+              deterministicUnit(safeSeed, 1000 + index) * 0.03);
+          const state = pedestrianRoutePose(
+            residentId,
+            route,
             input.elapsedMs,
-            durationMs,
-            index * 0.37 + deterministicUnit(safeSeed, 1000 + index) * 0.08,
+            startAtMs,
+            NORMAL_PEDESTRIAN_SPEED,
+            3.2,
+            residentClocks,
           );
           patchProperty(properties, property.role, {
             doorOpen: state.doorOpen,
             windowActivity: state.inside,
           });
-          const sampled = sampleRouteProgress(route, state.routeProgress);
           const resident = makePose(
-            "resident:" + String(index),
+            residentId,
             "resident",
-            sampled.point,
-            sampled.yaw,
-            NORMAL_PEDESTRIAN_SPEED,
+            state.point,
+            state.yaw,
+            state.speed,
             focus,
             state.doorOpen ? "door" : "none",
             property.role,
             false,
-            !state.inside,
+            state.visible,
           );
           actors.push(resident);
-          if (!state.inside) pedestrianPoints.push(sampled.point);
+          if (state.visible) pedestrianPoints.push(state.point);
           addStatistical(counts, resident);
 
           if (index === 0) {
-            const petPoint = Object.freeze({
-              x: sampled.point.x - Math.cos(sampled.yaw) * 0.72,
-              z: sampled.point.z - Math.sin(sampled.yaw) * 0.72 + 0.14,
-            });
+            const petState = pedestrianRoutePose(
+              "resident-pet",
+              route,
+              input.elapsedMs,
+              startAtMs + 350,
+              1.35,
+              3.2,
+              petClocks,
+            );
+            if (petState.doorOpen && !state.doorOpen) {
+              patchProperty(properties, property.role, {
+                doorOpen: true,
+              });
+            }
             const pet = makePose(
               "resident-pet",
               "pet",
-              petPoint,
-              sampled.yaw,
-              1.35,
+              petState.point,
+              petState.yaw,
+              petState.speed,
               focus,
-              state.doorOpen ? "door" : "none",
+              petState.doorOpen ? "door" : "none",
               property.role,
               false,
-              !state.inside,
+              petState.visible,
             );
             actors.push(pet);
-            if (!state.inside) pedestrianPoints.push(petPoint);
+            if (petState.visible) pedestrianPoints.push(petState.point);
             addStatistical(counts, pet);
           }
         });
