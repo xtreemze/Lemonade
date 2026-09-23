@@ -7,7 +7,7 @@
  * Enable with: `localStorage.setItem('LEMONADE_DEV_SCENE_VIEWER', '1')`
  */
 
-import type { SceneWeather, ScenePhase, LemonsvilleSceneState } from "@lemonade/scene";
+import type { LemonsvilleSceneController, LemonsvilleSceneState, ScenePhase, SceneWeather } from "@lemonade/scene";
 import { createLemonsvilleScene } from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
 // TODO: Integrate gizmo controller for 3D editor tool (game-engine-like scene manipulation)
@@ -32,10 +32,15 @@ export const disableSceneViewer = (): void => {
   }
 };
 
+export interface PersistentSceneViewer {
+  scene: LemonsvilleSceneController;
+  dispose(): void;
+}
+
 export const createPersistentSceneViewer = (
   appRoot: HTMLElement,
   options: { enableGizmo?: boolean; weather?: SceneWeather; phase?: ScenePhase } = {},
-) => {
+): PersistentSceneViewer | null => {
   // Clear app UI
   appRoot.innerHTML = "";
 
@@ -107,8 +112,8 @@ export const createPersistentSceneViewer = (
     line-height: 1.5;
   `;
   info.innerHTML = `
-    <div><strong>Weather:</strong> ${options.weather || "sunny"}</div>
-    <div><strong>Phase:</strong> ${options.phase || "simulation"}</div>
+    <div><strong>Weather:</strong> ${options.weather ?? "sunny"}</div>
+    <div><strong>Phase:</strong> ${options.phase ?? "simulation"}</div>
     <div><strong>Gizmo:</strong> ${options.enableGizmo ? "✓ Enabled" : "✗ Disabled"}</div>
     <div style="margin-top: 8px; color: #aaa; font-size: 10px;">
       Click scene to select objects<br/>
@@ -144,7 +149,7 @@ export const createPersistentSceneViewer = (
 
   // Create scene state
   const sceneState: LemonsvilleSceneState = Object.freeze({
-    weather: options.weather || "sunny",
+    weather: options.weather ?? "sunny",
     visibleSigns: 5,
     prepared: 20,
     durationMs: 14000,
@@ -160,7 +165,7 @@ export const createPersistentSceneViewer = (
       priceCents: 150,
       ambientPedestrianCount: 12,
     }),
-    phase: options.phase || "simulation",
+    phase: options.phase ?? "simulation",
     reducedMotion: false,
   });
 
@@ -232,8 +237,15 @@ export const createPersistentSceneViewer = (
   };
 };
 
+declare global {
+  interface Window {
+    enableSceneViewer: typeof enableSceneViewer;
+    disableSceneViewer: typeof disableSceneViewer;
+  }
+}
+
 // Make globally available
 if (typeof window !== "undefined") {
-  (window as any).enableSceneViewer = enableSceneViewer;
-  (window as any).disableSceneViewer = disableSceneViewer;
+  window.enableSceneViewer = enableSceneViewer;
+  window.disableSceneViewer = disableSceneViewer;
 }
