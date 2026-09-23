@@ -861,6 +861,36 @@ body:has(.game-shell[data-view="forecast"]) {
   overflow: visible;
 }
 
+.new-game-glyph {
+  display: none;
+}
+
+.history-next-button[data-action="new-game"] {
+  color: #9a2e26;
+}
+
+.history-next-button[data-action="new-game"] .next-day-glyph {
+  display: none;
+}
+
+.history-next-button[data-action="new-game"] .new-game-glyph {
+  display: block;
+}
+
+.new-game-arrow,
+.new-game-lemon {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 6;
+}
+
+.new-game-leaf {
+  fill: currentColor;
+  stroke: none;
+}
+
 .next-day-horizon,
 .next-day-ray,
 .next-day-sun,

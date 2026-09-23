@@ -578,12 +578,27 @@ export const weatherWindStrength = (weather: NeighborhoodWeather): number => {
     case "sunny":
       return 0.012;
     case "cloudy":
-      return 0.018;
+      return 0.022;
     case "hot-and-dry":
-      return 0.026;
+      return 0.034;
     case "thunderstorm":
-      return 0.064;
+      return 0.11;
   }
+};
+
+export const weatherWindGustAt = (
+  weather: NeighborhoodWeather,
+  seconds: number,
+  phase = 0,
+): number => {
+  const primary = Math.sin(seconds * 1.25 + phase) * 0.62;
+  const secondary = Math.sin(seconds * 2.7 + phase * 1.7) * 0.26;
+  const flutter = Math.sin(seconds * 5.1 + phase * 0.73) * 0.12;
+  if (weather !== "thunderstorm") return primary + secondary + flutter;
+
+  const gustWindow = Math.max(0, Math.sin(seconds * 0.72 + phase * 0.31 + 0.8));
+  const burst = gustWindow * gustWindow * gustWindow * gustWindow;
+  return (primary + secondary + flutter) * (1 + burst * 0.75);
 };
 
 export const updateNeighborhoodWind = (
@@ -605,11 +620,16 @@ export const updateNeighborhoodWind = (
       typeof object.userData["windBaseRotationZ"] === "number"
         ? object.userData["windBaseRotationZ"]
         : 0;
-    const gust =
-      Math.sin(seconds * 1.25 + phase) * 0.7 +
-      Math.sin(seconds * 2.7 + phase * 1.7) * 0.3;
-    object.rotation.x = baseX + gust * strength * 0.24;
-    object.rotation.z = baseZ + gust * strength;
+    const gust = weatherWindGustAt(weather, seconds, phase);
+    const sceneRole: unknown = object.userData["sceneRole"];
+    const response =
+      sceneRole === "garden-flower"
+        ? 1.65
+        : sceneRole === "procedural-shrub"
+          ? 1.3
+          : 1;
+    object.rotation.x = baseX + gust * strength * response * 0.32;
+    object.rotation.z = baseZ + gust * strength * response;
   }
 };
 

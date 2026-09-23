@@ -11,6 +11,7 @@ export type AudioCue =
   | "purchase:payment"
   | "purchase:drink"
   | "storm:thunder"
+  | "storm:gust"
   | "ambient:birdsong";
 
 export type WeatherToneSource = "historical-weather-excerpt";
@@ -147,6 +148,11 @@ const MOTIFS: Record<Exclude<AudioCue, WeatherAudioCue>, readonly MotifNote[]> =
     { note: 33, endNote: 25, beats: 5.5, waveform: "sawtooth", gain: 0.048 },
     { note: 28, endNote: 20, beats: 4.5, waveform: "sawtooth", gain: 0.04 },
     { note: 24, endNote: 16, beats: 5.5, waveform: "triangle", gain: 0.034 },
+  ],
+  "storm:gust": [
+    { note: 45, endNote: 36, beats: 2.8, waveform: "sawtooth", gain: 0.022 },
+    { note: 52, endNote: 43, beats: 1.9, waveform: "triangle", gain: 0.018 },
+    { note: 40, endNote: 33, beats: 2.2, waveform: "sine", gain: 0.016 },
   ],
   "ambient:birdsong": [
     { note: 91, beats: 0.22, waveform: "sine", gain: 0.018 },

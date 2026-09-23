@@ -70,6 +70,38 @@ test("supports precise numeric entry synchronized with sliders", async ({ page }
   await expect(glassesSlider).toHaveValue(maximumGlasses);
 });
 
+test("explains exactly how far an unaffordable plan exceeds operating funds", async ({ page }) => {
+  await openPlanningView(page);
+
+  await page.getByRole("spinbutton", { name: "Glasses Exact" }).fill("10");
+  await page.getByRole("spinbutton", { name: "Signs Exact" }).fill("1");
+
+  await expect(page.getByRole("button", { name: "Sell for the day" })).toBeDisabled();
+  await expect(page.locator("#decision-error")).toContainText("$0.50 over");
+});
+
+test("bankruptcy ends the run and turns the next action into a new game", async ({ page }) => {
+  await openPlanningView(page);
+
+  await page.getByRole("spinbutton", { name: "Glasses Exact" }).fill("10");
+  await page.getByRole("spinbutton", { name: "Signs Exact" }).fill("0");
+  await page.getByRole("spinbutton", { name: "Price Exact cents" }).fill("1");
+  await page.getByRole("button", { name: "Sell for the day" }).click();
+
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "report");
+  await expect(page.locator("#report-milestone")).toContainText("Bankrupt");
+  await expect(page.locator("#report-milestone")).toContainText("$10.00");
+
+  await page.getByRole("button", { name: "Review sales history" }).click();
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "history");
+  const restart = page.getByRole("button", { name: "Start a new game" });
+  await expect(restart).toBeVisible();
+
+  await restart.click();
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
+  await expect(page.locator("#status-day")).toHaveText("1");
+});
+
 test("restores the level-one operating envelope independently of finance", async ({ page }) => {
   await openPlanningView(page);
 

@@ -49,6 +49,12 @@ A revision is release-certified only when all of the following pass for the same
 5. Post-merge deployment
    - CI passes again on `master`;
    - the Pages publisher successfully builds and pushes that revision to `gh-pages`.
+6. Visual showcase evidence
+   - `pnpm test:showcase-contract` protects media configuration and normal-E2E isolation;
+   - the dedicated `Visual Showcase` workflow records 5/5 desktop and 5/5 mobile scenes from real Chromium;
+   - ten raw videos, ten screenshots, five desktop GIFs, five mobile GIFs, and both H.264 highlight reels are verified before artifact upload;
+   - GIF payload budgets are reported and enforced;
+   - Pages publishes the verified media beneath `/Lemonade/showcase/` at stable URLs used by the README and presentation documentation.
 
 The exact `master` and deployment revisions for a certification event are recorded on the certification issue so the evidence cannot become ambiguous as development continues.
 

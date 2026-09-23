@@ -91,6 +91,16 @@
   font-weight: 800;
 }
 
+.progression-note.milestone-warning {
+  border-color: #a96b12;
+  background: #f5edd1;
+}
+
+.progression-note.milestone-bankruptcy {
+  border-color: #9a2e26;
+  background: #f3d7cf;
+}
+
 .weekly-report {
   margin: 24px 0 18px;
   padding: 18px;

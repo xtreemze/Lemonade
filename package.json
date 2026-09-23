@@ -21,7 +21,12 @@
     "lint:antipatterns": "node scripts/lint-antipatterns.mjs",
     "lint:mobile-contract": "node scripts/lint-mobile-contract.mjs",
     "test:mobile-contract": "playwright test e2e/mobile-contract.spec.ts",
-    "verify:mobile": "pnpm lint:antipatterns && pnpm lint:mobile-contract && pnpm test:mobile-contract"
+    "verify:mobile": "pnpm lint:antipatterns && pnpm lint:mobile-contract && pnpm test:mobile-contract",
+    "test:showcase-contract": "node --test scripts/showcase-contract.test.mjs",
+    "showcase:capture": "playwright test --config=playwright.showcase.config.ts",
+    "showcase:render": "node scripts/render-showcase.mjs",
+    "showcase:verify": "node scripts/verify-showcase.mjs",
+    "showcase": "pnpm test:showcase-contract && pnpm showcase:capture && pnpm showcase:render && pnpm showcase:verify"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
