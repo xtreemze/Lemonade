@@ -623,7 +623,7 @@ export const updateNeighborhoodWind = (
         ? object.userData["windBaseRotationZ"]
         : 0;
     const gust = weatherWindGustAt(weather, seconds, phase);
-    const sceneRole = object.userData["sceneRole"];
+    const sceneRole: unknown = object.userData["sceneRole"];
     const response =
       sceneRole === "garden-flower"
         ? 1.65
