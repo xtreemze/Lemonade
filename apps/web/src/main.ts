@@ -5,13 +5,15 @@ import "./finance.css";
 import "./persistence.css";
 
 import { LemonadeApp, createFreshRunSnapshot } from "./app.js";
-import { createPersistentSceneViewer, isSceneViewerEnabled } from "./dev-scene-viewer.js";
 import { RunPersistenceError, clearCurrentRun, loadCurrentRun } from "./persistence.js";
 
 const root = document.querySelector("#root");
 if (!(root instanceof HTMLElement)) {
   throw new TypeError("Expected #root application mount point.");
 }
+
+const isPersistentSceneViewerEnabled = (): boolean =>
+  globalThis.localStorage?.getItem("LEMONADE_DEV_SCENE_VIEWER") === "1";
 
 const renderRecovery = (error: RunPersistenceError): void => {
   root.innerHTML = `
@@ -78,13 +80,17 @@ const start = async (): Promise<void> => {
   }
 };
 
-if (isSceneViewerEnabled()) {
-  console.log("🎥 Scene Viewer mode activated - launching persistent 3D scene");
+const startPersistentSceneViewer = async (): Promise<void> => {
+  const { createPersistentSceneViewer } = await import("./dev-scene-viewer.js");
   createPersistentSceneViewer(root, {
     enableGizmo: true,
     weather: "hot-and-dry",
     phase: "forecast",
   });
+};
+
+if (isPersistentSceneViewerEnabled()) {
+  void startPersistentSceneViewer();
 } else {
   void start();
 }
