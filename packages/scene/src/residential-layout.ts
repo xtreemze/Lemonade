@@ -939,7 +939,11 @@ const resolveGeneratedAccess = (
         const reachesSidewalk = hardscape.some(
           (rect) => rect.role === "sidewalk" && rectsOverlap(candidateRect, rect),
         );
-        if (!reachesSidewalk) continue;
+        const overlapsRoad = hardscape.some(
+          (rect) =>
+            rect.role === "road" && rectsOverlap(candidateRect, rect, 0),
+        );
+        if (!reachesSidewalk || overlapsRoad) continue;
 
         const clearsHouses = properties.every((other) => {
           const footprint = propertyFootprint(other);
