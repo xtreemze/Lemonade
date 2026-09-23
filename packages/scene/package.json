@@ -10,7 +10,8 @@
     "./neighborhood-mobility": "./src/neighborhood-mobility.ts",
     "./storyboard": "./src/storyboard.ts",
     "./storyboard-create": "./src/storyboard-create.ts",
-    "./gizmo-controller": "./src/gizmo-controller.ts"
+    "./gizmo-controller": "./src/gizmo-controller.ts",
+    "./babylon": "./src/babylon-scene.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -18,6 +19,7 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
+    "@babylonjs/core": "^9.27.1",
     "three": "^0.186.0"
   },
   "devDependencies": {
