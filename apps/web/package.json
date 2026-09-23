@@ -13,6 +13,7 @@
   "dependencies": {
     "@lemonade/audio": "workspace:*",
     "@lemonade/scene": "workspace:*",
+    "@lemonade/scene-babylon": "workspace:*",
     "@lemonade/simulation": "workspace:*",
     "@lemonade/ui": "workspace:*",
     "lit": "^3.3.3"
