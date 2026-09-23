@@ -56,7 +56,7 @@ const renderRecovery = (error: RunPersistenceError): void => {
   );
 };
 
-const start = async (): Promise<LemonadeApp | void> => {
+const start = async (): Promise<LemonadeApp | undefined> => {
   try {
     const restored = await loadCurrentRun();
     return new LemonadeApp(root, restored ?? createFreshRunSnapshot());
