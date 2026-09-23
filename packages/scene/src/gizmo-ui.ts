@@ -1,4 +1,4 @@
-import type { GizmoController, TransformMode } from "./gizmo-controller.js";
+import type { GizmoController } from "./gizmo-controller.js";
 
 export interface GizmoUIOptions {
   gizmoController: GizmoController;
@@ -24,7 +24,7 @@ const createButton = (text: string, onClick: () => void): HTMLButtonElement => {
 };
 
 export const createGizmoUI = (options: GizmoUIOptions): HTMLElement => {
-  const { gizmoController, container } = options;
+  const { gizmoController } = options;
 
   const panel = document.createElement("div");
   panel.style.cssText = `
@@ -65,9 +65,9 @@ export const createGizmoUI = (options: GizmoUIOptions): HTMLElement => {
       btn.style.background = "#333";
       btn.style.color = "#fff";
     });
-    const activeBtn = modeContainer.querySelector(
+    const activeBtn = modeContainer.querySelector<HTMLButtonElement>(
       `button[data-mode="${gizmoController.getMode()}"]`,
-    ) as HTMLButtonElement | null;
+    );
     if (activeBtn) {
       activeBtn.style.background = "#ff00ff";
       activeBtn.style.color = "#000";
@@ -195,12 +195,17 @@ export const createGizmoUI = (options: GizmoUIOptions): HTMLElement => {
 
   const copyToClipboardBtn = createButton("📋 Copy JSON", () => {
     const json = gizmoController.exportAsJSON();
-    navigator.clipboard.writeText(json).then(() => {
-      copyToClipboardBtn.textContent = "✓ Copied!";
-      setTimeout(() => {
-        copyToClipboardBtn.textContent = "📋 Copy JSON";
-      }, 2000);
-    });
+    void navigator.clipboard.writeText(json).then(
+      () => {
+        copyToClipboardBtn.textContent = "✓ Copied!";
+        setTimeout(() => {
+          copyToClipboardBtn.textContent = "📋 Copy JSON";
+        }, 2000);
+      },
+      () => {
+        copyToClipboardBtn.textContent = "Copy failed";
+      },
+    );
   });
   actionContainer.appendChild(copyToClipboardBtn);
 
@@ -219,7 +224,7 @@ export const createGizmoUI = (options: GizmoUIOptions): HTMLElement => {
 
   const updateSavedCount = () => {
     const saved = gizmoController.getSavedTransforms();
-    savedCountContainer.textContent = `Saved: ${saved.length} object${saved.length !== 1 ? "s" : ""}`;
+    savedCountContainer.textContent = `Saved: ${String(saved.length)} object${saved.length !== 1 ? "s" : ""}`;
   };
 
   const updateUI = () => {
