@@ -80,8 +80,8 @@ describe("neighborhood occurrence ledger", () => {
     const gardening = schedule(gardeningDays[0] ?? 1).find(
       (occurrence) => occurrence.kind === "gardening",
     );
-    expect(gardening?.startMinute).toBeGreaterThanOrEqual(9 * 60);
-    expect(gardening?.endMinute).toBeLessThanOrEqual(13 * 60);
+    expect(gardening?.startMinute).toBeGreaterThanOrEqual(7 * 60);
+    expect(gardening?.endMinute).toBeLessThanOrEqual(9 * 60 + 25);
   });
 
   it("allows sprinklers only for sunny or hot-and-dry mornings", () => {
@@ -133,6 +133,62 @@ describe("neighborhood occurrence ledger", () => {
         arrivals[0]?.startMinute ?? 0,
       );
     }
+  });
+
+  it("keeps pass-through car traffic active across the business-day simulation", () => {
+    const traffic = schedule(3, "sunny").filter(
+      (occurrence) => occurrence.kind === "vehicle-pass-through",
+    );
+    expect(traffic.length).toBeGreaterThanOrEqual(20);
+    expect(
+      traffic.every(
+        (occurrence) =>
+          occurrence.household === null &&
+          occurrence.actorKind === "vehicle" &&
+          occurrence.startMinute >= 9 * 60 + 30 &&
+          occurrence.endMinute <= 18 * 60 &&
+          occurrence.endMinute - occurrence.startMinute >= 38 &&
+          occurrence.anchors.some((anchor) => anchor.role === "crossing"),
+      ),
+    ).toBe(true);
+
+    const coveredHalfHours = new Set(
+      traffic.flatMap((occurrence) => {
+        const buckets: number[] = [];
+        for (
+          let minute = occurrence.startMinute;
+          minute < occurrence.endMinute;
+          minute += 30
+        ) {
+          buckets.push(Math.floor((minute - (9 * 60 + 30)) / 30));
+        }
+        return buckets;
+      }),
+    );
+    expect(coveredHalfHours.size).toBeGreaterThanOrEqual(12);
+  });
+
+  it("scales bicycle traffic with weather while keeping useful visible windows", () => {
+    const sunny = schedule(6, "sunny").filter(
+      (occurrence) => occurrence.kind === "bicycle-pass-through",
+    );
+    const cloudy = schedule(6, "cloudy").filter(
+      (occurrence) => occurrence.kind === "bicycle-pass-through",
+    );
+    const storm = schedule(6, "thunderstorm").filter(
+      (occurrence) => occurrence.kind === "bicycle-pass-through",
+    );
+
+    expect(sunny.length).toBeGreaterThan(cloudy.length);
+    expect(cloudy.length).toBeGreaterThan(0);
+    expect(storm).toHaveLength(0);
+    expect(
+      [...sunny, ...cloudy].every(
+        (occurrence) =>
+          occurrence.endMinute - occurrence.startMinute >= 35 &&
+          occurrence.endMinute <= 18 * 60,
+      ),
+    ).toBe(true);
   });
 
   it("does not perturb customer-market RNG streams", () => {
