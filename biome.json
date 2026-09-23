@@ -51,15 +51,40 @@
   "linter": {
     "enabled": true,
     "domains": {
-      "project": "all",
+      "project": "recommended",
       "types": "all",
       "test": "all",
       "playwright": "all"
     },
     "rules": {
-      "preset": "all",
+      "preset": "recommended",
+      "complexity": {
+        "useRegexLiterals": "error"
+      },
+      "correctness": {
+        "useParseIntRadix": "error"
+      },
+      "security": {
+        "noGlobalEval": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "error",
+        "useConsistentObjectDefinitions": "error",
+        "useExportType": "error",
+        "useImportType": "error",
+        "useReadonlyClassProperties": "error",
+        "useThrowOnlyError": "error"
+      },
+      "suspicious": {
+        "noAlert": "error",
+        "noDoubleEquals": "error",
+        "noExplicitAny": "error",
+        "noUnusedExpressions": "error"
+      },
       "nursery": {
-        "useExplicitType": "error"
+        "noImpliedEval": "error",
+        "useExplicitType": "error",
+        "useExhaustiveSwitchCases": "error"
       }
     }
   },
