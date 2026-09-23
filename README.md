@@ -250,4 +250,4 @@ The revival uses original presentation and synthesizes the weather melodies proc
 
 ## License
 
-This repository is licensed under the **GNU General Public License v3.0**. See [`LICENSE`](LICENSE).
+Lemonade is proprietary software. **All rights reserved.** No permission is granted to use, copy, modify, distribute, host, deploy, or create derivative works without prior express written permission from the copyright holder. See [`LICENSE`](LICENSE) for the controlling terms.
