@@ -129,6 +129,7 @@ describe("neighborhood world scale", () => {
           halfWidth,
           halfDepth,
         ),
+        `hardscape overlap role=${role} name=${object.name} x=${String(centerX)} z=${String(centerZ)} half=${String(halfWidth)},${String(halfDepth)}`,
       ).toBe(false);
 
       if (role === "procedural-tree") {
@@ -138,6 +139,7 @@ describe("neighborhood world scale", () => {
             layout,
             Math.max(halfWidth, halfDepth),
           ),
+          `tree point blocked name=${object.name} x=${String(object.position.x)} z=${String(object.position.z)}`,
         ).toBe(false);
       }
       checkedScenery += 1;
