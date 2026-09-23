@@ -1,0 +1,149 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "master"
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!**/build/**",
+      "!**/dist/**",
+      "!**/node_modules/**",
+      "!**/playwright-report/**",
+      "!**/test-results/**"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "domains": {
+      "project": "all",
+      "types": "all",
+      "test": "all",
+      "playwright": "all"
+    },
+    "rules": {
+      "preset": "all",
+      "a11y": "error",
+      "complexity": "error",
+      "correctness": "error",
+      "performance": "error",
+      "security": "error",
+      "style": "error",
+      "suspicious": "error",
+      "nursery": {
+        "noBaseToString": "error",
+        "noFloatingPromises": "error",
+        "noMisleadingReturnType": "error",
+        "noMisusedPromises": "error",
+        "noReturnInFinally": "error",
+        "noUnsafePlusOperands": "error",
+        "noUselessTypeConversion": "error",
+        "useAwaitThenable": "error",
+        "useDisposables": "error",
+        "useExhaustiveSwitchCases": "error",
+        "useIncludes": "error",
+        "useNullishCoalescing": "error",
+        "useRegexpExec": "error",
+        "useStringStartsEndsWith": "error"
+      }
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/simulation/src/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "window": "Simulation must not depend on browser state.",
+                  "document": "Simulation must not depend on the DOM.",
+                  "navigator": "Simulation must not depend on device state.",
+                  "localStorage": "Persistence belongs behind an adapter.",
+                  "sessionStorage": "Persistence belongs behind an adapter.",
+                  "indexedDB": "Persistence belongs behind an adapter.",
+                  "fetch": "Network I/O is forbidden in deterministic simulation code.",
+                  "XMLHttpRequest": "Network I/O is forbidden in deterministic simulation code.",
+                  "WebSocket": "Network I/O is forbidden in deterministic simulation code.",
+                  "AudioContext": "Audio belongs behind a presentation adapter.",
+                  "requestAnimationFrame": "Presentation timing must not affect simulation.",
+                  "setTimeout": "Ambient timing must not affect deterministic simulation.",
+                  "setInterval": "Ambient timing must not affect deterministic simulation.",
+                  "performance": "Ambient clock/device state must not enter simulation.",
+                  "crypto": "Randomness must be injected through the simulation RNG contract."
+                }
+              }
+            },
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "lit": "UI runtimes are forbidden in the simulation package.",
+                  "three": "Rendering dependencies are forbidden in the simulation package."
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "@lemonade/ui",
+                      "@lemonade/scene",
+                      "@lemonade/audio",
+                      "@tauri-apps/*",
+                      "node:*"
+                    ],
+                    "message": "Simulation must remain a pure, platform-independent inward dependency."
+                  }
+                ]
+              }
+            }
+          },
+          "nursery": {
+            "noJsRestrictedProperties": {
+              "level": "error",
+              "options": {
+                "entries": [
+                  {
+                    "object": "Math",
+                    "property": "random",
+                    "message": "Inject a seedable RandomSource; ambient randomness breaks replay determinism."
+                  },
+                  {
+                    "object": "Date",
+                    "property": "now",
+                    "message": "Pass time explicitly; ambient clock state is forbidden in simulation."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
