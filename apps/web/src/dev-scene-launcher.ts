@@ -57,7 +57,7 @@ const parsePhase = (value: string): ScenePhase => {
 };
 
 export const isSceneLauncherEnabled = (): boolean =>
-  globalThis.localStorage?.getItem("LEMONADE_DEV_SCENE_LAUNCHER") === "1";
+  localStorage.getItem("LEMONADE_DEV_SCENE_LAUNCHER") === "1";
 
 export const enableSceneLauncher = (): void => {
   localStorage.setItem("LEMONADE_DEV_SCENE_LAUNCHER", "1");
