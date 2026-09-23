@@ -5,7 +5,14 @@ import { pathToFileURL } from "node:url";
 
 const HOST = "127.0.0.1";
 const PORT = Number.parseInt(process.env.LEMONADE_MCP_PORT ?? "5178", 10);
-const PROTOCOL_VERSION = "2025-11-25";
+const LEGACY_PROTOCOL_VERSION = "2025-11-25";
+const MODERN_PROTOCOL_VERSION = "2026-07-28";
+const SERVER_INFO = Object.freeze({
+  name: "lemonade-scene-game",
+  version: "0.1.0",
+});
+const SERVER_INSTRUCTIONS =
+  "Open the Lemonade web app with enableMcpBridge(). Enable enableGizmo() for visual selection and transform-mode tools.";
 const BRIDGE_TIMEOUT_MS = 15_000;
 const POLL_TIMEOUT_MS = 20_000;
 
@@ -150,25 +157,54 @@ export const TOOL_DEFINITIONS = Object.freeze([
 const publicTool = ({ bridgeMethod: _bridgeMethod, ...tool }) => tool;
 const toolByName = new Map(TOOL_DEFINITIONS.map((tool) => [tool.name, tool]));
 
-const textResult = (value) => ({
-  content: [
-    {
-      type: "text",
-      text: JSON.stringify(value, null, 2),
-    },
-  ],
-  structuredContent: value,
+const serverMeta = () => ({
+  "io.modelcontextprotocol/serverInfo": SERVER_INFO,
 });
 
-const toolError = (error) => ({
-  content: [
+const completeResult = (result, modern) =>
+  modern
+    ? {
+        resultType: "complete",
+        ...result,
+        _meta: {
+          ...(result._meta ?? {}),
+          ...serverMeta(),
+        },
+      }
+    : result;
+
+const textResult = (value, modern) =>
+  completeResult(
     {
-      type: "text",
-      text: error instanceof Error ? error.message : String(error),
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(value, null, 2),
+        },
+      ],
+      structuredContent: value,
     },
-  ],
-  isError: true,
-});
+    modern,
+  );
+
+const toolError = (error, modern) =>
+  completeResult(
+    {
+      content: [
+        {
+          type: "text",
+          text: error instanceof Error ? error.message : String(error),
+        },
+      ],
+      isError: true,
+    },
+    modern,
+  );
+
+const modernRequest = (message) =>
+  message?.method === "server/discover" ||
+  message?.params?._meta?.["io.modelcontextprotocol/protocolVersion"] ===
+    MODERN_PROTOCOL_VERSION;
 
 export const handleMcpRequest = async (message, bridge) => {
   const method = message?.method;
@@ -184,14 +220,20 @@ export const handleMcpRequest = async (message, bridge) => {
 
   if (method.startsWith("notifications/")) return null;
 
+  const modern = modernRequest(message);
+
   if (method === "server/discover") {
     return {
       jsonrpc: "2.0",
       id: id ?? null,
-      error: {
-        code: -32601,
-        message:
-          "Modern stateless discovery is not implemented; retry with MCP initialize negotiation.",
+      result: {
+        resultType: "complete",
+        supportedVersions: [MODERN_PROTOCOL_VERSION],
+        capabilities: { tools: {} },
+        instructions: SERVER_INSTRUCTIONS,
+        cacheScope: "private",
+        ttlMs: 0,
+        _meta: serverMeta(),
       },
     };
   }
@@ -201,27 +243,27 @@ export const handleMcpRequest = async (message, bridge) => {
       jsonrpc: "2.0",
       id: id ?? null,
       result: {
-        protocolVersion: PROTOCOL_VERSION,
+        protocolVersion: LEGACY_PROTOCOL_VERSION,
         capabilities: { tools: { listChanged: false } },
-        serverInfo: {
-          name: "lemonade-scene-game",
-          version: "0.1.0",
-        },
-        instructions:
-          "Open the Lemonade web app with enableMcpBridge(). Enable enableGizmo() for visual selection and transform-mode tools.",
+        serverInfo: SERVER_INFO,
+        instructions: SERVER_INSTRUCTIONS,
       },
     };
   }
 
   if (method === "ping") {
-    return { jsonrpc: "2.0", id: id ?? null, result: {} };
+    return {
+      jsonrpc: "2.0",
+      id: id ?? null,
+      result: completeResult({}, modern),
+    };
   }
 
   if (method === "tools/list") {
     return {
       jsonrpc: "2.0",
       id: id ?? null,
-      result: { tools: TOOL_DEFINITIONS.map(publicTool) },
+      result: completeResult({ tools: TOOL_DEFINITIONS.map(publicTool) }, modern),
     };
   }
 
@@ -232,7 +274,10 @@ export const handleMcpRequest = async (message, bridge) => {
       return {
         jsonrpc: "2.0",
         id: id ?? null,
-        result: toolError(new RangeError(`Unknown Lemonade MCP tool: ${String(name)}`)),
+        result: toolError(
+          new RangeError(`Unknown Lemonade MCP tool: ${String(name)}`),
+          modern,
+        ),
       };
     }
 
@@ -242,13 +287,13 @@ export const handleMcpRequest = async (message, bridge) => {
       return {
         jsonrpc: "2.0",
         id: id ?? null,
-        result: textResult(result),
+        result: textResult(result, modern),
       };
     } catch (error) {
       return {
         jsonrpc: "2.0",
         id: id ?? null,
-        result: toolError(error),
+        result: toolError(error, modern),
       };
     }
   }
