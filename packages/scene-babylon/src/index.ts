@@ -8,50 +8,27 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Scene } from "@babylonjs/core/scene";
 
-import { STAND_WORLD_Z } from "@lemonade/scene/stand-anchors";
+import { STAND_WORLD_Z } from "@lemonade/scene-contracts/stand-anchors";
 import {
   sceneCameraComposition,
   sceneShotAt,
   type SceneShotKind,
   type StreetStoryboard,
-} from "@lemonade/scene/storyboard";
+} from "@lemonade/scene-contracts/storyboard";
 
-export type SceneWeather =
-  | "sunny"
-  | "cloudy"
-  | "hot-and-dry"
-  | "thunderstorm";
-export type ScenePhase = "idle" | "simulation" | "forecast";
+import type {
+  LemonsvilleSceneController,
+  LemonsvilleSceneState,
+  RendererDiagnostics,
+  SceneWeather,
+} from "@lemonade/scene-contracts/scene-state";
 
-export type LemonsvilleSceneState = Readonly<{
-  weather: SceneWeather;
-  visibleSigns: number;
-  prepared: number;
-  durationMs: number;
-  confidence: number;
-  nextConfidence: number;
-  characterSeed: number;
-  storyboard: StreetStoryboard;
-  phase: ScenePhase;
-  reducedMotion: boolean;
-}>;
-
-export type RendererDiagnostics = Readonly<{
-  frame: number;
-  drawCalls: number;
-  triangles: number;
-  lines: number;
-  points: number;
-  geometries: number;
-  textures: number;
-}>;
-
-export interface BabylonLemonsvilleSceneController {
-  update(state: LemonsvilleSceneState): void;
-  resize(width: number, height: number): void;
-  diagnostics(): RendererDiagnostics;
-  dispose(): void;
-}
+export type {
+  LemonsvilleSceneController,
+  LemonsvilleSceneState,
+  RendererDiagnostics,
+  SceneWeather,
+} from "@lemonade/scene-contracts/scene-state";
 
 const clampPixelRatio = (value: number): number =>
   Number.isFinite(value) && value > 0 ? Math.min(value, 2) : 1;
@@ -72,7 +49,7 @@ const clearColorForWeather = (weather: SceneWeather): Color4 => {
 export const createBabylonLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
-): BabylonLemonsvilleSceneController | null => {
+): LemonsvilleSceneController | null => {
   let engine: Engine;
   try {
     engine = new Engine(
