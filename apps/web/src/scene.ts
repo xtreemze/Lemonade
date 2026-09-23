@@ -1,10 +1,10 @@
-import type {
-  CustomerActivity,
-  LemonsvilleSceneController,
-  LemonsvilleSceneState,
-  ScenePhase,
-  LemonsvilleSceneOptions,
+import {
   neighborhoodSemanticLayoutForCharacterSeed,
+  type CustomerActivity,
+  type LemonsvilleSceneController,
+  type LemonsvilleSceneState,
+  type ScenePhase,
+  type LemonsvilleSceneOptions,
 } from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
 import {
