@@ -458,7 +458,7 @@ export class LemonadeApp {
     this.#elements.runTools.removeEventListener("lemonade-run-reset", this.#onResetRun);
     document.removeEventListener("visibilitychange", this.#onVisibilityChange);
     window.removeEventListener("pagehide", this.#onPageHide);
-    this.#lifecycle.presentationDeadline.cancel();
+    this.#presentationDeadline.cancel();
     this.#clearFeedbackTimers();
     this.#haptics.dispose();
     this.#scene.dispose();
@@ -467,12 +467,12 @@ export class LemonadeApp {
 
   readonly #onVisibilityChange = (): void => {
     if (document.visibilityState === "hidden") {
-      this.#lifecycle.presentationDeadline.pause();
+      this.#presentationDeadline.pause();
       this.#clearFeedbackTimers();
       this.#haptics.cancel();
       void this.#audio.suspend();
     } else {
-      this.#lifecycle.presentationDeadline.resume();
+      this.#presentationDeadline.resume();
       void this.#audio.resume();
     }
   };
@@ -792,7 +792,7 @@ export class LemonadeApp {
     afterTransition?: () => void,
   ): void {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    this.#lifecycle.presentationDeadline.schedule(reducedMotion ? 0 : delayMs, () => {
+    this.#presentationDeadline.schedule(reducedMotion ? 0 : delayMs, () => {
       if (this.#disposed) return;
       const transition = transitionRunLifecycle(this.#lifecycle, event);
       if (!transition.accepted) return;
@@ -800,7 +800,7 @@ export class LemonadeApp {
       this.#render();
       afterTransition?.();
     });
-    if (document.visibilityState === "hidden") this.#lifecycle.presentationDeadline.pause();
+    if (document.visibilityState === "hidden") this.#presentationDeadline.pause();
   }
 
   #playResolutionCues(
