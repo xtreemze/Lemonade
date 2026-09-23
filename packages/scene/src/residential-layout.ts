@@ -585,6 +585,45 @@ const nearestAccessRect = (
   }, first);
 };
 
+const closestPointOnRectBoundary = (
+  rect: ResidentialRect,
+  point: ResidentialPoint,
+): ResidentialPoint => {
+  if (
+    rect.x === undefined ||
+    rect.z === undefined ||
+    rect.length === undefined ||
+    rect.width === undefined ||
+    rect.rotationY === undefined
+  ) {
+    return Object.freeze({
+      x: Math.min(rect.maxX, Math.max(rect.minX, point.x)),
+      z: Math.min(rect.maxZ, Math.max(rect.minZ, point.z)),
+    });
+  }
+
+  const tangentX = Math.cos(rect.rotationY);
+  const tangentZ = Math.sin(rect.rotationY);
+  const normalX = -tangentZ;
+  const normalZ = tangentX;
+  const deltaX = point.x - rect.x;
+  const deltaZ = point.z - rect.z;
+  const tangentDistance = deltaX * tangentX + deltaZ * tangentZ;
+  const normalDistance = deltaX * normalX + deltaZ * normalZ;
+  const boundedTangent = Math.min(
+    rect.length / 2,
+    Math.max(-rect.length / 2, tangentDistance),
+  );
+  const boundedNormal = Math.min(
+    rect.width / 2,
+    Math.max(-rect.width / 2, normalDistance),
+  );
+  return Object.freeze({
+    x: rect.x + tangentX * boundedTangent + normalX * boundedNormal,
+    z: rect.z + tangentZ * boundedTangent + normalZ * boundedNormal,
+  });
+};
+
 const closestPointOnRectCenterline = (
   rect: ResidentialRect,
   point: ResidentialPoint,
@@ -625,6 +664,8 @@ export type ResidentialAccessLayout = Readonly<{
   parkingZ: number;
   drivewaySidewalkX: number;
   drivewaySidewalkZ: number;
+  drivewayPavementX: number;
+  drivewayPavementZ: number;
   roadX: number;
   roadCenterZ: number;
   drivewayCenterX: number;
@@ -706,6 +747,21 @@ export const residentialAccessLayout = (
         });
   const drivewaySidewalkX = drivewaySidewalkTarget.x;
   const drivewaySidewalkZ = drivewaySidewalkTarget.z;
+  const drivewayPavementTarget =
+    drivewaySidewalk === null
+      ? Object.freeze({
+          x: drivewayX,
+          z:
+            frontDirection > 0
+              ? fallbackSidewalk.minZ
+              : fallbackSidewalk.maxZ,
+        })
+      : closestPointOnRectBoundary(drivewaySidewalk, {
+          x: drivewayX,
+          z: parkingZ,
+        });
+  const drivewayPavementX = drivewayPavementTarget.x;
+  const drivewayPavementZ = drivewayPavementTarget.z;
   const road = nearestAccessRect(
     property,
     drivewaySidewalkX,
@@ -726,15 +782,15 @@ export const residentialAccessLayout = (
       : roadCenterZ >= property.houseZ
         ? road.minZ
         : road.maxZ;
-  const drivewayDeltaX = drivewaySidewalkX - drivewayX;
-  const drivewayDeltaZ = drivewaySidewalkZ - parkingZ;
+  const drivewayDeltaX = drivewayPavementX - drivewayX;
+  const drivewayDeltaZ = drivewayPavementZ - parkingZ;
   const drivewayLength = Math.max(
     3.2,
     Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.3,
   );
   const drivewayDepth = drivewayLength;
-  const drivewayCenterX = (drivewayX + drivewaySidewalkX) / 2;
-  const drivewayCenterZ = (parkingZ + drivewaySidewalkZ) / 2;
+  const drivewayCenterX = (drivewayX + drivewayPavementX) / 2;
+  const drivewayCenterZ = (parkingZ + drivewayPavementZ) / 2;
   const drivewayRotationY = Math.atan2(drivewayDeltaZ, drivewayDeltaX);
 
   return Object.freeze({
@@ -750,6 +806,8 @@ export const residentialAccessLayout = (
     parkingZ,
     drivewaySidewalkX,
     drivewaySidewalkZ,
+    drivewayPavementX,
+    drivewayPavementZ,
     roadX,
     roadCenterZ,
     drivewayCenterX,
@@ -780,7 +838,7 @@ const drivewayRectForProperty = (
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.drivewaySidewalkX, z: access.drivewaySidewalkZ },
+    { x: access.drivewayPavementX, z: access.drivewayPavementZ },
     WORLD_SCALE.vehicle.width,
   );
 };
@@ -797,7 +855,7 @@ const drivewayExclusionRectForProperty = (
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.drivewaySidewalkX, z: access.drivewaySidewalkZ },
+    { x: access.drivewayPavementX, z: access.drivewayPavementZ },
     WORLD_SCALE.vehicle.width,
   );
 };
