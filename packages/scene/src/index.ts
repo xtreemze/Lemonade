@@ -1093,8 +1093,7 @@ export const createLemonsvilleScene = (
       state.confidence !== nextState.confidence ||
       state.nextConfidence !== nextState.nextConfidence ||
       state.dayNumber !== nextState.dayNumber ||
-      state.weather !== nextState.weather ||
-      state.neighborhoodOccurrences !== nextState.neighborhoodOccurrences;
+      state.weather !== nextState.weather;
 
     state = nextState;
     storyboard = state.storyboard;
