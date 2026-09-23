@@ -710,16 +710,16 @@ export const residentialAccessLayout = (
       : roadCenterZ >= property.houseZ
         ? road.minZ
         : road.maxZ;
-  const sidewayDeltaX = drivewaySidewalkX - drivewayX;
-  const sidewayDeltaZ = drivewaySidewalkZ - parkingZ;
-  const roadDeltaX = roadX - drivewayX;
-  const roadDeltaZ = roadCenterZ - parkingZ;
-  const roadDistance = Math.hypot(roadDeltaX, roadDeltaZ);
-  const drivewayLength = Math.max(3.2, roadDistance + 0.3);
+  const drivewayDeltaX = roadX - drivewayX;
+  const drivewayDeltaZ = roadCenterZ - parkingZ;
+  const drivewayLength = Math.max(
+    3.2,
+    Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.3,
+  );
   const drivewayDepth = drivewayLength;
-  const drivewayCenterX = (drivewayX + drivewaySidewalkX) / 2;
-  const drivewayCenterZ = (parkingZ + drivewaySidewalkZ) / 2;
-  const drivewayRotationY = Math.atan2(roadDeltaZ, roadDeltaX);
+  const drivewayCenterX = (drivewayX + roadX) / 2;
+  const drivewayCenterZ = (parkingZ + roadCenterZ) / 2;
+  const drivewayRotationY = Math.atan2(drivewayDeltaZ, drivewayDeltaX);
 
   return Object.freeze({
     frontDirection,
@@ -776,28 +776,12 @@ const drivewayExclusionRectForProperty = (
     Object.freeze({ ...property, drivewayX }),
     seed,
   );
-  const dx = access.roadX - drivewayX;
-  const dz = access.roadCenterZ - access.parkingZ;
-  const rotationY = Math.atan2(dz, dx);
-  const x = access.drivewayCenterX;
-  const z = access.drivewayCenterZ;
-  const roadDistance = Math.hypot(dx, dz);
-  const cosine = Math.abs(Math.cos(rotationY));
-  const sine = Math.abs(Math.sin(rotationY));
-  const halfX = (roadDistance / 2) * cosine + (WORLD_SCALE.vehicle.width / 2) * sine;
-  const halfZ = (roadDistance / 2) * sine + (WORLD_SCALE.vehicle.width / 2) * cosine;
-  return Object.freeze({
-    minX: x - halfX,
-    maxX: x + halfX,
-    minZ: z - halfZ,
-    maxZ: z + halfZ,
-    role: "driveway",
-    x,
-    z,
-    length: roadDistance,
-    width: WORLD_SCALE.vehicle.width,
-    rotationY,
-  });
+  return orientedAccessRect(
+    "driveway",
+    { x: drivewayX, z: access.parkingZ },
+    { x: access.roadX, z: access.roadCenterZ },
+    WORLD_SCALE.vehicle.width,
+  );
 };
 
 const rectsHaveClearance = (
