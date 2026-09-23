@@ -513,6 +513,55 @@ const createVehicle = (
   return root;
 };
 
+const VEHICLE_VARIANTS = [
+  "sedan",
+  "sports",
+  "pickup",
+  "truck",
+] as const satisfies readonly VehicleVariant[];
+
+const VEHICLE_COLORS = [
+  0x7189a8,
+  0xa65e52,
+  0x6b7c61,
+  0x8a796d,
+  0x526f86,
+  0xb17b45,
+  0x63745f,
+  0x7d7270,
+] as const;
+
+const vehicleIdentitySalt = (actorId: string): number => {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < actorId.length; index += 1) {
+    hash = Math.imul(hash ^ actorId.charCodeAt(index), 0x01000193);
+  }
+  return hash >>> 0;
+};
+
+const createVehicleForActor = (seed: number, actorId: string): Group => {
+  const identitySalt = vehicleIdentitySalt(actorId);
+  const profileSeed = seed ^ identitySalt;
+  const variant =
+    VEHICLE_VARIANTS[
+      Math.floor(ambientUnit(profileSeed, 30_001) * VEHICLE_VARIANTS.length) %
+        VEHICLE_VARIANTS.length
+    ] ?? "sedan";
+  const color =
+    VEHICLE_COLORS[
+      Math.floor(ambientUnit(profileSeed, 30_002) * VEHICLE_COLORS.length) %
+        VEHICLE_COLORS.length
+    ] ?? VEHICLE_COLORS[0];
+  const vehicle = createVehicle(
+    color,
+    profileSeed,
+    identitySalt % 20_000,
+    variant,
+  );
+  vehicle.userData["mobilityActorId"] = actorId;
+  return vehicle;
+};
+
 const routeProgress = (
   elapsedMs: number,
   durationMs: number,
@@ -573,16 +622,7 @@ export const createAmbientLife = (
     createBicycle(0xb45d4c, seed, 1),
     createBicycle(0x75864f, seed, 2),
   ];
-  const vehicles = [
-    createVehicle(0x7189a8, seed, 0, "sedan"),
-    createVehicle(0xa65e52, seed, 1, "sports"),
-    createVehicle(0x6b7c61, seed, 2, "pickup"),
-    createVehicle(0x8a796d, seed, 3, "truck"),
-    createVehicle(0x526f86, seed, 4, "sedan"),
-    createVehicle(0xb17b45, seed, 5, "sports"),
-    createVehicle(0x63745f, seed, 6, "pickup"),
-    createVehicle(0x7d7270, seed, 7, "sedan"),
-  ];
+  const vehicleVisuals = new Map<string, Group>();
   const residents = [
     createTransportCharacter(seed ^ 0x7341, 12_000),
     createTransportCharacter(seed ^ 0x7341, 12_001),
@@ -600,11 +640,20 @@ export const createAmbientLife = (
 
   const mobility = createNeighborhoodMobilitySystem(mobilitySeed);
 
+  const vehicleForActor = (actorId: string): Group => {
+    const existing = vehicleVisuals.get(actorId);
+    if (existing !== undefined) return existing;
+    const vehicle = createVehicleForActor(seed, actorId);
+    vehicle.visible = false;
+    vehicleVisuals.set(actorId, vehicle);
+    scene.add(vehicle);
+    return vehicle;
+  };
+
   for (const actor of [
     ...pets,
     ...wildlife,
     ...bicycles,
-    ...vehicles,
     ...residents.map((resident) => resident.root),
     mailCarrier.root,
     gardener.root,
@@ -761,14 +810,15 @@ export const createAmbientLife = (
           ),
         ),
       ];
-      vehicles.forEach((vehicle, index) => {
-        const pose = vehiclePoses[index];
-        vehicle.visible = pose !== undefined;
-        if (pose === undefined) return;
-        vehicle.userData["mobilityActorId"] = pose.id;
+      for (const vehicle of vehicleVisuals.values()) {
+        vehicle.visible = false;
+      }
+      for (const pose of vehiclePoses) {
+        const vehicle = vehicleForActor(pose.id);
+        vehicle.visible = true;
         vehicle.position.set(pose.x, 0.02, pose.z);
         vehicle.rotation.y = -pose.yaw;
-      });
+      }
       return sample;
     },
   });
