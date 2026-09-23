@@ -428,11 +428,40 @@ const separateCrowd = (poses: (MutableCrowdPose | undefined)[]): number => {
             const deterministicSide =
               deterministicUnit(left + right, 71) < 0.5 ? -1 : 1;
             if (a.routeId !== b.routeId) {
-              const yieldDistance = (CROWD_SEPARATION - distance) * 0.58;
-              a.x -= a.tangentX * yieldDistance;
-              a.z -= a.tangentZ * yieldDistance;
-              b.x -= b.tangentX * yieldDistance;
-              b.z -= b.tangentZ * yieldDistance;
+              const separationSide =
+                deterministicSide === -1 ? -1 : 1;
+              const push = (CROWD_SEPARATION - distance) * 0.52;
+              const previousAOffset = a.lateralOffset;
+              const previousBOffset = b.lateralOffset;
+              a.lateralOffset = Math.max(
+                -a.lateralLimit,
+                Math.min(
+                  a.lateralLimit,
+                  a.lateralOffset - push * separationSide,
+                ),
+              );
+              b.lateralOffset = Math.max(
+                -b.lateralLimit,
+                Math.min(
+                  b.lateralLimit,
+                  b.lateralOffset + push * separationSide,
+                ),
+              );
+              a.x = a.centerX + a.normalX * a.lateralOffset;
+              a.z = a.centerZ + a.normalZ * a.lateralOffset;
+              b.x = b.centerX + b.normalX * b.lateralOffset;
+              b.z = b.centerZ + b.normalZ * b.lateralOffset;
+
+              const lateralResolved =
+                Math.abs(a.lateralOffset - previousAOffset) +
+                Math.abs(b.lateralOffset - previousBOffset);
+              if (lateralResolved < push * 0.7) {
+                const yielder = deterministicSide < 0 ? a : b;
+                const yieldDistance =
+                  (CROWD_SEPARATION - distance) * 0.16;
+                yielder.x -= yielder.tangentX * yieldDistance;
+                yielder.z -= yielder.tangentZ * yieldDistance;
+              }
               continue;
             }
             const lateralDelta = b.lateralOffset - a.lateralOffset;
