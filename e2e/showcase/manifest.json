@@ -7,7 +7,7 @@
       "title": "Weather forecast",
       "description": "Read the day’s weather and neighborhood conditions before opening the stand.",
       "alt": "Lemonade weather forecast over the Lemonsville neighborhood",
-      "durationSeconds": 3.5
+      "durationSeconds": 1.5
     },
     {
       "id": "02-three-decision-plan",
