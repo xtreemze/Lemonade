@@ -736,7 +736,7 @@ export const populateNeighborhood = (
         Object.freeze({
           role: "driveway",
           length: access.drivewayLength,
-          width: WORLD_SCALE.vehicle.width,
+          width: WORLD_SCALE.street.drivewayWidth,
           x: access.drivewayCenterX,
           z: access.drivewayCenterZ,
           rotationY: access.drivewayRotationY,
