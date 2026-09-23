@@ -26,7 +26,7 @@ const transport = (
     delivered,
     cancel,
     adapter: Object.freeze({
-      deliver(candidate): void {
+      deliver(candidate: SemanticFeedbackEvent): void {
         delivered.push(candidate);
       },
       ...(accepts === undefined ? {} : { accepts }),
