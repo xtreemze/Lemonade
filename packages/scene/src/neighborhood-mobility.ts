@@ -814,11 +814,9 @@ export const createNeighborhoodMobilitySystem = (
               3.2,
               petClocks,
             );
-            if (petState.doorOpen && !state.doorOpen) {
-              patchProperty(properties, property.role, {
-                doorOpen: true,
-              });
-            }
+            patchProperty(properties, property.role, {
+              doorOpen: state.doorOpen || petState.doorOpen,
+            });
             const pet = makePose(
               "resident-pet",
               "pet",
