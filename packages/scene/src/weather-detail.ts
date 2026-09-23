@@ -236,6 +236,7 @@ export const populateWeatherObjects = (
   }
 
   const sunContainer = new Group();
+  sunContainer.userData["sceneRole"] = "sun-disc";
   addSun(sunContainer, 0.82);
   weather.sunny.add(sunContainer);
 
@@ -260,8 +261,6 @@ export const populateWeatherObjects = (
     partlyCloudGroup.add(partlyCloud);
   }
   weather["hot-and-dry"].add(partlyCloudGroup);
-
-  addCloud(weather.cloudy, 0xd7e0df);
 
   const cloudyTownClouds = CLOUDY_TOWN_CLOUD_LAYOUT.map((layout, index) => {
     const cloud = new Group();
