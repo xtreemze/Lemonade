@@ -1,3 +1,4 @@
+// biome-ignore lint/correctness/noUnresolvedImports: Biome 2.5 misses Playwright's type re-exports.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 type MobileViewport = Readonly<{ width: number; height: number; name: string }>;
@@ -86,25 +87,25 @@ const expectViewportContract = async (
 
     const viewportViolations = rendered
       .filter((element) => {
-        const rect = element.getBoundingClientRect();
+        const bounds = element.getBoundingClientRect();
         return (
-          rect.left < -1 ||
-          rect.top < -1 ||
-          rect.right > window.innerWidth + 1 ||
-          rect.bottom > window.innerHeight + 1
+          bounds.left < -1 ||
+          bounds.top < -1 ||
+          bounds.right > window.innerWidth + 1 ||
+          bounds.bottom > window.innerHeight + 1
         );
       })
       .map((element) => {
-        const rect = element.getBoundingClientRect();
+        const bounds = element.getBoundingClientRect();
         return {
           element: describe(element),
           rect: {
-            left: rect.left,
-            top: rect.top,
-            right: rect.right,
-            bottom: rect.bottom,
-            width: rect.width,
-            height: rect.height,
+            left: bounds.left,
+            top: bounds.top,
+            right: bounds.right,
+            bottom: bounds.bottom,
+            width: bounds.width,
+            height: bounds.height,
           },
         };
       });
@@ -114,8 +115,8 @@ const expectViewportContract = async (
     ]
       .filter(isRendered)
       .filter((element) => {
-        const rect = element.getBoundingClientRect();
-        return rect.width < 44 || rect.height < 44;
+        const bounds = element.getBoundingClientRect();
+        return bounds.width < 44 || bounds.height < 44;
       })
       .map(describe);
 
@@ -227,6 +228,7 @@ test("simulation action art keeps the repaired transparent animated glass", asyn
   expect(svg).toContain('id="highlight"');
   expect(svg).not.toMatch(/stroke\s*:\s*#(?:211d14|000000|000)\b/i);
   expect(svg).not.toContain('class="outline"');
+  // biome-ignore lint/security/noSecrets: static SVG markup assertion, not a credential.
   expect(svg).not.toContain("<rect width=\"128\" height=\"128\"");
 });
 
