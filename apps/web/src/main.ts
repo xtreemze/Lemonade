@@ -31,7 +31,7 @@ const renderRecovery = (error: RunPersistenceError): void => {
 
   const errorElement = root.querySelector("#recovery-error");
   const discardButton = root.querySelector("#discard-saved-run");
-  if (!(errorElement instanceof HTMLElement) || !(discardButton instanceof HTMLButtonElement)) {
+  if (!(errorElement instanceof HTMLElement && discardButton instanceof HTMLButtonElement)) {
     throw new TypeError("Expected saved-run recovery controls.");
   }
 
