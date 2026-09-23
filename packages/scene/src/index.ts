@@ -7,6 +7,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
+  PlaneGeometry,
   SRGBColorSpace,
   Scene,
 } from "three";
