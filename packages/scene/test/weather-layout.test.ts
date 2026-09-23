@@ -105,9 +105,12 @@ describe("weather backdrop staging", () => {
       THUNDERSTORM_TOWN_CLOUD_LAYOUT,
     ] as const) {
       const sortedX = layout.map((cloud) => cloud.position[0]).sort((a, b) => a - b);
-      expect(sortedX.at(-1)! - sortedX[0]!).toBeGreaterThanOrEqual(12);
-      for (let index = 1; index < sortedX.length; index += 1) {
-        expect(sortedX[index]! - sortedX[index - 1]!).toBeGreaterThanOrEqual(2.7);
+      expect(Math.max(...sortedX) - Math.min(...sortedX)).toBeGreaterThanOrEqual(12);
+      const adjacentGaps = sortedX.slice(1).map(
+        (value, index) => value - (sortedX[index] ?? value),
+      );
+      for (const gap of adjacentGaps) {
+        expect(gap).toBeGreaterThanOrEqual(2.7);
       }
     }
   });
