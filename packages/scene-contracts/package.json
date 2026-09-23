@@ -1,0 +1,19 @@
+{
+  "name": "@lemonade/scene-contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./scene-state": "./src/scene-state.ts",
+    "./stand-anchors": "./src/stand-anchors.ts",
+    "./storyboard": "./src/storyboard.ts",
+    "./street-layout": "./src/street-layout.ts",
+    "./residential-layout": "./src/residential-layout.ts",
+    "./world-scale": "./src/world-scale.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "build": "tsc -p tsconfig.build.json"
+  }
+}
