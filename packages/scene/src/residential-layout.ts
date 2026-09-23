@@ -710,11 +710,12 @@ export const residentialAccessLayout = (
       : roadCenterZ >= property.houseZ
         ? road.minZ
         : road.maxZ;
-  const drivewayDeltaX = roadX - drivewayX;
-  const drivewayDeltaZ = roadCenterZ - parkingZ;
-  const roadDistance = Math.hypot(drivewayDeltaX, drivewayDeltaZ);
-  const sidewalkDistance = Math.hypot(drivewaySidewalkX - drivewayX, drivewaySidewalkZ - parkingZ);
-  const drivewayLength = Math.max(3.2, roadDistance + 0.3);
+  const drivewayDeltaX = drivewaySidewalkX - drivewayX;
+  const drivewayDeltaZ = drivewaySidewalkZ - parkingZ;
+  const drivewayLength = Math.max(
+    3.2,
+    Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.3,
+  );
   const drivewayDepth = drivewayLength;
   const drivewayCenterX = (drivewayX + drivewaySidewalkX) / 2;
   const drivewayCenterZ = (parkingZ + drivewaySidewalkZ) / 2;
@@ -775,15 +776,16 @@ const drivewayExclusionRectForProperty = (
     Object.freeze({ ...property, drivewayX }),
     seed,
   );
-  const dx = access.roadX - drivewayX;
-  const dz = access.roadCenterZ - access.parkingZ;
+  const dx = access.drivewaySidewalkX - drivewayX;
+  const dz = access.drivewaySidewalkZ - access.parkingZ;
   const rotationY = Math.atan2(dz, dx);
   const x = access.drivewayCenterX;
   const z = access.drivewayCenterZ;
+  const roadDistance = Math.hypot(access.roadX - drivewayX, access.roadCenterZ - access.parkingZ);
   const cosine = Math.abs(Math.cos(rotationY));
   const sine = Math.abs(Math.sin(rotationY));
-  const halfX = (access.drivewayLength / 2) * cosine + (WORLD_SCALE.vehicle.width / 2) * sine;
-  const halfZ = (access.drivewayLength / 2) * sine + (WORLD_SCALE.vehicle.width / 2) * cosine;
+  const halfX = (roadDistance / 2) * cosine + (WORLD_SCALE.vehicle.width / 2) * sine;
+  const halfZ = (roadDistance / 2) * sine + (WORLD_SCALE.vehicle.width / 2) * cosine;
   return Object.freeze({
     minX: x - halfX,
     maxX: x + halfX,
@@ -792,7 +794,7 @@ const drivewayExclusionRectForProperty = (
     role: "driveway",
     x,
     z,
-    length: access.drivewayLength,
+    length: roadDistance,
     width: WORLD_SCALE.vehicle.width,
     rotationY,
   });
