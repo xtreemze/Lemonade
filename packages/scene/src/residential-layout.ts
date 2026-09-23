@@ -91,6 +91,7 @@ const footprintIntersectsRect = (
 
 const resolvePropertyOverlaps = (
   properties: readonly ResidentialPropertySpec[],
+  seed: number,
 ): readonly ResidentialPropertySpec[] => {
   const mutable = properties.map((p) => ({ ...p }));
   const minClearance = 0.5;
@@ -123,14 +124,25 @@ const resolvePropertyOverlaps = (
 
       if (totalPushX !== 0 || totalPushZ !== 0) {
         anyMoved = true;
+        const shifted = {
+          x: a.houseX - totalPushX,
+          z: a.houseZ - totalPushZ,
+        };
+        const cleared = clearHouseFromBaseHardscape(
+          shifted,
+          aFootprint.halfWidth,
+          aFootprint.halfDepth,
+          seed,
+        );
+        const accessShiftX = cleared.x - a.houseX;
         mutable[i] = {
           ...a,
-          houseX: a.houseX - totalPushX,
-          houseZ: a.houseZ - totalPushZ,
+          houseX: cleared.x,
+          houseZ: cleared.z,
           drivewayX:
-            a.drivewayX === null ? null : a.drivewayX - totalPushX,
+            a.drivewayX === null ? null : a.drivewayX + accessShiftX,
           mailboxX:
-            a.mailboxX === null ? null : a.mailboxX - totalPushX,
+            a.mailboxX === null ? null : a.mailboxX + accessShiftX,
         };
       }
     }
@@ -1248,7 +1260,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     safeSeed,
   );
   const allPropertiesRaw = [...front, ...middle, ...back, ...outer];
-  const allPropertiesResolved = resolvePropertyOverlaps(allPropertiesRaw);
+  const allPropertiesResolved = resolvePropertyOverlaps(allPropertiesRaw, safeSeed);
 
   const resolvedByRole = new Map(allPropertiesResolved.map((p) => [p.role, p]));
   const resolveProperties = (props: readonly ResidentialPropertySpec[]) =>
