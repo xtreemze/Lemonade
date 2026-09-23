@@ -22,6 +22,10 @@ import {
   STREET_LAYOUT,
 } from "./street-layout.js";
 import { createStreetSurfaceField } from "./street-surface-field.js";
+import {
+  createPropertyAccessSurfaceField,
+  type PropertyAccessSurfaceSpec,
+} from "./property-access-surface-field.js";
 import { WORLD_SCALE } from "./world-scale.js";
 import type { PropertyActivity } from "./neighborhood-mobility.js";
 
@@ -54,28 +58,6 @@ const road = (
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(x, y, z);
   if (role !== undefined) mesh.userData["sceneRole"] = role;
-  scene.add(mesh);
-  return mesh;
-};
-
-const accessStrip = (
-  scene: Scene,
-  length: number,
-  width: number,
-  x: number,
-  z: number,
-  rotationY: number,
-  color: number,
-  y: number,
-  role: string,
-): Mesh => {
-  const mesh = new Mesh(
-    new BoxGeometry(length, 0.018, width),
-    material(color),
-  );
-  mesh.position.set(x, y, z);
-  mesh.rotation.y = -rotationY;
-  mesh.userData["sceneRole"] = role;
   scene.add(mesh);
   return mesh;
 };
@@ -716,30 +698,27 @@ export const populateNeighborhood = (
     ...layout.backProperties,
     ...layout.outerProperties,
   ];
+  const propertyAccessSurfaces: PropertyAccessSurfaceSpec[] = [];
   for (const property of allProperties) {
     const access = residentialAccessLayout(property, seed);
     if (property.drivewayX !== null) {
-      accessStrip(
-        scene,
-        access.drivewayLength,
-        WORLD_SCALE.vehicle.width,
-        access.drivewayCenterX,
-        access.drivewayCenterZ,
-        access.drivewayRotationY,
-        0xc9b995,
-        0.019,
-        "driveway",
-      );
-      accessStrip(
-        scene,
-        access.pathLength,
-        access.pathWidth,
-        access.pathCenterX,
-        access.pathCenterZ,
-        access.pathRotationY,
-        0xd8c9aa,
-        0.021,
-        "front-path",
+      propertyAccessSurfaces.push(
+        Object.freeze({
+          role: "driveway",
+          length: access.drivewayLength,
+          width: WORLD_SCALE.vehicle.width,
+          x: access.drivewayCenterX,
+          z: access.drivewayCenterZ,
+          rotationY: access.drivewayRotationY,
+        }),
+        Object.freeze({
+          role: "front-path",
+          length: access.pathLength,
+          width: access.pathWidth,
+          x: access.pathCenterX,
+          z: access.pathCenterZ,
+          rotationY: access.pathRotationY,
+        }),
       );
       roadSegments += 2;
     }
@@ -758,6 +737,11 @@ export const populateNeighborhood = (
     home.name = "building-" + property.role;
     scene.add(home);
   }
+
+  const propertyAccessField =
+    createPropertyAccessSurfaceField(propertyAccessSurfaces);
+  for (const anchor of propertyAccessField.anchors) scene.add(anchor);
+  for (const mesh of propertyAccessField.meshes) scene.add(mesh);
 
   const housePositions = [
     ...layout.middleProperties,
