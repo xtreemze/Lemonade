@@ -83,7 +83,8 @@
         "noProcessEnv": "off",
         "noHexColors": "off",
         "noContinue": "off",
-        "noTernary": "off"
+        "noTernary": "off",
+        "noExcessiveClassesPerFile": "off"
       },
       "suspicious": {
         "noBitwiseOperators": "off",
@@ -116,6 +117,18 @@
     }
   },
   "overrides": [
+    {
+      "includes": [
+        "apps/web/src/persistence.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useErrorCause": "off"
+          }
+        }
+      }
+    },
     {
       "includes": [
         "scripts/certify.mjs"
