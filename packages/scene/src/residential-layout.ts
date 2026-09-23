@@ -759,10 +759,12 @@ const drivewayRectForProperty = (
     Object.freeze({ ...property, drivewayX }),
     seed,
   );
+  // Driveway pavement ends at the sidewalk crossing. Mobility has a
+  // separate semantic route from the driveway across the curb to the road.
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.roadX, z: access.roadCenterZ },
+    { x: access.drivewaySidewalkX, z: access.drivewaySidewalkZ },
     WORLD_SCALE.vehicle.width,
   );
 };
@@ -779,7 +781,7 @@ const drivewayExclusionRectForProperty = (
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.roadX, z: access.roadCenterZ },
+    { x: access.drivewaySidewalkX, z: access.drivewaySidewalkZ },
     WORLD_SCALE.vehicle.width,
   );
 };
@@ -863,10 +865,7 @@ const resolveGeneratedAccess = (
         const reachesSidewalk = hardscape.some(
           (rect) => rect.role === "sidewalk" && rectsOverlap(candidateRect, rect),
         );
-        const reachesRoad = hardscape.some(
-          (rect) => rect.role === "road" && rectsOverlap(candidateRect, rect),
-        );
-        if (!reachesSidewalk || !reachesRoad) continue;
+        if (!reachesSidewalk) continue;
 
         const clearsHouses = properties.every((other) => {
           const footprint = propertyFootprint(other);
@@ -1276,7 +1275,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       7,
     ),
   ];
-  for (const fallbackSalt of [4_050, 4_850] as const) {
+  for (const fallbackSalt of [4_050, 4_850, 5_650, 6_450] as const) {
     const assignedRoles = new Set(
       backyardTrees
         .map((planting) => planting.propertyRole)
@@ -1330,7 +1329,11 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     ),
   ]);
 
-  const detailedProperties = [...front, ...middle, ...back];
+  const detailedProperties = [
+    ...partial.frontProperties,
+    ...partial.middleProperties,
+    ...partial.backProperties,
+  ];
   const yardShrubs = generatePropertyPlantings(
     safeSeed,
     detailedProperties,
