@@ -12,6 +12,7 @@ import {
 import { characterProfileFor } from "./characters.js";
 import { decorateCharacter } from "./character-detail.js";
 import { updateNeighborhoodWind } from "./neighborhood.js";
+import type { SceneNeighborhoodOccurrence } from "./neighborhood-occurrences.js";
 import {
   createNeighborhoodMobilitySystem,
   type MobilityPose,
@@ -52,6 +53,7 @@ export type AmbientLifeController = Readonly<{
     elapsedMs: number,
     durationMs: number,
     dayNumber?: number,
+    occurrences?: readonly SceneNeighborhoodOccurrence[],
     focus?: Readonly<{ x: number; z: number }>,
   ): NeighborhoodMobilitySample;
 }>;
@@ -564,6 +566,7 @@ export const createAmbientLife = (
       elapsedMs,
       durationMs,
       dayNumber = 1,
+      occurrences = Object.freeze([]),
       focus = Object.freeze({ x: 0, z: 0 }),
     ): NeighborhoodMobilitySample {
       updateNeighborhoodWind(scene, elapsedMs / 1000, weather);
@@ -602,6 +605,7 @@ export const createAmbientLife = (
         elapsedMs,
         durationMs,
         dayNumber,
+        occurrences,
         focus,
         pedestrianObstacles,
       });
