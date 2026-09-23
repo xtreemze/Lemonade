@@ -5,254 +5,158 @@ export interface GizmoUIOptions {
   container: HTMLElement;
 }
 
-const createButton = (text: string, onClick: () => void): HTMLButtonElement => {
+const createButton = (
+  text: string,
+  onClick: () => void,
+): HTMLButtonElement => {
   const button = document.createElement("button");
+  button.type = "button";
   button.textContent = text;
-  button.onclick = onClick;
+  button.addEventListener("click", onClick);
   button.style.cssText = `
+    min-height: 44px;
     padding: 8px 12px;
-    margin: 4px;
     background: #333;
     color: #fff;
     border: 1px solid #666;
     border-radius: 4px;
     cursor: pointer;
-    font-family: monospace;
-    font-size: 12px;
+    font: 12px monospace;
   `;
   return button;
 };
 
 export const createGizmoUI = (options: GizmoUIOptions): HTMLElement => {
   const { gizmoController, container } = options;
-
-  const panel = document.createElement("div");
+  const panel = document.createElement("aside");
+  panel.setAttribute("aria-label", "3D transform controls");
   panel.style.cssText = `
-    position: fixed;
+    position: absolute;
     top: 10px;
     left: 10px;
-    background: rgba(0, 0, 0, 0.9);
+    width: min(300px, calc(100% - 20px));
+    padding: 12px;
+    background: rgb(0 0 0 / 90%);
     border: 2px solid #ff00ff;
     border-radius: 8px;
-    padding: 12px;
-    font-family: monospace;
-    font-size: 12px;
     color: #fff;
+    font: 12px monospace;
     z-index: 1000;
-    max-width: 300px;
   `;
 
-  const title = document.createElement("div");
-  title.textContent = "🎨 3D Gizmo Dev Tool";
-  title.style.cssText = `
-    font-weight: bold;
-    margin-bottom: 8px;
-    color: #ff00ff;
-    font-size: 14px;
-  `;
+  const title = document.createElement("strong");
+  title.textContent = "3D Gizmo";
   panel.appendChild(title);
 
-  const modeContainer = document.createElement("div");
-  modeContainer.style.cssText = "margin-bottom: 8px;";
+  const modes = document.createElement("div");
+  modes.style.cssText = "display:flex;gap:4px;flex-wrap:wrap;margin-block:8px;";
 
-  const modeLabel = document.createElement("div");
-  modeLabel.textContent = "Transform Mode (G/R/S):";
-  modeLabel.style.cssText = "margin-bottom: 4px; color: #aaa;";
-  modeContainer.appendChild(modeLabel);
-
-  const updateActiveMode = () => {
-    Array.from(modeContainer.querySelectorAll("button")).forEach((btn) => {
-      btn.style.background = "#333";
-      btn.style.color = "#fff";
+  const modeButtons = new Map<TransformMode, HTMLButtonElement>();
+  for (const [mode, label] of [
+    ["translate", "Move (G)"],
+    ["rotate", "Rotate (R)"],
+    ["scale", "Scale (S)"],
+  ] as const) {
+    const button = createButton(label, () => {
+      gizmoController.setMode(mode);
+      sync();
     });
-    const activeBtn = modeContainer.querySelector(
-      `button[data-mode="${gizmoController.getMode()}"]`,
-    ) as HTMLButtonElement | null;
-    if (activeBtn) {
-      activeBtn.style.background = "#ff00ff";
-      activeBtn.style.color = "#000";
-    }
-  };
-
-  const translateBtn = document.createElement("button");
-  translateBtn.textContent = "Move (G)";
-  translateBtn.setAttribute("data-mode", "translate");
-  translateBtn.onclick = () => {
-    gizmoController.setMode("translate");
-    updateActiveMode();
-  };
-  translateBtn.style.cssText = `
-    padding: 6px 10px;
-    margin: 2px;
-    background: #ff00ff;
-    color: #000;
-    border: 1px solid #666;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: monospace;
-    font-size: 11px;
-    font-weight: bold;
-  `;
-
-  const rotateBtn = document.createElement("button");
-  rotateBtn.textContent = "Rotate (R)";
-  rotateBtn.setAttribute("data-mode", "rotate");
-  rotateBtn.onclick = () => {
-    gizmoController.setMode("rotate");
-    updateActiveMode();
-  };
-  rotateBtn.style.cssText = `
-    padding: 6px 10px;
-    margin: 2px;
-    background: #333;
-    color: #fff;
-    border: 1px solid #666;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: monospace;
-    font-size: 11px;
-  `;
-
-  const scaleBtn = document.createElement("button");
-  scaleBtn.textContent = "Scale (S)";
-  scaleBtn.setAttribute("data-mode", "scale");
-  scaleBtn.onclick = () => {
-    gizmoController.setMode("scale");
-    updateActiveMode();
-  };
-  scaleBtn.style.cssText = `
-    padding: 6px 10px;
-    margin: 2px;
-    background: #333;
-    color: #fff;
-    border: 1px solid #666;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: monospace;
-    font-size: 11px;
-  `;
-
-  modeContainer.appendChild(translateBtn);
-  modeContainer.appendChild(rotateBtn);
-  modeContainer.appendChild(scaleBtn);
-  panel.appendChild(modeContainer);
-
-  const infoContainer = document.createElement("div");
-  infoContainer.style.cssText = `
-    background: #1a1a1a;
-    border: 1px solid #444;
-    border-radius: 4px;
-    padding: 8px;
-    margin-bottom: 8px;
-    font-size: 11px;
-    color: #0f0;
-  `;
+    modeButtons.set(mode, button);
+    modes.appendChild(button);
+  }
+  panel.appendChild(modes);
 
   const selectedInfo = document.createElement("div");
-  selectedInfo.id = "selected-info";
-  selectedInfo.textContent = "No object selected (ESC to deselect)";
-  infoContainer.appendChild(selectedInfo);
+  selectedInfo.style.cssText =
+    "margin-block:8px;padding:8px;background:#1a1a1a;border:1px solid #444;color:#0f0;";
+  panel.appendChild(selectedInfo);
 
-  const positionInfo = document.createElement("div");
-  positionInfo.id = "position-info";
-  positionInfo.style.cssText = "margin-top: 4px; font-size: 10px;";
-  infoContainer.appendChild(positionInfo);
+  const actions = document.createElement("div");
+  actions.style.cssText = "display:grid;gap:6px;";
 
-  panel.appendChild(infoContainer);
+  const savedCount = document.createElement("div");
+  savedCount.style.cssText = "margin-top:8px;color:#0f0;";
 
-  const actionContainer = document.createElement("div");
-  actionContainer.style.cssText = "display: flex; flex-direction: column; gap: 6px;";
+  actions.appendChild(
+    createButton("Save transform", () => {
+      gizmoController.saveTransform();
+      sync();
+    }),
+  );
+  actions.appendChild(
+    createButton("Export JSON", () => {
+      const blob = new Blob([gizmoController.exportAsJSON()], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "scene-transforms.json";
+      anchor.click();
+      URL.revokeObjectURL(url);
+    }),
+  );
+  actions.appendChild(
+    createButton("Export code", () => {
+      const blob = new Blob([gizmoController.exportAsCode()], {
+        type: "text/plain",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "scene-transforms.ts";
+      anchor.click();
+      URL.revokeObjectURL(url);
+    }),
+  );
+  actions.appendChild(
+    createButton("Copy JSON", () => {
+      void navigator.clipboard
+        .writeText(gizmoController.exportAsJSON())
+        .catch(() => undefined);
+    }),
+  );
+  panel.append(actions, savedCount);
 
-  const saveBtn = createButton("💾 Save Transform", () => {
-    gizmoController.saveTransform();
-    updateSavedCount();
-  });
-  actionContainer.appendChild(saveBtn);
+  let animationFrame: number | null = null;
+  let disposed = false;
 
-  const exportJSONBtn = createButton("📋 Export JSON", () => {
-    const json = gizmoController.exportAsJSON();
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "scene-transforms.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  });
-  actionContainer.appendChild(exportJSONBtn);
-
-  const exportCodeBtn = createButton("📝 Export Code", () => {
-    const code = gizmoController.exportAsCode();
-    const blob = new Blob([code], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "scene-transforms.ts";
-    a.click();
-    URL.revokeObjectURL(url);
-  });
-  actionContainer.appendChild(exportCodeBtn);
-
-  const copyToClipboardBtn = createButton("📋 Copy JSON", () => {
-    const json = gizmoController.exportAsJSON();
-    navigator.clipboard.writeText(json).then(() => {
-      copyToClipboardBtn.textContent = "✓ Copied!";
-      setTimeout(() => {
-        copyToClipboardBtn.textContent = "📋 Copy JSON";
-      }, 2000);
-    });
-  });
-  actionContainer.appendChild(copyToClipboardBtn);
-
-  panel.appendChild(actionContainer);
-
-  const savedCountContainer = document.createElement("div");
-  savedCountContainer.id = "saved-count";
-  savedCountContainer.style.cssText = `
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid #444;
-    font-size: 11px;
-    color: #0f0;
-  `;
-  panel.appendChild(savedCountContainer);
-
-  const updateSavedCount = () => {
-    const saved = gizmoController.getSavedTransforms();
-    savedCountContainer.textContent = `Saved: ${saved.length} object${saved.length !== 1 ? "s" : ""}`;
-  };
-
-  const updateUI = () => {
-    const selected = gizmoController.getSelectedObject();
-    if (selected) {
-      selectedInfo.textContent = `Selected: ${selected.name || "unnamed"}`;
-      const pos = selected.position;
-      const rot = selected.rotation;
-      const scale = selected.scale;
-      positionInfo.innerHTML = `
-        <div>Pos: (${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})</div>
-        <div>Rot: (${rot.x.toFixed(2)}, ${rot.y.toFixed(2)}, ${rot.z.toFixed(2)})</div>
-        <div>Scale: (${scale.x.toFixed(2)}, ${scale.y.toFixed(2)}, ${scale.z.toFixed(2)})</div>
-      `;
-    } else {
-      selectedInfo.textContent = "No object selected (ESC to deselect)";
-      positionInfo.innerHTML = "";
+  function sync(): void {
+    if (disposed) return;
+    for (const [mode, button] of modeButtons) {
+      const active = gizmoController.getMode() === mode;
+      button.style.background = active ? "#ff00ff" : "#333";
+      button.style.color = active ? "#000" : "#fff";
     }
-    updateSavedCount();
+
+    const selected = gizmoController.getSelectedObject();
+    if (selected === null) {
+      selectedInfo.textContent = "No object selected.";
+    } else {
+      selectedInfo.textContent =
+        `${selected.name || "unnamed"} · ` +
+        `pos ${selected.position.x.toFixed(2)}, ${selected.position.y.toFixed(2)}, ${selected.position.z.toFixed(2)}`;
+    }
+
+    const saved = gizmoController.getSavedTransforms();
+    savedCount.textContent = `Saved: ${String(saved.length)}`;
+  }
+
+  const frame = (): void => {
+    sync();
+    if (!disposed) animationFrame = window.requestAnimationFrame(frame);
   };
 
-  // Update UI on animation frame
-  const updateLoop = () => {
-    updateUI();
-    requestAnimationFrame(updateLoop);
-  };
-  updateLoop();
+  const observer = new MutationObserver(() => {
+    if (!container.contains(panel)) {
+      disposed = true;
+      if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
+      observer.disconnect();
+    }
+  });
+  observer.observe(container, { childList: true, subtree: true });
 
+  sync();
+  animationFrame = window.requestAnimationFrame(frame);
   return panel;
 };
-
-declare global {
-  interface Window {
-    __updateActiveMode?: () => void;
-  }
-}
