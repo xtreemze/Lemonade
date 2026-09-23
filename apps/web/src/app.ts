@@ -565,22 +565,29 @@ export class LemonadeApp {
       }
       case "scene.diagnostics":
         return sceneDevtools().diagnostics();
-      case "scene.tree":
+      case "scene.tree": {
+        const maxDepth = devOptionalNumber(args, "maxDepth");
+        const maxChildren = devOptionalNumber(args, "maxChildren");
         return sceneDevtools().tree({
-          maxDepth: devOptionalNumber(args, "maxDepth"),
-          maxChildren: devOptionalNumber(args, "maxChildren"),
+          ...(maxDepth === undefined ? {} : { maxDepth }),
+          ...(maxChildren === undefined ? {} : { maxChildren }),
         });
+      }
       case "scene.object":
         return sceneDevtools().object({ id: devString(args, "id") });
-      case "scene.set_transform":
+      case "scene.set_transform": {
+        const position = devTuple(args, "position");
+        const rotation = devTuple(args, "rotation");
+        const scale = devTuple(args, "scale");
         return sceneDevtools().setTransform(
           { id: devString(args, "id") },
           {
-            position: devTuple(args, "position"),
-            rotation: devTuple(args, "rotation"),
-            scale: devTuple(args, "scale"),
+            ...(position === undefined ? {} : { position }),
+            ...(rotation === undefined ? {} : { rotation }),
+            ...(scale === undefined ? {} : { scale }),
           },
         );
+      }
       case "scene.set_visibility": {
         const visible = args["visible"];
         if (typeof visible !== "boolean") throw new TypeError("visible must be a boolean.");
