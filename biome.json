@@ -118,6 +118,18 @@
   "overrides": [
     {
       "includes": [
+        "scripts/certify.mjs"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnresolvedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
         "apps/web/src/app.ts",
         "e2e/renderer-stress.spec.ts"
       ],
