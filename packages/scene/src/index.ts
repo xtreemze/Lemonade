@@ -26,6 +26,10 @@ import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
 import { walkingCycleAtDistance } from "./gait.js";
 import {
+  rendererDiagnostics,
+  type RendererDiagnostics,
+} from "./renderer-diagnostics.js";
+import {
   characterGroundClearance,
   WORLD_SCALE,
 } from "./world-scale.js";
@@ -70,6 +74,7 @@ export type LemonsvilleSceneOptions = Readonly<{
 export interface LemonsvilleSceneController {
   update(state: LemonsvilleSceneState): void;
   resize(width: number, height: number): void;
+  diagnostics(): RendererDiagnostics;
   dispose(): void;
   scene?: Scene; // Three.js Scene for dev tools
   camera?: PerspectiveCamera; // Three.js Camera for dev tools
@@ -1144,8 +1149,11 @@ export const createLemonsvilleScene = (
     renderer.dispose();
   };
 
+  const diagnostics = (): RendererDiagnostics => rendererDiagnostics(renderer.info);
+
   update(initialState);
-  return Object.freeze({ update, resize, dispose, scene, camera });
+  return Object.freeze({ update, resize, diagnostics, dispose, scene, camera });
 };
 
 export { createGizmoController, type GizmoController } from "./gizmo-controller.js";
+export { rendererDiagnostics, type RendererDiagnostics } from "./renderer-diagnostics.js";
