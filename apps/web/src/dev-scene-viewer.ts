@@ -10,8 +10,6 @@
 import type { SceneWeather, ScenePhase, LemonsvilleSceneState } from "@lemonade/scene";
 import { createLemonsvilleScene } from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
-// TODO: Integrate gizmo controller for 3D editor tool (game-engine-like scene manipulation)
-// import { createGizmoController } from "@lemonade/scene";
 
 export const isSceneViewerEnabled = (): boolean => {
   if (typeof localStorage === "undefined") return false;
@@ -164,9 +162,9 @@ export const createPersistentSceneViewer = (
     reducedMotion: false,
   });
 
-  // Create scene (gizmo disabled for now - reserved for future 3D editor tool)
+  // Create the same live scene/editor surface used by the game.
   const scene = createLemonsvilleScene(canvas, sceneState, {
-    enableGizmo: false,
+    enableGizmo: options.enableGizmo === true,
   });
 
   if (!scene) {
@@ -188,14 +186,7 @@ export const createPersistentSceneViewer = (
     return null;
   }
 
-  // TODO: Initialize gizmo controller for 3D editor (reserved for future development)
-  // Once gizmo is integrated, this will enable realtime scene object manipulation
-  // let gizmoController: ReturnType<typeof createGizmoController> | null = null;
-  // if (scene.scene && scene.camera) {
-  //   gizmoController = createGizmoController({ scene: scene.scene, camera: scene.camera, ... })
-  // }
-
-  // Gizmo section info (reserved for future 3D editor tool development)
+  // Live editor + diagnostics use the scene controller shared with the MCP bridge.
   const gizmoSection = document.createElement("div");
   gizmoSection.style.cssText = `
     background: #1a1a1a;
@@ -205,12 +196,16 @@ export const createPersistentSceneViewer = (
     font-size: 11px;
     color: #aaa;
   `;
-  gizmoSection.innerHTML = `
-    <div style="font-weight: bold; margin-bottom: 8px; color: #888;">📐 3D Editor (Future)</div>
-    <div style="line-height: 1.5;">
-      <div style="font-size: 10px;">Infrastructure for realtime 3D manipulation and diagnostics. Enable when ready for game-engine-like editing capabilities.</div>
-    </div>
-  `;
+  const renderDiagnostics = (): void => {
+    const diagnostics = scene.devtools.diagnostics();
+    gizmoSection.textContent =
+      `3D editor: ${diagnostics.editor.enabled ? "enabled" : "disabled"} · ` +
+      `${String(diagnostics.scene.objects)} objects · ` +
+      `${String(diagnostics.scene.meshes)} meshes · ` +
+      `${String(diagnostics.renderer.render.calls)} draw calls · ` +
+      `${String(diagnostics.renderer.render.triangles)} triangles`;
+  };
+  renderDiagnostics();
   sidebar.appendChild(gizmoSection);
 
   // Handle resize
