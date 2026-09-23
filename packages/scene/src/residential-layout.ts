@@ -681,11 +681,14 @@ export const residentialAccessLayout = (
       : sidewalkCenterZ >= property.houseZ
         ? sidewalk.minZ
         : sidewalk.maxZ;
+  // The path is a walking surface leading up to the sidewalk; it should end
+  // at the sidewalk's near edge, not extend across it to its centerline
+  // (which would visually stack the path on top of the sidewalk).
   const pathDeltaX = sidewalkX - entryX;
-  const pathDeltaZ = sidewalkCenterZ - entryZ;
+  const pathDeltaZ = sidewalkEdgeZ - entryZ;
   const pathLength = Math.max(0.72, Math.hypot(pathDeltaX, pathDeltaZ) + 0.24);
   const pathCenterX = (entryX + sidewalkX) / 2;
-  const pathCenterZ = (entryZ + sidewalkCenterZ) / 2;
+  const pathCenterZ = (entryZ + sidewalkEdgeZ) / 2;
   const pathWidth = 1.04;
   const pathDepth = pathLength;
   const pathRotationY = Math.atan2(pathDeltaZ, pathDeltaX);
@@ -730,15 +733,18 @@ export const residentialAccessLayout = (
       : roadCenterZ >= property.houseZ
         ? road.minZ
         : road.maxZ;
+  // The driveway pavement should end at the road's near edge, not extend
+  // across it to the road's centerline (which would visually stack the
+  // driveway on top of the travel lane).
   const drivewayDeltaX = roadX - drivewayX;
-  const drivewayDeltaZ = roadCenterZ - parkingZ;
+  const drivewayDeltaZ = roadEdgeZ - parkingZ;
   const drivewayLength = Math.max(
     3.2,
     Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.3,
   );
   const drivewayDepth = drivewayLength;
   const drivewayCenterX = (drivewayX + roadX) / 2;
-  const drivewayCenterZ = (parkingZ + roadCenterZ) / 2;
+  const drivewayCenterZ = (parkingZ + roadEdgeZ) / 2;
   const drivewayRotationY = Math.atan2(drivewayDeltaZ, drivewayDeltaX);
 
   return Object.freeze({
@@ -779,10 +785,12 @@ const drivewayRectForProperty = (
     Object.freeze({ ...property, drivewayX }),
     seed,
   );
+  // End at the road's near edge, not its centerline, so the driveway
+  // doesn't visually stack on top of the travel lane.
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.roadX, z: access.roadCenterZ },
+    { x: access.roadX, z: access.roadEdgeZ },
     WORLD_SCALE.vehicle.width,
   );
 };
@@ -796,10 +804,12 @@ const drivewayExclusionRectForProperty = (
     Object.freeze({ ...property, drivewayX }),
     seed,
   );
+  // End at the road's near edge, not its centerline, so the driveway
+  // doesn't visually stack on top of the travel lane.
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.roadX, z: access.roadCenterZ },
+    { x: access.roadX, z: access.roadEdgeZ },
     WORLD_SCALE.vehicle.width,
   );
 };
@@ -939,10 +949,12 @@ const accessExclusions = (
     if (property.drivewayX === null) return [];
     const access = residentialAccessLayout(property, seed);
     const driveway = drivewayExclusionRectForProperty(property, property.drivewayX, seed);
+    // End at the sidewalk's near edge, not its centerline, so the path
+    // doesn't visually stack on top of the sidewalk.
     const path = orientedAccessRect(
       "path",
       { x: access.entryX, z: access.entryZ },
-      { x: access.sidewalkX, z: access.sidewalkCenterZ },
+      { x: access.sidewalkX, z: access.sidewalkEdgeZ },
       access.pathWidth,
     );
     return [driveway, path];
@@ -1197,8 +1209,20 @@ const generatePropertyPlantings = (
 const restoreFrontMailboxes = (
   properties: readonly ResidentialPropertySpec[],
   seed: number,
-): readonly ResidentialPropertySpec[] =>
-  Object.freeze(
+): readonly ResidentialPropertySpec[] => {
+  // mailboxXForDriveway only clears the mailbox's own driveway and base
+  // street hardscape; it doesn't know about neighboring properties' final
+  // driveways (not yet resolved when a property is first created). Check
+  // those here too, now that every front property's drivewayX is final.
+  const clearOfOtherDriveways = (x: number, ownDrivewayX: number): boolean =>
+    properties.every(
+      (other) =>
+        other.drivewayX === null ||
+        other.drivewayX === ownDrivewayX ||
+        Math.abs(x - other.drivewayX) > DRIVEWAY_HALF_WIDTH + 0.3,
+    );
+
+  return Object.freeze(
     properties.map((property, index) => {
       if (property.drivewayX === null) return property;
       const drivewaySide: -1 | 1 =
@@ -1207,17 +1231,16 @@ const restoreFrontMailboxes = (
         DRIVEWAY_HALF_WIDTH +
         MAILBOX_CLEARANCE_FROM_DRIVEWAY +
         unit(seed, index * 17 + 31) * 0.18;
-      return Object.freeze({
-        ...property,
-        mailboxX: mailboxXForDriveway(
-          property.drivewayX,
-          drivewaySide,
-          offset,
-          seed,
-        ),
-      });
+      const preferred = property.drivewayX + drivewaySide * offset;
+      const mailboxX =
+        mailboxAnchorIsClear(preferred, seed) &&
+        clearOfOtherDriveways(preferred, property.drivewayX)
+          ? preferred
+          : property.drivewayX - drivewaySide * offset;
+      return Object.freeze({ ...property, mailboxX });
     }),
   );
+};
 
 export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): ResidentialLayout => {
   const safeSeed = Number.isFinite(seed) ? Math.trunc(seed) >>> 0 : DEFAULT_RESIDENTIAL_SEED;
