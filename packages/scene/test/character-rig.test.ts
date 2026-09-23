@@ -19,7 +19,7 @@ describe("shared Three procedural character rig", () => {
     expect(rig.head.geometry).toBe(geometries.head);
     expect(rig.arms[0].lower.children[0]).toBeDefined();
     expect(rig.legs[0].lower.children[0]).toBeDefined();
-    expect(rig.root.userData["characterRig"]).toBe("shared-three");
+    expect(rig.root.userData.characterRig).toBe("shared-three");
     expect(rig.root.scale.y).toBeCloseTo(
       rig.profile.heightScale * WORLD_SCALE.character.renderScale,
     );

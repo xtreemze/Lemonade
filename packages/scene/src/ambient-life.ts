@@ -592,14 +592,13 @@ export const transportGaitAt = (
 
 const applyTransportWalk = (
   rig: TransportCharacterRig,
-  elapsedMs: number,
-  speed: number,
+  travelDistance: number,
+  preserveLocomotionPose: boolean,
 ): void => {
-  const travelDistance = Math.max(0, elapsedMs) / 1_000 * Math.max(0, speed);
   applyThreeCharacterPose(
     rig,
     characterPoseAtDistance(rig.profile, travelDistance, {
-      moving: speed > 0,
+      moving: preserveLocomotionPose,
     }),
   );
 };
@@ -660,7 +659,11 @@ const placeRig = (
   rig.root.position.set(pose.x, 0, pose.z);
   rig.root.rotation.y = -pose.yaw;
   rig.root.rotation.z = 0;
-  applyTransportWalk(rig, elapsedMs, pose.speed);
+  applyTransportWalk(
+    rig,
+    pose.travelDistance,
+    pose.interaction !== "gardening" && pose.interaction !== "mailbox",
+  );
   if (pose.interaction === "gardening") {
     rig.arms[0].root.rotation.x = -1.05;
     rig.arms[1].root.rotation.x = -0.72;

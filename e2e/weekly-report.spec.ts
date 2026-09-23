@@ -34,6 +34,7 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
     { name: "phone portrait", width: 360, height: 740, dailyColumns: 2, weeklyColumns: 2 },
     { name: "phone landscape", width: 740, height: 360, dailyColumns: 4, weeklyColumns: 4 },
     { name: "tablet", width: 1024, height: 768, dailyColumns: 4, weeklyColumns: 4 },
+    { name: "large desktop", width: 1600, height: 900, dailyColumns: 4, weeklyColumns: 4 },
   ] as const;
 
   for (const viewport of responsiveViewports) {
@@ -44,9 +45,13 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
       const report = document.querySelector(".report-panel");
       const reportContent = document.querySelector(".report-content");
       const dailyResults = document.querySelector(".results-grid");
+      const reportHeading = document.querySelector(".panel-heading");
       const ledger = document.querySelector(".ledger-breakdown");
+      const ledgerHeading = ledger?.querySelector("h3");
+      const ledgerTable = ledger?.querySelector("table");
       const weeklyResults = document.querySelector(".weekly-results-grid");
       const weekly = document.querySelector(".weekly-report");
+      const weeklyHeading = weekly?.querySelector(".weekly-report-heading");
       const action = document.querySelector("#review-history-button");
 
       if (
@@ -54,9 +59,13 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
         !(report instanceof HTMLElement) ||
         !(reportContent instanceof HTMLElement) ||
         !(dailyResults instanceof HTMLElement) ||
+        !(reportHeading instanceof HTMLElement) ||
         !(ledger instanceof HTMLElement) ||
+        !(ledgerHeading instanceof HTMLElement) ||
+        !(ledgerTable instanceof HTMLElement) ||
         !(weeklyResults instanceof HTMLElement) ||
         !(weekly instanceof HTMLElement) ||
+        !(weeklyHeading instanceof HTMLElement) ||
         !(action instanceof HTMLElement)
       ) {
         throw new TypeError("Expected complete responsive report structure.");
@@ -98,16 +107,21 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
           ...bounds(reportContent),
           clientHeight: reportContent.clientHeight,
           scrollHeight: reportContent.scrollHeight,
+          columns: columnCount(reportContent),
         },
         dailyResults: {
           ...bounds(dailyResults),
           display: getComputedStyle(dailyResults).display,
           columns: columnCount(dailyResults),
         },
+        reportHeadingDirection: getComputedStyle(reportHeading).flexDirection,
         ledger: {
           ...bounds(ledger),
           display: getComputedStyle(ledger).display,
           visibility: getComputedStyle(ledger).visibility,
+          contentHeight:
+            ledgerHeading.getBoundingClientRect().height +
+            ledgerTable.getBoundingClientRect().height,
           rowHeights: [...ledger.querySelectorAll<HTMLElement>("tbody tr")].map(
             (row) => row.getBoundingClientRect().height,
           ),
@@ -116,6 +130,7 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
           ...bounds(weekly),
           display: getComputedStyle(weekly).display,
         },
+        weeklyHeadingDirection: getComputedStyle(weeklyHeading).flexDirection,
         weeklyResults: {
           ...bounds(weeklyResults),
           columns: columnCount(weeklyResults),
@@ -139,6 +154,9 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
     expect(layout.report.scrollHeight, viewport.name).toBeLessThanOrEqual(
       layout.report.clientHeight + 1,
     );
+    expect(layout.report.width, viewport.name).toBeLessThanOrEqual(
+      Math.min(viewport.width, 1408) + 1,
+    );
     expect(layout.reportContent.scrollHeight, viewport.name).toBeLessThanOrEqual(
       layout.reportContent.clientHeight + 1,
     );
@@ -161,11 +179,19 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
       expect(rect.bottom, viewport.name).toBeLessThanOrEqual(viewport.height + 1);
     }
 
+    expect(layout.reportContent.columns, viewport.name).toBe(viewport.width >= 640 ? 2 : 1);
     expect(layout.dailyResults.display, viewport.name).toBe("grid");
     expect(layout.dailyResults.columns, viewport.name).toBe(viewport.dailyColumns);
+    expect(layout.reportHeadingDirection, viewport.name).toBe("row");
+    expect(layout.weeklyHeadingDirection, viewport.name).toBe("row");
     expect(layout.ledger.display, viewport.name).not.toBe("none");
     expect(layout.ledger.visibility, viewport.name).toBe("visible");
     expect(Math.max(...layout.ledger.rowHeights), viewport.name).toBeLessThanOrEqual(48);
+    if (viewport.width < 640) {
+      expect(layout.ledger.height, viewport.name).toBeLessThanOrEqual(
+        layout.ledger.contentHeight + 4,
+      );
+    }
     expect(layout.weekly.display, viewport.name).not.toBe("none");
     expect(layout.weeklyResults.columns, viewport.name).toBe(viewport.weeklyColumns);
   }

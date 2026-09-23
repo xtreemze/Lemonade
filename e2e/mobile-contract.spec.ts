@@ -19,6 +19,7 @@ const desktopViewports: readonly MobileViewport[] = Object.freeze([
   { name: "compact desktop", width: 800, height: 600 },
   { name: "standard desktop", width: 1024, height: 768 },
   { name: "wide desktop", width: 1280, height: 720 },
+  { name: "large desktop", width: 1600, height: 900 },
 ]);
 
 const expectViewportContract = async (
@@ -179,6 +180,138 @@ const expectCenteredBottomAction = async (
   expect((await action.textContent())?.trim()).toBe("");
 };
 
+const expectCompactReportComposition = async (
+  page: Page,
+  viewport: MobileViewport,
+): Promise<void> => {
+  const layout = await page.locator(".report-panel").evaluate((panel) => {
+    const heading = panel.querySelector<HTMLElement>(".panel-heading");
+    const ledger = panel.querySelector<HTMLElement>(".ledger-breakdown");
+    const ledgerHeading = ledger?.querySelector<HTMLElement>("h3") ?? null;
+    const ledgerTable = ledger?.querySelector<HTMLElement>("table") ?? null;
+
+    if (
+      heading === null ||
+      ledger === null ||
+      ledgerHeading === null ||
+      ledgerTable === null
+    ) {
+      throw new TypeError("Expected complete report composition.");
+    }
+
+    return {
+      headingDirection: getComputedStyle(heading).flexDirection,
+      ledgerHeight: ledger.getBoundingClientRect().height,
+      ledgerContentHeight:
+        ledgerHeading.getBoundingClientRect().height +
+        ledgerTable.getBoundingClientRect().height,
+    };
+  });
+
+  expect(layout.headingDirection).toBe("row");
+
+  if (viewport.width < 640) {
+    expect(layout.ledgerHeight).toBeLessThanOrEqual(layout.ledgerContentHeight + 4);
+  }
+};
+
+const expectCompactPortraitHistory = async (
+  page: Page,
+  viewport: MobileViewport,
+): Promise<void> => {
+  if (viewport.width >= viewport.height || viewport.width >= 761) return;
+
+  const layout = await page.locator("#ledger-history-host").evaluate((host) => {
+    const section = host.querySelector<HTMLElement>(".ledger-history");
+    const charts = [...host.querySelectorAll<SVGElement>(".history-chart")];
+
+    if (section === null || charts.length === 0) {
+      throw new TypeError("Expected rendered sales history.");
+    }
+
+    return {
+      hostHeight: host.getBoundingClientRect().height,
+      sectionHeight: section.getBoundingClientRect().height,
+      chartHeights: charts.map((chart) => chart.getBoundingClientRect().height),
+    };
+  });
+
+  expect(layout.sectionHeight).toBeLessThan(layout.hostHeight - 4);
+  expect(Math.max(...layout.chartHeights)).toBeLessThanOrEqual(169);
+};
+
+const expectDesktopReportComposition = async (
+  page: Page,
+  viewport: MobileViewport,
+): Promise<void> => {
+  const layout = await page.locator(".report-panel").evaluate((panel) => {
+    const content = panel.querySelector<HTMLElement>(".report-content");
+    const ledger = panel.querySelector<HTMLElement>(".ledger-breakdown");
+    const ledgerHeading = ledger?.querySelector<HTMLElement>("h3") ?? null;
+    const ledgerTable = ledger?.querySelector<HTMLElement>("table") ?? null;
+
+    if (
+      content === null ||
+      ledger === null ||
+      ledgerHeading === null ||
+      ledgerTable === null
+    ) {
+      throw new TypeError("Expected complete desktop report composition.");
+    }
+
+    const columns = getComputedStyle(content).gridTemplateColumns
+      .trim()
+      .split(/\s+/u)
+      .filter(Boolean).length;
+
+    return {
+      panelWidth: panel.getBoundingClientRect().width,
+      columns,
+      ledgerHeight: ledger.getBoundingClientRect().height,
+      ledgerContentHeight:
+        ledgerHeading.getBoundingClientRect().height +
+        ledgerTable.getBoundingClientRect().height,
+    };
+  });
+
+  expect(layout.columns).toBe(2);
+  expect(layout.panelWidth).toBeLessThanOrEqual(Math.min(viewport.width, 1408) + 1);
+  expect(layout.ledgerHeight).toBeLessThanOrEqual(layout.ledgerContentHeight + 4);
+};
+
+const expectDesktopHistoryComposition = async (
+  page: Page,
+  viewport: MobileViewport,
+): Promise<void> => {
+  const layout = await page.locator("#ledger-history-host").evaluate((host) => {
+    const section = host.querySelector<HTMLElement>(".ledger-history");
+    const chartGrid = host.querySelector<HTMLElement>(".chart-grid");
+    const charts = [...host.querySelectorAll<SVGElement>(".history-chart")];
+
+    if (section === null || chartGrid === null || charts.length === 0) {
+      throw new TypeError("Expected complete desktop sales-history composition.");
+    }
+
+    const columns = getComputedStyle(chartGrid).gridTemplateColumns
+      .trim()
+      .split(/\s+/u)
+      .filter(Boolean).length;
+
+    return {
+      sectionWidth: section.getBoundingClientRect().width,
+      columns,
+      chartHeights: charts.map((chart) => chart.getBoundingClientRect().height),
+    };
+  });
+
+  expect(layout.columns).toBe(2);
+  expect(layout.sectionWidth).toBeLessThanOrEqual(Math.min(viewport.width, 1408) + 1);
+
+  if (viewport.width >= 1024) {
+    expect(Math.max(...layout.chartHeights)).toBeLessThanOrEqual(321);
+  }
+};
+
 const expectPlanningControlWeight = async (page: Page): Promise<void> => {
   const metrics = await page.locator(".decision-panel").evaluate((panel) => {
     const sliders = [...panel.querySelectorAll<HTMLInputElement>(".game-slider")];
@@ -294,6 +427,7 @@ for (const viewport of viewports) {
       await expectViewportContract(page, "report");
       await expect(page.locator("#report-title")).toBeVisible();
       await expect(page.locator(".results-grid > div")).toHaveCount(4);
+      await expectCompactReportComposition(page, viewport);
       await expectCenteredBottomAction(
         page,
         page.getByRole("button", { name: "Review sales history" }),
@@ -304,6 +438,7 @@ for (const viewport of viewports) {
       await expect(main).toHaveAttribute("data-view", "history");
       await expectViewportContract(page, "history");
       await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+      await expectCompactPortraitHistory(page, viewport);
       await expectCenteredBottomAction(
         page,
         page.getByRole("button", { name: "Plan next day" }),
@@ -428,6 +563,7 @@ for (const viewport of desktopViewports) {
 
       await expect(main).toHaveAttribute("data-view", "report", { timeout: 15_000 });
       await expectViewportContract(page, "report");
+      await expectDesktopReportComposition(page, viewport);
       await expectCenteredBottomAction(
         page,
         page.getByRole("button", { name: "Review sales history" }),
@@ -437,6 +573,7 @@ for (const viewport of desktopViewports) {
       await expect(main).toHaveAttribute("data-view", "history");
       await expectViewportContract(page, "history");
       await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+      await expectDesktopHistoryComposition(page, viewport);
       await expectCenteredBottomAction(page, page.getByRole("button", { name: "Plan next day" }));
 
       await page.getByRole("button", { name: "Plan next day" }).click();
