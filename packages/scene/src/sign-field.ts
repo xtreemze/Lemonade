@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   DoubleSide,
+  DynamicDrawUsage,
   Group,
   InstancedMesh,
   Matrix4,
@@ -64,6 +65,12 @@ export const createAdvertisingSignField = (
   boardMesh.name = "AdvertisingSignBoards";
   labelMesh.name = "AdvertisingSignLabels";
 
+  const meshes = [postMesh, boardMesh, labelMesh] as const;
+  for (const mesh of meshes) {
+    mesh.frustumCulled = false;
+    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  }
+
   const postLocal = localMatrix(0, 0.43, 0);
   const boardLocal = localMatrix(0, 1.05, 0);
   const labelLocal = localMatrix(0, 1.05, 0.066);
@@ -97,7 +104,7 @@ export const createAdvertisingSignField = (
   return Object.freeze({
     signs: Object.freeze(signs),
     labelMaterial,
-    meshes: Object.freeze([postMesh, boardMesh, labelMesh]),
+    meshes: Object.freeze(meshes),
     sync,
   });
 };
