@@ -3,13 +3,7 @@ import {
   type OperatingScaleRules,
 } from "@lemonade/simulation";
 
-const moneyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-});
-
-const formatMoney = (cents: number): string => moneyFormatter.format(cents / 100);
+const formatMoney = (cents: number): string => `${(cents / 100).toFixed(2)}`;
 
 export const affordabilityShortfallMessage = (
   spendCents: number,

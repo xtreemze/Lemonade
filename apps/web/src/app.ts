@@ -306,8 +306,8 @@ const DEFAULT_OPTIONS: LemonadeAppOptions = Object.freeze({
 
 export class LemonadeApp {
   readonly #elements: AppElements;
-  #runSeed: Seed;
-  #random: RandomSource;
+  readonly #runSeed: Seed;
+  readonly #random: RandomSource;
   readonly #audio = createProceduralAudioEngine();
   readonly #haptics = createHapticEngine();
   readonly #scene: LemonsvilleSceneView;
@@ -546,7 +546,7 @@ export class LemonadeApp {
     if (this.#phase.kind !== "report" || this.#presentation !== "history") return;
 
     if (isLegacyBankrupt(this.#phase.resolution.nextState)) {
-      void this.#restartAfterBankruptcy();
+      void this.#resetRun();
       return;
     }
 
@@ -619,55 +619,6 @@ export class LemonadeApp {
     } catch (error) {
       this.#showPersistenceError(persistenceMessage(error));
     }
-  }
-
-  async #restartAfterBankruptcy(): Promise<void> {
-    let storageError: unknown = null;
-    try {
-      await this.#saveChain;
-      if (this.#persistenceEnabled) {
-        await clearCurrentRun();
-      }
-    } catch (error) {
-      storageError = error;
-    }
-
-    this.#startFreshRun();
-
-    if (this.#persistenceEnabled) {
-      this.#queueSave("New game saved locally.");
-    }
-    if (storageError !== null) {
-      this.#showPersistenceError(persistenceMessage(storageError));
-    }
-  }
-
-  #startFreshRun(): void {
-    const fresh = createFreshRunSnapshot();
-    const limits = decisionLimit(fresh.state);
-
-    this.#clearPresentationTimer();
-    this.#clearFeedbackTimers();
-    this.#haptics.cancel();
-    this.#runSeed = fresh.seed;
-    this.#random = restoreEnvironmentRandom(fresh);
-    this.#game = fresh.state;
-    this.#environment = fresh.environment;
-    this.#phase = fresh.phase;
-    this.#presentation = "forecast";
-    this.#glasses = Math.min(Number(fresh.draft.glasses), limits.glasses);
-    this.#signs = Math.min(Number(fresh.draft.signs), limits.signs);
-    this.#price = Math.min(Number(fresh.draft.price), limits.price);
-    this.#sceneConfidenceOverride = null;
-    this.#scenePhaseOverride = null;
-    this.#sceneSoldOverride = null;
-    this.#render();
-
-    this.#playWeatherForecastCue(this.#environment.weather.kind);
-    if (this.#environment.weather.kind === "thunderstorm") {
-      this.#scheduleStormFeedback(WEATHER_FORECAST_DURATION_MS);
-    }
-    this.#schedulePresentation("planning", WEATHER_FORECAST_DURATION_MS);
   }
 
   #snapshot(): RunSnapshot {
