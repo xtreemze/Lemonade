@@ -46,6 +46,7 @@ export const createPersistentSceneViewer = (
 
   // Create main container with flexbox (scene on left, sidebar on right)
   const container = document.createElement("div");
+  container.dataset["rendererStressFixture"] = options.stress === true ? "true" : "false";
   container.style.cssText = `
     width: 100vw;
     height: 100vh;
@@ -127,6 +128,7 @@ export const createPersistentSceneViewer = (
   panel.appendChild(info);
 
   const diagnostics = document.createElement("div");
+  diagnostics.dataset["rendererDiagnostics"] = "true";
   diagnostics.style.cssText = `
     background: #111;
     border: 1px solid #444;
