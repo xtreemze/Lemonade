@@ -217,11 +217,11 @@ type ElementConstructor<T extends Element> = abstract new () => T;
 const requireElement = <T extends Element>(
   root: ParentNode,
   selector: string,
-  constructor: ElementConstructor<T>,
+  elementConstructor: ElementConstructor<T>,
 ): T => {
   const element = root.querySelector(selector);
-  if (!(element instanceof constructor)) {
-    throw new TypeError(`Expected ${selector} to match ${constructor.name}.`);
+  if (!(element instanceof elementConstructor)) {
+    throw new TypeError(`Expected ${selector} to match ${elementConstructor.name}.`);
   }
   return element;
 };
