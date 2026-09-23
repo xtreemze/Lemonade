@@ -11,7 +11,7 @@ export type DevMcpCommand = Readonly<{
 export type DevMcpCommandHandler = (
   method: string,
   params: unknown,
-) => unknown | Promise<unknown>;
+) => unknown;
 
 export type DevMcpBrowserBridge = Readonly<{
   dispose(): void;
@@ -153,7 +153,7 @@ export const createDevMcpBrowserBridge = (
           await deliver(command, null, errorMessage(error));
         }
       } catch (error) {
-        if (disposed || abortController.signal.aborted) return;
+        if (abortController.signal.aborted) return;
         console.warn("Lemonade MCP bridge disconnected:", errorMessage(error));
         sessionId = null;
         await sleep(750);
