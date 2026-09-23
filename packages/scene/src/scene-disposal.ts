@@ -10,12 +10,17 @@ export type SceneResourceCounts = Readonly<{
   materials: number;
 }>;
 
+type DisposableMesh = Mesh<BufferGeometry, Material | Material[]>;
+
+const isDisposableMesh = (object: Object3D): object is DisposableMesh =>
+  object instanceof Mesh;
+
 export const disposeSceneResources = (root: Object3D): SceneResourceCounts => {
   const geometries = new Set<BufferGeometry>();
   const materials = new Set<Material>();
 
   root.traverse((object) => {
-    if (!(object instanceof Mesh)) return;
+    if (!isDisposableMesh(object)) return;
     geometries.add(object.geometry);
     if (Array.isArray(object.material)) {
       for (const material of object.material) materials.add(material);
