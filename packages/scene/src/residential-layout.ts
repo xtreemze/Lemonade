@@ -615,11 +615,51 @@ const closestPointOnRectCenterline = (
   });
 };
 
+// The point on a rect's *perimeter* nearest `from`, on whichever long edge
+// faces `from`. Unlike a naive `minZ`/`maxZ` pick, this projects onto the
+// rect's own rotated axes, so it stays correct for a diagonal street-network
+// segment (a corner turn), not just an axis-aligned one. Using minZ/maxZ
+// directly for a rotated rect picked a corner far off to one side instead of
+// the point actually closest to the approaching driveway/path, which sent it
+// toward the road at a steep angle that cut deep into the travel lane.
+const nearestRectEdgePoint = (
+  rect: ResidentialRect,
+  from: ResidentialPoint,
+): ResidentialPoint => {
+  if (
+    rect.x === undefined ||
+    rect.z === undefined ||
+    rect.length === undefined ||
+    rect.width === undefined ||
+    rect.rotationY === undefined
+  ) {
+    return Object.freeze({
+      x: Math.min(rect.maxX, Math.max(rect.minX, from.x)),
+      z: from.z >= rectCenterZ(rect) ? rect.minZ : rect.maxZ,
+    });
+  }
+
+  const tangentX = Math.cos(rect.rotationY);
+  const tangentZ = Math.sin(rect.rotationY);
+  const normalX = -tangentZ;
+  const normalZ = tangentX;
+  const alongTangent = (from.x - rect.x) * tangentX + (from.z - rect.z) * tangentZ;
+  const boundedTangent = Math.min(rect.length / 2, Math.max(-rect.length / 2, alongTangent));
+  const alongNormal = (from.x - rect.x) * normalX + (from.z - rect.z) * normalZ;
+  const normalOffset = (alongNormal >= 0 ? 1 : -1) * (rect.width / 2);
+  return Object.freeze({
+    x: rect.x + tangentX * boundedTangent + normalX * normalOffset,
+    z: rect.z + tangentZ * boundedTangent + normalZ * normalOffset,
+  });
+};
+
 export type ResidentialAccessLayout = Readonly<{
   frontDirection: -1 | 1;
   sidewalkX: number;
   sidewalkCenterZ: number;
+  sidewalkEdgeX: number;
   sidewalkEdgeZ: number;
+  roadEdgeX: number;
   roadEdgeZ: number;
   doorX: number;
   doorZ: number;
@@ -673,21 +713,22 @@ export const residentialAccessLayout = (
       : closestPointOnRectCenterline(sidewalk, { x: entryX, z: entryZ });
   const sidewalkX = sidewalkTarget.x;
   const sidewalkCenterZ = sidewalkTarget.z;
-  const sidewalkEdgeZ =
+  const sidewalkEdgePoint =
     sidewalk === null
-      ? frontDirection > 0
-        ? fallbackSidewalk.minZ
-        : fallbackSidewalk.maxZ
-      : sidewalkCenterZ >= property.houseZ
-        ? sidewalk.minZ
-        : sidewalk.maxZ;
+      ? Object.freeze({
+          x: entryX,
+          z: frontDirection > 0 ? fallbackSidewalk.minZ : fallbackSidewalk.maxZ,
+        })
+      : nearestRectEdgePoint(sidewalk, { x: entryX, z: entryZ });
+  const sidewalkEdgeX = sidewalkEdgePoint.x;
+  const sidewalkEdgeZ = sidewalkEdgePoint.z;
   // The path is a walking surface leading up to the sidewalk; it should end
   // at the sidewalk's near edge, not extend across it to its centerline
   // (which would visually stack the path on top of the sidewalk).
-  const pathDeltaX = sidewalkX - entryX;
+  const pathDeltaX = sidewalkEdgeX - entryX;
   const pathDeltaZ = sidewalkEdgeZ - entryZ;
   const pathLength = Math.max(0.72, Math.hypot(pathDeltaX, pathDeltaZ) + 0.24);
-  const pathCenterX = (entryX + sidewalkX) / 2;
+  const pathCenterX = (entryX + sidewalkEdgeX) / 2;
   const pathCenterZ = (entryZ + sidewalkEdgeZ) / 2;
   const pathWidth = 1.04;
   const pathDepth = pathLength;
@@ -713,37 +754,44 @@ export const residentialAccessLayout = (
         });
   const drivewaySidewalkX = drivewaySidewalkTarget.x;
   const drivewaySidewalkZ = drivewaySidewalkTarget.z;
+  // Look up and target the road from the driveway's own X position, not the
+  // sidewalk anchor's. For a property near the end of a block, the nearest
+  // sidewalk segment's centerline projection can land well off to one side
+  // (near that segment's own edge); chaining the road lookup through that
+  // shifted point sent the driveway toward the road at a steep diagonal
+  // instead of roughly straight across, cutting deep into the travel lane.
   const road = nearestAccessRect(
     property,
-    drivewaySidewalkX,
+    drivewayX,
     "road",
     seed,
   );
   const roadTarget =
     road === null
-      ? Object.freeze({ x: drivewaySidewalkX, z: STREET_LAYOUT.road.centerZ })
-      : closestPointOnRectCenterline(road, drivewaySidewalkTarget);
+      ? Object.freeze({ x: drivewayX, z: STREET_LAYOUT.road.centerZ })
+      : closestPointOnRectCenterline(road, { x: drivewayX, z: parkingZ });
   const roadX = roadTarget.x;
   const roadCenterZ = roadTarget.z;
-  const roadEdgeZ =
+  const roadEdgePoint =
     road === null
-      ? frontDirection > 0
-        ? STREET_LAYOUT.road.minZ
-        : STREET_LAYOUT.road.maxZ
-      : roadCenterZ >= property.houseZ
-        ? road.minZ
-        : road.maxZ;
+      ? Object.freeze({
+          x: drivewayX,
+          z: frontDirection > 0 ? STREET_LAYOUT.road.minZ : STREET_LAYOUT.road.maxZ,
+        })
+      : nearestRectEdgePoint(road, { x: drivewayX, z: parkingZ });
+  const roadEdgeX = roadEdgePoint.x;
+  const roadEdgeZ = roadEdgePoint.z;
   // The driveway pavement should end at the road's near edge, not extend
   // across it to the road's centerline (which would visually stack the
   // driveway on top of the travel lane).
-  const drivewayDeltaX = roadX - drivewayX;
+  const drivewayDeltaX = roadEdgeX - drivewayX;
   const drivewayDeltaZ = roadEdgeZ - parkingZ;
   const drivewayLength = Math.max(
     3.2,
     Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.3,
   );
   const drivewayDepth = drivewayLength;
-  const drivewayCenterX = (drivewayX + roadX) / 2;
+  const drivewayCenterX = (drivewayX + roadEdgeX) / 2;
   const drivewayCenterZ = (parkingZ + roadEdgeZ) / 2;
   const drivewayRotationY = Math.atan2(drivewayDeltaZ, drivewayDeltaX);
 
@@ -751,7 +799,9 @@ export const residentialAccessLayout = (
     frontDirection,
     sidewalkX,
     sidewalkCenterZ,
+    sidewalkEdgeX,
     sidewalkEdgeZ,
+    roadEdgeX,
     roadEdgeZ,
     doorX,
     doorZ,
@@ -790,7 +840,7 @@ const drivewayRectForProperty = (
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.roadX, z: access.roadEdgeZ },
+    { x: access.roadEdgeX, z: access.roadEdgeZ },
     WORLD_SCALE.vehicle.width,
   );
 };
@@ -809,7 +859,7 @@ const drivewayExclusionRectForProperty = (
   return orientedAccessRect(
     "driveway",
     { x: drivewayX, z: access.parkingZ },
-    { x: access.roadX, z: access.roadEdgeZ },
+    { x: access.roadEdgeX, z: access.roadEdgeZ },
     WORLD_SCALE.vehicle.width,
   );
 };
@@ -954,7 +1004,7 @@ const accessExclusions = (
     const path = orientedAccessRect(
       "path",
       { x: access.entryX, z: access.entryZ },
-      { x: access.sidewalkX, z: access.sidewalkEdgeZ },
+      { x: access.sidewalkEdgeX, z: access.sidewalkEdgeZ },
       access.pathWidth,
     );
     return [driveway, path];

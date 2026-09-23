@@ -1,6 +1,7 @@
 import type { Group, Scene } from "three";
 
 import { walkingCycleAtDistance } from "./gait.js";
+import { PASSERBY_ACTIVE_LIMIT } from "./scene-capacity.js";
 import { characterGroundClearance } from "./world-scale.js";
 import {
   DEFAULT_STREET_SEED,
@@ -182,13 +183,17 @@ const basePose = (
   actorIndex: number,
   elapsedMs: number,
   durationMs: number,
-  actorCount: number,
   routes: readonly PedestrianRoute[],
 ): MutableCrowdPose => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
-  const count = Math.max(1, actorCount);
+  // Spacing is deliberately keyed to the fixed visual pool capacity, not the
+  // number of currently active actors: that count fluctuates frame to frame
+  // (e.g. as buyers arrive/leave and animatePassersBy raises its target
+  // count), and dividing by it would instantly shift every visible
+  // pedestrian's position along their route whenever it changed.
   const worldSpeed = 1.28 + deterministicUnit(actorIndex, 17) * 0.54;
-  const phaseOffset = actorIndex / count + deterministicUnit(actorIndex, 29) * 0.11;
+  const phaseOffset =
+    actorIndex / PASSERBY_ACTIVE_LIMIT + deterministicUnit(actorIndex, 29) * 0.11;
   const elapsedSeconds =
     Math.max(0, Math.min(elapsedMs, safeDuration * 8)) / 1_000;
 
@@ -396,7 +401,7 @@ export const createCrowdSimulation = (
         const beat = beats[(index * 7) % beats.length];
         if (beat === undefined) throw new Error("crowd beat invariant failed");
         if (elapsedMs < beat.startAtMs || elapsedMs >= beat.endAtMs) return undefined;
-        return basePose(beat, index, elapsedMs, safeDuration, count, routes);
+        return basePose(beat, index, elapsedMs, safeDuration, routes);
       });
 
       const neighborChecks = separateCrowd(poses);
