@@ -29,6 +29,22 @@ jobs:
           pnpm --filter @lemonade/web exec vite build --base=/Lemonade/
           pnpm --filter @lemonade/web verify:pages-bundle
 
+  devtools-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - name: Verify scene diagnostics contract
+        run: pnpm --filter @lemonade/scene exec vitest run test/devtools.test.ts
+      - name: Verify MCP protocol and dispatch contract
+        run: node --test scripts/lemonade-mcp.test.mjs
+
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 15
