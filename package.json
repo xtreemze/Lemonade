@@ -13,7 +13,7 @@
     "dev": "pnpm --filter @lemonade/web dev",
     "build": "pnpm -r --if-present build",
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm -r --if-present typecheck",
-    "lint": "biome lint --error-on-warnings --max-diagnostics=none . && pnpm lint:antipatterns && pnpm lint:mobile-contract",
+    "lint": "biome lint --diagnostic-level=warn --error-on-warnings --max-diagnostics=none . && pnpm lint:antipatterns && pnpm lint:mobile-contract",
     "test": "pnpm -r --if-present test",
     "test:e2e": "playwright test",
     "certify": "pnpm --filter @lemonade/simulation build && node scripts/certify.mjs",
