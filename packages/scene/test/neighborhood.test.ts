@@ -1,4 +1,14 @@
-import { Box3, Mesh, MeshStandardMaterial, Scene, type Object3D } from "three";
+import {
+  Box3,
+  InstancedMesh,
+  Matrix4,
+  Mesh,
+  MeshStandardMaterial,
+  Quaternion,
+  Scene,
+  Vector3,
+  type Object3D,
+} from "three";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -16,6 +26,7 @@ import {
 } from "../src/residential-layout.js";
 import { STAND_WORLD_Z } from "../src/stand-anchors.js";
 import { STAND_LAYOUT } from "../src/stand-layout.js";
+import { WORLD_SCALE } from "../src/world-scale.js";
 import { gardenSignPosition, STREET_LAYOUT } from "../src/street-layout.js";
 
 // Three.js's `Object3D.userData` is typed as `Record<string, any>`; these
@@ -158,6 +169,26 @@ describe("neighborhood world scale", () => {
     expect(residentialHomes.some((home) => home.position.z > 12)).toBe(true);
     expect(residentialHomes.some((home) => home.position.z < -58)).toBe(true);
     expect(residentialHomes.some((home) => Math.abs(home.position.x) > 65)).toBe(true);
+  });
+
+  it("renders residential driveways at the authoritative driveway width", () => {
+    const scene = new Scene();
+    const stats = populateNeighborhood(scene, DEFAULT_RESIDENTIAL_SEED);
+    const drivewayBatch = scene.getObjectByName("DrivewaySurfaces");
+
+    expect(drivewayBatch).toBeInstanceOf(InstancedMesh);
+    if (!(drivewayBatch instanceof InstancedMesh)) return;
+    expect(drivewayBatch.count).toBe(stats.driveways);
+
+    const matrix = new Matrix4();
+    const position = new Vector3();
+    const rotation = new Quaternion();
+    const scale = new Vector3();
+    for (let index = 0; index < drivewayBatch.count; index += 1) {
+      drivewayBatch.getMatrixAt(index, matrix);
+      matrix.decompose(position, rotation, scale);
+      expect(scale.z).toBeCloseTo(WORLD_SCALE.street.drivewayWidth);
+    }
   });
 
   it("keeps rendered static scenery and signs off roads, sidewalks, and driveways", () => {
