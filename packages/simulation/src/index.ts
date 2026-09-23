@@ -5,6 +5,7 @@ export * from "./conversion.js";
 export * from "./environment.js";
 export * from "./finance.js";
 export * from "./legacy.js";
+export * from "./memory.js";
 export type * from "./model.js";
 export * from "./primitives.js";
 export * from "./rng.js";
