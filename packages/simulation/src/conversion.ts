@@ -71,33 +71,74 @@ export const confidenceToleranceMultiplier = (
   confidence: LegacyConfidence,
 ): BasisPoints => basisPoints(9_600 + confidence * 160);
 
-export const marketMemoryToleranceMultiplier = (
+export type MarketMemoryToleranceComponents = Readonly<{
+  priceExpectation: BasisPoints;
+  satisfaction: BasisPoints;
+  stockout: BasisPoints;
+  excess: BasisPoints;
+  combined: BasisPoints;
+}>;
+
+export const marketMemoryToleranceComponents = (
   traits: CustomerTraits,
   memory: MarketMemory,
-): BasisPoints => {
+): MarketMemoryToleranceComponents => {
   const intrinsic = Number(traits.intrinsicPriceTolerance);
   if (intrinsic <= 0) {
     throw new RangeError("intrinsic price tolerance must be greater than zero");
   }
 
   const expected = Number(memory.expectedPrice);
-  const anchor =
-    expected === 0
+  const priceExpectation = boundedBasisPoints(
+    (expected === 0
       ? 1
-      : Math.min(1.05, Math.max(0.95, expected / intrinsic));
+      : Math.min(1.05, Math.max(0.95, expected / intrinsic))) * 10_000,
+    9_500,
+    10_500,
+  );
 
-  const satisfaction = Math.min(
+  const satisfactionValue = Math.min(
     10_000,
     Math.max(0, Number(memory.satisfaction)),
   );
-  const satisfactionAdjustment = ((satisfaction - 5_000) / 5_000) * 300;
-
-  return boundedBasisPoints(
-    anchor * 10_000 + satisfactionAdjustment,
-    9_200,
-    10_800,
+  const satisfaction = boundedBasisPoints(
+    10_000 + ((satisfactionValue - 5_000) / 5_000) * 300,
+    9_700,
+    10_300,
   );
+
+  const stockout = boundedBasisPoints(
+    10_000 -
+      (Math.min(10_000, Number(memory.stockoutPressure)) / 10_000) * 650,
+    9_350,
+    10_000,
+  );
+  const excess = boundedBasisPoints(
+    10_000 -
+      (Math.min(10_000, Number(memory.excessPressure)) / 10_000) * 100,
+    9_900,
+    10_000,
+  );
+
+  const combined =
+    (Number(priceExpectation) / 10_000) *
+    (Number(satisfaction) / 10_000) *
+    (Number(stockout) / 10_000) *
+    (Number(excess) / 10_000);
+
+  return Object.freeze({
+    priceExpectation,
+    satisfaction,
+    stockout,
+    excess,
+    combined: boundedBasisPoints(combined * 10_000, 9_000, 10_800),
+  });
 };
+
+export const marketMemoryToleranceMultiplier = (
+  traits: CustomerTraits,
+  memory: MarketMemory,
+): BasisPoints => marketMemoryToleranceComponents(traits, memory).combined;
 
 export type EffectivePriceToleranceInput = Readonly<{
   traits: CustomerTraits;
@@ -114,16 +155,21 @@ export const effectivePriceTolerance = (
     throw new RangeError("intrinsic price tolerance must be greater than zero");
   }
 
-  const type = Number(customerTypeToleranceMultiplier(input.traits.type)) / 10_000;
+  const type =
+    Number(customerTypeToleranceMultiplier(input.traits.type)) / 10_000;
   const weather =
     Number(weatherToleranceMultiplier(input.weather, input.traits)) / 10_000;
   const confidence =
     Number(confidenceToleranceMultiplier(input.confidence)) / 10_000;
   const memory =
-    Number(marketMemoryToleranceMultiplier(input.traits, input.memory)) / 10_000;
+    Number(marketMemoryToleranceMultiplier(input.traits, input.memory)) /
+    10_000;
 
   return moneyCents(
-    Math.max(1, Math.round(intrinsic * type * weather * confidence * memory)),
+    Math.max(
+      1,
+      Math.round(intrinsic * type * weather * confidence * memory),
+    ),
   );
 };
 
