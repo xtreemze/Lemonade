@@ -241,12 +241,13 @@ export const createSceneDevtools = (options: SceneDevtoolsOptions): SceneDevtool
 
   return Object.freeze({
     diagnostics,
-    tree: (treeOptions) => snapshotSceneTree(scene, treeOptions),
-    object(selector) {
+    tree: (treeOptions?: Readonly<{ maxDepth?: number; maxChildren?: number }>) =>
+      snapshotSceneTree(scene, treeOptions),
+    object(selector: SceneObjectSelector) {
       const found = findObject(scene, selector.id);
       return found === null ? null : detailsFor(found);
     },
-    setTransform(selector, patch) {
+    setTransform(selector: SceneObjectSelector, patch: SceneTransformPatch) {
       const target = requireObject(scene, selector);
       const position = finiteTuple(patch.position, "position");
       const rotation = finiteTuple(patch.rotation, "rotation");
@@ -264,13 +265,13 @@ export const createSceneDevtools = (options: SceneDevtoolsOptions): SceneDevtool
       render();
       return detailsFor(target);
     },
-    setVisible(selector, visible) {
+    setVisible(selector: SceneObjectSelector, visible: boolean) {
       const target = requireObject(scene, selector);
       target.visible = visible;
       render();
       return detailsFor(target);
     },
-    select(selector) {
+    select(selector: SceneObjectSelector | null) {
       if (selector === null) {
         gizmo?.deselectObject();
         render();
@@ -284,7 +285,7 @@ export const createSceneDevtools = (options: SceneDevtoolsOptions): SceneDevtool
       render();
       return detailsFor(target);
     },
-    setMode(mode) {
+    setMode(mode: TransformMode) {
       if (gizmo === null) {
         throw new Error("The in-scene gizmo is disabled. Enable LEMONADE_DEV_GIZMO first.");
       }
