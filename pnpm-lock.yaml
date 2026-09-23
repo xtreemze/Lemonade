@@ -211,6 +211,9 @@ importers:
 
   packages/scene:
     dependencies:
+      '@babylonjs/core':
+        specifier: ^9.27.1
+        version: 9.27.1
       three:
         specifier: ^0.186.0
         version: 0.186.0
@@ -228,6 +231,9 @@ importers:
         version: link:../simulation
 
 packages:
+
+  '@babylonjs/core@9.27.1':
+    resolution: {integrity: sha512-bcHeB7YNrYRiD+pEhZjEfzm8tT/N4dC8oYhlENFVa9fnP/XiHEbmt7h2U6Es/vs8x/Aju+9vgpcmq2qnLv+3Hw==}
 
   '@cacheable/memory@2.2.0':
     resolution: {integrity: sha512-CTLKqLItRCEixEAewD3/j9DB3/o96gpTPD4eJ1v+DGOlxZRZncRQkGYqqnAGCscYd6RNeXfGeiuCphsPtqyIfQ==}
@@ -1065,6 +1071,8 @@ packages:
     engines: {node: '>=10'}
 
 snapshots:
+
+  '@babylonjs/core@9.27.1': {}
 
   '@cacheable/memory@2.2.0':
     dependencies:
