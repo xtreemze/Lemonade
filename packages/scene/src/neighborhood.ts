@@ -27,7 +27,10 @@ import {
   type PropertyAccessSurfaceSpec,
 } from "./property-access-surface-field.js";
 import { WORLD_SCALE } from "./world-scale.js";
-import type { PropertyActivity } from "./neighborhood-mobility.js";
+import {
+  sprinklerEligibleAt,
+  type PropertyActivity,
+} from "./neighborhood-mobility.js";
 
 const material = (color: number, flatShading = true): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading, roughness: 0.92 });
@@ -898,21 +901,11 @@ export const populateNeighborhood = (
   for (const detail of yardDetails) scene.add(detail);
 
   allProperties.forEach((property, index) => {
-    if (index % 3 !== 0) return;
+    if (!sprinklerEligibleAt(index, property, layout, seed)) return;
     const access = residentialAccessLayout(property, seed);
     const lateral = index % 2 === 0 ? 2.15 : -2.15;
     const x = property.houseX + lateral;
     const z = access.pathCenterZ;
-    if (
-      residentialFootprintIntersectsHardscape(
-        { x, z },
-        layout,
-        0.28,
-        0.28,
-      )
-    ) {
-      return;
-    }
     scene.add(sprinkler(x, z, property.role));
   });
 

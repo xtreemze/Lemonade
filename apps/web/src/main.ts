@@ -57,6 +57,14 @@ const renderRecovery = (error: RunPersistenceError): void => {
 };
 
 const start = async (): Promise<void> => {
+  if (import.meta.env.DEV) {
+    const sceneEditor = await import("./dev-scene-viewer.js");
+    if (sceneEditor.isSceneViewerEnabled()) {
+      sceneEditor.createPersistentSceneViewer(root);
+      return;
+    }
+  }
+
   try {
     const restored = await loadCurrentRun();
     new LemonadeApp(root, restored ?? createFreshRunSnapshot());

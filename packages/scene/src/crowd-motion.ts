@@ -174,6 +174,13 @@ export const neighborhoodSidewalkRoutes = (
   );
 };
 
+const routeSupportsSideEntry = (route: PedestrianRoute): boolean => {
+  const first = route.points[0];
+  const last = route.points.at(-1);
+  if (first === undefined || last === undefined) return false;
+  return Math.abs(last.x - first.x) >= Math.abs(last.z - first.z);
+};
+
 const samplePedestrianRoute = (
   route: PedestrianRoute,
   distance: number,
@@ -236,7 +243,7 @@ const basePose = (
   routes: readonly PedestrianRoute[],
 ): MutableCrowdPose | undefined => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
-  const worldSpeed = 1.24 + deterministicUnit(actorIndex, 17) * 0.22;
+  const worldSpeed = 1.18 + deterministicUnit(actorIndex, 17) * 0.26;
   const elapsedSeconds =
     Math.max(
       0,
@@ -244,10 +251,23 @@ const basePose = (
     ) / 1_000;
 
   const mainRoutes = routes.filter((route) => route.streetId === "main");
-  const neighborhoodRoutes = routes.filter((route) => route.streetId !== "main");
+  const neighborhoodRoutes = routes.filter(
+    (route) => route.streetId !== "main" && routeSupportsSideEntry(route),
+  );
   const requestedSide: SidewalkSide = actorIndex % 2 === 0 ? "near" : "far";
   const mainRoute =
-    mainRoutes.find((route) => route.side === requestedSide) ??
+    mainRoutes
+      .filter((route) => route.side === requestedSide)
+      .sort((left, right) => {
+        const leftStart = left.points[0]?.x ?? 0;
+        const leftEnd = left.points.at(-1)?.x ?? 0;
+        const rightStart = right.points[0]?.x ?? 0;
+        const rightEnd = right.points.at(-1)?.x ?? 0;
+        return (
+          Math.abs((leftStart + leftEnd) / 2) -
+          Math.abs((rightStart + rightEnd) / 2)
+        );
+      })[0] ??
     mainRoutes[actorIndex % Math.max(1, mainRoutes.length)];
   const neighborhoodRoute =
     neighborhoodRoutes.length === 0
@@ -267,12 +287,21 @@ const basePose = (
     throw new Error("crowd motion requires generated sidewalk routes");
   }
 
-  const traveled = elapsedSeconds * worldSpeed;
-  const forwardDistance = traveled;
-  if (forwardDistance > route.total) return undefined;
-  const progress = forwardDistance / route.total;
+  const requestedEntryOffset = beat.seesAdvertisement
+    ? 10 + deterministicUnit(actorIndex, 29) * 6
+    : 38 + deterministicUnit(actorIndex, 29) * 18;
+  const sideEntryOffset = Math.min(route.total * 0.42, requestedEntryOffset);
+  const spawnDistance =
+    beat.direction === -1
+      ? Math.max(0, route.total / 2 - sideEntryOffset)
+      : Math.min(route.total, route.total / 2 + sideEntryOffset);
+  const distanceTravelled = elapsedSeconds * worldSpeed;
   const routeDistance =
-    beat.direction === -1 ? forwardDistance : route.total - forwardDistance;
+    beat.direction === -1
+      ? spawnDistance + distanceTravelled
+      : spawnDistance - distanceTravelled;
+  if (routeDistance < 0 || routeDistance > route.total) return undefined;
+  const progress = routeDistance / route.total;
   const sampled = samplePedestrianRoute(route, routeDistance);
   const travelYaw =
     sampled.yaw + (beat.direction === -1 ? 0 : Math.PI);
@@ -301,9 +330,9 @@ const basePose = (
     x: sampled.x + normalX * lateralOffset + (route.streetId === "main" ? signPull : 0),
     z: sampled.z + normalZ * lateralOffset,
     heading,
-    pace: Math.max(0.88, Math.min(1.14, worldSpeed / 1.3)),
+    pace: Math.max(0.82, Math.min(1.18, worldSpeed / 1.3)),
     worldSpeed,
-    travelDistance: traveled,
+    travelDistance: distanceTravelled,
     side: route.side,
     routeId: route.id,
     seesAdvertisement: beat.seesAdvertisement,
