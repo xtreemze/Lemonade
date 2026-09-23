@@ -14,6 +14,7 @@ import {
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import { buyerMotionAt } from "./buyer-motion.js";
+import { reclaimBuyerVisualPool } from "./buyer-visual-pool.js";
 import {
   createCharacterGeometrySet,
   type CharacterGeometrySet,
@@ -670,6 +671,7 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   const positionStaticPedestrians = (): void => {
+    reclaimBuyerVisualPool(buyers);
     if (state.phase === "forecast") {
       for (const customer of customers) {
         resetPersonPose(customer);
@@ -760,6 +762,7 @@ export const createLemonsvilleScene = (
   const animateBuyers = (elapsedMs: number): number => {
     const activeBuyerPositions: { x: number; z: number }[] = [];
 
+    reclaimBuyerVisualPool(buyers);
     for (const buyer of buyers) {
       const fade = buyerFadeState.get(buyer);
       if (fade) fade.targetOpacity = 0;
