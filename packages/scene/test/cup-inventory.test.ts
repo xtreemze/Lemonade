@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Group, Matrix4, Vector3 } from "three";
 
 import {
+  attachLemonadeCupToHand,
   createCupInventory,
   decorateLemonadeCup,
   MAX_VISIBLE_PREPARED_CUPS,
@@ -15,6 +16,29 @@ describe("original-art 3D lemonade cups", () => {
     decorateLemonadeCup(cup);
 
     expect(cup.children).toHaveLength(9);
+  });
+
+  it("anchors a carried cup directly to the hand without a floating forearm offset", () => {
+    const arm = new Group();
+    const hand = new Group();
+    hand.position.set(0, -0.34, 0);
+    arm.add(hand);
+
+    const cup = new Group();
+    attachLemonadeCupToHand(hand, cup);
+
+    expect(cup.parent).toBe(hand);
+    expect(cup.position.length()).toBeLessThan(0.15);
+    expect(cup.position.z).toBeGreaterThan(0);
+    expect(cup.scale.x).toBeCloseTo(0.9);
+
+    arm.rotation.x = -1.1;
+    arm.rotation.z = 0.35;
+    arm.updateMatrixWorld(true);
+
+    const handWorld = hand.getWorldPosition(new Vector3());
+    const cupWorld = cup.getWorldPosition(new Vector3());
+    expect(handWorld.distanceTo(cupWorld)).toBeCloseTo(cup.position.length());
   });
 
   it("keeps prepared cups visibly stacked on the vendor's right side", () => {
