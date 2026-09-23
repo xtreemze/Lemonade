@@ -14,7 +14,7 @@ type RendererSnapshot = Readonly<{
 
 const readCounter = (text: string, label: string): number => {
   const match = new RegExp(`^${label}: (\\d+)$`, "mu").exec(text);
-  if (match?.[1] === undefined) {
+  if (match === null) {
     throw new Error(`missing renderer diagnostic: ${label}`);
   }
   return Number(match[1]);
