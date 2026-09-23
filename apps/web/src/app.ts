@@ -48,12 +48,8 @@ import { createHapticEngine, type HapticCue } from "./haptics.js";
 import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 import { isGizmoEnabled, printGizmoHelp } from "./dev-gizmo.js";
-import {
-  isSceneLauncherEnabled,
-  printSceneLauncherHelp,
-  createSceneLauncherUI,
-  type ScenePreset,
-} from "./dev-scene-launcher.js";
+import { isSceneLauncherEnabled } from "./dev-scene-launcher-flag.js";
+import type { ScenePreset } from "./dev-scene-launcher.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
 const ACTIVE_SIMULATION_PRESENTATION_MS = 10_000;
@@ -344,10 +340,6 @@ export class LemonadeApp {
     }
 
     const sceneLauncherEnabled = isSceneLauncherEnabled();
-    if (sceneLauncherEnabled) {
-      console.log("🎬 Scene launcher enabled - type 'sceneLauncherHelp()' for help");
-      printSceneLauncherHelp();
-    }
 
     this.#scene = createLemonsvilleSceneView(
       {
@@ -383,8 +375,14 @@ export class LemonadeApp {
         this.#renderScene();
       };
 
-      const launcherPanel = createSceneLauncherUI(onPresetSelect);
-      document.body.appendChild(launcherPanel);
+      void import("./dev-scene-launcher.js").then(
+        ({ printSceneLauncherHelp, createSceneLauncherUI }) => {
+          console.log("🎬 Scene launcher enabled - type 'sceneLauncherHelp()' for help");
+          printSceneLauncherHelp();
+          const launcherPanel = createSceneLauncherUI(onPresetSelect);
+          document.body.appendChild(launcherPanel);
+        },
+      );
     }
 
     this.#elements.decisionPanel.addEventListener(

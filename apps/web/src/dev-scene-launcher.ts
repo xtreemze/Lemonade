@@ -8,6 +8,9 @@
  */
 
 import type { SceneWeather, ScenePhase } from "@lemonade/scene";
+import { isSceneLauncherEnabled } from "./dev-scene-launcher-flag.js";
+
+export { isSceneLauncherEnabled };
 
 export interface ScenePreset {
   name: string;
@@ -163,11 +166,6 @@ export const SCENE_PRESETS: ScenePreset[] = [
     visibleSigns: 5,
   },
 ];
-
-export const isSceneLauncherEnabled = (): boolean => {
-  if (typeof localStorage === "undefined") return false;
-  return localStorage.getItem("LEMONADE_DEV_SCENE_LAUNCHER") === "1";
-};
 
 export const enableSceneLauncher = (): void => {
   if (typeof localStorage !== "undefined") {
