@@ -182,10 +182,8 @@ describe("unified neighborhood mobility", () => {
       string,
       { x: number; z: number; visible: boolean }
     >();
-    let sawResidentEntry = false;
-    let sawPetEntry = false;
-    let sawResidentMotion = false;
-    let sawPetMotion = false;
+    const entered = new Set<string>();
+    const moved = new Set<string>();
 
     for (let elapsedMs = 0; elapsedMs <= 14_000; elapsedMs += 50) {
       const sample = system.sample({
@@ -207,8 +205,7 @@ describe("unified neighborhood mobility", () => {
           expect(Math.hypot(actor.x - door.x, actor.z - door.z)).toBeLessThan(
             0.15,
           );
-          if (id === "resident:0") sawResidentEntry = true;
-          else sawPetEntry = true;
+          entered.add(id);
         }
 
         if (prior !== undefined && prior.visible && actor.visible) {
@@ -217,10 +214,7 @@ describe("unified neighborhood mobility", () => {
             actor.z - prior.z,
           );
           expect(displacement).toBeLessThanOrEqual(0.09);
-          if (displacement > 0.005) {
-            if (id === "resident:0") sawResidentMotion = true;
-            else sawPetMotion = true;
-          }
+          if (displacement > 0.005) moved.add(id);
         }
 
         previous.set(id, {
@@ -231,10 +225,8 @@ describe("unified neighborhood mobility", () => {
       }
     }
 
-    expect(sawResidentEntry).toBe(true);
-    expect(sawPetEntry).toBe(true);
-    expect(sawResidentMotion).toBe(true);
-    expect(sawPetMotion).toBe(true);
+    expect(entered).toEqual(new Set(["resident:0", "resident-pet"]));
+    expect(moved).toEqual(new Set(["resident:0", "resident-pet"]));
   });
 
   it("drives a resident vehicle into a driveway, parks, and later departs", () => {
