@@ -534,7 +534,9 @@ const VEHICLE_COLORS = [
   0x7d7270,
 ] as const;
 
-const vehicleIdentitySalt = (actorId: string): number => {
+const BICYCLE_COLORS = [0x4f7f91, 0xb45d4c, 0x75864f] as const;
+
+const actorIdentitySalt = (actorId: string): number => {
   let hash = 0x811c9dc5;
   for (let index = 0; index < actorId.length; index += 1) {
     hash = Math.imul(hash ^ actorId.charCodeAt(index), 0x01000193);
@@ -542,8 +544,25 @@ const vehicleIdentitySalt = (actorId: string): number => {
   return hash >>> 0;
 };
 
+const createBicycleForActor = (seed: number, actorId: string): Group => {
+  const identitySalt = actorIdentitySalt(actorId);
+  const profileSeed = seed ^ identitySalt;
+  const color =
+    BICYCLE_COLORS[
+      Math.floor(ambientUnit(profileSeed, 29_001) * BICYCLE_COLORS.length) %
+        BICYCLE_COLORS.length
+    ] ?? BICYCLE_COLORS[0];
+  const bicycle = createBicycle(
+    color,
+    profileSeed,
+    identitySalt % 20_000,
+  );
+  bicycle.userData["mobilityActorId"] = actorId;
+  return bicycle;
+};
+
 const createVehicleForActor = (seed: number, actorId: string): Group => {
-  const identitySalt = vehicleIdentitySalt(actorId);
+  const identitySalt = actorIdentitySalt(actorId);
   const profileSeed = seed ^ identitySalt;
   const variant =
     VEHICLE_VARIANTS[
@@ -666,12 +685,11 @@ export const createAmbientLife = (
     birdFlightProfileFor(seed ^ 0x42495244, index),
   );
   const wildlife = wildlifeProfiles.map((profile) => createBird(profile));
-  const bicycles = [
-    createBicycle(0x4f7f91, seed, 0),
-    createBicycle(0xb45d4c, seed, 1),
-    createBicycle(0x75864f, seed, 2),
-  ];
+  const bicycleVisuals = new Map<string, Group>();
   const vehicleVisuals = new Map<string, Group>();
+  const ambientPetOwners = pets
+    .slice(0, 2)
+    .map((_, index) => owners[index]);
   const residents = [
     createTransportCharacter(seed ^ 0x7341, 12_000),
     createTransportCharacter(seed ^ 0x7341, 12_001),
@@ -689,6 +707,16 @@ export const createAmbientLife = (
 
   const mobility = createNeighborhoodMobilitySystem(mobilitySeed);
 
+  const bicycleForActor = (actorId: string): Group => {
+    const existing = bicycleVisuals.get(actorId);
+    if (existing !== undefined) return existing;
+    const bicycle = createBicycleForActor(seed, actorId);
+    bicycle.visible = false;
+    bicycleVisuals.set(actorId, bicycle);
+    scene.add(bicycle);
+    return bicycle;
+  };
+
   const vehicleForActor = (actorId: string): Group => {
     const existing = vehicleVisuals.get(actorId);
     if (existing !== undefined) return existing;
@@ -702,7 +730,6 @@ export const createAmbientLife = (
   for (const actor of [
     ...pets,
     ...wildlife,
-    ...bicycles,
     ...residents.map((resident) => resident.root),
     mailCarrier.root,
     gardener.root,
@@ -725,10 +752,11 @@ export const createAmbientLife = (
       const pedestrianObstacles: Readonly<{ x: number; z: number }>[] = [];
 
       pets.slice(0, 2).forEach((pet, index) => {
-        const owner = owners.find((candidate, ownerIndex) =>
-          candidate.visible && ownerIndex >= index,
-        ) ?? owners.find((candidate) => candidate.visible);
-        pet.visible = index < population.pets && owner !== undefined;
+        const owner = ambientPetOwners[index];
+        pet.visible =
+          index < population.pets &&
+          owner !== undefined &&
+          owner.visible;
         if (!pet.visible || owner === undefined) return;
         const pose = petFollowPose({
           x: owner.position.x,
@@ -833,15 +861,17 @@ export const createAmbientLife = (
       const bicyclePoses = sample.actors.filter(
         (actor) => actor.kind === "bicycle" && actor.visible,
       );
-      bicycles.forEach((bike, index) => {
-        const pose = index < population.bicycles ? bicyclePoses[index] : undefined;
-        bike.visible = pose !== undefined;
-        if (pose === undefined) return;
-        bike.userData["mobilityActorId"] = pose.id;
-        applyMobilityRenderDetail(bike, pose.detail);
-        bike.position.set(pose.x, 0.02, pose.z);
-        bike.rotation.y = -pose.yaw;
-      });
+      for (const bicycle of bicycleVisuals.values()) {
+        bicycle.visible = false;
+      }
+      for (const pose of bicyclePoses.slice(0, population.bicycles)) {
+        const bicycle = bicycleForActor(pose.id);
+        bicycle.visible = true;
+        bicycle.userData["mobilityActorId"] = pose.id;
+        applyMobilityRenderDetail(bicycle, pose.detail);
+        bicycle.position.set(pose.x, 0.02, pose.z);
+        bicycle.rotation.y = -pose.yaw;
+      }
 
       const allVehiclePoses = sample.actors.filter(
         (actor) => actor.kind === "vehicle" && actor.visible,
