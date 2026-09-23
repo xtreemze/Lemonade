@@ -1,4 +1,7 @@
-import type { OperatingScaleRules } from "@lemonade/simulation";
+import {
+  LEGACY_STARTING_BALANCE_CENTS,
+  type OperatingScaleRules,
+} from "@lemonade/simulation";
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -33,5 +36,5 @@ export const standLevelTransitionMessage = (
 
 export const bankruptcyMessage = (bankrupt: boolean): string | null =>
   bankrupt
-    ? "Bankrupt — operating balance fell below the $10.00 reserve. The stand closes after today. Review the run, then start a new game."
+    ? `Bankrupt — operating balance fell below the ${formatMoney(LEGACY_STARTING_BALANCE_CENTS)} reserve. The stand closes after today. Review the run, then start a new game.`
     : null;
