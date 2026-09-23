@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
-import manifest from "./manifest.json";
+import manifest from "./manifest.json" with { type: "json" };
 
 type Feature = (typeof manifest.features)[number];
 type FormFactor = "desktop" | "mobile";
