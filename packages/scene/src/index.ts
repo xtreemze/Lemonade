@@ -1,15 +1,11 @@
 import {
   BoxGeometry,
-  type BufferGeometry,
   CanvasTexture,
-  CylinderGeometry,
   DirectionalLight,
   DoubleSide,
   Group,
   HemisphereLight,
-  SphereGeometry,
   LinearFilter,
-  type Material,
   Mesh,
   MeshStandardMaterial,
   type Object3D,
@@ -20,6 +16,10 @@ import {
 } from "three";
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
+import {
+  createCharacterGeometrySet,
+  type CharacterGeometrySet,
+} from "./character-geometry.js";
 import { createGizmoController, type GizmoController } from "./gizmo-controller.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import type { CupInventory } from "./cup-inventory.js";
@@ -28,6 +28,7 @@ import {
   rendererDiagnostics,
   type RendererDiagnostics,
 } from "./renderer-diagnostics.js";
+import { disposeSceneResources } from "./scene-disposal.js";
 import {
   characterGroundClearance,
   WORLD_SCALE,
@@ -179,9 +180,9 @@ const personGroundY = (person: PersonRig): number =>
   characterGroundClearance(person.profile.heightScale);
 
 const createLimb = (
+  geometries: CharacterGeometrySet,
   upperLength: number,
   lowerLength: number,
-  radius: number,
   upperColor: number,
   lowerColor: number,
   extremityColor: number,
@@ -189,14 +190,14 @@ const createLimb = (
 ): LimbRig => {
   const root = new Group();
   const upper = new Mesh(
-    new CylinderGeometry(radius, radius * 0.94, upperLength, 8),
+    foot ? geometries.legUpper : geometries.armUpper,
     makeCharacterMaterial(upperColor),
   );
   upper.position.y = -upperLength / 2;
   root.add(upper);
 
   const joint = new Mesh(
-    new SphereGeometry(radius * 1.14, 9, 6),
+    foot ? geometries.legJoint : geometries.armJoint,
     makeCharacterMaterial(lowerColor),
   );
   joint.position.y = -upperLength;
@@ -205,40 +206,39 @@ const createLimb = (
   const lower = new Group();
   lower.position.y = -upperLength;
   const lowerMesh = new Mesh(
-    new CylinderGeometry(radius * 0.92, radius * 0.82, lowerLength, 8),
+    foot ? geometries.legLower : geometries.armLower,
     makeCharacterMaterial(lowerColor),
   );
   lowerMesh.position.y = -lowerLength / 2;
   lower.add(lowerMesh);
 
-  const extremity = foot
-    ? new Mesh(
-        new BoxGeometry(radius * 2.1, radius * 1.25, radius * 3.2),
-        makeCharacterMaterial(extremityColor),
-      )
-    : new Mesh(
-        new SphereGeometry(radius * 1.05, 9, 6),
-        makeCharacterMaterial(extremityColor),
-      );
-  extremity.position.set(0, -lowerLength, foot ? radius * 0.62 : 0);
+  const extremity = new Mesh(
+    foot ? geometries.foot : geometries.hand,
+    makeCharacterMaterial(extremityColor),
+  );
+  extremity.position.set(0, -lowerLength, foot ? 0.105 * 0.62 : 0);
   lower.add(extremity);
   root.add(lower);
 
   return Object.freeze({ root, lower });
 };
 
-const createPerson = (characterSeed: number, index: number): PersonRig => {
+const createPerson = (
+  geometries: CharacterGeometrySet,
+  characterSeed: number,
+  index: number,
+): PersonRig => {
   const profile = characterProfileFor(characterSeed, index);
   const root = new Group();
 
   const torso = new Mesh(
-    new CylinderGeometry(0.25, 0.34, 0.9, 10),
+    geometries.torso,
     makeCharacterMaterial(profile.clothingColor),
   );
   torso.position.y = 1.05;
 
   const head = new Mesh(
-    new SphereGeometry(0.27, 12, 8),
+    geometries.head,
     makeCharacterMaterial(profile.skinColor),
   );
   head.scale.set(0.94, 1.04, 0.9);
@@ -246,17 +246,17 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   root.add(torso, head);
 
   const leftArm = createLimb(
+    geometries,
     0.38,
     0.34,
-    0.082,
     profile.clothingColor,
     profile.skinColor,
     profile.skinColor,
   );
   const rightArm = createLimb(
+    geometries,
     0.38,
     0.34,
-    0.082,
     profile.clothingColor,
     profile.skinColor,
     profile.skinColor,
@@ -265,18 +265,18 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   rightArm.root.position.set(0.35, 1.38, 0);
 
   const leftLeg = createLimb(
+    geometries,
     0.43,
     0.42,
-    0.105,
     profile.trouserColor,
     profile.trouserColor,
     0x30383d,
     true,
   );
   const rightLeg = createLimb(
+    geometries,
     0.43,
     0.42,
-    0.105,
     profile.trouserColor,
     profile.trouserColor,
     0x30383d,
@@ -312,8 +312,11 @@ const createPerson = (characterSeed: number, index: number): PersonRig => {
   });
 };
 
-const createSeller = (characterSeed: number): SellerRig => {
-  const person = createPerson(characterSeed ^ 0x51_1e_12, 10_001);
+const createSeller = (
+  geometries: CharacterGeometrySet,
+  characterSeed: number,
+): SellerRig => {
+  const person = createPerson(geometries, characterSeed ^ 0x51_1e_12, 10_001);
   const leftBrow = new Group();
   const rightBrow = new Group();
   const mouthLeft = new Group();
@@ -424,21 +427,6 @@ const applyBuyerPose = (
   }
 };
 
-type DisposableMesh = Mesh<BufferGeometry, Material | Material[]>;
-
-const isDisposableMesh = (object: Object3D): object is DisposableMesh =>
-  object instanceof Mesh;
-
-const disposeObject = (object: Object3D): void => {
-  if (!isDisposableMesh(object)) return;
-  object.geometry.dispose();
-  if (Array.isArray(object.material)) {
-    for (const material of object.material) material.dispose();
-  } else {
-    object.material.dispose();
-  }
-};
-
 export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
@@ -452,6 +440,7 @@ export const createLemonsvilleScene = (
   const { renderer } = rendererBackend;
 
   const scene = new Scene();
+  const characterGeometries = createCharacterGeometrySet();
   const camera = new PerspectiveCamera(34, 1, 0.1, 180);
   camera.position.set(0, 6.8, 13.5);
   camera.lookAt(0, 1.7, 0);
@@ -490,12 +479,16 @@ export const createLemonsvilleScene = (
     | null = null;
 
   const customers = Array.from({ length: PASSERBY_VISUAL_POOL_SIZE }, (_, index) =>
-    createPerson(initialState.characterSeed, index),
+    createPerson(characterGeometries, initialState.characterSeed, index),
   );
   for (const customer of customers) scene.add(customer.root);
 
   const buyers = Array.from({ length: BUYER_VISUAL_POOL_SIZE }, (_, index) =>
-    createPerson(initialState.characterSeed, index + BUYER_PROFILE_INDEX_OFFSET),
+    createPerson(
+      characterGeometries,
+      initialState.characterSeed,
+      index + BUYER_PROFILE_INDEX_OFFSET,
+    ),
   );
   const buyerFadeState = new Map<PersonRig, { opacity: number; targetOpacity: number }>();
   for (const buyer of buyers) {
@@ -516,7 +509,7 @@ export const createLemonsvilleScene = (
     });
   };
 
-  const seller = createSeller(initialState.characterSeed);
+  const seller = createSeller(characterGeometries, initialState.characterSeed);
   seller.person.root.position.set(
     0,
     personGroundY(seller.person),
@@ -1141,7 +1134,7 @@ export const createLemonsvilleScene = (
     animationFrame = null;
     signTexture?.dispose();
     gizmoController?.dispose();
-    scene.traverse(disposeObject);
+    disposeSceneResources(scene);
     rendererBackend.dispose();
   };
 
