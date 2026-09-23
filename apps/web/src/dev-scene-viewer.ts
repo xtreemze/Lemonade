@@ -47,6 +47,7 @@ const makeState = (
     nextConfidence: 3,
     characterSeed: 12_345,
     dayNumber: 1,
+    neighborhoodOccurrences: Object.freeze([]),
     storyboard: createStreetStoryboard({
       durationMs: Math.max(1, durationMs),
       prepared: phase === "forecast" ? 0 : 20,
