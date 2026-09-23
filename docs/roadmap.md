@@ -29,7 +29,7 @@ Current baseline:
 - Vite 8 as a thin development/build layer;
 - Vitest 5;
 - Playwright;
-- ESLint flat config with type-aware rules;
+- Biome 2.5 with strict project- and type-aware lint rules;
 - `pnpm/setup@v1` CI provisioning for pnpm + Node;
 - no Webpack, Babel, Travis, PostCSS compatibility layer, or runtime UI framework.
 
