@@ -566,21 +566,18 @@ const nearestAccessRect = (
   );
   if (frontCandidates.length === 0) return null;
 
-  const directCandidates = frontCandidates.filter(
-    (rect) => horizontalGapToRect(x, rect) <= 0.5,
-  );
-  const candidates =
-    directCandidates.length > 0 ? directCandidates : frontCandidates;
-  const first = candidates[0];
+  const first = frontCandidates[0];
   if (first === undefined) return null;
 
-  return candidates.reduce((best, candidate) => {
-    const candidateScore =
-      Math.abs(rectCenterZ(candidate) - property.houseZ) +
-      horizontalGapToRect(x, candidate) * 2.2;
-    const bestScore =
-      Math.abs(rectCenterZ(best) - property.houseZ) +
-      horizontalGapToRect(x, best) * 2.2;
+  return frontCandidates.reduce((best, candidate) => {
+    const candidateScore = Math.hypot(
+      rectCenterZ(candidate) - property.houseZ,
+      horizontalGapToRect(x, candidate),
+    );
+    const bestScore = Math.hypot(
+      rectCenterZ(best) - property.houseZ,
+      horizontalGapToRect(x, best),
+    );
     return candidateScore < bestScore ? candidate : best;
   }, first);
 };
@@ -927,39 +924,55 @@ const resolveGeneratedAccess = (
       const distance = baseDistance + step * 0.42;
       for (const side of [preferredSide, -preferredSide] as const) {
         const candidateX = property.houseX + side * distance;
-        const candidateRect = drivewayRectForProperty(
+        const candidateRoute = drivewayRectForProperty(
+          property,
+          candidateX,
+          seed,
+        );
+        const candidatePavement = drivewayExclusionRectForProperty(
           property,
           candidateX,
           seed,
         );
         const reachesSidewalk = hardscape.some(
-          (rect) => rect.role === "sidewalk" && rectsOverlap(candidateRect, rect),
+          (rect) =>
+            rect.role === "sidewalk" &&
+            rectsOverlap(candidatePavement, rect),
         );
         const reachesRoad = hardscape.some(
-          (rect) => rect.role === "road" && rectsOverlap(candidateRect, rect),
+          (rect) => rect.role === "road" && rectsOverlap(candidateRoute, rect),
         );
         if (!reachesSidewalk || !reachesRoad) continue;
 
         const clearsHouses = properties.every((other) => {
           const footprint = propertyFootprint(other);
-          return !footprintIntersectsHardscapeRect(
-            candidateRect,
-            { x: other.houseX, z: other.houseZ },
-            footprint.halfWidth,
-            footprint.halfDepth,
+          const point = { x: other.houseX, z: other.houseZ };
+          return (
+            !footprintIntersectsHardscapeRect(
+              candidateRoute,
+              point,
+              footprint.halfWidth,
+              footprint.halfDepth,
+            ) &&
+            !footprintIntersectsHardscapeRect(
+              candidatePavement,
+              point,
+              footprint.halfWidth,
+              footprint.halfDepth,
+            )
           );
         });
         if (!clearsHouses) continue;
 
         sharedAccessFallback ??= Object.freeze({
           x: candidateX,
-          rect: candidateRect,
+          rect: candidateRoute,
         });
-        if (!occupied.every((existing) => rectsHaveClearance(candidateRect, existing))) {
+        if (!occupied.every((existing) => rectsHaveClearance(candidateRoute, existing))) {
           continue;
         }
         drivewayX = candidateX;
-        occupied.push(candidateRect);
+        occupied.push(candidateRoute);
         break;
       }
     }
