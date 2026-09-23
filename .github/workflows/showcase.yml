@@ -1,0 +1,85 @@
+name: Visual Showcase
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "packages/scene/**"
+      - "packages/ui/**"
+      - "e2e/**"
+      - "scripts/**"
+      - "playwright*.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/showcase.yml"
+      - ".github/workflows/pages.yml"
+      - "README.md"
+      - "docs/showcase.md"
+  push:
+    branches: [master]
+    paths:
+      - "apps/web/**"
+      - "packages/scene/**"
+      - "packages/ui/**"
+      - "e2e/**"
+      - "scripts/**"
+      - "playwright*.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/showcase.yml"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-showcase-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  media:
+    name: Record and render showcase
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm and Node
+        uses: pnpm/setup@v1
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Verify showcase contracts
+        run: pnpm test:showcase-contract
+
+      - name: Record desktop and mobile scenes
+        run: pnpm showcase:capture
+
+      - name: Render highlight reels and GIFs
+        run: pnpm showcase:render
+
+      - name: Verify media and report sizes
+        run: pnpm showcase:verify
+
+      - name: Upload complete visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: lemonade-showcase-${{ github.sha }}
+          path: artifacts/e2e-media
+          if-no-files-found: error
+          retention-days: 14

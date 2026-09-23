@@ -1,0 +1,41 @@
+{
+  "product": "Lemonade",
+  "stableBaseUrl": "https://xtreemze.github.io/Lemonade/showcase",
+  "features": [
+    {
+      "id": "01-weather-forecast",
+      "title": "Weather forecast",
+      "description": "Read the day’s weather and neighborhood conditions before opening the stand.",
+      "alt": "Lemonade weather forecast over the Lemonsville neighborhood",
+      "durationSeconds": 1.5
+    },
+    {
+      "id": "02-three-decision-plan",
+      "title": "Three-decision planning",
+      "description": "Set glasses, advertising signs, and price on the compact daily planning surface.",
+      "alt": "Lemonade daily planning controls for glasses, signs, and price",
+      "durationSeconds": 4
+    },
+    {
+      "id": "03-lemonsville-simulation",
+      "title": "Live Lemonsville simulation",
+      "description": "Watch the stand, neighborhood, customers, weather, and inventory resolve the business day.",
+      "alt": "Lemonsville 3D neighborhood simulation around the lemonade stand",
+      "durationSeconds": 4
+    },
+    {
+      "id": "04-day-report",
+      "title": "Day report",
+      "description": "See sold glasses, revenue, costs, profit or loss, and ending assets immediately after the day.",
+      "alt": "Lemonade end-of-day financial report",
+      "durationSeconds": 3.5
+    },
+    {
+      "id": "05-sales-history",
+      "title": "Sales history",
+      "description": "Review accessible trends and ledger history before planning the next day.",
+      "alt": "Lemonade sales history charts and ledger",
+      "durationSeconds": 3.5
+    }
+  ]
+}
