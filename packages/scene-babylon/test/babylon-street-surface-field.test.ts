@@ -3,7 +3,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { describe, expect, it } from "vitest";
 
 import { createBabylonStreetSurfaceField } from "../src/babylon-street-surface-field.js";
-import type { StreetStripSpec } from "@lemonade/scene/street-layout";
+import type { StreetStripSpec } from "@lemonade/scene-contracts/street-layout";
 
 const strip = (
   role: StreetStripSpec["role"],
