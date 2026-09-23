@@ -383,8 +383,8 @@ const mailOccurrences = (
   if (count === 0) return Object.freeze([]);
 
   const result: NeighborhoodOccurrence[] = [];
-  const base = 8 * 60 + 20;
-  const span = 145;
+  const base = 8 * 60;
+  const span = 80;
 
   mailboxes.forEach((household, index) => {
     const random = randomFor(
