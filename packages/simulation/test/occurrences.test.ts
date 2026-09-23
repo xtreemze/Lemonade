@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  createMarketRandom,
+  createSeededRandom,
   dayNumber,
   generateNeighborhoodOccurrences,
   seed,
@@ -192,15 +192,11 @@ describe("neighborhood occurrence ledger", () => {
   });
 
   it("does not perturb customer-market RNG streams", () => {
-    const before = createMarketRandom(seed(99), "audience-selection", {
-      day: dayNumber(8),
-    }).nextUnit();
+    const before = createSeededRandom(seed(99)).nextUnit();
 
     schedule(8, "sunny");
 
-    const after = createMarketRandom(seed(99), "audience-selection", {
-      day: dayNumber(8),
-    }).nextUnit();
+    const after = createSeededRandom(seed(99)).nextUnit();
 
     expect(after).toBe(before);
   });
