@@ -34,6 +34,7 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
     { name: "phone portrait", width: 360, height: 740, dailyColumns: 2, weeklyColumns: 2 },
     { name: "phone landscape", width: 740, height: 360, dailyColumns: 4, weeklyColumns: 4 },
     { name: "tablet", width: 1024, height: 768, dailyColumns: 4, weeklyColumns: 4 },
+    { name: "large desktop", width: 1600, height: 900, dailyColumns: 4, weeklyColumns: 4 },
   ] as const;
 
   for (const viewport of responsiveViewports) {
@@ -106,6 +107,7 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
           ...bounds(reportContent),
           clientHeight: reportContent.clientHeight,
           scrollHeight: reportContent.scrollHeight,
+          columns: columnCount(reportContent),
         },
         dailyResults: {
           ...bounds(dailyResults),
@@ -152,6 +154,9 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
     expect(layout.report.scrollHeight, viewport.name).toBeLessThanOrEqual(
       layout.report.clientHeight + 1,
     );
+    expect(layout.report.width, viewport.name).toBeLessThanOrEqual(
+      Math.min(viewport.width, 1408) + 1,
+    );
     expect(layout.reportContent.scrollHeight, viewport.name).toBeLessThanOrEqual(
       layout.reportContent.clientHeight + 1,
     );
@@ -174,6 +179,7 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
       expect(rect.bottom, viewport.name).toBeLessThanOrEqual(viewport.height + 1);
     }
 
+    expect(layout.reportContent.columns, viewport.name).toBe(viewport.width >= 640 ? 2 : 1);
     expect(layout.dailyResults.display, viewport.name).toBe("grid");
     expect(layout.dailyResults.columns, viewport.name).toBe(viewport.dailyColumns);
     expect(layout.reportHeadingDirection, viewport.name).toBe("row");
