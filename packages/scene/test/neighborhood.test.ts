@@ -18,6 +18,22 @@ import { STAND_WORLD_Z } from "../src/stand-anchors.js";
 import { STAND_LAYOUT } from "../src/stand-layout.js";
 import { gardenSignPosition, STREET_LAYOUT } from "../src/street-layout.js";
 
+// Three.js's `Object3D.userData` is typed as `Record<string, any>`; these
+// helpers isolate that boundary so callers deal in validated, narrow types
+// instead of propagating `any` through map/filter callbacks.
+const proceduralSeedOf = (object: Object3D): number => {
+  const seed: unknown = object.userData["proceduralSeed"];
+  return typeof seed === "number" ? seed : Number.NaN;
+};
+
+const meshGeometryUuid = (object: Object3D): string | null => {
+  if (!(object instanceof Mesh)) return null;
+  const geometry: unknown = object.geometry;
+  if (geometry === null || typeof geometry !== "object") return null;
+  const uuid: unknown = (geometry as Record<string, unknown>)["uuid"];
+  return typeof uuid === "string" ? uuid : null;
+};
+
 describe("neighborhood world scale", () => {
   it("extends the world with LOD scenery beyond the cinematic camera envelope", () => {
     const scene = new Scene();
@@ -102,14 +118,15 @@ describe("neighborhood world scale", () => {
     ).toBe(true);
     expect(
       new Set(
-        proceduralPlants.map((plant) => plant.userData["proceduralSeed"]),
+        proceduralPlants.map((plant) => proceduralSeedOf(plant)),
       ).size,
     ).toBeGreaterThan(16);
 
     const reusesGeometryWithinPlant = proceduralPlants.some((plant) => {
       const geometryIds: string[] = [];
       plant.traverse((object) => {
-        if (object instanceof Mesh) geometryIds.push(object.geometry.uuid);
+        const uuid = meshGeometryUuid(object);
+        if (uuid !== null) geometryIds.push(uuid);
       });
       return (
         geometryIds.length > 3 &&
@@ -128,7 +145,8 @@ describe("neighborhood world scale", () => {
     if (firstFlowerBed !== undefined) {
       const geometryIds: string[] = [];
       firstFlowerBed.traverse((object) => {
-        if (object instanceof Mesh) geometryIds.push(object.geometry.uuid);
+        const uuid = meshGeometryUuid(object);
+        if (uuid !== null) geometryIds.push(uuid);
       });
       expect(new Set(geometryIds).size).toBeLessThan(geometryIds.length);
     }
