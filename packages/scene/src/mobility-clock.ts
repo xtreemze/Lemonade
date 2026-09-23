@@ -2,6 +2,7 @@ export type MobilityClockLifecycle = "active" | "completed";
 
 export type MobilityClockState = Readonly<{
   distance: number;
+  travelDistance: number;
   velocity: number;
   routeLength: number;
   maxAcceleration: number;
@@ -73,6 +74,7 @@ export const createMobilityClock = (input: {
 
   return Object.freeze({
     distance,
+    travelDistance: 0,
     velocity: completed
       ? 0
       : finiteNonNegative(input.initialVelocity ?? 0),
@@ -111,10 +113,12 @@ export const advanceMobilityClock = (
     state.distance + Math.max(0, advanced.distance),
   );
   const completed = distance >= state.routeLength;
+  const travelled = Math.max(0, distance - state.distance);
 
   return Object.freeze({
     ...state,
     distance,
+    travelDistance: state.travelDistance + travelled,
     velocity: completed ? 0 : advanced.velocity,
     lifecycle: completed ? "completed" : "active",
   });
