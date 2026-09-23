@@ -46,6 +46,7 @@ import {
   PASSERBY_VISUAL_POOL_SIZE,
 } from "./scene-capacity.js";
 import { businessDayFrameAt, type WeatherDetailController } from "./weather-detail.js";
+import { MIN_STREET_PEDESTRIANS } from "./storyboard-create.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -824,10 +825,7 @@ export const createLemonsvilleScene = (
     return activeBuyerCount;
   };
 
-  const animatePassersBy = (
-    elapsedMs: number,
-    activeBuyerCount: number,
-  ): void => {
+  const animatePassersBy = (elapsedMs: number): void => {
     if (
       state.phase !== "simulation" ||
       elapsedMs >= storyboard.activeDurationMs
@@ -838,10 +836,8 @@ export const createLemonsvilleScene = (
 
     const targetCount = Math.min(
       customers.length,
-      Math.max(
-        activeBuyerCount + 1,
-        Math.min(PASSERBY_ACTIVE_LIMIT, storyboard.passersBy.length),
-      ),
+      PASSERBY_ACTIVE_LIMIT,
+      Math.max(MIN_STREET_PEDESTRIANS, storyboard.passersBy.length),
     );
     const poses =
       crowdMotion?.crowdPosesAt(
@@ -923,8 +919,8 @@ export const createLemonsvilleScene = (
       applyCameraShot(nextShot);
     }
 
-    const activeBuyerCount = animateBuyers(elapsedMs);
-    animatePassersBy(elapsedMs, activeBuyerCount);
+    animateBuyers(elapsedMs);
+    animatePassersBy(elapsedMs);
     animateSeller(seconds, elapsedMs);
     ambientLife?.update(
       state.weather,
