@@ -186,16 +186,19 @@ describe("procedural residential layout", () => {
         layout.exclusions.some(
           (rect) => rect.role === "sidewalk" && overlaps(path, rect),
         ),
+        `${property.role} path should reach a sidewalk`,
       ).toBe(true);
       expect(
         layout.exclusions.some(
           (rect) => rect.role === "sidewalk" && overlaps(driveway, rect),
         ),
+        `${property.role} driveway should reach a sidewalk`,
       ).toBe(true);
       expect(
         layout.exclusions.some(
           (rect) => rect.role === "road" && overlaps(driveway, rect, 0),
         ),
+        `${property.role} driveway should not pave into a road`,
       ).toBe(false);
     }
   });
