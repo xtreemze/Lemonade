@@ -32,6 +32,7 @@ export class DecisionOutsideOperatingScaleError extends Error {
     super(
       `${field} decision ${String(requested)} exceeds operating-scale maximum ${String(maximum)}`,
     );
+    // biome-ignore lint/security/noSecrets: Error.name is a stable class identifier, not a credential.
     this.name = "DecisionOutsideOperatingScaleError";
   }
 }
