@@ -12,35 +12,41 @@ import { createLemonsvilleScene } from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
 // TODO: Integrate gizmo controller for 3D editor tool (game-engine-like scene manipulation)
 // import { createGizmoController } from "@lemonade/scene";
+import {
+  disableRendererStressFixture,
+  disableSceneViewer,
+  enableRendererStressFixture,
+  enableSceneViewer,
+  isRendererStressFixtureEnabled,
+  isSceneViewerEnabled,
+} from "./dev-scene-viewer-flag.js";
 
-export const isSceneViewerEnabled = (): boolean => {
-  if (typeof localStorage === "undefined") return false;
-  return localStorage.getItem("LEMONADE_DEV_SCENE_VIEWER") === "1";
+export {
+  disableRendererStressFixture,
+  disableSceneViewer,
+  enableRendererStressFixture,
+  enableSceneViewer,
+  isRendererStressFixtureEnabled,
+  isSceneViewerEnabled,
 };
 
-export const enableSceneViewer = (): void => {
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem("LEMONADE_DEV_SCENE_VIEWER", "1");
-    console.log("🎥 Scene viewer enabled! Refresh the page to activate.");
-  }
-};
-
-export const disableSceneViewer = (): void => {
-  if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("LEMONADE_DEV_SCENE_VIEWER");
-    console.log("🎥 Scene viewer disabled. Refresh the page.");
-  }
-};
+export interface SceneViewerOptions {
+  enableGizmo?: boolean;
+  weather?: SceneWeather;
+  phase?: ScenePhase;
+  stress?: boolean;
+}
 
 export const createPersistentSceneViewer = (
   appRoot: HTMLElement,
-  options: { enableGizmo?: boolean; weather?: SceneWeather; phase?: ScenePhase } = {},
-) => {
+  options: SceneViewerOptions = {},
+): { scene: ReturnType<typeof createLemonsvilleScene>; dispose: () => void } | null => {
   // Clear app UI
   appRoot.innerHTML = "";
 
   // Create main container with flexbox (scene on left, sidebar on right)
   const container = document.createElement("div");
+  container.dataset["rendererStressFixture"] = options.stress === true ? "true" : "false";
   container.style.cssText = `
     width: 100vw;
     height: 100vh;
@@ -92,7 +98,10 @@ export const createPersistentSceneViewer = (
 
   const title = document.createElement("div");
   title.style.cssText = "font-weight: bold; margin-bottom: 12px; color: #ffff00; font-size: 14px;";
-  title.textContent = "🎥 Scene Viewer";
+  const stress = options.stress === true;
+  const phase: ScenePhase = stress ? "simulation" : (options.phase ?? "simulation");
+
+  title.textContent = stress ? "🎥 Renderer Stress Fixture" : "🎥 Scene Viewer";
   panel.appendChild(title);
 
   const info = document.createElement("div");
@@ -107,8 +116,9 @@ export const createPersistentSceneViewer = (
     line-height: 1.5;
   `;
   info.innerHTML = `
-    <div><strong>Weather:</strong> ${options.weather || "sunny"}</div>
-    <div><strong>Phase:</strong> ${options.phase || "simulation"}</div>
+    <div><strong>Weather:</strong> ${options.weather ?? "sunny"}</div>
+    <div><strong>Phase:</strong> ${phase}</div>
+    <div><strong>Profile:</strong> ${stress ? "maximum-load deterministic" : "interactive"}</div>
     <div><strong>Gizmo:</strong> ${options.enableGizmo ? "✓ Enabled" : "✗ Disabled"}</div>
     <div style="margin-top: 8px; color: #aaa; font-size: 10px;">
       Click scene to select objects<br/>
@@ -116,6 +126,22 @@ export const createPersistentSceneViewer = (
     </div>
   `;
   panel.appendChild(info);
+
+  const diagnostics = document.createElement("div");
+  diagnostics.dataset["rendererDiagnostics"] = "true";
+  diagnostics.style.cssText = `
+    background: #111;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 16px;
+    font-size: 11px;
+    color: #9cff9c;
+    line-height: 1.5;
+    white-space: pre;
+  `;
+  diagnostics.textContent = "Renderer diagnostics: initializing…";
+  panel.appendChild(diagnostics);
 
   const closeBtn = document.createElement("button");
   closeBtn.textContent = "✕ Exit";
@@ -143,24 +169,30 @@ export const createPersistentSceneViewer = (
   appRoot.appendChild(container);
 
   // Create scene state
+  const prepared = stress ? 400 : 20;
+  const sold = stress ? 400 : 10;
+  const visibleSigns = stress ? 40 : 5;
+  const ambientPedestrianCount = stress ? 60 : 12;
+  const durationMs = 14_000;
+
   const sceneState: LemonsvilleSceneState = Object.freeze({
-    weather: options.weather || "sunny",
-    visibleSigns: 5,
-    prepared: 20,
-    durationMs: 14000,
+    weather: options.weather ?? "sunny",
+    visibleSigns,
+    prepared,
+    durationMs,
     confidence: 3,
     nextConfidence: 3,
     characterSeed: 12345,
     dayNumber: 1,
     storyboard: createStreetStoryboard({
-      durationMs: 14000,
-      prepared: 20,
-      sold: 10,
-      visibleSigns: 5,
+      durationMs,
+      prepared,
+      sold,
+      visibleSigns,
       priceCents: 150,
-      ambientPedestrianCount: 12,
+      ambientPedestrianCount,
     }),
-    phase: options.phase || "simulation",
+    phase,
     reducedMotion: false,
   });
 
@@ -223,17 +255,46 @@ export const createPersistentSceneViewer = (
   // Initial render
   scene.update(sceneState);
 
+  const updateDiagnostics = (): void => {
+    const snapshot = scene.diagnostics();
+    diagnostics.textContent = [
+      `Draw calls: ${String(snapshot.drawCalls)}`,
+      `Triangles: ${String(snapshot.triangles)}`,
+      `Lines: ${String(snapshot.lines)}`,
+      `Points: ${String(snapshot.points)}`,
+      `Geometries: ${String(snapshot.geometries)}`,
+      `Textures: ${String(snapshot.textures)}`,
+      `Renderer frame: ${String(snapshot.frame)}`,
+      `Fixture: ${stress ? "stress" : "interactive"}`,
+      `Storyboard sales: ${String(sceneState.storyboard.sales.length)}`,
+      `Storyboard passers: ${String(sceneState.storyboard.passersBy.length)}`,
+    ].join("\n");
+  };
+  updateDiagnostics();
+  const diagnosticsInterval = window.setInterval(updateDiagnostics, 500);
+
   return {
     scene,
     dispose: () => {
       window.removeEventListener("resize", handleResize);
+      window.clearInterval(diagnosticsInterval);
       scene.dispose();
     },
   };
 };
 
+interface SceneViewerDevWindow {
+  enableSceneViewer: typeof enableSceneViewer;
+  disableSceneViewer: typeof disableSceneViewer;
+  enableRendererStressFixture: typeof enableRendererStressFixture;
+  disableRendererStressFixture: typeof disableRendererStressFixture;
+}
+
 // Make globally available
 if (typeof window !== "undefined") {
-  (window as any).enableSceneViewer = enableSceneViewer;
-  (window as any).disableSceneViewer = disableSceneViewer;
+  const devWindow = window as unknown as SceneViewerDevWindow;
+  devWindow.enableSceneViewer = enableSceneViewer;
+  devWindow.disableSceneViewer = disableSceneViewer;
+  devWindow.enableRendererStressFixture = enableRendererStressFixture;
+  devWindow.disableRendererStressFixture = disableRendererStressFixture;
 }

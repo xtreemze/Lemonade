@@ -11,7 +11,10 @@ import {
 
 import { characterProfileFor } from "./characters.js";
 import { decorateCharacter } from "./character-detail.js";
-import { updateNeighborhoodWind } from "./neighborhood.js";
+import {
+  updateNeighborhoodActivity,
+  updateNeighborhoodWind,
+} from "./neighborhood.js";
 import {
   createNeighborhoodMobilitySystem,
   type MobilityPose,
@@ -59,6 +62,57 @@ export type AmbientLifeController = Readonly<{
 const material = (color: number): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, roughness: 0.88 });
 
+const ambientUnit = (seed: number, salt: number): number => {
+  let value = Math.imul((seed ^ salt) >>> 0, 0x9e3779b1);
+  value = Math.imul(value ^ (value >>> 16), 0x21f0aaad);
+  return ((value ^ (value >>> 15)) >>> 0) / 0xffff_ffff;
+};
+
+export type BirdFlightProfile = Readonly<{
+  color: number;
+  direction: -1 | 1;
+  routeOffset: number;
+  speed: number;
+  altitude: number;
+  depth: number;
+  verticalAmplitude: number;
+  wingBeat: number;
+  phase: number;
+  scale: number;
+}>;
+
+const BIRD_PALETTE = [
+  0x343a40,
+  0x454b52,
+  0x5d6971,
+  0x66795a,
+  0x795d4e,
+  0x6f7890,
+] as const;
+
+export const birdFlightProfileFor = (
+  seed: number,
+  index: number,
+): BirdFlightProfile => {
+  const salt = 20_000 + index * 97;
+  return Object.freeze({
+    color:
+      BIRD_PALETTE[
+        Math.floor(ambientUnit(seed, salt) * BIRD_PALETTE.length) %
+          BIRD_PALETTE.length
+      ] ?? BIRD_PALETTE[0],
+    direction: index % 2 === 0 ? 1 : -1,
+    routeOffset: ambientUnit(seed, salt + 1),
+    speed: 0.54 + ambientUnit(seed, salt + 2) * 0.34,
+    altitude: 5.5 + ambientUnit(seed, salt + 3) * 2.5,
+    depth: -2.5 - ambientUnit(seed, salt + 4) * 8.5,
+    verticalAmplitude: 0.12 + ambientUnit(seed, salt + 5) * 0.28,
+    wingBeat: 14 + ambientUnit(seed, salt + 6) * 8,
+    phase: ambientUnit(seed, salt + 7) * Math.PI * 2,
+    scale: 0.88 + ambientUnit(seed, salt + 8) * 0.28,
+  });
+};
+
 export const ambientPopulationFor = (
   weather: AmbientWeather,
   phase: AmbientPhase,
@@ -67,7 +121,7 @@ export const ambientPopulationFor = (
     return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 2 });
   }
   if (phase !== "simulation") {
-    return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 0 });
+    return Object.freeze({ pets: 0, wildlife: 0, bicycles: 0, vehicles: 6 });
   }
   switch (weather) {
     case "sunny":
@@ -101,14 +155,21 @@ export const petFollowPose = (
   });
 };
 
-const createBird = (color: number): Group => {
+const createBird = (profile: BirdFlightProfile): Group => {
   const root = new Group();
   root.userData["sceneRole"] = "ambient-bird";
-  const body = new Mesh(new SphereGeometry(0.12, 7, 5), material(color));
+  root.userData["proceduralFlightProfile"] = profile;
+  root.scale.setScalar(profile.scale);
+
+  const plumage = material(profile.color);
+  const wingGeometry = new BoxGeometry(0.34, 0.025, 0.12);
+  const tailGeometry = new BoxGeometry(0.16, 0.025, 0.07);
+
+  const body = new Mesh(new SphereGeometry(0.12, 7, 5), plumage);
   body.scale.set(1.45, 0.72, 0.72);
   root.add(body);
 
-  const head = new Mesh(new SphereGeometry(0.075, 7, 5), material(color));
+  const head = new Mesh(new SphereGeometry(0.075, 7, 5), plumage);
   head.position.set(0.15, 0.035, 0);
   root.add(head);
 
@@ -121,7 +182,7 @@ const createBird = (color: number): Group => {
   root.add(beak);
 
   for (const direction of [-1, 1] as const) {
-    const wing = new Mesh(new BoxGeometry(0.34, 0.025, 0.12), material(color));
+    const wing = new Mesh(wingGeometry, plumage);
     wing.userData["sceneRole"] = "ambient-bird-wing";
     wing.position.set(0, 0.02, direction * 0.16);
     wing.rotation.x = direction * 0.26;
@@ -129,7 +190,7 @@ const createBird = (color: number): Group => {
   }
 
   for (const direction of [-1, 1] as const) {
-    const tail = new Mesh(new BoxGeometry(0.16, 0.025, 0.07), material(color));
+    const tail = new Mesh(tailGeometry, plumage);
     tail.position.set(-0.18, -0.015, direction * 0.055);
     tail.rotation.y = direction * 0.22;
     root.add(tail);
@@ -455,6 +516,74 @@ const createVehicle = (
   return root;
 };
 
+const VEHICLE_VARIANTS = [
+  "sedan",
+  "sports",
+  "pickup",
+  "truck",
+] as const satisfies readonly VehicleVariant[];
+
+const VEHICLE_COLORS = [
+  0x7189a8,
+  0xa65e52,
+  0x6b7c61,
+  0x8a796d,
+  0x526f86,
+  0xb17b45,
+  0x63745f,
+  0x7d7270,
+] as const;
+
+const BICYCLE_COLORS = [0x4f7f91, 0xb45d4c, 0x75864f] as const;
+
+const actorIdentitySalt = (actorId: string): number => {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < actorId.length; index += 1) {
+    hash = Math.imul(hash ^ actorId.charCodeAt(index), 0x01000193);
+  }
+  return hash >>> 0;
+};
+
+const createBicycleForActor = (seed: number, actorId: string): Group => {
+  const identitySalt = actorIdentitySalt(actorId);
+  const profileSeed = seed ^ identitySalt;
+  const color =
+    BICYCLE_COLORS[
+      Math.floor(ambientUnit(profileSeed, 29_001) * BICYCLE_COLORS.length) %
+        BICYCLE_COLORS.length
+    ] ?? BICYCLE_COLORS[0];
+  const bicycle = createBicycle(
+    color,
+    profileSeed,
+    identitySalt % 20_000,
+  );
+  bicycle.userData["mobilityActorId"] = actorId;
+  return bicycle;
+};
+
+const createVehicleForActor = (seed: number, actorId: string): Group => {
+  const identitySalt = actorIdentitySalt(actorId);
+  const profileSeed = seed ^ identitySalt;
+  const variant =
+    VEHICLE_VARIANTS[
+      Math.floor(ambientUnit(profileSeed, 30_001) * VEHICLE_VARIANTS.length) %
+        VEHICLE_VARIANTS.length
+    ] ?? "sedan";
+  const color =
+    VEHICLE_COLORS[
+      Math.floor(ambientUnit(profileSeed, 30_002) * VEHICLE_COLORS.length) %
+        VEHICLE_COLORS.length
+    ] ?? VEHICLE_COLORS[0];
+  const vehicle = createVehicle(
+    color,
+    profileSeed,
+    identitySalt % 20_000,
+    variant,
+  );
+  vehicle.userData["mobilityActorId"] = actorId;
+  return vehicle;
+};
+
 const routeProgress = (
   elapsedMs: number,
   durationMs: number,
@@ -480,6 +609,51 @@ const applyTransportWalk = (
   rig.root.position.y = Math.abs(Math.sin(cycle)) * 0.018;
 };
 
+const REDUCED_DETAIL_ROLES = new Set([
+  "face-expression",
+  "eye-white",
+  "eye-pupil",
+  "hair-detail",
+  "garment-detail",
+  "character-bag",
+]);
+
+const applyMobilityRenderDetail = (
+  root: Object3D,
+  detail: MobilityPose["detail"],
+): void => {
+  root.userData["mobilityDetail"] = detail;
+  root.traverse((child) => {
+    const role: unknown = child.userData["sceneRole"];
+    if (typeof role !== "string" || !REDUCED_DETAIL_ROLES.has(role)) return;
+    child.visible = detail === "full";
+  });
+};
+
+const distributedTrafficPoses = (
+  poses: readonly MobilityPose[],
+  limit: number,
+): readonly MobilityPose[] => {
+  const safeLimit = Math.max(0, Math.trunc(limit));
+  if (safeLimit === 0) return Object.freeze([]);
+
+  const primaryByStreet = new Map<string, MobilityPose>();
+  const extras: MobilityPose[] = [];
+  for (const pose of poses) {
+    const match = /^traffic-vehicle:([^:]+):v\d+$/.exec(pose.id);
+    const streetId = match?.[1];
+    if (streetId !== undefined && !primaryByStreet.has(streetId)) {
+      primaryByStreet.set(streetId, pose);
+    } else {
+      extras.push(pose);
+    }
+  }
+
+  return Object.freeze(
+    [...primaryByStreet.values(), ...extras].slice(0, safeLimit),
+  );
+};
+
 const placeRig = (
   rig: TransportCharacterRig,
   pose: MobilityPose | undefined,
@@ -487,6 +661,7 @@ const placeRig = (
 ): void => {
   rig.root.visible = pose?.visible === true;
   if (!pose?.visible) return;
+  applyMobilityRenderDetail(rig.root, pose.detail);
   rig.root.position.set(pose.x, 0, pose.z);
   rig.root.rotation.y = -pose.yaw;
   applyTransportWalk(rig, elapsedMs, pose.speed);
@@ -506,27 +681,15 @@ export const createAmbientLife = (
   mobilitySeed = seed,
 ): AmbientLifeController => {
   const pets = [createPet(0xa96f45), createPet(0x3e3a36), createPet(0xd1b48b)];
-  const wildlife = [
-    createBird(0x5d6971),
-    createBird(0x795d4e),
-    createBird(0x66795a),
-    createBird(0x6f7890),
-  ];
-  const bicycles = [
-    createBicycle(0x4f7f91, seed, 0),
-    createBicycle(0xb45d4c, seed, 1),
-    createBicycle(0x75864f, seed, 2),
-  ];
-  const vehicles = [
-    createVehicle(0x7189a8, seed, 0, "sedan"),
-    createVehicle(0xa65e52, seed, 1, "sports"),
-    createVehicle(0x6b7c61, seed, 2, "pickup"),
-    createVehicle(0x8a796d, seed, 3, "truck"),
-    createVehicle(0x526f86, seed, 4, "sedan"),
-    createVehicle(0xb17b45, seed, 5, "sports"),
-    createVehicle(0x63745f, seed, 6, "pickup"),
-    createVehicle(0x7d7270, seed, 7, "sedan"),
-  ];
+  const wildlifeProfiles = Array.from({ length: 4 }, (_, index) =>
+    birdFlightProfileFor(seed ^ 0x42495244, index),
+  );
+  const wildlife = wildlifeProfiles.map((profile) => createBird(profile));
+  const bicycleVisuals = new Map<string, Group>();
+  const vehicleVisuals = new Map<string, Group>();
+  const ambientPetOwners = pets
+    .slice(0, 2)
+    .map((_, index) => owners[index]);
   const residents = [
     createTransportCharacter(seed ^ 0x7341, 12_000),
     createTransportCharacter(seed ^ 0x7341, 12_001),
@@ -544,11 +707,29 @@ export const createAmbientLife = (
 
   const mobility = createNeighborhoodMobilitySystem(mobilitySeed);
 
+  const bicycleForActor = (actorId: string): Group => {
+    const existing = bicycleVisuals.get(actorId);
+    if (existing !== undefined) return existing;
+    const bicycle = createBicycleForActor(seed, actorId);
+    bicycle.visible = false;
+    bicycleVisuals.set(actorId, bicycle);
+    scene.add(bicycle);
+    return bicycle;
+  };
+
+  const vehicleForActor = (actorId: string): Group => {
+    const existing = vehicleVisuals.get(actorId);
+    if (existing !== undefined) return existing;
+    const vehicle = createVehicleForActor(seed, actorId);
+    vehicle.visible = false;
+    vehicleVisuals.set(actorId, vehicle);
+    scene.add(vehicle);
+    return vehicle;
+  };
+
   for (const actor of [
     ...pets,
     ...wildlife,
-    ...bicycles,
-    ...vehicles,
     ...residents.map((resident) => resident.root),
     mailCarrier.root,
     gardener.root,
@@ -571,10 +752,10 @@ export const createAmbientLife = (
       const pedestrianObstacles: Readonly<{ x: number; z: number }>[] = [];
 
       pets.slice(0, 2).forEach((pet, index) => {
-        const owner = owners.find((candidate, ownerIndex) =>
-          candidate.visible && ownerIndex >= index,
-        ) ?? owners.find((candidate) => candidate.visible);
-        pet.visible = index < population.pets && owner !== undefined;
+        const owner = ambientPetOwners[index];
+        pet.visible =
+          index < population.pets &&
+          owner?.visible === true;
         if (!pet.visible || owner === undefined) return;
         const pose = petFollowPose({
           x: owner.position.x,
@@ -605,6 +786,8 @@ export const createAmbientLife = (
         focus,
         pedestrianObstacles,
       });
+
+      updateNeighborhoodActivity(scene, sample.properties, elapsedMs);
 
       const residentPet = sample.actors.find((actor) => actor.id === "resident-pet");
       const homePet = pets[2];
@@ -638,43 +821,56 @@ export const createAmbientLife = (
       wildlife.forEach((bird, index) => {
         bird.visible = index < population.wildlife;
         if (!bird.visible) return;
+        const profile = wildlifeProfiles[index];
+        if (profile === undefined) return;
         const progress = routeProgress(
           elapsedMs,
           durationMs,
-          index * 0.39 + 0.12,
-          0.62 + index * 0.08,
+          profile.routeOffset,
+          profile.speed,
         );
-        const direction = index % 2 === 0 ? 1 : -1;
-        const x = direction === 1
-          ? -18 + progress * 36
-          : 18 - progress * 36;
+        const x = profile.direction === 1
+          ? -20 + progress * 40
+          : 20 - progress * 40;
         bird.position.set(
           x,
-          5.8 + index * 0.65 + Math.sin(progress * Math.PI * 4) * 0.25,
-          -3 - index * 2.4,
+          profile.altitude +
+            Math.sin(progress * Math.PI * 4 + profile.phase) *
+              profile.verticalAmplitude,
+          profile.depth,
         );
-        bird.rotation.y = xTravelYaw(direction);
+        bird.rotation.y = xTravelYaw(profile.direction);
         bird.rotation.z =
-          direction * Math.sin(progress * Math.PI * 12) * 0.08;
+          profile.direction *
+          Math.sin(progress * Math.PI * 12 + profile.phase) *
+          0.08;
         for (const child of bird.children) {
           if (child.userData["sceneRole"] !== "ambient-bird-wing") continue;
           const side = Math.sign(child.position.z) || 1;
           child.rotation.x =
-            side * (0.18 + Math.sin(progress * Math.PI * 18 + index) * 0.42);
+            side *
+            (0.18 +
+              Math.sin(
+                progress * Math.PI * profile.wingBeat + profile.phase,
+              ) *
+                0.42);
         }
       });
 
       const bicyclePoses = sample.actors.filter(
         (actor) => actor.kind === "bicycle" && actor.visible,
       );
-      bicycles.forEach((bike, index) => {
-        const pose = index < population.bicycles ? bicyclePoses[index] : undefined;
-        bike.visible = pose !== undefined;
-        if (pose === undefined) return;
-        bike.userData["mobilityActorId"] = pose.id;
-        bike.position.set(pose.x, 0.02, pose.z);
-        bike.rotation.y = -pose.yaw;
-      });
+      for (const bicycle of bicycleVisuals.values()) {
+        bicycle.visible = false;
+      }
+      for (const pose of bicyclePoses.slice(0, population.bicycles)) {
+        const bicycle = bicycleForActor(pose.id);
+        bicycle.visible = true;
+        bicycle.userData["mobilityActorId"] = pose.id;
+        applyMobilityRenderDetail(bicycle, pose.detail);
+        bicycle.position.set(pose.x, 0.02, pose.z);
+        bicycle.rotation.y = -pose.yaw;
+      }
 
       const allVehiclePoses = sample.actors.filter(
         (actor) => actor.kind === "vehicle" && actor.visible,
@@ -687,22 +883,25 @@ export const createAmbientLife = (
       );
       const vehiclePoses = [
         ...(residentVehicle === undefined ? [] : [residentVehicle]),
-        ...throughTraffic.slice(
-          0,
+        ...distributedTrafficPoses(
+          throughTraffic,
           Math.max(
             0,
             population.vehicles - (residentVehicle === undefined ? 0 : 1),
           ),
         ),
       ];
-      vehicles.forEach((vehicle, index) => {
-        const pose = vehiclePoses[index];
-        vehicle.visible = pose !== undefined;
-        if (pose === undefined) return;
+      for (const vehicle of vehicleVisuals.values()) {
+        vehicle.visible = false;
+      }
+      for (const pose of vehiclePoses) {
+        const vehicle = vehicleForActor(pose.id);
+        vehicle.visible = true;
         vehicle.userData["mobilityActorId"] = pose.id;
+        applyMobilityRenderDetail(vehicle, pose.detail);
         vehicle.position.set(pose.x, 0.02, pose.z);
         vehicle.rotation.y = -pose.yaw;
-      });
+      }
       return sample;
     },
   });

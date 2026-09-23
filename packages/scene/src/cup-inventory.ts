@@ -7,7 +7,7 @@ import {
   Mesh,
   MeshStandardMaterial,
 } from "three";
-import type { Group } from "three";
+import type { Group, Object3D } from "three";
 
 import { STAND_LAYOUT } from "./stand-layout.js";
 
@@ -17,6 +17,18 @@ export type CupInventory = Readonly<{
   meshes: readonly InstancedMesh[];
   setStock(remaining: number, prepared: number): void;
 }>;
+
+const HELD_CUP_GRIP = Object.freeze({
+  position: [0.055, 0.045, 0.055] as const,
+  scale: 0.9,
+});
+
+export const attachLemonadeCupToHand = (hand: Object3D, cup: Group): void => {
+  cup.position.set(...HELD_CUP_GRIP.position);
+  cup.rotation.set(0, 0, -0.08);
+  cup.scale.setScalar(HELD_CUP_GRIP.scale);
+  hand.add(cup);
+};
 
 const finiteStock = (value: number): number =>
   Math.max(0, Number.isFinite(value) ? Math.trunc(value) : 0);

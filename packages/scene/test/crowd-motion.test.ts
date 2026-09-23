@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ambientPopulationFor,
+  birdFlightProfileFor,
   createAmbientLife,
   petFollowPose,
   vehicleVariantSpec,
@@ -72,10 +73,14 @@ describe("crowd motion", () => {
     expect(new Set(first.map((pose) => pose?.side).filter(Boolean))).toEqual(
       new Set(["near", "far"]),
     );
-    const routeIds = new Set(first.map((pose) => pose?.routeId).filter(Boolean));
+    const routeIds = new Set(
+      first
+        .map((pose) => pose?.routeId)
+        .filter((routeId): routeId is string => routeId !== undefined),
+    );
     expect(routeIds.size).toBeGreaterThan(4);
-    expect(routeIds.has("main:0")).toBe(true);
-    expect(routeIds.has("main:1")).toBe(true);
+    expect([...routeIds].some((routeId) => routeId.startsWith("main:0"))).toBe(true);
+    expect([...routeIds].some((routeId) => routeId.startsWith("main:1"))).toBe(true);
     const generatedRouteIds = new Set(
       neighborhoodSidewalkRoutes().map((route) => route.id),
     );
@@ -99,6 +104,65 @@ describe("crowd motion", () => {
         const distance = Math.hypot(a.x - b.x, a.z - b.z);
         expect(distance).toBeGreaterThan(0.42);
       }
+    }
+  });
+
+  it("keeps sidewalk routes contiguous and prevents frame-to-frame pedestrian teleports", () => {
+    const routes = neighborhoodSidewalkRoutes();
+    for (const route of routes) {
+      for (let index = 1; index < route.strips.length; index += 1) {
+        const previous = route.strips[index - 1];
+        const current = route.strips[index];
+        if (previous === undefined || current === undefined) continue;
+        expect(Math.floor(current.segmentIndex / 2)).toBe(
+          Math.floor(previous.segmentIndex / 2) + 1,
+        );
+      }
+    }
+
+    const longBeats = Object.freeze(
+      beats.map((beat) =>
+        Object.freeze({
+          ...beat,
+          startAtMs: 0,
+          endAtMs: 12_000,
+        }),
+      ),
+    );
+    const simulation = createCrowdSimulation(longBeats, 12, 12_000);
+    let previous = simulation.sample(0).poses;
+    for (let elapsedMs = 100; elapsedMs < 12_000; elapsedMs += 100) {
+      const current = simulation.sample(elapsedMs).poses;
+      for (let index = 0; index < current.length; index += 1) {
+        const before = previous[index];
+        const after = current[index];
+        if (before === undefined || after === undefined) continue;
+        expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeLessThan(
+          1.25,
+        );
+      }
+      previous = current;
+    }
+  });
+
+  it("uses left/right side-entry routes instead of top/bottom pedestrian approaches", () => {
+    const sample = crowdPosesAt(beats, 12, 2_750, 6_000);
+    const routes = new Map(
+      neighborhoodSidewalkRoutes().map((route) => [route.id, route] as const),
+    );
+    for (const pose of sample) {
+      if (pose === undefined) continue;
+      const route = routes.get(pose.routeId);
+      expect(route).toBeDefined();
+      if (route === undefined) continue;
+      const first = route.points[0];
+      const last = route.points.at(-1);
+      expect(first).toBeDefined();
+      expect(last).toBeDefined();
+      if (first === undefined || last === undefined) continue;
+      expect(Math.abs(last.x - first.x)).toBeGreaterThanOrEqual(
+        Math.abs(last.z - first.z),
+      );
     }
   });
 
@@ -149,6 +213,51 @@ describe("crowd motion", () => {
     expect(farPet.z).toBeGreaterThanOrEqual(STREET_LAYOUT.farSidewalk.minZ);
     expect(farPet.z).toBeLessThanOrEqual(STREET_LAYOUT.farSidewalk.maxZ);
     expect(Math.abs(farPet.yaw)).toBeCloseTo(Math.PI);
+  });
+
+
+  it("does not rebind a visible pet to another pedestrian when its owner disappears", () => {
+    const scene = new Scene();
+    const firstOwner = new Group();
+    firstOwner.visible = true;
+    firstOwner.position.set(-12, 0, STREET_LAYOUT.nearSidewalk.centerZ);
+    firstOwner.rotation.y = Math.PI / 2;
+    const secondOwner = new Group();
+    secondOwner.visible = true;
+    secondOwner.position.set(12, 0, STREET_LAYOUT.nearSidewalk.centerZ);
+    secondOwner.rotation.y = Math.PI / 2;
+    scene.add(firstOwner, secondOwner);
+
+    const ambient = createAmbientLife(scene, 0x51a7, [
+      firstOwner,
+      secondOwner,
+    ]);
+    ambient.update("sunny", "simulation", 2_000, 14_000);
+
+    const firstPet = scene.children
+      .filter((object) => object.userData["sceneRole"] === "ambient-pet")
+      .find(
+        (pet) =>
+          pet.visible &&
+          Math.abs(pet.position.x - firstOwner.position.x) < 2,
+      );
+    const secondPet = scene.children
+      .filter((object) => object.userData["sceneRole"] === "ambient-pet")
+      .find(
+        (pet) =>
+          pet.visible &&
+          Math.abs(pet.position.x - secondOwner.position.x) < 2,
+      );
+    expect(firstPet).toBeDefined();
+    expect(secondPet).toBeDefined();
+    if (firstPet === undefined || secondPet === undefined) return;
+
+    firstOwner.visible = false;
+    ambient.update("sunny", "simulation", 2_016, 14_000);
+
+    expect(firstPet.visible).toBe(false);
+    expect(secondPet.visible).toBe(true);
+    expect(Math.abs(secondPet.position.x - secondOwner.position.x)).toBeLessThan(2);
   });
 
   it("keeps pets on sidewalks and traffic on generated roads as neighborhood routes turn", () => {
@@ -232,6 +341,32 @@ describe("crowd motion", () => {
     }
   });
 
+  it("derives deterministic varied bird flight profiles from the scene seed", () => {
+    const first = Array.from({ length: 4 }, (_, index) =>
+      birdFlightProfileFor(0x1ead2026, index),
+    );
+    const repeated = Array.from({ length: 4 }, (_, index) =>
+      birdFlightProfileFor(0x1ead2026, index),
+    );
+    const alternate = Array.from({ length: 4 }, (_, index) =>
+      birdFlightProfileFor(0x1ead2027, index),
+    );
+
+    expect(repeated).toEqual(first);
+    expect(alternate).not.toEqual(first);
+    expect(new Set(first.map((profile) => profile.direction))).toEqual(
+      new Set([-1, 1]),
+    );
+    expect(new Set(first.map((profile) => profile.depth)).size).toBe(4);
+    expect(new Set(first.map((profile) => profile.altitude)).size).toBe(4);
+    for (const profile of first) {
+      expect(profile.speed).toBeGreaterThanOrEqual(0.54);
+      expect(profile.speed).toBeLessThanOrEqual(0.88);
+      expect(profile.scale).toBeGreaterThanOrEqual(0.88);
+      expect(profile.scale).toBeLessThanOrEqual(1.16);
+    }
+  });
+
   it("flies sunny-day birds across town in both street directions", () => {
     const scene = new Scene();
     const ambient = createAmbientLife(scene, 0x1ead2026, []);
@@ -296,9 +431,33 @@ describe("crowd motion", () => {
     );
     expect(extent).toBeGreaterThan(42);
     for (const pose of allPoses) {
-      expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.15);
-      expect(pose.worldSpeed).toBeLessThanOrEqual(2.05);
+      expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.18);
+      expect(pose.worldSpeed).toBeLessThanOrEqual(1.44);
     }
+  });
+
+  it("starts late pedestrians at a route boundary and moves them immediately", () => {
+    const lateBeat: PasserbyBeat = Object.freeze({
+      pedestrianIndex: 0,
+      startAtMs: 1_000,
+      endAtMs: 5_000,
+      direction: -1,
+      lane: 0,
+      seesAdvertisement: true,
+      signIndex: 0,
+    });
+    const simulation = createCrowdSimulation([lateBeat], 1, 6_000);
+
+    expect(simulation.sample(999).poses[0]).toBeUndefined();
+    const spawned = simulation.sample(1_000).poses[0];
+    const moved = simulation.sample(1_100).poses[0];
+    expect(spawned).toBeDefined();
+    expect(moved).toBeDefined();
+    if (spawned === undefined || moved === undefined) return;
+
+    expect(spawned.travelDistance).toBeCloseTo(0, 6);
+    expect(moved.travelDistance).toBeCloseTo(moved.worldSpeed * 0.1, 5);
+    expect(Math.hypot(moved.x - spawned.x, moved.z - spawned.z)).toBeGreaterThan(0.08);
   });
 
   it("provides enough ground clearance for adult and child seeded heights", () => {
@@ -337,5 +496,45 @@ describe("crowd motion", () => {
       bicycles: 0,
       vehicles: 2,
     });
+    expect(ambientPopulationFor("sunny", "idle")).toEqual({
+      pets: 0,
+      wildlife: 0,
+      bicycles: 0,
+      vehicles: 6,
+    });
   });
+
+  it("never teleports an active pedestrian between sidewalk samples", () => {
+    const simulation = createCrowdSimulation(beats, 12, 12_000);
+    let previous = simulation.sample(0).poses;
+
+    for (let elapsedMs = 50; elapsedMs <= 12_000; elapsedMs += 50) {
+      const current = simulation.sample(elapsedMs).poses;
+      for (let index = 0; index < current.length; index += 1) {
+        const before = previous[index];
+        const after = current[index];
+        if (before === undefined || after === undefined) continue;
+        const displacement = Math.hypot(after.x - before.x, after.z - before.z);
+        const expectedTravel = Math.max(before.worldSpeed, after.worldSpeed) * 0.05;
+        expect(displacement).toBeLessThanOrEqual(expectedTravel + 0.28);
+      }
+      previous = current;
+    }
+  });
+
+  it("keeps ordinary pedestrians within a normal walking-speed envelope", () => {
+    const simulation = createCrowdSimulation(beats, 12, 12_000);
+    const sampled = [
+      ...simulation.sample(1_000).poses,
+      ...simulation.sample(6_000).poses,
+      ...simulation.sample(11_000).poses,
+    ].filter((pose) => pose !== undefined);
+
+    expect(sampled.length).toBeGreaterThan(0);
+    for (const pose of sampled) {
+      expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.18);
+      expect(pose.worldSpeed).toBeLessThanOrEqual(1.44);
+    }
+  });
+
 });

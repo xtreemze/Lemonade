@@ -11,6 +11,7 @@ import {
   financeRulesForTier,
   generateEnvironment,
   glassCount,
+  isLegacyBankrupt,
   legacyConfidenceForState,
   moneyCents,
   operatingScaleForState,
@@ -46,15 +47,15 @@ import {
 } from "./persistence.js";
 import { createHapticEngine, type HapticCue } from "./haptics.js";
 import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
+import {
+  affordabilityShortfallMessage,
+  bankruptcyMessage,
+  standLevelTransitionMessage,
+} from "./report-feedback.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 import { isGizmoEnabled, printGizmoHelp } from "./dev-gizmo.js";
-import {
-  isSceneLauncherEnabled,
-  printSceneLauncherHelp,
-  createSceneLauncherUI,
-  type ScenePreset,
-} from "./dev-scene-launcher.js";
-import { isSceneViewerEnabled, createPersistentSceneViewer } from "./dev-scene-viewer.js";
+import { isSceneLauncherEnabled } from "./dev-scene-launcher-flag.js";
+import type { ScenePreset } from "./dev-scene-launcher.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
 const ACTIVE_SIMULATION_PRESENTATION_MS = 10_000;
@@ -208,10 +209,17 @@ const SHELL_MARKUP = `
         aria-hidden="true"
         focusable="false"
       >
-        <path class="next-day-horizon" d="M18 62h42" />
-        <path class="next-day-ray" d="M39 19v9M17 39l7 4M61 39l-7 4" />
-        <path class="next-day-sun" d="M24 62a15 15 0 0 1 30 0" />
-        <path class="next-day-arrow" d="M58 49l18 13-18 13M75 62H49" />
+        <g class="next-day-glyph">
+          <path class="next-day-horizon" d="M18 62h42" />
+          <path class="next-day-ray" d="M39 19v9M17 39l7 4M61 39l-7 4" />
+          <path class="next-day-sun" d="M24 62a15 15 0 0 1 30 0" />
+          <path class="next-day-arrow" d="M58 49l18 13-18 13M75 62H49" />
+        </g>
+        <g class="new-game-glyph">
+          <circle class="new-game-lemon" cx="46" cy="52" r="14" />
+          <path class="new-game-leaf" d="M45 34c5-9 13-11 20-7-4 8-10 11-20 7Z" />
+          <path class="new-game-arrow" d="M73 42a29 29 0 1 1-7-14M66 18v18H49" />
+        </g>
       </svg>
     </button>
   </main>
@@ -222,11 +230,11 @@ type ElementConstructor<T extends Element> = abstract new () => T;
 const requireElement = <T extends Element>(
   root: ParentNode,
   selector: string,
-  constructor: ElementConstructor<T>,
+  elementType: ElementConstructor<T>,
 ): T => {
   const element = root.querySelector(selector);
-  if (!(element instanceof constructor)) {
-    throw new TypeError(`Expected ${selector} to match ${constructor.name}.`);
+  if (!(element instanceof elementType)) {
+    throw new TypeError(`Expected ${selector} to match ${elementType.name}.`);
   }
   return element;
 };
@@ -310,6 +318,9 @@ export class LemonadeApp {
   #glasses: number;
   #signs: number;
   #price: number;
+  #sceneConfidenceOverride: number | null = null;
+  #scenePhaseOverride: ScenePreset["phase"] | null = null;
+  #sceneSoldOverride: number | null = null;
   #runStatusMessage = "";
   #runErrorMessage: string | null = null;
   #saveChain: Promise<void> = Promise.resolve();
@@ -320,13 +331,6 @@ export class LemonadeApp {
     initialRun: RunSnapshot = createFreshRunSnapshot(),
     options: LemonadeAppOptions = DEFAULT_OPTIONS,
   ) {
-    // Check for persistent 3D scene viewer dev mode
-    if (isSceneViewerEnabled()) {
-      console.log("🎥 Scene Viewer mode activated - launching persistent 3D scene");
-      createPersistentSceneViewer(root, { enableGizmo: true, weather: "hot-and-dry", phase: "forecast" });
-      return;
-    }
-
     this.#runSeed = initialRun.seed;
     this.#random = restoreEnvironmentRandom(initialRun);
     this.#game = initialRun.state;
@@ -349,10 +353,6 @@ export class LemonadeApp {
     }
 
     const sceneLauncherEnabled = isSceneLauncherEnabled();
-    if (sceneLauncherEnabled) {
-      console.log("🎬 Scene launcher enabled - type 'sceneLauncherHelp()' for help");
-      printSceneLauncherHelp();
-    }
 
     this.#scene = createLemonsvilleSceneView(
       {
@@ -374,28 +374,28 @@ export class LemonadeApp {
         this.#environment = {
           ...this.#environment,
           weather: {
+            ...this.#environment.weather,
             kind: preset.weather,
-            temperature: preset.weather === "thunderstorm" ? 55 : 72,
           },
         };
-        this.#presentation =
-          preset.phase === "forecast" ? "forecast" : preset.phase === "idle" ? "idle" : "simulation";
-
-        if (preset.confidence !== undefined) {
-          this.#game = {
-            ...this.#game,
-            confidence: preset.confidence,
-          };
-        }
-
+        this.#presentation = preset.phase === "forecast" ? "forecast" : "simulation";
+        this.#scenePhaseOverride = preset.phase;
+        this.#sceneConfidenceOverride = preset.confidence ?? null;
+        this.#sceneSoldOverride = preset.sold ?? null;
         this.#glasses = preset.prepared ?? 5;
         this.#signs = preset.visibleSigns ?? 1;
 
         this.#renderScene();
       };
 
-      const launcherPanel = createSceneLauncherUI(onPresetSelect);
-      document.body.appendChild(launcherPanel);
+      void import("./dev-scene-launcher.js").then(
+        ({ printSceneLauncherHelp, createSceneLauncherUI }) => {
+          console.log("🎬 Scene launcher enabled - type 'sceneLauncherHelp()' for help");
+          printSceneLauncherHelp();
+          const launcherPanel = createSceneLauncherUI(onPresetSelect);
+          document.body.appendChild(launcherPanel);
+        },
+      );
     }
 
     this.#elements.decisionPanel.addEventListener(
@@ -542,6 +542,11 @@ export class LemonadeApp {
 
   readonly #onNextDay = (): void => {
     if (this.#phase.kind !== "report" || this.#presentation !== "history") return;
+
+    if (isLegacyBankrupt(this.#phase.resolution.nextState)) {
+      void this.#resetRun();
+      return;
+    }
 
     const nextState = this.#phase.resolution.nextState;
     const nextEnvironment = generateEnvironment(nextState.day, this.#random);
@@ -713,19 +718,22 @@ export class LemonadeApp {
     }
   }
 
-  #scheduleHaptic(delayMs: number, cue: HapticCue): void {
-    const timer = window.setTimeout(() => {
-      this.#feedbackTimers = this.#feedbackTimers.filter((candidate) => candidate !== timer);
-      if (!this.#disposed) this.#haptics.play(cue);
-    }, Math.max(0, delayMs));
-    this.#feedbackTimers.push(timer);
-  }
-
   #scheduleStormFeedback(durationMs: number): void {
     const duration = Math.max(700, durationMs);
-    this.#scheduleFeedback(180, "storm:thunder", "storm:thunder");
-    this.#scheduleHaptic(Math.min(duration - 180, duration * 0.34), "storm:gust");
-    this.#scheduleHaptic(Math.min(duration - 90, duration * 0.72), "storm:gust");
+    for (const progress of [0.2, 0.57, 0.78] as const) {
+      this.#scheduleFeedback(
+        Math.min(duration - 90, duration * progress + 110),
+        "storm:thunder",
+        "storm:thunder",
+      );
+    }
+    for (const progress of [0.34, 0.72] as const) {
+      this.#scheduleFeedback(
+        Math.min(duration - 90, duration * progress),
+        "storm:gust",
+        "storm:gust",
+      );
+    }
   }
 
   #playWeatherForecastCue(weather: DayEnvironment["weather"]["kind"]): void {
@@ -807,6 +815,13 @@ export class LemonadeApp {
 
   #renderPresentationState(): void {
     this.#elements.gameShell.dataset["view"] = this.#presentation;
+    const bankrupt =
+      this.#phase.kind === "report" && isLegacyBankrupt(this.#phase.resolution.nextState);
+    this.#elements.historyNextButton.setAttribute(
+      "aria-label",
+      bankrupt ? "Start a new game" : "Plan next day",
+    );
+    this.#elements.historyNextButton.dataset["action"] = bankrupt ? "new-game" : "next-day";
 
     switch (this.#presentation) {
       case "planning":
@@ -866,15 +881,44 @@ export class LemonadeApp {
       priceText: `Price ${formatMoney(this.#price)} / glass`,
       spendText: `Spend ${formatMoney(affordability.spend)} of ${formatMoney(affordability.operatingFunds)} operating funds`,
       affordable: affordability.affordable,
+      affordabilityMessage: affordabilityShortfallMessage(
+        affordability.spend,
+        affordability.operatingFunds,
+      ),
     });
   }
 
   #renderReportState(): void {
     const report = this.#phase.kind === "report" ? this.#phase.resolution : null;
+    const previousScale = operatingScaleForState(this.#game);
+    const nextScale = report === null ? previousScale : operatingScaleForState(report.nextState);
+    const bankrupt = report !== null && isLegacyBankrupt(report.nextState);
+    const standMessage =
+      report === null ? null : standLevelTransitionMessage(previousScale, nextScale);
+    const financeMessage =
+      report !== null && report.nextState.tier !== this.#game.tier
+        ? `Business tier ${String(report.nextState.tier)} unlocks tomorrow. New finance rules will be shown before you sell.`
+        : null;
+    const progressionMessage = [standMessage, financeMessage]
+      .filter((message): message is string => message !== null)
+      .join(" ");
+    const milestoneMessage =
+      bankruptcyMessage(bankrupt) ??
+      (progressionMessage.length > 0 ? progressionMessage : null);
+    const milestoneKind =
+      bankrupt
+        ? "bankruptcy"
+        : nextScale.level < previousScale.level
+          ? "warning"
+          : milestoneMessage === null
+            ? null
+            : "progression";
+
     this.#elements.reportPanel.model = Object.freeze({
       report,
       weeklyReport: report === null ? null : summarizeCompletedWeek(report.nextState.ledger),
-      currentTier: this.#game.tier,
+      milestoneMessage,
+      milestoneKind,
     });
   }
 
@@ -882,21 +926,27 @@ export class LemonadeApp {
     const phase = this.#phase;
     const resolvedDay = phase.kind === "report" ? phase.resolution.entry : null;
     const scenePhase =
-      this.#presentation === "simulation" || this.#presentation === "forecast"
+      this.#scenePhaseOverride ??
+      (this.#presentation === "simulation" || this.#presentation === "forecast"
         ? this.#presentation
-        : "idle";
-    const confidence = legacyConfidenceForState(this.#game);
+        : "idle");
+    const confidence =
+      this.#sceneConfidenceOverride ?? legacyConfidenceForState(this.#game);
     const nextConfidence =
-      phase.kind === "report"
+      this.#sceneConfidenceOverride ??
+      (phase.kind === "report"
         ? legacyConfidenceForState(phase.resolution.nextState)
-        : confidence;
+        : confidence);
     this.#scene.update({
       environment: this.#environment,
       confidence,
       nextConfidence,
       visibleSigns: resolvedDay === null ? this.#signs : Number(resolvedDay.decision.signs),
       phase: scenePhase,
-      sold: resolvedDay === null ? 0 : Number(resolvedDay.sold),
+      sold:
+        resolvedDay === null
+          ? (this.#sceneSoldOverride ?? 0)
+          : Number(resolvedDay.sold),
       prepared: resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses),
       priceCents: resolvedDay === null ? this.#price : Number(resolvedDay.decision.price),
       characterSeed: Number(this.#runSeed),

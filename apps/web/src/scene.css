@@ -29,14 +29,14 @@
 
 .scene-overlay {
   position: absolute;
-  top: max(18px, env(safe-area-inset-top));
+  top: max(10px, env(safe-area-inset-top));
   left: 50%;
   z-index: 4;
-  width: min(92%, 34rem);
-  padding: 10px 14px;
-  border: 2px solid #211d14;
+  width: min(calc(100% - 24px), 30rem);
+  padding: 7px 10px;
+  border: 1px solid #211d14;
   background: rgb(255 249 228 / 88%);
-  box-shadow: 4px 4px 0 #211d14;
+  box-shadow: 3px 3px 0 #211d14;
   text-align: center;
   transform: translateX(-50%);
   pointer-events: none;
@@ -44,11 +44,12 @@
 
 .scene-overlay .eyebrow {
   margin-bottom: 2px;
+  font-size: 0.62rem;
 }
 
 .scene-overlay strong {
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  font-size: clamp(1rem, 5vw, 1.65rem);
+  font-size: clamp(0.9rem, 4.4vw, 1.35rem);
   text-transform: uppercase;
 }
 
@@ -57,6 +58,22 @@
   .scene-fallback {
     height: 310px;
     min-height: 310px;
+  }
+
+  .scene-overlay {
+    top: max(18px, env(safe-area-inset-top));
+    width: min(92%, 34rem);
+    padding: 10px 14px;
+    border-width: 2px;
+    box-shadow: 4px 4px 0 #211d14;
+  }
+
+  .scene-overlay .eyebrow {
+    font-size: 0.72rem;
+  }
+
+  .scene-overlay strong {
+    font-size: clamp(1rem, 2.4vw, 1.65rem);
   }
 }
 

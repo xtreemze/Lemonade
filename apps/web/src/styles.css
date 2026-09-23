@@ -187,17 +187,6 @@ h2 {
   justify-content: space-between;
 }
 
-.decision-control .decision-exact {
-  grid-column: 2;
-  grid-row: 2;
-  justify-self: end;
-}
-
-.decision-control .game-slider {
-  grid-column: 1 / -1;
-  grid-row: 3;
-}
-
 .decision-control-heading {
   display: flex;
   grid-column: 1 / -1;
@@ -274,6 +263,11 @@ h2 {
   -webkit-tap-highlight-color: transparent;
 }
 
+.decision-control .game-slider {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+
 .decision-control-glasses .game-slider {
   --slider-thumb-image: url("./assets/cup.svg");
   --slider-thumb-kind: cup;
@@ -345,6 +339,12 @@ h2 {
   justify-self: end;
   gap: 4px;
   min-width: 92px;
+}
+
+.decision-control .decision-exact {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
 }
 
 .decision-exact > span:first-child {
@@ -861,6 +861,36 @@ body:has(.game-shell[data-view="forecast"]) {
   overflow: visible;
 }
 
+.new-game-glyph {
+  display: none;
+}
+
+.history-next-button[data-action="new-game"] {
+  color: #9a2e26;
+}
+
+.history-next-button[data-action="new-game"] .next-day-glyph {
+  display: none;
+}
+
+.history-next-button[data-action="new-game"] .new-game-glyph {
+  display: block;
+}
+
+.new-game-arrow,
+.new-game-lemon {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 6;
+}
+
+.new-game-leaf {
+  fill: currentColor;
+  stroke: none;
+}
+
 .next-day-horizon,
 .next-day-ray,
 .next-day-sun,
@@ -941,7 +971,7 @@ body:has(.game-shell[data-view="forecast"]) {
   min-width: 0;
   min-height: 0;
   margin: 0;
-  padding: clamp(6px, 1.5dvh, 10px) 6px 86px;
+  padding: clamp(6px, 1.5dvh, 10px) 6px 74px;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -1052,7 +1082,8 @@ body:has(.game-shell[data-view="forecast"]) {
   display: grid;
   flex: 1 1 auto;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: stretch;
+  align-content: start;
+  grid-auto-rows: minmax(2rem, auto);
   min-width: 0;
   min-height: 0;
 }
@@ -1063,6 +1094,7 @@ body:has(.game-shell[data-view="forecast"]) {
   justify-content: space-between;
   gap: 4px;
   min-width: 0;
+  min-height: 2rem;
   border-bottom: 1px solid #d9cda9;
 }
 
@@ -1202,9 +1234,9 @@ body:has(.game-shell[data-view="forecast"]) {
   bottom: max(6px, env(safe-area-inset-bottom));
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 76px;
-  min-height: 76px;
+  width: 68px;
+  height: 68px;
+  min-height: 68px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -1289,7 +1321,7 @@ body:has(.game-shell[data-view="forecast"]) {
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding-bottom: 84px;
+  padding-bottom: 74px;
   overflow: hidden;
 }
 
@@ -1299,9 +1331,9 @@ body:has(.game-shell[data-view="forecast"]) {
   bottom: max(6px, env(safe-area-inset-bottom));
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 76px;
-  min-height: 76px;
+  width: 68px;
+  height: 68px;
+  min-height: 68px;
   margin: 0;
   padding: 0;
   border: 0;

@@ -13,7 +13,11 @@
     "dev": "pnpm --filter @lemonade/web dev",
     "build": "pnpm -r --if-present build",
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm -r --if-present typecheck",
-    "lint": "eslint . && pnpm lint:antipatterns && pnpm lint:mobile-contract",
+    "lint": "pnpm lint:biome && pnpm lint:antipatterns && pnpm lint:mobile-contract",
+    "lint:biome": "pnpm dlx @biomejs/biome@2.5.13 lint --error-on-warnings --max-diagnostics=200 .",
+    "format": "pnpm dlx @biomejs/biome@2.5.13 format --write .",
+    "format:check": "pnpm dlx @biomejs/biome@2.5.13 format .",
+    "fix": "pnpm dlx @biomejs/biome@2.5.13 check --write .",
     "test": "pnpm -r --if-present test",
     "test:e2e": "playwright test",
     "certify": "pnpm --filter @lemonade/simulation build && node scripts/certify.mjs",
@@ -21,14 +25,17 @@
     "lint:antipatterns": "node scripts/lint-antipatterns.mjs",
     "lint:mobile-contract": "node scripts/lint-mobile-contract.mjs",
     "test:mobile-contract": "playwright test e2e/mobile-contract.spec.ts",
-    "verify:mobile": "pnpm lint:antipatterns && pnpm lint:mobile-contract && pnpm test:mobile-contract"
+    "verify:mobile": "pnpm lint:antipatterns && pnpm lint:mobile-contract && pnpm test:mobile-contract",
+    "test:showcase-contract": "node --test scripts/showcase-contract.test.mjs",
+    "showcase:capture": "playwright test --config=playwright.showcase.config.ts",
+    "showcase:render": "node scripts/render-showcase.mjs",
+    "showcase:verify": "node scripts/verify-showcase.mjs",
+    "showcase": "pnpm test:showcase-contract && pnpm showcase:capture && pnpm showcase:render && pnpm showcase:verify"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/node": "^24.13.6",
-    "eslint": "^10.11.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.70.0",
     "vitest": "^5.0.1"
   },
   "repository": {
