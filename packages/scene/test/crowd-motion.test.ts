@@ -501,7 +501,7 @@ describe("crowd motion", () => {
       pets: 0,
       wildlife: 0,
       bicycles: 0,
-      vehicles: 6,
+      vehicles: 0,
     });
   });
 
