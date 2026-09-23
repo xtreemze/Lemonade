@@ -710,16 +710,16 @@ export const residentialAccessLayout = (
       : roadCenterZ >= property.houseZ
         ? road.minZ
         : road.maxZ;
-  const drivewayDeltaX = drivewaySidewalkX - drivewayX;
-  const drivewayDeltaZ = drivewaySidewalkZ - parkingZ;
-  const drivewayLength = Math.max(
-    3.2,
-    Math.hypot(drivewayDeltaX, drivewayDeltaZ) + 0.3,
-  );
+  const sidewayDeltaX = drivewaySidewalkX - drivewayX;
+  const sidewayDeltaZ = drivewaySidewalkZ - parkingZ;
+  const roadDeltaX = roadX - drivewayX;
+  const roadDeltaZ = roadCenterZ - parkingZ;
+  const roadDistance = Math.hypot(roadDeltaX, roadDeltaZ);
+  const drivewayLength = Math.max(3.2, roadDistance + 0.3);
   const drivewayDepth = drivewayLength;
   const drivewayCenterX = (drivewayX + drivewaySidewalkX) / 2;
   const drivewayCenterZ = (parkingZ + drivewaySidewalkZ) / 2;
-  const drivewayRotationY = Math.atan2(drivewayDeltaZ, drivewayDeltaX);
+  const drivewayRotationY = Math.atan2(roadDeltaZ, roadDeltaX);
 
   return Object.freeze({
     frontDirection,
@@ -776,12 +776,12 @@ const drivewayExclusionRectForProperty = (
     Object.freeze({ ...property, drivewayX }),
     seed,
   );
-  const dx = access.drivewaySidewalkX - drivewayX;
-  const dz = access.drivewaySidewalkZ - access.parkingZ;
+  const dx = access.roadX - drivewayX;
+  const dz = access.roadCenterZ - access.parkingZ;
   const rotationY = Math.atan2(dz, dx);
   const x = access.drivewayCenterX;
   const z = access.drivewayCenterZ;
-  const roadDistance = Math.hypot(access.roadX - drivewayX, access.roadCenterZ - access.parkingZ);
+  const roadDistance = Math.hypot(dx, dz);
   const cosine = Math.abs(Math.cos(rotationY));
   const sine = Math.abs(Math.sin(rotationY));
   const halfX = (roadDistance / 2) * cosine + (WORLD_SCALE.vehicle.width / 2) * sine;
