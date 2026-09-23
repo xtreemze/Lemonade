@@ -151,9 +151,12 @@ test("01-weather-forecast", async ({ page }, testInfo) => {
   await expect(page.locator("#scene-canvas")).toHaveAttribute("data-stand-state", "closed", {
     timeout: 4_000,
   });
+  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-scene-shot", "forecast", {
+    timeout: 4_000,
+  });
 
   await recordFeature(page, testInfo, feature, async () => {
-    await expect(page.locator("#scene-canvas")).toHaveAttribute("data-scene-shot", "forecast");
+    await expect(page.locator("#scene-canvas")).toHaveAttribute("data-stand-state", "closed");
   });
 });
 
