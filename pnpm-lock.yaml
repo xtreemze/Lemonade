@@ -193,6 +193,9 @@ importers:
       '@lemonade/scene':
         specifier: workspace:*
         version: link:../../packages/scene
+      '@lemonade/scene-babylon':
+        specifier: workspace:*
+        version: link:../../packages/scene-babylon
       '@lemonade/simulation':
         specifier: workspace:*
         version: link:../../packages/simulation
@@ -209,11 +212,17 @@ importers:
 
   packages/audio: {}
 
-  packages/scene:
+  packages/scene-babylon:
     dependencies:
       '@babylonjs/core':
         specifier: ^9.27.1
         version: 9.27.1
+      '@lemonade/scene':
+        specifier: workspace:*
+        version: link:../scene
+
+  packages/scene:
+    dependencies:
       three:
         specifier: ^0.186.0
         version: 0.186.0
