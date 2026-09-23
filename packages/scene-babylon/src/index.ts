@@ -9,7 +9,7 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Scene } from "@babylonjs/core/scene";
 
 import { STAND_WORLD_Z } from "@lemonade/scene/stand-anchors";
-import { generateStreetNetwork } from "@lemonade/scene/street-layout";
+import { generateStreetNetwork } from "@lemonade/scene-contracts/street-layout";
 import { createBabylonStreetSurfaceField } from "./babylon-street-surface-field.js";
 import {
   sceneCameraComposition,
