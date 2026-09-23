@@ -16,6 +16,7 @@ import {
   type GeneratedStreetNetwork,
   type StreetStripSpec,
 } from "./street-layout.js";
+import { createOccurrenceMobilityProjector } from "./occurrence-mobility.js";
 
 export type MobilityWeather =
   | "sunny"
@@ -37,7 +38,8 @@ export type MobilityInteraction =
   | "door"
   | "mailbox"
   | "gardening"
-  | "parking";
+  | "parking"
+  | "traffic";
 
 export type MobilityPose = Readonly<{
   id: string;
@@ -292,7 +294,8 @@ const routeIntersections = (
 };
 
 export const mobilityDetailForDistance = (distance: number): MobilityDetail => {
-  const safe = Number.isFinite(distance) ? Math.max(0, distance) : 0;
+  if (!Number.isFinite(distance)) return "statistical";
+  const safe = Math.max(0, distance);
   if (safe <= 28) return "full";
   if (safe <= 72) return "reduced";
   return "statistical";
@@ -596,6 +599,7 @@ export const createNeighborhoodMobilitySystem = (
     layout.frontProperties[
       Math.floor(deterministicUnit(safeSeed, 907) * layout.frontProperties.length)
     ] ?? layout.frontProperties[0];
+  const occurrenceProjector = createOccurrenceMobilityProjector(safeSeed);
 
   return Object.freeze({
     seed: safeSeed,
@@ -609,6 +613,7 @@ export const createNeighborhoodMobilitySystem = (
       const counts = emptyCounts();
       const occurrenceSchedule = input.occurrences ?? Object.freeze([]);
       const usesOccurrenceSchedule = occurrenceSchedule.length > 0;
+      if (usesOccurrenceSchedule) return occurrenceProjector.sample(input);
       const currentMinute = phaseMinuteAt(
         phase,
         input.elapsedMs,
