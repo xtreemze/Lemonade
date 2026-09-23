@@ -197,11 +197,11 @@ const basePose = (
   const elapsedSeconds =
     Math.max(0, Math.min(elapsedMs, safeDuration * 8)) / 1_000;
 
-  const mainRoutes = routes.filter((route) => route.streetId === "main");
-  const neighborhoodRoutes = routes.filter((route) => route.streetId !== "main");
+  const mainRoutes = routes.filter((candidateRoute) => candidateRoute.streetId === "main");
+  const neighborhoodRoutes = routes.filter((candidateRoute) => candidateRoute.streetId !== "main");
   const requestedSide: SidewalkSide = actorIndex % 2 === 0 ? "near" : "far";
   const mainRoute =
-    mainRoutes.find((route) => route.side === requestedSide) ??
+    mainRoutes.find((candidateRoute) => candidateRoute.side === requestedSide) ??
     mainRoutes[actorIndex % Math.max(1, mainRoutes.length)];
   const neighborhoodRoute =
     neighborhoodRoutes.length === 0
