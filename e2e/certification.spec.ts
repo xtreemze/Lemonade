@@ -1,3 +1,4 @@
+// biome-ignore lint/correctness/noUnresolvedImports: Biome 2.5 misses Playwright's Page type re-export.
 import { expect, test, type Page } from "@playwright/test";
 
 const FORECAST_PRESENTATION_MS = 6_000;
