@@ -340,9 +340,9 @@ describe("neighborhood world scale", () => {
       FRONT_PROPERTY_LAYOUT.some((property) => Math.abs(property.rotationY) > 0.02),
     ).toBe(true);
     for (const mailbox of mailboxes) {
-      expect(mailbox.rotation.y).toBeCloseTo(0);
+      expect(mailbox.rotation.y).toBeCloseTo(-Math.PI / 2);
       const streetFacingYaw: unknown = mailbox.userData["streetFacingYaw"];
-      expect(streetFacingYaw).toBe(0);
+      expect(streetFacingYaw).toBe(-Math.PI / 2);
     }
   });
 

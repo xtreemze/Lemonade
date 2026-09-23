@@ -20,8 +20,12 @@ import {
 import {
   generateStreetNetwork,
   STREET_LAYOUT,
-  type StreetStripSpec,
 } from "./street-layout.js";
+import { createStreetSurfaceField } from "./street-surface-field.js";
+import {
+  createPropertyAccessSurfaceField,
+  type PropertyAccessSurfaceSpec,
+} from "./property-access-surface-field.js";
 import { WORLD_SCALE } from "./world-scale.js";
 import type { PropertyActivity } from "./neighborhood-mobility.js";
 
@@ -54,46 +58,6 @@ const road = (
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(x, y, z);
   if (role !== undefined) mesh.userData["sceneRole"] = role;
-  scene.add(mesh);
-  return mesh;
-};
-
-const streetStrip = (
-  scene: Scene,
-  strip: StreetStripSpec,
-  color: number,
-): Mesh => {
-  const mesh = new Mesh(
-    new BoxGeometry(strip.length, 0.022, strip.width),
-    material(color),
-  );
-  mesh.position.set(strip.x, strip.role === "sidewalk" ? 0.022 : 0.012, strip.z);
-  mesh.rotation.y = -strip.rotationY;
-  mesh.userData["sceneRole"] = strip.role;
-  mesh.userData["streetId"] = strip.streetId;
-  mesh.userData["streetSegment"] = strip.segmentIndex;
-  scene.add(mesh);
-  return mesh;
-};
-
-const accessStrip = (
-  scene: Scene,
-  length: number,
-  width: number,
-  x: number,
-  z: number,
-  rotationY: number,
-  color: number,
-  y: number,
-  role: string,
-): Mesh => {
-  const mesh = new Mesh(
-    new BoxGeometry(length, 0.018, width),
-    material(color),
-  );
-  mesh.position.set(x, y, z);
-  mesh.rotation.y = -rotationY;
-  mesh.userData["sceneRole"] = role;
   scene.add(mesh);
   return mesh;
 };
@@ -447,6 +411,11 @@ const flower = (
   return markWindResponsive(root, phase);
 };
 
+// Half-thickness of a fence's end posts (box width 0.12 / 2). The outermost
+// posts are centered at +/-width/2, so they overhang the nominal `width` by
+// this much on each side; callers validating hardscape clearance must add it.
+const FENCE_POST_HALF_THICKNESS = 0.06;
+
 const fenceRun = (x: number, z: number, width: number): Group => {
   const root = new Group();
   box(root, [width, 0.1, 0.1], [0, 0.56, 0], 0xe9dfc7);
@@ -576,6 +545,34 @@ export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] =
 
 export type NeighborhoodWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 
+type WindRegistry = Readonly<{
+  rootChildCount: number;
+  objects: readonly Object3D[];
+}>;
+
+const windRegistryByScene = new WeakMap<Scene, WindRegistry>();
+
+const refreshWindRegistry = (scene: Scene): WindRegistry => {
+  const objects: Object3D[] = [];
+  scene.traverse((object) => {
+    if (object.userData["windResponsive"] === true) objects.push(object);
+  });
+  const registry = Object.freeze({
+    rootChildCount: scene.children.length,
+    objects: Object.freeze(objects),
+  });
+  windRegistryByScene.set(scene, registry);
+  return registry;
+};
+
+const windRegistryFor = (scene: Scene): WindRegistry => {
+  const cached = windRegistryByScene.get(scene);
+  if (cached?.rootChildCount === scene.children.length) {
+    return cached;
+  }
+  return refreshWindRegistry(scene);
+};
+
 export const weatherWindStrength = (weather: NeighborhoodWeather): number => {
   switch (weather) {
     case "sunny":
@@ -595,8 +592,7 @@ export const updateNeighborhoodWind = (
   weather: NeighborhoodWeather,
 ): void => {
   const strength = weatherWindStrength(weather);
-  scene.traverse((object) => {
-    if (object.userData["windResponsive"] !== true) return;
+  for (const object of windRegistryFor(scene).objects) {
     const phase =
       typeof object.userData["windPhase"] === "number"
         ? object.userData["windPhase"]
@@ -614,7 +610,7 @@ export const updateNeighborhoodWind = (
       Math.sin(seconds * 2.7 + phase * 1.7) * 0.3;
     object.rotation.x = baseX + gust * strength * 0.24;
     object.rotation.z = baseZ + gust * strength;
-  });
+  }
 };
 
 
@@ -683,12 +679,12 @@ export const populateNeighborhood = (
   let roadSegments = streetNetwork.roads.length + streetNetwork.sidewalks.length;
   const pavedRoads = streetNetwork.roads.length;
 
-  for (const strip of streetNetwork.roads) {
-    streetStrip(scene, strip, strip.streetId === "main" ? 0x596065 : 0x62686b);
-  }
-  for (const strip of streetNetwork.sidewalks) {
-    streetStrip(scene, strip, 0xd4d0c6);
-  }
+  const streetSurfaces = createStreetSurfaceField(
+    streetNetwork.roads,
+    streetNetwork.sidewalks,
+  );
+  for (const anchor of streetSurfaces.anchors) scene.add(anchor);
+  for (const mesh of streetSurfaces.meshes) scene.add(mesh);
 
   for (let x = -115; x <= 115; x += 7.5) {
     road(
@@ -709,30 +705,27 @@ export const populateNeighborhood = (
     ...layout.backProperties,
     ...layout.outerProperties,
   ];
+  const propertyAccessSurfaces: PropertyAccessSurfaceSpec[] = [];
   for (const property of allProperties) {
     const access = residentialAccessLayout(property, seed);
     if (property.drivewayX !== null) {
-      accessStrip(
-        scene,
-        access.drivewayLength,
-        WORLD_SCALE.vehicle.width,
-        access.drivewayCenterX,
-        access.drivewayCenterZ,
-        access.drivewayRotationY,
-        0xc9b995,
-        0.019,
-        "driveway",
-      );
-      accessStrip(
-        scene,
-        access.pathLength,
-        access.pathWidth,
-        access.pathCenterX,
-        access.pathCenterZ,
-        access.pathRotationY,
-        0xd8c9aa,
-        0.021,
-        "front-path",
+      propertyAccessSurfaces.push(
+        Object.freeze({
+          role: "driveway",
+          length: access.drivewayLength,
+          width: WORLD_SCALE.vehicle.width,
+          x: access.drivewayCenterX,
+          z: access.drivewayCenterZ,
+          rotationY: access.drivewayRotationY,
+        }),
+        Object.freeze({
+          role: "front-path",
+          length: access.pathLength,
+          width: access.pathWidth,
+          x: access.pathCenterX,
+          z: access.pathCenterZ,
+          rotationY: access.pathRotationY,
+        }),
       );
       roadSegments += 2;
     }
@@ -751,6 +744,11 @@ export const populateNeighborhood = (
     home.name = "building-" + property.role;
     scene.add(home);
   }
+
+  const propertyAccessField =
+    createPropertyAccessSurfaceField(propertyAccessSurfaces);
+  for (const anchor of propertyAccessField.anchors) scene.add(anchor);
+  for (const mesh of propertyAccessField.meshes) scene.add(mesh);
 
   const housePositions = [
     ...layout.middleProperties,
@@ -863,7 +861,10 @@ export const populateNeighborhood = (
       if (width >= 1.15) {
         const fence = fenceRun(cursor + width / 2, fenceZ, width);
         fence.userData["propertyRole"] = property.role;
-        addYardDetailIfClear(fence, width / 2, 0.06);
+        // fenceRun's end posts are centered at +/-width/2 with their own
+        // half-thickness (0.06), so the rendered fence is actually
+        // FENCE_POST_HALF_THICKNESS wider than `width` on each side.
+        addYardDetailIfClear(fence, width / 2 + FENCE_POST_HALF_THICKNESS, 0.06);
       }
       cursor = Math.max(cursor, gap.maxX);
     }
@@ -871,7 +872,7 @@ export const populateNeighborhood = (
     if (finalWidth >= 1.15) {
       const fence = fenceRun(cursor + finalWidth / 2, fenceZ, finalWidth);
       fence.userData["propertyRole"] = property.role;
-      addYardDetailIfClear(fence, finalWidth / 2, 0.06);
+      addYardDetailIfClear(fence, finalWidth / 2 + FENCE_POST_HALF_THICKNESS, 0.06);
     }
   }
   for (const detail of yardDetails) scene.add(detail);
@@ -946,6 +947,8 @@ export const populateNeighborhood = (
   distantHill(scene, 104, -100, 30, 12, 0x718967);
   atmosphereBand(scene, -82, 12, 260, 42, 0xb9c8bd, 0.08);
   atmosphereBand(scene, -116, 15, 300, 48, 0xc8d2ca, 0.11);
+
+  refreshWindRegistry(scene);
 
   return Object.freeze({
     houseLods: layout.frontProperties.length + housePositions.length,

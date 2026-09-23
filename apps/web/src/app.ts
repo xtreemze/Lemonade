@@ -48,13 +48,8 @@ import { createHapticEngine, type HapticCue } from "./haptics.js";
 import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 import { isGizmoEnabled, printGizmoHelp } from "./dev-gizmo.js";
-import {
-  isSceneLauncherEnabled,
-  printSceneLauncherHelp,
-  createSceneLauncherUI,
-  type ScenePreset,
-} from "./dev-scene-launcher.js";
-import { isSceneViewerEnabled, createPersistentSceneViewer } from "./dev-scene-viewer.js";
+import { isSceneLauncherEnabled } from "./dev-scene-launcher-flag.js";
+import type { ScenePreset } from "./dev-scene-launcher.js";
 
 const DEFAULT_RUN_SEED = seed(0x1e_ad_2026);
 const ACTIVE_SIMULATION_PRESENTATION_MS = 10_000;
@@ -310,6 +305,9 @@ export class LemonadeApp {
   #glasses: number;
   #signs: number;
   #price: number;
+  #sceneConfidenceOverride: number | null = null;
+  #scenePhaseOverride: ScenePreset["phase"] | null = null;
+  #sceneSoldOverride: number | null = null;
   #runStatusMessage = "";
   #runErrorMessage: string | null = null;
   #saveChain: Promise<void> = Promise.resolve();
@@ -320,13 +318,6 @@ export class LemonadeApp {
     initialRun: RunSnapshot = createFreshRunSnapshot(),
     options: LemonadeAppOptions = DEFAULT_OPTIONS,
   ) {
-    // Check for persistent 3D scene viewer dev mode
-    if (isSceneViewerEnabled()) {
-      console.log("🎥 Scene Viewer mode activated - launching persistent 3D scene");
-      createPersistentSceneViewer(root, { enableGizmo: true, weather: "hot-and-dry", phase: "forecast" });
-      return;
-    }
-
     this.#runSeed = initialRun.seed;
     this.#random = restoreEnvironmentRandom(initialRun);
     this.#game = initialRun.state;
@@ -349,10 +340,6 @@ export class LemonadeApp {
     }
 
     const sceneLauncherEnabled = isSceneLauncherEnabled();
-    if (sceneLauncherEnabled) {
-      console.log("🎬 Scene launcher enabled - type 'sceneLauncherHelp()' for help");
-      printSceneLauncherHelp();
-    }
 
     this.#scene = createLemonsvilleSceneView(
       {
@@ -374,28 +361,28 @@ export class LemonadeApp {
         this.#environment = {
           ...this.#environment,
           weather: {
+            ...this.#environment.weather,
             kind: preset.weather,
-            temperature: preset.weather === "thunderstorm" ? 55 : 72,
           },
         };
-        this.#presentation =
-          preset.phase === "forecast" ? "forecast" : preset.phase === "idle" ? "idle" : "simulation";
-
-        if (preset.confidence !== undefined) {
-          this.#game = {
-            ...this.#game,
-            confidence: preset.confidence,
-          };
-        }
-
+        this.#presentation = preset.phase === "forecast" ? "forecast" : "simulation";
+        this.#scenePhaseOverride = preset.phase;
+        this.#sceneConfidenceOverride = preset.confidence ?? null;
+        this.#sceneSoldOverride = preset.sold ?? null;
         this.#glasses = preset.prepared ?? 5;
         this.#signs = preset.visibleSigns ?? 1;
 
         this.#renderScene();
       };
 
-      const launcherPanel = createSceneLauncherUI(onPresetSelect);
-      document.body.appendChild(launcherPanel);
+      void import("./dev-scene-launcher.js").then(
+        ({ printSceneLauncherHelp, createSceneLauncherUI }) => {
+          console.log("🎬 Scene launcher enabled - type 'sceneLauncherHelp()' for help");
+          printSceneLauncherHelp();
+          const launcherPanel = createSceneLauncherUI(onPresetSelect);
+          document.body.appendChild(launcherPanel);
+        },
+      );
     }
 
     this.#elements.decisionPanel.addEventListener(
@@ -882,21 +869,27 @@ export class LemonadeApp {
     const phase = this.#phase;
     const resolvedDay = phase.kind === "report" ? phase.resolution.entry : null;
     const scenePhase =
-      this.#presentation === "simulation" || this.#presentation === "forecast"
+      this.#scenePhaseOverride ??
+      (this.#presentation === "simulation" || this.#presentation === "forecast"
         ? this.#presentation
-        : "idle";
-    const confidence = legacyConfidenceForState(this.#game);
+        : "idle");
+    const confidence =
+      this.#sceneConfidenceOverride ?? legacyConfidenceForState(this.#game);
     const nextConfidence =
-      phase.kind === "report"
+      this.#sceneConfidenceOverride ??
+      (phase.kind === "report"
         ? legacyConfidenceForState(phase.resolution.nextState)
-        : confidence;
+        : confidence);
     this.#scene.update({
       environment: this.#environment,
       confidence,
       nextConfidence,
       visibleSigns: resolvedDay === null ? this.#signs : Number(resolvedDay.decision.signs),
       phase: scenePhase,
-      sold: resolvedDay === null ? 0 : Number(resolvedDay.sold),
+      sold:
+        resolvedDay === null
+          ? (this.#sceneSoldOverride ?? 0)
+          : Number(resolvedDay.sold),
       prepared: resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses),
       priceCents: resolvedDay === null ? this.#price : Number(resolvedDay.decision.price),
       characterSeed: Number(this.#runSeed),

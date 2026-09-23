@@ -238,11 +238,10 @@ export const populateWeatherObjects = (
     { position: [-2.2, 1.2, -0.2] as const, scale: 0.95 },
     { position: [1.8, 1.6, -0.2] as const, scale: 0.88 },
   ] as const;
-  for (let i = 0; i < 3; i++) {
+  for (const [i, baseLayout] of cloudPositions.entries()) {
     const partlyCloud = new Group();
-    partlyCloud.userData["sceneRole"] = `partly-cloud-${i}`;
-    const baseLayout = cloudPositions[i];
-    partlyCloud.position.set(...baseLayout.position);
+    partlyCloud.userData["sceneRole"] = `partly-cloud-${String(i)}`;
+    partlyCloud.position.set(baseLayout.position[0], baseLayout.position[1], baseLayout.position[2]);
     partlyCloud.scale.setScalar(baseLayout.scale);
     addCloud(partlyCloud, 0xd7e0df);
     partlyCloudGroup.add(partlyCloud);

@@ -11,6 +11,8 @@ export type BuyerPhase =
 
 export type SceneShotKind = "forecast" | "stand" | "remaining";
 
+export const SIMULATION_CAMERA_ZOOM = 1.2 as const;
+
 export type SceneShot = Readonly<{
   kind: SceneShotKind;
   startAtMs: number;
@@ -155,6 +157,11 @@ export type SceneCameraComposition = Readonly<{
 const finiteViewportEdge = (value: number): number =>
   Math.max(1, Number.isFinite(value) ? value : 1);
 
+const zoomedPerspectiveFov = (fovDegrees: number, zoom: number): number => {
+  const halfAngleRadians = (fovDegrees * Math.PI) / 360;
+  return (360 * Math.atan(Math.tan(halfAngleRadians) / zoom)) / Math.PI;
+};
+
 const VIEWPORT_CLASSES = [
   "mobile-portrait",
   "mobile-landscape",
@@ -212,7 +219,10 @@ export const sceneCameraComposition = (
 
   return {
     mode,
-    fov: profile[0],
+    fov:
+      shot === "stand"
+        ? zoomedPerspectiveFov(profile[0], SIMULATION_CAMERA_ZOOM)
+        : profile[0],
     position: [0, profile[1], profile[2]],
     lookAt: [shot === "remaining" ? 0.45 : 0, profile[3], profile[4]],
   };

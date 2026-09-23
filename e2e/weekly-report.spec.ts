@@ -30,6 +30,7 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
   await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
 
   const responsiveViewports = [
+    { name: "compact phone", width: 320, height: 568, dailyColumns: 2, weeklyColumns: 2 },
     { name: "phone portrait", width: 360, height: 740, dailyColumns: 2, weeklyColumns: 2 },
     { name: "phone landscape", width: 740, height: 360, dailyColumns: 4, weeklyColumns: 4 },
     { name: "tablet", width: 1024, height: 768, dailyColumns: 4, weeklyColumns: 4 },
@@ -107,6 +108,9 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
           ...bounds(ledger),
           display: getComputedStyle(ledger).display,
           visibility: getComputedStyle(ledger).visibility,
+          rowHeights: [...ledger.querySelectorAll<HTMLElement>("tbody tr")].map(
+            (row) => row.getBoundingClientRect().height,
+          ),
         },
         weekly: {
           ...bounds(weekly),
@@ -161,6 +165,7 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
     expect(layout.dailyResults.columns, viewport.name).toBe(viewport.dailyColumns);
     expect(layout.ledger.display, viewport.name).not.toBe("none");
     expect(layout.ledger.visibility, viewport.name).toBe("visible");
+    expect(Math.max(...layout.ledger.rowHeights), viewport.name).toBeLessThanOrEqual(48);
     expect(layout.weekly.display, viewport.name).not.toBe("none");
     expect(layout.weeklyResults.columns, viewport.name).toBe(viewport.weeklyColumns);
   }
