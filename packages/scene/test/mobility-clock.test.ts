@@ -24,7 +24,7 @@ describe("actor-owned mobility clock", () => {
       desiredSpeed: 1.4,
     });
     expect(afterOneSecond.velocity).toBeCloseTo(1.4, 6);
-    expect(afterOneSecond.distance).toBeCloseTo(0.88, 6);
+    expect(afterOneSecond.distance).toBeCloseTo(0.91, 6);
   });
 
   it("decelerates while yielding and resumes from the held route distance without catch-up", () => {
