@@ -982,6 +982,7 @@ body:has(.game-shell[data-view="forecast"]) {
 .game-shell[data-view="report"] .panel-heading {
   display: flex;
   align-items: end;
+  flex-direction: row;
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
@@ -1019,7 +1020,8 @@ body:has(.game-shell[data-view="forecast"]) {
     "weekly"
     "notes";
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: repeat(4, auto);
+  align-content: start;
   gap: var(--report-gap);
   min-width: 0;
   min-height: 0;
@@ -1056,6 +1058,7 @@ body:has(.game-shell[data-view="forecast"]) {
 .game-shell[data-view="report"] .ledger-breakdown {
   grid-area: ledger;
   display: flex;
+  align-self: start;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
@@ -1072,7 +1075,7 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .game-shell[data-view="report"] .ledger-breakdown table {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
@@ -1080,7 +1083,7 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .game-shell[data-view="report"] .ledger-breakdown tbody {
   display: grid;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-content: start;
   grid-auto-rows: minmax(2rem, auto);
@@ -1119,7 +1122,8 @@ body:has(.game-shell[data-view="forecast"]) {
 .game-shell[data-view="report"] .weekly-report {
   grid-area: weekly;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-self: start;
+  grid-template-rows: auto auto auto;
   gap: 5px;
   min-width: 0;
   min-height: 0;
@@ -1132,6 +1136,7 @@ body:has(.game-shell[data-view="forecast"]) {
 .game-shell[data-view="report"] .weekly-report-heading {
   display: flex;
   align-items: end;
+  flex-direction: row;
   justify-content: space-between;
   gap: 7px;
   min-width: 0;
@@ -1163,7 +1168,7 @@ body:has(.game-shell[data-view="forecast"]) {
 .game-shell[data-view="report"] .weekly-results-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: stretch;
+  align-content: start;
   min-width: 0;
   min-height: 0;
   margin: 0;
@@ -1258,6 +1263,7 @@ body:has(.game-shell[data-view="forecast"]) {
   }
 
   .game-shell[data-view="report"] .report-content {
+    align-content: stretch;
     grid-template-areas:
       "metrics ledger"
       "notes ledger";
@@ -1274,8 +1280,26 @@ body:has(.game-shell[data-view="forecast"]) {
     grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
+  .game-shell[data-view="report"] .ledger-breakdown {
+    align-self: stretch;
+  }
+
+  .game-shell[data-view="report"] .ledger-breakdown table,
+  .game-shell[data-view="report"] .ledger-breakdown tbody {
+    flex: 1 1 auto;
+  }
+
   .game-shell[data-view="report"] .ledger-breakdown tbody {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .game-shell[data-view="report"] .weekly-report {
+    align-self: stretch;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .game-shell[data-view="report"] .weekly-results-grid {
+    align-content: stretch;
   }
 
   .game-shell[data-view="report"] .report-content:has(.weekly-report) .ledger-breakdown tbody {
