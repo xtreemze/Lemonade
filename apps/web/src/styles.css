@@ -187,17 +187,6 @@ h2 {
   justify-content: space-between;
 }
 
-.decision-control .decision-exact {
-  grid-column: 2;
-  grid-row: 2;
-  justify-self: end;
-}
-
-.decision-control .game-slider {
-  grid-column: 1 / -1;
-  grid-row: 3;
-}
-
 .decision-control-heading {
   display: flex;
   grid-column: 1 / -1;
@@ -274,6 +263,11 @@ h2 {
   -webkit-tap-highlight-color: transparent;
 }
 
+.decision-control .game-slider {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+
 .decision-control-glasses .game-slider {
   --slider-thumb-image: url("./assets/cup.svg");
   --slider-thumb-kind: cup;
@@ -345,6 +339,12 @@ h2 {
   justify-self: end;
   gap: 4px;
   min-width: 92px;
+}
+
+.decision-control .decision-exact {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
 }
 
 .decision-exact > span:first-child {
