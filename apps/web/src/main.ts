@@ -13,7 +13,7 @@ if (!(root instanceof HTMLElement)) {
 }
 
 const isPersistentSceneViewerEnabled = (): boolean =>
-  globalThis.localStorage?.getItem("LEMONADE_DEV_SCENE_VIEWER") === "1";
+  localStorage.getItem("LEMONADE_DEV_SCENE_VIEWER") === "1";
 
 const renderRecovery = (error: RunPersistenceError): void => {
   root.innerHTML = `
