@@ -12,13 +12,18 @@ import {
   Scene,
 } from "three";
 
-import { characterProfileFor, type CharacterProfile } from "./characters.js";
 import { buyerMotionAt } from "./buyer-motion.js";
 import { reclaimBuyerVisualPool } from "./buyer-visual-pool.js";
 import {
   createCharacterGeometrySet,
   type CharacterGeometrySet,
 } from "./character-geometry.js";
+import {
+  applyThreeCharacterPose,
+  createThreeCharacterRig,
+  resetThreeCharacterPose,
+  type ThreeCharacterRig,
+} from "./character-rig.js";
 import { createGizmoController, type GizmoController } from "./gizmo-controller.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import {
@@ -108,9 +113,6 @@ const lerp = (start: number, end: number, progress: number): number =>
 const makeMaterial = (color: number): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading: true, roughness: 0.92 });
 
-const makeCharacterMaterial = (color: number): MeshStandardMaterial =>
-  new MeshStandardMaterial({ color, flatShading: false, roughness: 0.88 });
-
 type StandModel = Readonly<{
   root: Group;
   shutter: Group;
@@ -124,20 +126,8 @@ const createStand = (): StandModel => {
   return Object.freeze({ root, shutter });
 };
 
-type LimbRig = Readonly<{
-  root: Group;
-  lower: Group;
-  extremity: Mesh;
-}>;
-
-type PersonRig = Readonly<{
-  root: Group;
-  torso: Mesh;
-  head: Mesh;
-  arms: readonly [LimbRig, LimbRig];
-  legs: readonly [LimbRig, LimbRig];
+type PersonRig = ThreeCharacterRig & Readonly<{
   cup: Group;
-  profile: CharacterProfile;
 }>;
 
 type SellerRig = Readonly<{
@@ -149,148 +139,16 @@ type SellerRig = Readonly<{
 const personGroundY = (person: PersonRig): number =>
   characterGroundClearance(person.profile.heightScale);
 
-const createLimb = (
-  geometries: CharacterGeometrySet,
-  upperLength: number,
-  lowerLength: number,
-  upperColor: number,
-  lowerColor: number,
-  extremityColor: number,
-  foot = false,
-): LimbRig => {
-  const root = new Group();
-  const upper = new Mesh(
-    foot ? geometries.legUpper : geometries.armUpper,
-    makeCharacterMaterial(upperColor),
-  );
-  upper.position.y = -upperLength / 2;
-  root.add(upper);
-
-  const joint = new Mesh(
-    foot ? geometries.legJoint : geometries.armJoint,
-    makeCharacterMaterial(lowerColor),
-  );
-  joint.position.y = -upperLength;
-  root.add(joint);
-
-  const lower = new Group();
-  lower.position.y = -upperLength;
-  const lowerMesh = new Mesh(
-    foot ? geometries.legLower : geometries.armLower,
-    makeCharacterMaterial(lowerColor),
-  );
-  lowerMesh.position.y = -lowerLength / 2;
-  lower.add(lowerMesh);
-
-  const extremity = new Mesh(
-    foot ? geometries.foot : geometries.hand,
-    makeCharacterMaterial(extremityColor),
-  );
-  extremity.position.set(0, -lowerLength, foot ? 0.105 * 0.62 : 0);
-  lower.add(extremity);
-  root.add(lower);
-
-  return Object.freeze({ root, lower, extremity });
-};
-
 const createPerson = (
-  geometries: CharacterGeometrySet,
+  geometries: ReturnType<typeof createCharacterGeometrySet>,
   characterSeed: number,
   index: number,
 ): PersonRig => {
-  const profile = characterProfileFor(characterSeed, index);
-  const root = new Group();
-
-  const torso = new Mesh(
-    geometries.torso,
-    makeCharacterMaterial(profile.clothingColor),
-  );
-  torso.position.y = CHARACTER_ANATOMY.torso.centerY;
-
-  const head = new Mesh(
-    geometries.head,
-    makeCharacterMaterial(profile.skinColor),
-  );
-  head.scale.set(0.94, 1.04, 0.9);
-  head.position.y = CHARACTER_ANATOMY.head.centerY;
-  root.add(torso, head);
-
-  const leftArm = createLimb(
-    geometries,
-    CHARACTER_ANATOMY.arm.upperLength,
-    CHARACTER_ANATOMY.arm.lowerLength,
-    profile.clothingColor,
-    profile.skinColor,
-    profile.skinColor,
-  );
-  const rightArm = createLimb(
-    geometries,
-    CHARACTER_ANATOMY.arm.upperLength,
-    CHARACTER_ANATOMY.arm.lowerLength,
-    profile.clothingColor,
-    profile.skinColor,
-    profile.skinColor,
-  );
-  leftArm.root.position.set(
-    -CHARACTER_ANATOMY.arm.shoulderOffsetX,
-    CHARACTER_ANATOMY.torso.shoulderY,
-    0,
-  );
-  rightArm.root.position.set(
-    CHARACTER_ANATOMY.arm.shoulderOffsetX,
-    CHARACTER_ANATOMY.torso.shoulderY,
-    0,
-  );
-
-  const leftLeg = createLimb(
-    geometries,
-    CHARACTER_ANATOMY.leg.upperLength,
-    CHARACTER_ANATOMY.leg.lowerLength,
-    profile.trouserColor,
-    profile.trouserColor,
-    0x30383d,
-    true,
-  );
-  const rightLeg = createLimb(
-    geometries,
-    CHARACTER_ANATOMY.leg.upperLength,
-    CHARACTER_ANATOMY.leg.lowerLength,
-    profile.trouserColor,
-    profile.trouserColor,
-    0x30383d,
-    true,
-  );
-  leftLeg.root.position.set(
-    -CHARACTER_ANATOMY.leg.hipOffsetX,
-    CHARACTER_ANATOMY.leg.hipY,
-    0,
-  );
-  rightLeg.root.position.set(
-    CHARACTER_ANATOMY.leg.hipOffsetX,
-    CHARACTER_ANATOMY.leg.hipY,
-    0,
-  );
-  root.add(leftArm.root, rightArm.root, leftLeg.root, rightLeg.root);
-
+  const rig = createThreeCharacterRig(geometries, characterSeed, index);
   const cup = new Group();
-  attachLemonadeCupToHand(rightArm.extremity, cup);
+  attachLemonadeCupToHand(rig.arms[1].extremity, cup);
   cup.visible = false;
-
-  root.scale.set(
-    profile.widthScale * WORLD_SCALE.character.renderScale,
-    profile.heightScale * WORLD_SCALE.character.renderScale,
-    profile.widthScale * WORLD_SCALE.character.renderScale,
-  );
-
-  return Object.freeze({
-    root,
-    torso,
-    head,
-    arms: [leftArm, rightArm] as const,
-    legs: [leftLeg, rightLeg] as const,
-    cup,
-    profile,
-  });
+  return Object.freeze({ ...rig, cup });
 };
 
 const createSeller = (
@@ -336,14 +194,7 @@ const applySellerExpression = (seller: SellerRig, confidence: number): void => {
 };
 
 const resetPersonPose = (person: PersonRig): void => {
-  person.torso.rotation.set(0, 0, 0);
-  person.head.rotation.set(0, 0, 0);
-  person.torso.position.y = CHARACTER_ANATOMY.torso.centerY;
-  person.head.position.y = CHARACTER_ANATOMY.head.centerY;
-  for (const limb of [...person.arms, ...person.legs]) {
-    limb.root.rotation.set(0, 0, 0);
-    limb.lower.rotation.set(0, 0, 0);
-  }
+  resetThreeCharacterPose(person);
   person.cup.visible = false;
 };
 
@@ -355,48 +206,7 @@ const applyWalkingPose = (
   const pose = characterPoseAtDistance(person.profile, travelDistance, {
     carryingCup,
   });
-
-  person.torso.position.y =
-    CHARACTER_ANATOMY.torso.centerY + pose.chest.lift;
-  person.head.position.y =
-    CHARACTER_ANATOMY.head.centerY + pose.head.lift;
-  person.torso.rotation.set(
-    pose.chest.rotation.x,
-    pose.chest.rotation.y,
-    pose.chest.rotation.z,
-  );
-  person.head.rotation.set(
-    pose.head.rotation.x,
-    pose.head.rotation.y,
-    pose.head.rotation.z,
-  );
-
-  for (const index of [0, 1] as const) {
-    const legPose = pose.legs[index];
-    person.legs[index].root.rotation.set(
-      legPose.hip.rotation.x,
-      legPose.hip.rotation.y,
-      legPose.hip.rotation.z,
-    );
-    person.legs[index].lower.rotation.set(
-      legPose.knee.rotation.x,
-      legPose.knee.rotation.y,
-      legPose.knee.rotation.z,
-    );
-
-    const armPose = pose.arms[index];
-    person.arms[index].root.rotation.set(
-      armPose.shoulder.rotation.x,
-      armPose.shoulder.rotation.y,
-      armPose.shoulder.rotation.z,
-    );
-    person.arms[index].lower.rotation.set(
-      armPose.elbow.rotation.x,
-      armPose.elbow.rotation.y,
-      armPose.elbow.rotation.z,
-    );
-  }
-
+  applyThreeCharacterPose(person, pose);
   person.cup.visible = pose.rightHandOccupancy === "cup";
 };
 

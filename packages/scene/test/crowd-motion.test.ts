@@ -339,6 +339,8 @@ describe("crowd motion", () => {
       expect(roles.has("hair-cover")).toBe(true);
       expect(roles.has("hair-detail")).toBe(true);
       expect(roles.has("garment-detail")).toBe(true);
+      expect(actor.userData["characterRig"]).toBe("shared-three");
+      expect(actor.scale.y).toBeGreaterThan(0.5);
     }
   });
 
