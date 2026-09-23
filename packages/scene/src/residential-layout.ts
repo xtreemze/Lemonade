@@ -548,12 +548,9 @@ function baseExclusions(seed: number): ResidentialRect[] {
 const rectCenterZ = (rect: ResidentialRect): number =>
   (rect.minZ + rect.maxZ) / 2;
 
-const horizontalGapToRect = (x: number, rect: ResidentialRect): number =>
-  x < rect.minX ? rect.minX - x : x > rect.maxX ? x - rect.maxX : 0;
-
 const nearestAccessRect = (
   property: ResidentialPropertySpec,
-  x: number,
+  point: ResidentialPoint,
   role: "road" | "sidewalk",
   seed: number,
 ): ResidentialRect | null => {
@@ -570,13 +567,15 @@ const nearestAccessRect = (
   if (first === undefined) return null;
 
   return frontCandidates.reduce((best, candidate) => {
+    const candidateTarget = closestPointOnRectCenterline(candidate, point);
+    const bestTarget = closestPointOnRectCenterline(best, point);
     const candidateScore = Math.hypot(
-      rectCenterZ(candidate) - property.houseZ,
-      horizontalGapToRect(x, candidate),
+      candidateTarget.x - point.x,
+      candidateTarget.z - point.z,
     );
     const bestScore = Math.hypot(
-      rectCenterZ(best) - property.houseZ,
-      horizontalGapToRect(x, best),
+      bestTarget.x - point.x,
+      bestTarget.z - point.z,
     );
     return candidateScore < bestScore ? candidate : best;
   }, first);
@@ -653,7 +652,7 @@ export const residentialAccessLayout = (
   const entryZ = property.houseZ + frontZ * entryDistance;
   const sidewalk = nearestAccessRect(
     property,
-    entryX,
+    { x: entryX, z: entryZ },
     "sidewalk",
     seed,
   );
@@ -690,7 +689,7 @@ export const residentialAccessLayout = (
     frontDirection * Math.min(1.35, Math.max(0.82, footprint.halfDepth * 0.34));
   const drivewaySidewalk = nearestAccessRect(
     property,
-    drivewayX,
+    { x: drivewayX, z: parkingZ },
     "sidewalk",
     seed,
   );
@@ -705,7 +704,7 @@ export const residentialAccessLayout = (
   const drivewaySidewalkZ = drivewaySidewalkTarget.z;
   const road = nearestAccessRect(
     property,
-    drivewaySidewalkX,
+    drivewaySidewalkTarget,
     "road",
     seed,
   );
@@ -1427,7 +1426,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
     3_150,
     "front",
     partial,
-    2.8,
+    3.5,
     4.2,
     3,
   );
