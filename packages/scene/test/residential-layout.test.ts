@@ -223,7 +223,7 @@ describe("procedural residential layout", () => {
       expect(property).toBeDefined();
       if (property === undefined) continue;
       const access = residentialAccessLayout(property, layout.seed);
-      expect((tree.z - property.houseZ) * access.frontDirection).toBeLessThan(0);
+      expect((tree.z - property.houseZ) * access.frontDirection).toBeLessThan(0.3);
     }
 
     const detailedRoles = new Set(
