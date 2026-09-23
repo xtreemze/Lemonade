@@ -584,15 +584,38 @@ const createVehicleForActor = (seed: number, actorId: string): Group => {
   return vehicle;
 };
 
-const routeProgress = (
+const BIRD_RECYCLE_GAP = 0.12;
+
+export const birdRouteProgressAt = (
   elapsedMs: number,
   durationMs: number,
   offset: number,
   speed: number,
-): number => {
+): number | null => {
   const duration = Math.max(1, durationMs);
-  const progress = elapsedMs / duration * speed + offset;
-  return progress - Math.floor(progress);
+  const cycle =
+    Math.max(0, elapsedMs) / duration * Math.max(0, speed) + offset;
+  const wrapped = cycle - Math.floor(cycle);
+  const activeSpan = 1 - BIRD_RECYCLE_GAP;
+  if (wrapped >= activeSpan) return null;
+  return wrapped / activeSpan;
+};
+
+export type TransportGait = Readonly<{
+  stride: number;
+  lift: number;
+}>;
+
+export const transportGaitAt = (
+  elapsedMs: number,
+  speed: number,
+): TransportGait => {
+  if (speed <= 0) return Object.freeze({ stride: 0, lift: 0 });
+  const cycle = elapsedMs * 0.009 * speed;
+  return Object.freeze({
+    stride: Math.sin(cycle) * 0.52,
+    lift: Math.abs(Math.sin(cycle)) * 0.018,
+  });
 };
 
 const applyTransportWalk = (
@@ -600,13 +623,12 @@ const applyTransportWalk = (
   elapsedMs: number,
   speed: number,
 ): void => {
-  const cycle = elapsedMs * 0.009 * Math.max(0.4, speed);
-  const stride = Math.sin(cycle) * 0.52;
-  rig.legs[0].rotation.x = stride;
-  rig.legs[1].rotation.x = -stride;
-  rig.arms[0].rotation.x = -stride * 0.72;
-  rig.arms[1].rotation.x = stride * 0.72;
-  rig.root.position.y = Math.abs(Math.sin(cycle)) * 0.018;
+  const gait = transportGaitAt(elapsedMs, speed);
+  rig.legs[0].rotation.x = gait.stride;
+  rig.legs[1].rotation.x = -gait.stride;
+  rig.arms[0].rotation.x = -gait.stride * 0.72;
+  rig.arms[1].rotation.x = gait.stride * 0.72;
+  rig.root.position.y = gait.lift;
 };
 
 const REDUCED_DETAIL_ROLES = new Set([
@@ -664,6 +686,7 @@ const placeRig = (
   applyMobilityRenderDetail(rig.root, pose.detail);
   rig.root.position.set(pose.x, 0, pose.z);
   rig.root.rotation.y = -pose.yaw;
+  rig.root.rotation.z = 0;
   applyTransportWalk(rig, elapsedMs, pose.speed);
   if (pose.interaction === "gardening") {
     rig.arms[0].rotation.x = -1.05;
@@ -819,16 +842,23 @@ export const createAmbientLife = (
       );
 
       wildlife.forEach((bird, index) => {
-        bird.visible = index < population.wildlife;
-        if (!bird.visible) return;
+        if (index >= population.wildlife) {
+          bird.visible = false;
+          return;
+        }
         const profile = wildlifeProfiles[index];
-        if (profile === undefined) return;
-        const progress = routeProgress(
+        if (profile === undefined) {
+          bird.visible = false;
+          return;
+        }
+        const progress = birdRouteProgressAt(
           elapsedMs,
           durationMs,
           profile.routeOffset,
           profile.speed,
         );
+        bird.visible = progress !== null;
+        if (progress === null) return;
         const x = profile.direction === 1
           ? -20 + progress * 40
           : 20 - progress * 40;
