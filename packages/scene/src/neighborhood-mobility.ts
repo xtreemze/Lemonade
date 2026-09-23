@@ -1019,7 +1019,7 @@ export const createNeighborhoodMobilitySystem = (
             `parked-vehicle-night-${String(i)}`,
             "vehicle",
             {
-              x: property.drivewayX,
+              x: drivewayX,
               z: access.drivewayCenterZ,
             },
             Math.PI / 2,
