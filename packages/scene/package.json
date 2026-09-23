@@ -11,7 +11,8 @@
     "./neighborhood-mobility": "./src/neighborhood-mobility.ts",
     "./storyboard": "./src/storyboard.ts",
     "./storyboard-create": "./src/storyboard-create.ts",
-    "./gizmo-controller": "./src/gizmo-controller.ts"
+    "./gizmo-controller": "./src/gizmo-controller.ts",
+    "./environment-presentation": "./src/environment-presentation.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
