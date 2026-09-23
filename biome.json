@@ -1,0 +1,180 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!build",
+      "!dist",
+      "!node_modules",
+      "!playwright-report",
+      "!test-results",
+      "!coverage"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": {
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "bracketSpacing": true,
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "json": {
+    "formatter": {
+      "trailingCommas": "none"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "domains": {
+      "project": "recommended",
+      "types": "all",
+      "test": "all",
+      "playwright": "all"
+    },
+    "rules": {
+      "preset": "recommended",
+      "complexity": {
+        "useRegexLiterals": "error"
+      },
+      "correctness": {
+        "useParseIntRadix": "error"
+      },
+      "security": {
+        "noGlobalEval": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "error",
+        "useConsistentObjectDefinitions": "error",
+        "useExportType": "error",
+        "useImportType": "error",
+        "useReadonlyClassProperties": "error",
+        "useThrowOnlyError": "error"
+      },
+      "suspicious": {
+        "noAlert": "error",
+        "noDoubleEquals": "error",
+        "noExplicitAny": "error",
+        "noUnusedExpressions": "error"
+      },
+      "nursery": {
+        "noImpliedEval": "error",
+        "useExhaustiveSwitchCases": "error"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "apps/web/src/app.ts",
+        "e2e/renderer-stress.spec.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnnecessaryConditions": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/simulation/src/**/*.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "window": "Simulation must not depend on browser state.",
+                  "document": "Simulation must not depend on the DOM.",
+                  "navigator": "Simulation must not depend on device state.",
+                  "localStorage": "Persistence belongs behind an adapter.",
+                  "sessionStorage": "Persistence belongs behind an adapter.",
+                  "indexedDB": "Persistence belongs behind an adapter.",
+                  "fetch": "Network I/O is forbidden in deterministic simulation code.",
+                  "XMLHttpRequest": "Network I/O is forbidden in deterministic simulation code.",
+                  "WebSocket": "Network I/O is forbidden in deterministic simulation code.",
+                  "AudioContext": "Audio belongs behind a presentation adapter.",
+                  "requestAnimationFrame": "Presentation timing must not affect simulation.",
+                  "setTimeout": "Ambient timing must not affect deterministic simulation.",
+                  "setInterval": "Ambient timing must not affect deterministic simulation.",
+                  "performance": "Ambient clock/device state must not enter simulation.",
+                  "crypto": "Randomness must be injected through the simulation RNG contract."
+                }
+              }
+            },
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "lit": "UI runtimes are forbidden in the simulation package.",
+                  "three": "Rendering dependencies are forbidden in the simulation package."
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "@lemonade/ui",
+                      "@lemonade/ui/**",
+                      "@lemonade/scene",
+                      "@lemonade/scene/**",
+                      "@lemonade/audio",
+                      "@lemonade/audio/**",
+                      "@tauri-apps/*",
+                      "node:*"
+                    ],
+                    "message": "Simulation must remain a pure, platform-independent inward dependency."
+                  }
+                ]
+              }
+            }
+          },
+          "nursery": {
+            "noJsRestrictedProperties": {
+              "level": "error",
+              "options": {
+                "entries": [
+                  {
+                    "object": "Math",
+                    "property": "random",
+                    "message": "Inject a seedable RandomSource; ambient randomness breaks replay determinism."
+                  },
+                  {
+                    "object": "Date",
+                    "property": "now",
+                    "message": "Pass time explicitly; ambient clock state is forbidden in simulation."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
