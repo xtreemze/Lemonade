@@ -52,7 +52,8 @@
       "correctness": {
         "useImportExtensions": "off",
         "noProcessGlobal": "off",
-        "noNodejsModules": "off"
+        "noNodejsModules": "off",
+        "useQwikValidLexicalScope": "off"
       },
       "performance": {
         "useTopLevelRegex": "off",
