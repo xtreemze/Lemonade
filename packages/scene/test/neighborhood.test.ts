@@ -5,6 +5,7 @@ import {
   FRONT_PROPERTY_LAYOUT,
   populateNeighborhood,
   updateNeighborhoodActivity,
+  weatherWindGustAt,
   weatherWindStrength,
 } from "../src/neighborhood.js";
 import {
@@ -238,11 +239,16 @@ describe("neighborhood world scale", () => {
     expect(sprinkler?.visible).toBe(false);
   });
 
-  it("makes storm wind materially stronger than ordinary weather", () => {
+  it("makes storm wind materially stronger and gustier than ordinary weather", () => {
     expect(weatherWindStrength("sunny")).toBeGreaterThan(0);
     expect(weatherWindStrength("thunderstorm")).toBeGreaterThan(
-      weatherWindStrength("cloudy") * 2,
+      weatherWindStrength("cloudy") * 4,
     );
+
+    const ordinary = weatherWindGustAt("cloudy", 2.4, 0.7);
+    const storm = weatherWindGustAt("thunderstorm", 2.4, 0.7);
+    expect(Math.abs(storm)).toBeGreaterThanOrEqual(Math.abs(ordinary));
+    expect(weatherWindGustAt("thunderstorm", 2.4, 0.7)).toBe(storm);
   });
 
   it("puts the stand in the featured garden beside its driveway and near the next property", () => {
