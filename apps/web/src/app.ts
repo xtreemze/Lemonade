@@ -702,14 +702,6 @@ export class LemonadeApp {
     }
   }
 
-  #scheduleHaptic(delayMs: number, cue: HapticCue): void {
-    const timer = window.setTimeout(() => {
-      this.#feedbackTimers = this.#feedbackTimers.filter((candidate) => candidate !== timer);
-      if (!this.#disposed) this.#haptics.play(cue);
-    }, Math.max(0, delayMs));
-    this.#feedbackTimers.push(timer);
-  }
-
   #scheduleStormFeedback(durationMs: number): void {
     const duration = Math.max(700, durationMs);
     for (const progress of [0.2, 0.57, 0.78] as const) {
