@@ -688,14 +688,14 @@ export const createLemonsvilleScene = (
     const visibleCount = Math.min(
       customers.length,
       PASSERBY_ACTIVE_LIMIT,
-      Math.max(MIN_STREET_PEDESTRIANS, storyboard.passersBy.length),
+      Math.max(PASSERBY_BASE_ACTIVE_COUNT, storyboard.passersBy.length),
     );
     const poses =
       crowdMotion?.crowdPosesAt(
         storyboard.passersBy,
         visibleCount,
         0,
-        Math.max(1, storyboard.activeDurationMs),
+        Math.max(1, storyboard.durationMs),
       ) ?? [];
     customers.forEach((customer, index) => {
       const pose = poses[index];
