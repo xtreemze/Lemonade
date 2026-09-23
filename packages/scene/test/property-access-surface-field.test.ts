@@ -38,7 +38,7 @@ describe("property access surface field", () => {
 
     expect(field.anchors).toHaveLength(3);
     expect(
-      field.anchors.map((anchor) => anchor.userData["sceneRole"]),
+      field.anchors.map((anchor) => String(anchor.userData["sceneRole"])),
     ).toEqual(["driveway", "front-path", "driveway"]);
     expect(field.meshes).toHaveLength(2);
     expect(
