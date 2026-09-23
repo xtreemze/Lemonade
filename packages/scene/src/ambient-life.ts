@@ -755,8 +755,7 @@ export const createAmbientLife = (
         const owner = ambientPetOwners[index];
         pet.visible =
           index < population.pets &&
-          owner !== undefined &&
-          owner.visible;
+          owner?.visible === true;
         if (!pet.visible || owner === undefined) return;
         const pose = petFollowPose({
           x: owner.position.x,
