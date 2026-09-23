@@ -1,6 +1,7 @@
 import {
   Mesh,
   PerspectiveCamera,
+  type BufferGeometry,
   type Camera,
   type Material,
   type Object3D,
@@ -103,15 +104,8 @@ const materialNames = (material: Material | Material[]): readonly string[] => {
   return materials.map((entry) => entry.name || entry.type);
 };
 
-const findObject = (scene: Scene, id: string): Object3D | null => {
-  let byUuid: Object3D | null = null;
-  let byName: Object3D | null = null;
-  scene.traverse((candidate) => {
-    if (byUuid === null && candidate.uuid === id) byUuid = candidate;
-    if (byName === null && candidate.name === id) byName = candidate;
-  });
-  return byUuid ?? byName;
-};
+const findObject = (scene: Scene, id: string): Object3D | null =>
+  scene.getObjectByProperty("uuid", id) ?? scene.getObjectByName(id) ?? null;
 
 const detailsFor = (object: Object3D): SceneObjectDetails => {
   object.updateWorldMatrix(true, false);
@@ -131,7 +125,12 @@ const detailsFor = (object: Object3D): SceneObjectDetails => {
     ] as const,
     scale: tuple3(object.scale),
     childCount: object.children.length,
-    material: object instanceof Mesh ? materialNames(object.material) : [],
+    material:
+      object instanceof Mesh
+        ? materialNames(
+            (object as Mesh<BufferGeometry, Material | Material[]>).material,
+          )
+        : [],
   });
 };
 
