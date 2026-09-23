@@ -20,6 +20,7 @@ export const MAX_STORYBOARD_CUPS = 400 as const;
 export const MAX_STORYBOARD_SIGNS = 40 as const;
 export const ACTIVE_STREET_DURATION_MS = 12_000 as const;
 export const ENDING_CLOSEUP_DURATION_MS = 4_000 as const;
+export const MIN_STREET_PEDESTRIANS = 20 as const;
 const MAX_PRICE_CENTS = 99_999;
 
 const finiteInteger = (value: number, fallback: number): number =>
@@ -60,8 +61,15 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
   const sold = clampInteger(input.sold, 0, prepared);
   const visibleSigns = clampInteger(input.visibleSigns, 0, MAX_STORYBOARD_SIGNS);
   const priceCents = clampInteger(input.priceCents, 0, MAX_PRICE_CENTS);
-  const ambientPedestrianCount = Math.max(1, finiteInteger(input.ambientPedestrianCount, 1));
-  const passerbyCount = Math.max(sold + 1, ambientPedestrianCount + visibleSigns * 2);
+  const ambientPedestrianCount = Math.max(
+    MIN_STREET_PEDESTRIANS,
+    finiteInteger(input.ambientPedestrianCount, MIN_STREET_PEDESTRIANS),
+  );
+  const passerbyCount = Math.max(
+    MIN_STREET_PEDESTRIANS,
+    sold + 1,
+    ambientPedestrianCount + visibleSigns * 2,
+  );
   const advertisementRatio =
     visibleSigns === 0 ? 0 : Math.min(0.5, 0.12 + visibleSigns * 0.02);
   const adViewerCount =
@@ -142,13 +150,28 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
     });
   });
 
+  const initialPasserbyCount = Math.min(
+    MIN_STREET_PEDESTRIANS,
+    passerbyCount,
+  );
+  const additionalPasserbyCount = Math.max(
+    0,
+    passerbyCount - initialPasserbyCount,
+  );
   const passersBy = Array.from({ length: passerbyCount }, (_, index): PasserbyBeat => {
     const seesAdvertisement = index < adViewerCount;
-    const staggerMs = (activeDurationMs * index) / Math.max(1, passerbyCount);
+    const additionalIndex = index - initialPasserbyCount;
+    const startAtMs =
+      index < initialPasserbyCount
+        ? 0
+        : Math.round(
+            (activeDurationMs * (additionalIndex + 1)) /
+              Math.max(1, additionalPasserbyCount + 1),
+          );
     return Object.freeze({
       pedestrianIndex: index,
-      startAtMs: Math.round(staggerMs),
-      endAtMs: Math.round(activeDurationMs + staggerMs),
+      startAtMs,
+      endAtMs: activeDurationMs,
       direction: index % 2 === 0 ? -1 : 1,
       lane: index % 4,
       seesAdvertisement,
