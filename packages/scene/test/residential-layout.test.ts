@@ -99,7 +99,10 @@ describe("procedural residential layout", () => {
 
     for (const planting of layout.trees) {
       const clearance = 3.5 * planting.scale;
-      expect(residentialPointIsBlocked(planting, layout, clearance)).toBe(false);
+      expect(
+        residentialPointIsBlocked(planting, layout, clearance),
+        `tree blocked role=${String(planting.propertyRole)} zone=${String(planting.yardZone)} x=${String(planting.x)} z=${String(planting.z)} scale=${String(planting.scale)}`,
+      ).toBe(false);
       expect(
         residentialFootprintIntersectsHardscape(
           planting,
@@ -178,8 +181,11 @@ describe("procedural residential layout", () => {
             (rect.minZ + rect.maxZ) / 2 - access.drivewayCenterZ,
           ) < 0.02,
       );
-      expect(path).toBeDefined();
-      expect(driveway).toBeDefined();
+      expect(path, `missing path for ${property.role}`).toBeDefined();
+      expect(
+        driveway,
+        `missing driveway for ${property.role}; expected center ${String(access.drivewayCenterX)},${String(access.drivewayCenterZ)}`,
+      ).toBeDefined();
       if (path === undefined || driveway === undefined) continue;
 
       expect(
@@ -214,9 +220,10 @@ describe("procedural residential layout", () => {
       (planting) =>
         planting.propertyRole !== null && planting.yardZone === "back",
     );
-    expect(backyardTrees.length).toBeGreaterThan(
-      layout.trees.length / 3,
-    );
+    expect(
+      backyardTrees.length,
+      `backyard tree coverage=${String(backyardTrees.length)}/${String(layout.trees.length)}`,
+    ).toBeGreaterThan(layout.trees.length / 3);
     for (const tree of backyardTrees) {
       const property =
         tree.propertyRole === null ? undefined : byRole.get(tree.propertyRole);
