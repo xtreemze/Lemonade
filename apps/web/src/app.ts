@@ -49,6 +49,12 @@ import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 import { isGizmoEnabled, printGizmoHelp } from "./dev-gizmo.js";
 import {
+  createDevMcpBrowserBridge,
+  isMcpBridgeEnabled,
+  printMcpBridgeHelp,
+  type DevMcpBrowserBridge,
+} from "./dev-mcp-bridge.js";
+import {
   isSceneLauncherEnabled,
   printSceneLauncherHelp,
   createSceneLauncherUI,
@@ -126,6 +132,49 @@ const persistenceMessage = (error: unknown): string =>
   error instanceof RunPersistenceError
     ? error.message
     : "Run storage failed unexpectedly. Export your run before leaving this page.";
+
+const devRecord = (value: unknown): Record<string, unknown> => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("MCP tool arguments must be an object.");
+  }
+  return value as Record<string, unknown>;
+};
+
+const devString = (record: Record<string, unknown>, key: string): string => {
+  const value = record[key];
+  if (typeof value !== "string" || value.length === 0) {
+    throw new TypeError(`${key} must be a non-empty string.`);
+  }
+  return value;
+};
+
+const devOptionalNumber = (
+  record: Record<string, unknown>,
+  key: string,
+): number | undefined => {
+  const value = record[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new TypeError(`${key} must be a finite number.`);
+  }
+  return value;
+};
+
+const devTuple = (
+  record: Record<string, unknown>,
+  key: string,
+): readonly [number, number, number] | undefined => {
+  const value = record[key];
+  if (value === undefined) return undefined;
+  if (
+    !Array.isArray(value) ||
+    value.length !== 3 ||
+    value.some((component) => typeof component !== "number" || !Number.isFinite(component))
+  ) {
+    throw new TypeError(`${key} must contain exactly three finite numbers.`);
+  }
+  return value as unknown as readonly [number, number, number];
+};
 
 export const createFreshRunSnapshot = (): RunSnapshot => {
   const state = createInitialState();
@@ -299,6 +348,7 @@ export class LemonadeApp {
   readonly #haptics = createHapticEngine();
   readonly #scene: LemonsvilleSceneView;
   readonly #persistenceEnabled: boolean;
+  #mcpBridge: DevMcpBrowserBridge | null = null;
 
   #game: GameState;
   #environment: DayEnvironment;
@@ -311,6 +361,9 @@ export class LemonadeApp {
   #price: number;
   #sceneConfidenceOverride: number | null = null;
   #scenePhaseOverride: ScenePreset["phase"] | null = null;
+  #sceneWeatherOverride: ScenePreset["weather"] | null = null;
+  #scenePreparedOverride: number | null = null;
+  #sceneVisibleSignsOverride: number | null = null;
   #sceneSoldOverride: number | null = null;
   #runStatusMessage = "";
   #runErrorMessage: string | null = null;
@@ -363,28 +416,18 @@ export class LemonadeApp {
       },
     );
 
-    // Initialize scene launcher if enabled
+    // Initialize scene launcher if enabled.
     if (sceneLauncherEnabled) {
-      const onPresetSelect = (preset: ScenePreset) => {
-        this.#environment = {
-          ...this.#environment,
-          weather: {
-            ...this.#environment.weather,
-            kind: preset.weather,
-          },
-        };
-        this.#presentation = preset.phase === "forecast" ? "forecast" : "simulation";
-        this.#scenePhaseOverride = preset.phase;
-        this.#sceneConfidenceOverride = preset.confidence ?? null;
-        this.#sceneSoldOverride = preset.sold ?? null;
-        this.#glasses = preset.prepared ?? 5;
-        this.#signs = preset.visibleSigns ?? 1;
-
-        this.#renderScene();
-      };
-
-      const launcherPanel = createSceneLauncherUI(onPresetSelect);
+      const launcherPanel = createSceneLauncherUI((preset) => {
+        this.#applyScenePreset(preset);
+      });
       document.body.appendChild(launcherPanel);
+    }
+
+    if (isMcpBridgeEnabled()) {
+      console.log("Lemonade MCP bridge enabled - type 'mcpBridgeHelp()' for help");
+      printMcpBridgeHelp();
+      this.#mcpBridge = createDevMcpBrowserBridge(this.#handleDevMcpCommand);
     }
 
     this.#elements.decisionPanel.addEventListener(
@@ -443,9 +486,159 @@ export class LemonadeApp {
     this.#clearPresentationTimer();
     this.#clearFeedbackTimers();
     this.#haptics.dispose();
+    this.#mcpBridge?.dispose();
+    this.#mcpBridge = null;
     this.#scene.dispose();
     void this.#audio.dispose();
   }
+
+  #applyScenePreset(preset: ScenePreset): void {
+    this.#sceneWeatherOverride = preset.weather;
+    this.#presentation = preset.phase === "forecast" ? "forecast" : "simulation";
+    this.#scenePhaseOverride = preset.phase;
+    this.#sceneConfidenceOverride = preset.confidence ?? null;
+    this.#sceneSoldOverride = preset.sold ?? null;
+    this.#scenePreparedOverride = preset.prepared ?? null;
+    this.#sceneVisibleSignsOverride = preset.visibleSigns ?? null;
+    this.#renderPresentationState();
+    this.#renderScene();
+  }
+
+  #devGameSnapshot(): unknown {
+    return Object.freeze({
+      run: this.#snapshot(),
+      presentation: this.#presentation,
+      draft: Object.freeze({
+        glasses: this.#glasses,
+        signs: this.#signs,
+        priceCents: this.#price,
+      }),
+      sceneOverrides: Object.freeze({
+        weather: this.#sceneWeatherOverride,
+        phase: this.#scenePhaseOverride,
+        confidence: this.#sceneConfidenceOverride,
+        prepared: this.#scenePreparedOverride,
+        visibleSigns: this.#sceneVisibleSignsOverride,
+        sold: this.#sceneSoldOverride,
+      }),
+    });
+  }
+
+  readonly #handleDevMcpCommand = (method: string, params: unknown): unknown => {
+    const args = devRecord(params ?? {});
+    const sceneDevtools = (): NonNullable<ReturnType<LemonsvilleSceneView["devtools"]>> => {
+      const controller = this.#scene.devtools();
+      if (controller === null) {
+        throw new Error("The Three.js scene is not active. Open a forecast or simulation first.");
+      }
+      return controller;
+    };
+
+    switch (method) {
+      case "runtime.snapshot":
+        return Object.freeze({
+          game: this.#devGameSnapshot(),
+          scene: this.#scene.devtools()?.diagnostics() ?? null,
+        });
+      case "game.state":
+        return this.#devGameSnapshot();
+      case "game.set_draft": {
+        if (this.#phase.kind !== "deciding") {
+          throw new Error("Draft decisions can only be edited while planning a day.");
+        }
+        const limits = decisionLimit(this.#game);
+        const glasses = devOptionalNumber(args, "glasses");
+        const signs = devOptionalNumber(args, "signs");
+        const priceCents = devOptionalNumber(args, "priceCents");
+        if (glasses !== undefined) {
+          this.#glasses = Math.max(0, Math.min(limits.glasses, Math.trunc(glasses)));
+        }
+        if (signs !== undefined) {
+          this.#signs = Math.max(0, Math.min(limits.signs, Math.trunc(signs)));
+        }
+        if (priceCents !== undefined) {
+          this.#price = Math.max(0, Math.min(limits.price, Math.trunc(priceCents)));
+        }
+        this.#renderDecisionState();
+        this.#renderScene();
+        return this.#devGameSnapshot();
+      }
+      case "scene.diagnostics":
+        return sceneDevtools().diagnostics();
+      case "scene.tree":
+        return sceneDevtools().tree({
+          maxDepth: devOptionalNumber(args, "maxDepth"),
+          maxChildren: devOptionalNumber(args, "maxChildren"),
+        });
+      case "scene.object":
+        return sceneDevtools().object({ id: devString(args, "id") });
+      case "scene.set_transform":
+        return sceneDevtools().setTransform(
+          { id: devString(args, "id") },
+          {
+            position: devTuple(args, "position"),
+            rotation: devTuple(args, "rotation"),
+            scale: devTuple(args, "scale"),
+          },
+        );
+      case "scene.set_visibility": {
+        const visible = args["visible"];
+        if (typeof visible !== "boolean") throw new TypeError("visible must be a boolean.");
+        return sceneDevtools().setVisible({ id: devString(args, "id") }, visible);
+      }
+      case "scene.select": {
+        const id = args["id"];
+        if (id === null || id === undefined) return sceneDevtools().select(null);
+        if (typeof id !== "string" || id.length === 0) {
+          throw new TypeError("id must be a non-empty string or null.");
+        }
+        return sceneDevtools().select({ id });
+      }
+      case "scene.set_mode": {
+        const mode = devString(args, "mode");
+        if (mode !== "translate" && mode !== "rotate" && mode !== "scale") {
+          throw new RangeError("mode must be translate, rotate, or scale.");
+        }
+        return sceneDevtools().setMode(mode);
+      }
+      case "scene.set_presentation": {
+        const weather = args["weather"];
+        const phase = args["phase"];
+        if (
+          weather !== "sunny" &&
+          weather !== "cloudy" &&
+          weather !== "hot-and-dry" &&
+          weather !== "thunderstorm"
+        ) {
+          throw new RangeError("weather must be sunny, cloudy, hot-and-dry, or thunderstorm.");
+        }
+        if (phase !== "forecast" && phase !== "idle" && phase !== "simulation") {
+          throw new RangeError("phase must be forecast, idle, or simulation.");
+        }
+        const confidence = devOptionalNumber(args, "confidence");
+        const prepared = devOptionalNumber(args, "prepared");
+        const sold = devOptionalNumber(args, "sold");
+        const visibleSigns = devOptionalNumber(args, "visibleSigns");
+        this.#applyScenePreset({
+          name: "MCP",
+          weather,
+          phase,
+          ...(confidence === undefined ? {} : { confidence: Math.max(0, Math.min(5, confidence)) }),
+          ...(prepared === undefined ? {} : { prepared: Math.max(0, Math.trunc(prepared)) }),
+          ...(sold === undefined ? {} : { sold: Math.max(0, Math.trunc(sold)) }),
+          ...(visibleSigns === undefined
+            ? {}
+            : { visibleSigns: Math.max(0, Math.trunc(visibleSigns)) }),
+        });
+        return Object.freeze({
+          game: this.#devGameSnapshot(),
+          scene: this.#scene.devtools()?.diagnostics() ?? null,
+        });
+      }
+      default:
+        throw new RangeError(`Unsupported MCP bridge method: ${method}`);
+    }
+  };
 
   readonly #onVisibilityChange = (): void => {
     if (document.visibilityState === "hidden") {
@@ -883,16 +1076,29 @@ export class LemonadeApp {
         ? legacyConfidenceForState(phase.resolution.nextState)
         : confidence);
     this.#scene.update({
-      environment: this.#environment,
+      environment:
+        this.#sceneWeatherOverride === null
+          ? this.#environment
+          : {
+              ...this.#environment,
+              weather: {
+                ...this.#environment.weather,
+                kind: this.#sceneWeatherOverride,
+              },
+            },
       confidence,
       nextConfidence,
-      visibleSigns: resolvedDay === null ? this.#signs : Number(resolvedDay.decision.signs),
+      visibleSigns:
+        this.#sceneVisibleSignsOverride ??
+        (resolvedDay === null ? this.#signs : Number(resolvedDay.decision.signs)),
       phase: scenePhase,
       sold:
         resolvedDay === null
           ? (this.#sceneSoldOverride ?? 0)
           : Number(resolvedDay.sold),
-      prepared: resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses),
+      prepared:
+        this.#scenePreparedOverride ??
+        (resolvedDay === null ? this.#glasses : Number(resolvedDay.decision.glasses)),
       priceCents: resolvedDay === null ? this.#price : Number(resolvedDay.decision.price),
       characterSeed: Number(this.#runSeed),
       dayNumber: resolvedDay === null ? Number(this.#game.day) : Number(resolvedDay.day),
