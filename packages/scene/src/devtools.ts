@@ -1,7 +1,6 @@
 import {
   Mesh,
   PerspectiveCamera,
-  type BufferGeometry,
   type Camera,
   type Material,
   type Object3D,
@@ -10,6 +9,10 @@ import {
 } from "three";
 
 import type { GizmoController, TransformMode } from "./gizmo-controller.js";
+
+interface MaterialObject extends Object3D {
+  material: Material | Material[];
+}
 
 export type SceneObjectSelector = Readonly<{ id: string }>;
 
