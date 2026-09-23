@@ -18,6 +18,10 @@ import {
 } from "../src/crowd-motion.js";
 import { walkingCycleAtDistance } from "../src/gait.js";
 import {
+  PASSERBY_BASE_ACTIVE_COUNT,
+  PASSERBY_FOREGROUND_TARGET,
+} from "../src/scene-capacity.js";
+import {
   generateStreetNetwork,
   STREET_LAYOUT,
   roadLaneZ,
@@ -423,8 +427,18 @@ describe("crowd motion", () => {
   });
 
   it("keeps walkers moving through the wider neighborhood at normal walking speed", () => {
-    const early = crowdPosesAt(beats, 12, 250, 6_000);
-    const late = crowdPosesAt(beats, 12, 5_750, 6_000);
+    const early = crowdPosesAt(
+      beats,
+      PASSERBY_BASE_ACTIVE_COUNT,
+      250,
+      6_000,
+    );
+    const late = crowdPosesAt(
+      beats,
+      PASSERBY_BASE_ACTIVE_COUNT,
+      5_750,
+      6_000,
+    );
     const allPoses = [...early, ...late].filter((pose) => pose !== undefined);
     const extent = allPoses.reduce(
       (max, pose) => Math.max(max, Math.abs(pose.x)),
@@ -539,36 +553,61 @@ describe("crowd motion", () => {
   });
 
 
-  it("keeps at least twenty ordinary pedestrians active and moving for the full street simulation", () => {
+  it("keeps twenty foreground pedestrians present and moving for the full simulation presentation", () => {
     const storyboard = createStreetStoryboard({
-      durationMs: 14_000,
+      durationMs: 16_000,
       prepared: 20,
       sold: 0,
       visibleSigns: 0,
       priceCents: 150,
       ambientPedestrianCount: 4,
     });
-    expect(storyboard.passersBy.length).toBeGreaterThanOrEqual(20);
+    expect(storyboard.passersBy.length).toBeGreaterThanOrEqual(
+      PASSERBY_FOREGROUND_TARGET,
+    );
 
     const simulation = createCrowdSimulation(
       storyboard.passersBy,
-      20,
-      storyboard.activeDurationMs,
+      PASSERBY_BASE_ACTIVE_COUNT,
+      storyboard.durationMs,
     );
     let previous = simulation.sample(0).poses;
-    expect(previous.filter((pose) => pose !== undefined).length).toBeGreaterThanOrEqual(20);
+    expect(
+      previous.filter((pose) => pose !== undefined).length,
+    ).toBeGreaterThanOrEqual(PASSERBY_FOREGROUND_TARGET);
+
+    const foregroundAtStart = previous.slice(0, PASSERBY_FOREGROUND_TARGET);
+    const backgroundAtStart = previous
+      .slice(PASSERBY_FOREGROUND_TARGET)
+      .filter((pose) => pose !== undefined);
+    const averageRadius = (
+      poses: readonly NonNullable<(typeof previous)[number]>[],
+    ): number =>
+      poses.reduce(
+        (total, pose) => total + Math.hypot(pose.x, pose.z),
+        0,
+      ) / Math.max(1, poses.length);
+    const definedForeground = foregroundAtStart.filter(
+      (pose): pose is NonNullable<typeof pose> => pose !== undefined,
+    );
+    expect(definedForeground).toHaveLength(PASSERBY_FOREGROUND_TARGET);
+    expect(backgroundAtStart.length).toBeGreaterThan(0);
+    expect(averageRadius(definedForeground)).toBeLessThan(
+      averageRadius(backgroundAtStart),
+    );
 
     for (
       let elapsedMs = 250;
-      elapsedMs < storyboard.activeDurationMs;
+      elapsedMs < storyboard.durationMs;
       elapsedMs += 250
     ) {
       const current = simulation.sample(elapsedMs).poses;
+      const foreground = current.slice(0, PASSERBY_FOREGROUND_TARGET);
       expect(
-        current.filter((pose) => pose !== undefined).length,
-      ).toBeGreaterThanOrEqual(20);
+        foreground.filter((pose) => pose !== undefined).length,
+      ).toBe(PASSERBY_FOREGROUND_TARGET);
 
-      for (let index = 0; index < 20; index += 1) {
+      for (let index = 0; index < PASSERBY_FOREGROUND_TARGET; index += 1) {
         const before = previous[index];
         const after = current[index];
         expect(before).toBeDefined();

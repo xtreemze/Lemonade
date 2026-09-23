@@ -53,10 +53,10 @@ import {
   BUYER_PROFILE_INDEX_OFFSET,
   BUYER_VISUAL_POOL_SIZE,
   PASSERBY_ACTIVE_LIMIT,
+  PASSERBY_BASE_ACTIVE_COUNT,
   PASSERBY_VISUAL_POOL_SIZE,
 } from "./scene-capacity.js";
 import { businessDayFrameAt, type WeatherDetailController } from "./weather-detail.js";
-import { MIN_STREET_PEDESTRIANS } from "./storyboard-create.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -732,14 +732,14 @@ export const createLemonsvilleScene = (
     const visibleCount = Math.min(
       customers.length,
       PASSERBY_ACTIVE_LIMIT,
-      Math.max(MIN_STREET_PEDESTRIANS, storyboard.passersBy.length),
+      Math.max(PASSERBY_BASE_ACTIVE_COUNT, storyboard.passersBy.length),
     );
     const poses =
       crowdMotion?.crowdPosesAt(
         storyboard.passersBy,
         visibleCount,
         0,
-        Math.max(1, storyboard.activeDurationMs),
+        Math.max(1, storyboard.durationMs),
       ) ?? [];
     customers.forEach((customer, index) => {
       const pose = poses[index];
@@ -874,10 +874,7 @@ export const createLemonsvilleScene = (
   };
 
   const animatePassersBy = (elapsedMs: number): void => {
-    if (
-      state.phase !== "simulation" ||
-      elapsedMs >= storyboard.activeDurationMs
-    ) {
+    if (state.phase !== "simulation") {
       for (const customer of customers) customer.root.visible = false;
       return;
     }
@@ -885,14 +882,14 @@ export const createLemonsvilleScene = (
     const targetCount = Math.min(
       customers.length,
       PASSERBY_ACTIVE_LIMIT,
-      Math.max(MIN_STREET_PEDESTRIANS, storyboard.passersBy.length),
+      Math.max(PASSERBY_BASE_ACTIVE_COUNT, storyboard.passersBy.length),
     );
     const poses =
       crowdMotion?.crowdPosesAt(
         storyboard.passersBy,
         targetCount,
         elapsedMs,
-        Math.max(1, storyboard.activeDurationMs),
+        Math.max(1, storyboard.durationMs),
       ) ?? [];
 
     customers.forEach((customer, index) => {
