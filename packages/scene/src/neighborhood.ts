@@ -20,8 +20,8 @@ import {
 import {
   generateStreetNetwork,
   STREET_LAYOUT,
-  type StreetStripSpec,
 } from "./street-layout.js";
+import { createStreetSurfaceField } from "./street-surface-field.js";
 import { WORLD_SCALE } from "./world-scale.js";
 import type { PropertyActivity } from "./neighborhood-mobility.js";
 
@@ -54,24 +54,6 @@ const road = (
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(x, y, z);
   if (role !== undefined) mesh.userData["sceneRole"] = role;
-  scene.add(mesh);
-  return mesh;
-};
-
-const streetStrip = (
-  scene: Scene,
-  strip: StreetStripSpec,
-  color: number,
-): Mesh => {
-  const mesh = new Mesh(
-    new BoxGeometry(strip.length, 0.022, strip.width),
-    material(color),
-  );
-  mesh.position.set(strip.x, strip.role === "sidewalk" ? 0.022 : 0.012, strip.z);
-  mesh.rotation.y = -strip.rotationY;
-  mesh.userData["sceneRole"] = strip.role;
-  mesh.userData["streetId"] = strip.streetId;
-  mesh.userData["streetSegment"] = strip.segmentIndex;
   scene.add(mesh);
   return mesh;
 };
@@ -713,12 +695,12 @@ export const populateNeighborhood = (
   let roadSegments = streetNetwork.roads.length + streetNetwork.sidewalks.length;
   const pavedRoads = streetNetwork.roads.length;
 
-  for (const strip of streetNetwork.roads) {
-    streetStrip(scene, strip, strip.streetId === "main" ? 0x596065 : 0x62686b);
-  }
-  for (const strip of streetNetwork.sidewalks) {
-    streetStrip(scene, strip, 0xd4d0c6);
-  }
+  const streetSurfaces = createStreetSurfaceField(
+    streetNetwork.roads,
+    streetNetwork.sidewalks,
+  );
+  for (const anchor of streetSurfaces.anchors) scene.add(anchor);
+  for (const mesh of streetSurfaces.meshes) scene.add(mesh);
 
   for (let x = -115; x <= 115; x += 7.5) {
     road(
