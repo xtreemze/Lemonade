@@ -66,7 +66,7 @@ export const createBabylonLemonsvilleScene = (
   }
 
   engine.setHardwareScalingLevel(
-    1 / clampPixelRatio(globalThis.devicePixelRatio ?? 1),
+    1 / clampPixelRatio(globalThis.devicePixelRatio),
   );
 
   const scene = new Scene(engine);
