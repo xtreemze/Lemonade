@@ -148,15 +148,16 @@ test("01-weather-forecast", async ({ page }, testInfo) => {
   const feature = getFeature("01-weather-forecast");
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "forecast");
-  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-stand-state", "closed", {
-    timeout: 4_000,
-  });
-  await expect(page.locator("#scene-canvas")).toHaveAttribute("data-scene-shot", "forecast", {
-    timeout: 4_000,
-  });
 
   await recordFeature(page, testInfo, feature, async () => {
-    await expect(page.locator("#scene-canvas")).toHaveAttribute("data-stand-state", "closed");
+    await Promise.all([
+      expect(page.locator("#scene-canvas")).toHaveAttribute("data-stand-state", "closed", {
+        timeout: 4_000,
+      }),
+      expect(page.locator("#scene-canvas")).toHaveAttribute("data-scene-shot", "forecast", {
+        timeout: 4_000,
+      }),
+    ]);
   });
 });
 
