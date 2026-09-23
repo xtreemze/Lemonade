@@ -4,7 +4,6 @@ import {
   BufferAttribute,
   BufferGeometry,
   ConeGeometry,
-  Euler,
   Group,
   Line,
   LineBasicMaterial,
@@ -14,7 +13,7 @@ import {
   Vector2,
   Vector3,
 } from "three";
-import type { Object3D, PerspectiveCamera, Scene } from "three";
+import type { Euler, Object3D, PerspectiveCamera, Scene } from "three";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 export type TransformMode = "translate" | "rotate" | "scale";
@@ -297,7 +296,7 @@ export const createGizmoController = (options: GizmoOptions): GizmoController =>
       let foundAxis: "x" | "y" | "z" | null = null;
 
       const readAxis = (object: Object3D): "x" | "y" | "z" | null => {
-        const axis = object.userData["axis"];
+        const axis: unknown = object.userData["axis"];
         return axis === "x" || axis === "y" || axis === "z" ? axis : null;
       };
 
