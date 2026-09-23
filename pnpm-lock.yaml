@@ -217,12 +217,17 @@ importers:
       '@babylonjs/core':
         specifier: ^9.27.1
         version: 9.27.1
-      '@lemonade/scene':
+      '@lemonade/scene-contracts':
         specifier: workspace:*
-        version: link:../scene
+        version: link:../scene-contracts
+
+  packages/scene-contracts: {}
 
   packages/scene:
     dependencies:
+      '@lemonade/scene-contracts':
+        specifier: workspace:*
+        version: link:../scene-contracts
       three:
         specifier: ^0.186.0
         version: 0.186.0
