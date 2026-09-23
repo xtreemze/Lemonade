@@ -1,239 +1,195 @@
 /**
- * Dev Tool: Persistent 3D Scene Viewer
+ * Persistent scene viewer loaded only when explicitly enabled.
  *
- * Launches a dedicated 3D scene view that persists without game UI interference.
- * Perfect for using the gizmo tool to manipulate objects interactively.
- *
- * Enable with: `localStorage.setItem('LEMONADE_DEV_SCENE_VIEWER', '1')`
+ * Enable with: localStorage.setItem("LEMONADE_DEV_SCENE_VIEWER", "1")
  */
 
-import type { SceneWeather, ScenePhase, LemonsvilleSceneState } from "@lemonade/scene";
-import { createLemonsvilleScene } from "@lemonade/scene";
+import {
+  createLemonsvilleScene,
+  type LemonsvilleSceneState,
+  type ScenePhase,
+  type SceneWeather,
+} from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
-// TODO: Integrate gizmo controller for 3D editor tool (game-engine-like scene manipulation)
-// import { createGizmoController } from "@lemonade/scene";
 
-export const isSceneViewerEnabled = (): boolean => {
-  if (typeof localStorage === "undefined") return false;
-  return localStorage.getItem("LEMONADE_DEV_SCENE_VIEWER") === "1";
-};
+export interface PersistentSceneViewerOptions {
+  enableGizmo?: boolean;
+  weather?: SceneWeather;
+  phase?: ScenePhase;
+}
+
+export interface PersistentSceneViewer {
+  dispose(): void;
+}
+
+export const isSceneViewerEnabled = (): boolean =>
+  globalThis.localStorage?.getItem("LEMONADE_DEV_SCENE_VIEWER") === "1";
 
 export const enableSceneViewer = (): void => {
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem("LEMONADE_DEV_SCENE_VIEWER", "1");
-    console.log("🎥 Scene viewer enabled! Refresh the page to activate.");
-  }
+  localStorage.setItem("LEMONADE_DEV_SCENE_VIEWER", "1");
 };
 
 export const disableSceneViewer = (): void => {
-  if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("LEMONADE_DEV_SCENE_VIEWER");
-    console.log("🎥 Scene viewer disabled. Refresh the page.");
+  localStorage.removeItem("LEMONADE_DEV_SCENE_VIEWER");
+};
+
+const makeState = (
+  weather: SceneWeather,
+  phase: ScenePhase,
+): LemonsvilleSceneState => {
+  const durationMs = phase === "forecast" ? 6_000 : phase === "simulation" ? 14_000 : 0;
+  return Object.freeze({
+    weather,
+    visibleSigns: phase === "forecast" ? 0 : 5,
+    prepared: phase === "forecast" ? 0 : 20,
+    durationMs,
+    confidence: 3,
+    nextConfidence: 3,
+    characterSeed: 12_345,
+    dayNumber: 1,
+    storyboard: createStreetStoryboard({
+      durationMs: Math.max(1, durationMs),
+      prepared: phase === "forecast" ? 0 : 20,
+      sold: phase === "simulation" ? 10 : 0,
+      visibleSigns: phase === "forecast" ? 0 : 5,
+      priceCents: 150,
+      ambientPedestrianCount: 12,
+    }),
+    phase,
+    reducedMotion: false,
+  });
+};
+
+const createSelect = <T extends string>(
+  labelText: string,
+  values: readonly T[],
+  selected: T,
+): Readonly<{ label: HTMLLabelElement; select: HTMLSelectElement }> => {
+  const label = document.createElement("label");
+  label.style.cssText = "display:grid;gap:4px;";
+  label.append(labelText);
+
+  const select = document.createElement("select");
+  for (const value of values) {
+    select.add(new Option(value, value, false, value === selected));
   }
+  label.appendChild(select);
+  return Object.freeze({ label, select });
 };
 
 export const createPersistentSceneViewer = (
   appRoot: HTMLElement,
-  options: { enableGizmo?: boolean; weather?: SceneWeather; phase?: ScenePhase } = {},
-) => {
-  // Clear app UI
-  appRoot.innerHTML = "";
+  options: PersistentSceneViewerOptions = {},
+): PersistentSceneViewer | null => {
+  const initialWeather = options.weather ?? "sunny";
+  const initialPhase = options.phase ?? "simulation";
 
-  // Create main container with flexbox (scene on left, sidebar on right)
-  const container = document.createElement("div");
-  container.style.cssText = `
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    flex-direction: row;
-    background: #000;
-  `;
+  appRoot.replaceChildren();
 
-  // Create canvas container (takes up most space)
-  const canvasContainer = document.createElement("div");
-  canvasContainer.style.cssText = `
-    flex: 1;
-    display: flex;
-    background: #000;
-    position: relative;
-  `;
+  const shell = document.createElement("main");
+  shell.style.cssText =
+    "width:100dvw;height:100dvh;display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,320px);background:#000;";
 
-  // Create canvas
+  const sceneHost = document.createElement("div");
+  sceneHost.style.cssText = "min-width:0;min-height:0;position:relative;";
+
   const canvas = document.createElement("canvas");
-  canvas.style.cssText = `
-    flex: 1;
-    display: block;
-    background: #000;
-  `;
-  canvasContainer.appendChild(canvas);
+  canvas.style.cssText = "width:100%;height:100%;display:block;";
+  sceneHost.appendChild(canvas);
 
-  // Create sidebar
-  const sidebar = document.createElement("div");
-  sidebar.style.cssText = `
-    width: 320px;
-    background: rgba(0, 0, 0, 0.95);
-    border-left: 2px solid #ffff00;
-    overflow-y: auto;
-    padding: 16px;
-    font-family: monospace;
-    font-size: 12px;
-    color: #fff;
-    z-index: 2000;
-  `;
+  const sidebar = document.createElement("aside");
+  sidebar.setAttribute("aria-label", "Scene viewer controls");
+  sidebar.style.cssText =
+    "min-height:0;overflow:auto;padding:16px;background:rgb(0 0 0 / 94%);border-left:2px solid #ffff00;color:#fff;font:12px monospace;";
 
-  // Create control panel inside sidebar
-  const panel = document.createElement("div");
-  panel.style.cssText = `
-    background: transparent;
-    border: none;
-    padding: 0;
-    margin-bottom: 24px;
-  `;
+  const heading = document.createElement("h1");
+  heading.textContent = "Scene Viewer";
+  heading.style.cssText = "font-size:14px;margin:0 0 12px;color:#ffff00;";
+  sidebar.appendChild(heading);
 
-  const title = document.createElement("div");
-  title.style.cssText = "font-weight: bold; margin-bottom: 12px; color: #ffff00; font-size: 14px;";
-  title.textContent = "🎥 Scene Viewer";
-  panel.appendChild(title);
+  const weatherControl = createSelect(
+    "Weather",
+    ["sunny", "cloudy", "hot-and-dry", "thunderstorm"] as const,
+    initialWeather,
+  );
+  const phaseControl = createSelect(
+    "Phase",
+    ["forecast", "idle", "simulation"] as const,
+    initialPhase,
+  );
+  sidebar.append(weatherControl.label, phaseControl.label);
 
-  const info = document.createElement("div");
-  info.style.cssText = `
-    background: #1a1a1a;
-    border: 1px solid #666;
-    border-radius: 4px;
-    padding: 8px;
-    margin-bottom: 16px;
-    font-size: 11px;
-    color: #0f0;
-    line-height: 1.5;
-  `;
-  info.innerHTML = `
-    <div><strong>Weather:</strong> ${options.weather || "sunny"}</div>
-    <div><strong>Phase:</strong> ${options.phase || "simulation"}</div>
-    <div><strong>Gizmo:</strong> ${options.enableGizmo ? "✓ Enabled" : "✗ Disabled"}</div>
-    <div style="margin-top: 8px; color: #aaa; font-size: 10px;">
-      Click scene to select objects<br/>
-      G/R/S for move/rotate/scale
-    </div>
-  `;
-  panel.appendChild(info);
-
-  const closeBtn = document.createElement("button");
-  closeBtn.textContent = "✕ Exit";
-  closeBtn.style.cssText = `
-    width: 100%;
-    padding: 8px;
-    background: #ff3333;
-    color: #fff;
-    border: 1px solid #ff3333;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: monospace;
-    font-weight: bold;
-    margin-bottom: 16px;
-  `;
-  closeBtn.onclick = () => {
+  const exit = document.createElement("button");
+  exit.type = "button";
+  exit.textContent = "Exit viewer";
+  exit.style.cssText =
+    "min-height:44px;width:100%;margin-top:16px;border:1px solid #ffff00;background:#111;color:#ffff00;";
+  exit.addEventListener("click", () => {
     disableSceneViewer();
-    location.reload();
-  };
-  panel.appendChild(closeBtn);
-
-  sidebar.appendChild(panel);
-  container.appendChild(canvasContainer);
-  container.appendChild(sidebar);
-  appRoot.appendChild(container);
-
-  // Create scene state
-  const sceneState: LemonsvilleSceneState = Object.freeze({
-    weather: options.weather || "sunny",
-    visibleSigns: 5,
-    prepared: 20,
-    durationMs: 14000,
-    confidence: 3,
-    nextConfidence: 3,
-    characterSeed: 12345,
-    dayNumber: 1,
-    storyboard: createStreetStoryboard({
-      durationMs: 14000,
-      prepared: 20,
-      sold: 10,
-      visibleSigns: 5,
-      priceCents: 150,
-      ambientPedestrianCount: 12,
-    }),
-    phase: options.phase || "simulation",
-    reducedMotion: false,
+    window.location.reload();
   });
+  sidebar.appendChild(exit);
 
-  // Create scene (gizmo disabled for now - reserved for future 3D editor tool)
-  const scene = createLemonsvilleScene(canvas, sceneState, {
-    enableGizmo: false,
+  shell.append(sceneHost, sidebar);
+  appRoot.appendChild(shell);
+
+  let weather: SceneWeather = initialWeather;
+  let phase: ScenePhase = initialPhase;
+  const scene = createLemonsvilleScene(canvas, makeState(weather, phase), {
+    enableGizmo: options.enableGizmo === true,
   });
-
-  if (!scene) {
-    const error = document.createElement("div");
-    error.style.cssText = `
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #ff3333;
-      color: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-      z-index: 3000;
-    `;
-    error.textContent = "❌ Failed to create 3D scene";
-    canvasContainer.appendChild(error);
+  if (scene === null) {
+    sceneHost.textContent = "Unable to initialize the 3D scene.";
     return null;
   }
 
-  // TODO: Initialize gizmo controller for 3D editor (reserved for future development)
-  // Once gizmo is integrated, this will enable realtime scene object manipulation
-  // let gizmoController: ReturnType<typeof createGizmoController> | null = null;
-  // if (scene.scene && scene.camera) {
-  //   gizmoController = createGizmoController({ scene: scene.scene, camera: scene.camera, ... })
-  // }
-
-  // Gizmo section info (reserved for future 3D editor tool development)
-  const gizmoSection = document.createElement("div");
-  gizmoSection.style.cssText = `
-    background: #1a1a1a;
-    border: 1px solid #666666;
-    border-radius: 4px;
-    padding: 12px;
-    font-size: 11px;
-    color: #aaa;
-  `;
-  gizmoSection.innerHTML = `
-    <div style="font-weight: bold; margin-bottom: 8px; color: #888;">📐 3D Editor (Future)</div>
-    <div style="line-height: 1.5;">
-      <div style="font-size: 10px;">Infrastructure for realtime 3D manipulation and diagnostics. Enable when ready for game-engine-like editing capabilities.</div>
-    </div>
-  `;
-  sidebar.appendChild(gizmoSection);
-
-  // Handle resize
-  const handleResize = () => {
-    scene.resize(window.innerWidth, window.innerHeight);
+  const update = (): void => {
+    scene.update(makeState(weather, phase));
   };
-  window.addEventListener("resize", handleResize);
-  handleResize();
 
-  // Initial render
-  scene.update(sceneState);
+  weatherControl.select.addEventListener("change", () => {
+    const value = weatherControl.select.value;
+    if (
+      value === "sunny" ||
+      value === "cloudy" ||
+      value === "hot-and-dry" ||
+      value === "thunderstorm"
+    ) {
+      weather = value;
+      update();
+    }
+  });
 
-  return {
-    scene,
-    dispose: () => {
-      window.removeEventListener("resize", handleResize);
+  phaseControl.select.addEventListener("change", () => {
+    const value = phaseControl.select.value;
+    if (value === "forecast" || value === "idle" || value === "simulation") {
+      phase = value;
+      update();
+    }
+  });
+
+  const observer = new ResizeObserver(() => {
+    scene.resize(sceneHost.clientWidth, sceneHost.clientHeight);
+  });
+  observer.observe(sceneHost);
+  scene.resize(sceneHost.clientWidth, sceneHost.clientHeight);
+
+  return Object.freeze({
+    dispose(): void {
+      observer.disconnect();
       scene.dispose();
     },
-  };
+  });
 };
 
-// Make globally available
+declare global {
+  interface Window {
+    enableSceneViewer?: typeof enableSceneViewer;
+    disableSceneViewer?: typeof disableSceneViewer;
+  }
+}
+
 if (typeof window !== "undefined") {
-  (window as any).enableSceneViewer = enableSceneViewer;
-  (window as any).disableSceneViewer = disableSceneViewer;
+  window.enableSceneViewer = enableSceneViewer;
+  window.disableSceneViewer = disableSceneViewer;
 }
