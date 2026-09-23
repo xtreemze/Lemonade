@@ -203,11 +203,18 @@ describe("procedural residential layout", () => {
           (rect) => rect.role === "sidewalk" && overlaps(driveway, rect),
         ),
       ).toBe(true);
+      const roadOverlaps = layout.exclusions
+        .filter((rect) => rect.role === "road" && overlaps(driveway, rect, 0))
+        .map((rect) => ({
+          minX: Number(rect.minX.toFixed(2)),
+          maxX: Number(rect.maxX.toFixed(2)),
+          minZ: Number(rect.minZ.toFixed(2)),
+          maxZ: Number(rect.maxZ.toFixed(2)),
+        }));
       expect(
-        layout.exclusions.some(
-          (rect) => rect.role === "road" && overlaps(driveway, rect, 0),
-        ),
-      ).toBe(false);
+        roadOverlaps,
+        `${property.role} driveway at (${driveway.x?.toFixed(2)}, ${driveway.z?.toFixed(2)}) reaches road`,
+      ).toEqual([]);
     }
   });
 
