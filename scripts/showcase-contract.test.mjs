@@ -59,7 +59,7 @@ test("renderer creates source-quality reels plus mixed PNG and animated WebP pre
   assert.ok(renderer.includes("libwebp_anim"));
   assert.ok(renderer.includes("animatedGraphicFps"));
   assert.ok(renderer.includes('"-loop", "1"'));
-  assert.ok(renderer.includes('"crf",\n    "17"'));
+  assert.ok(renderer.includes('"-crf",\n    "17"'));
   assert.ok(renderer.includes("flags=lanczos"));
 });
 
