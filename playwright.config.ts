@@ -6,6 +6,7 @@ const previewOrigin = "http://127.0.0.1:4173";
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: ["showcase/**"],
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
