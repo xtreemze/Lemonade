@@ -13,7 +13,6 @@ import {
   sceneCameraComposition,
   sceneShotAt,
   type SceneShotKind,
-  type StreetStoryboard,
 } from "@lemonade/scene-contracts/storyboard";
 
 import type {
