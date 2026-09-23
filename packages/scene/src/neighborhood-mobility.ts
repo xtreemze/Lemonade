@@ -513,9 +513,7 @@ const trafficPose = (
     maxSpeed,
     route.total * travelFraction / durationSeconds,
   );
-  const requiredTravel = desiredSpeed * durationSeconds;
-  const availableStart = Math.max(0, route.total - requiredTravel - 0.5);
-  const initialDistance = fract(offset) * availableStart;
+  const initialDistance = fract(offset) * Math.max(0, route.total - 0.5);
   const maxAcceleration = kind === "vehicle" ? 4 : 3.2;
 
   let record = clocks.get(id);
