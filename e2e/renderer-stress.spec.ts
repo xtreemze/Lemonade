@@ -1,3 +1,4 @@
+// biome-ignore lint/correctness/noUnresolvedImports: Biome 2.5 misses Playwright's Page type re-export.
 import { expect, test, type Page } from "@playwright/test";
 
 type RendererSnapshot = Readonly<{
@@ -21,6 +22,7 @@ const readCounter = (text: string, label: string): number => {
 };
 
 const readSnapshot = async (page: Page): Promise<RendererSnapshot> => {
+  // biome-ignore lint/security/noSecrets: stable data-attribute selector, not a credential.
   const diagnostics = page.locator('[data-renderer-diagnostics="true"]');
   const text = (await diagnostics.textContent()) ?? "";
   return Object.freeze({
@@ -62,6 +64,7 @@ test("deterministic maximum-load scene produces renderer certification evidence"
   const fixture = page.locator('[data-renderer-stress-fixture="true"]');
   await expect(fixture).toBeAttached();
 
+  // biome-ignore lint/security/noSecrets: stable data-attribute selector, not a credential.
   const diagnostics = page.locator('[data-renderer-diagnostics="true"]');
   await expect(diagnostics).toBeAttached();
   await expect(diagnostics).toContainText("Fixture: stress");
