@@ -428,7 +428,7 @@ export const createSceneLauncherUI = (
       name: "Custom",
       weather: weatherSelect.value as SceneWeather,
       phase: phaseSelect.value as ScenePhase,
-      confidence: parseInt(confidenceSlider.value, 10),
+      confidence: Number.parseInt(confidenceSlider.value, 10),
       prepared: 10,
       sold: 0,
       visibleSigns: 2,
