@@ -20,4 +20,4 @@ jobs:
           install: false
       - run: pnpm install --frozen-lockfile
       - name: Run residential layout regression suite
-        run: pnpm --filter @lemonade/scene exec vitest run test/issue-139-diagnostic.test.ts
+        run: pnpm --filter @lemonade/scene exec vitest run test/residential-layout.test.ts
