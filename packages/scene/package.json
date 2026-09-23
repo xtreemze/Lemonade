@@ -11,7 +11,8 @@
     "./storyboard": "./src/storyboard.ts",
     "./storyboard-create": "./src/storyboard-create.ts",
     "./gizmo-controller": "./src/gizmo-controller.ts",
-    "./stand-anchors": "./src/stand-anchors.ts"
+    "./stand-anchors": "./src/stand-anchors.ts",
+    "./street-layout": "./src/street-layout.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
