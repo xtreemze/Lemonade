@@ -122,14 +122,20 @@ describe("neighborhood world scale", () => {
       const halfWidth = (bounds.max.x - bounds.min.x) / 2;
       const halfDepth = (bounds.max.z - bounds.min.z) / 2;
 
+      const hardscapeBlockers = layout.exclusions
+        .filter((rect) =>
+          residentialFootprintIntersectsHardscape(
+            { x: centerX, z: centerZ },
+            { exclusions: [rect] },
+            halfWidth,
+            halfDepth,
+          ),
+        )
+        .map((rect) => rect.role);
       expect(
-        residentialFootprintIntersectsHardscape(
-          { x: centerX, z: centerZ },
-          layout,
-          halfWidth,
-          halfDepth,
-        ),
-      ).toBe(false);
+        hardscapeBlockers,
+        `${role} at (${centerX.toFixed(2)}, ${centerZ.toFixed(2)}) intersects ${hardscapeBlockers.join(",")}`,
+      ).toEqual([]);
 
       if (role === "procedural-tree") {
         expect(
