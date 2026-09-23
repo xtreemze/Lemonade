@@ -1233,65 +1233,73 @@ const restoreFrontMailboxes = (
 
 export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): ResidentialLayout => {
   const safeSeed = Number.isFinite(seed) ? Math.trunc(seed) >>> 0 : DEFAULT_RESIDENTIAL_SEED;
-  const front = restoreFrontMailboxes(
-    resolveGeneratedAccess(frontProperties(safeSeed), safeSeed),
-    safeSeed,
-  );
-  const middle = resolveGeneratedAccess(
-    rowProperties(
-      safeSeed,
-      1_100,
-      -26,
-      [-46, -35, -24.5, -9.1, 4, 16.5, 29.7, 41.7],
-      true,
-    ),
-    safeSeed,
-  );
-  const back = resolveGeneratedAccess(
-    rowProperties(
-      safeSeed,
-      2_300,
-      -49.5,
-      [-47, -36.5, -25.4, -9.7, 3.5, 16.5, 28.5, 39.6, 52.5],
-      true,
-    ),
-    safeSeed,
-  );
-  const outer = resolveGeneratedAccess(
-    [
-      ...rowProperties(
-        safeSeed,
-        2_900,
-        16.8,
-        [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
-        false,
-      ),
-      ...rowProperties(
-        safeSeed,
-        3_000,
-        -72,
-        [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
-        false,
-      ),
-    ],
-    safeSeed,
-  );
-  const allPropertiesRaw = [...front, ...middle, ...back, ...outer];
-  const allPropertiesResolved = resolvePropertyOverlaps(allPropertiesRaw, safeSeed);
 
-  const resolvedByRole = new Map(allPropertiesResolved.map((p) => [p.role, p]));
-  const resolveProperties = (props: readonly ResidentialPropertySpec[]) =>
-    Object.freeze(props.map((p) => resolvedByRole.get(p.role) ?? p));
+  const initialFront = frontProperties(safeSeed);
+  const initialMiddle = rowProperties(
+    safeSeed,
+    1_100,
+    -26,
+    [-46, -35, -24.5, -9.1, 4, 16.5, 29.7, 41.7],
+    true,
+  );
+  const initialBack = rowProperties(
+    safeSeed,
+    2_300,
+    -49.5,
+    [-47, -36.5, -25.4, -9.7, 3.5, 16.5, 28.5, 39.6, 52.5],
+    true,
+  );
+  const initialOuter = Object.freeze([
+    ...rowProperties(
+      safeSeed,
+      2_900,
+      16.8,
+      [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
+      false,
+    ),
+    ...rowProperties(
+      safeSeed,
+      3_000,
+      -72,
+      [-94, -82, -70, -43, -31, -7, 6, 31, 44, 70, 83, 95],
+      false,
+    ),
+  ]);
 
-  const allProperties = allPropertiesResolved;
+  // House positions are authoritative. Settle them before solving access so
+  // driveways, paths, mailboxes, planting exclusions, and rendering all consume
+  // the same final property geometry.
+  const settledHouses = resolvePropertyOverlaps(
+    [...initialFront, ...initialMiddle, ...initialBack, ...initialOuter],
+    safeSeed,
+  );
+  const accessResolved = resolveGeneratedAccess(settledHouses, safeSeed);
+  const byRole = new Map(accessResolved.map((property) => [property.role, property]));
+  const propertiesFor = (
+    source: readonly ResidentialPropertySpec[],
+  ): readonly ResidentialPropertySpec[] =>
+    Object.freeze(
+      source.map((property) => byRole.get(property.role) ?? property),
+    );
+
+  const resolvedFront = restoreFrontMailboxes(
+    propertiesFor(initialFront),
+    safeSeed,
+  );
+  const resolvedMiddle = propertiesFor(initialMiddle);
+  const resolvedBack = propertiesFor(initialBack);
+  const resolvedOuter = propertiesFor(initialOuter);
+  const allProperties = Object.freeze([
+    ...resolvedFront,
+    ...resolvedMiddle,
+    ...resolvedBack,
+    ...resolvedOuter,
+  ]);
+
   const exclusions = Object.freeze([
     ...baseExclusions(safeSeed),
     ...accessExclusions(allProperties, safeSeed),
   ]);
-  const resolvedFront = resolveProperties(front);
-  const resolvedMiddle = resolveProperties(middle);
-  const resolvedBack = resolveProperties(back);
-  const resolvedOuter = resolveProperties(outer);
   const partial = {
     exclusions,
     frontProperties: resolvedFront,
