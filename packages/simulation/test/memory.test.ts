@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   basisPoints,
   customerId,
-  customerTraitsFor,
   deriveMarketMemory,
   glassCount,
   marketMemoryToleranceMultiplier,
@@ -12,6 +11,7 @@ import {
   nextMarketMemory,
   seed,
   signCount,
+  type CustomerTraits,
   type MarketMemoryObservation,
 } from "../src/index.js";
 
@@ -27,6 +27,17 @@ const observation = (
     purchased: 8,
     ...overrides,
   });
+
+const traits: CustomerTraits = Object.freeze({
+  id: customerId(4),
+  type: "regular",
+  visualSeed: seed(0x1234_abcd),
+  intrinsicPriceTolerance: moneyCents(300),
+  advertisingResponsiveness: basisPoints(8_000),
+  familiarity: basisPoints(5_000),
+  loyalty: basisPoints(5_000),
+  weatherCommitment: basisPoints(5_000),
+});
 
 describe("market memory", () => {
   it("starts from an inspectable neutral state", () => {
@@ -124,8 +135,6 @@ describe("market memory", () => {
   });
 
   it("keeps excess-production effects materially smaller than stockout effects", () => {
-    const traits = customerTraitsFor(seed(0x1234_abcd), customerId(4));
-
     let excess = neutralMarketMemory();
     let stockout = neutralMarketMemory();
     for (let day = 0; day < 8; day += 1) {
