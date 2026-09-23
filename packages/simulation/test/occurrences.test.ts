@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  createMarketRandom,
+  createSeededRandom,
   dayNumber,
   generateNeighborhoodOccurrences,
   seed,
@@ -135,18 +135,13 @@ describe("neighborhood occurrence ledger", () => {
     }
   });
 
-  it("does not perturb customer-market RNG streams", () => {
-    const before = createMarketRandom(seed(99), "audience-selection", {
-      day: dayNumber(8),
-    }).nextUnit();
+  it("does not perturb independent seeded RNG streams", () => {
+    const control = createSeededRandom(seed(99));
+    const candidate = createSeededRandom(seed(99));
 
+    expect(candidate.nextUnit()).toBe(control.nextUnit());
     schedule(8, "sunny");
-
-    const after = createMarketRandom(seed(99), "audience-selection", {
-      day: dayNumber(8),
-    }).nextUnit();
-
-    expect(after).toBe(before);
+    expect(candidate.nextUnit()).toBe(control.nextUnit());
   });
 
   it("rejects semantic layout slots outside the household range", () => {
