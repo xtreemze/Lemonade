@@ -5,7 +5,10 @@ import "./finance.css";
 import "./persistence.css";
 
 import { LemonadeApp, createFreshRunSnapshot } from "./app.js";
-import { createPersistentSceneViewer, isSceneViewerEnabled } from "./dev-scene-viewer.js";
+import {
+  isRendererStressFixtureEnabled,
+  isSceneViewerEnabled,
+} from "./dev-scene-viewer-flag.js";
 import { RunPersistenceError, clearCurrentRun, loadCurrentRun } from "./persistence.js";
 
 const root = document.querySelector("#root");
@@ -79,11 +82,19 @@ const start = async (): Promise<void> => {
 };
 
 if (isSceneViewerEnabled()) {
-  console.log("🎥 Scene Viewer mode activated - launching persistent 3D scene");
-  createPersistentSceneViewer(root, {
-    enableGizmo: true,
-    weather: "hot-and-dry",
-    phase: "forecast",
+  const stress = isRendererStressFixtureEnabled();
+  console.log(
+    stress
+      ? "Renderer stress fixture activated"
+      : "🎥 Scene Viewer mode activated - launching persistent 3D scene",
+  );
+  void import("./dev-scene-viewer.js").then(({ createPersistentSceneViewer }) => {
+    createPersistentSceneViewer(root, {
+      enableGizmo: true,
+      weather: "hot-and-dry",
+      phase: "forecast",
+      stress,
+    });
   });
 } else {
   void start();

@@ -2,43 +2,55 @@ import {
   Vector3,
   Vector2,
   Raycaster,
-  Camera,
-  Scene,
-  Object3D,
-  Group,
-  BoxHelper,
-  Euler,
-  Quaternion,
-  Matrix4,
+  PerspectiveCamera,
   BufferGeometry,
   BufferAttribute,
   LineBasicMaterial,
   Line,
-  Color,
   ConeGeometry,
   MeshBasicMaterial,
   Mesh,
   BoxGeometry,
-  TubeGeometry,
+  Group,
+  BoxHelper,
+  Euler,
 } from "three";
-// @ts-ignore - TransformControls not in @types/three, but exists in three/examples
+import type { Camera, Scene, Object3D } from "three";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 export type TransformMode = "translate" | "rotate" | "scale";
 
-export type GizmoState = {
+export interface GizmoState {
   selectedObject: Object3D | null;
   mode: TransformMode;
   isDragging: boolean;
   savedPositions: Map<string, { position: Vector3; rotation: Euler; scale: Vector3 }>;
-};
+}
 
-export type ObjectTransform = {
+export interface ObjectTransform {
   uuid: string;
   name: string;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
+}
+
+// TransformControls ships no .d.ts under three/examples/jsm; TypeScript structurally infers its
+// Object3D-derived shape from the .js source, but not the extra `gizmoGroup` field it sets at
+// runtime. This intersection is the single documented boundary for that gap.
+type TransformControlsInstance = TransformControls & { gizmoGroup?: Object3D };
+
+const createTransformControls = (camera: Camera, container: HTMLElement): TransformControlsInstance =>
+  new TransformControls(camera, container);
+
+const getVerticalFovRadians = (camera: Camera): number => {
+  const fovDegrees = camera instanceof PerspectiveCamera ? camera.fov : 50;
+  return fovDegrees * (Math.PI / 180);
+};
+
+const readAxis = (obj: Object3D): "x" | "y" | "z" | null => {
+  const axis: unknown = obj.userData["axis"];
+  return axis === "x" || axis === "y" || axis === "z" ? axis : null;
 };
 
 const raycaster = new Raycaster();
@@ -48,13 +60,11 @@ let selectedObject: Object3D | null = null;
 let selectedHelper: BoxHelper | null = null;
 let currentMode: TransformMode = "translate";
 let isDragging = false;
-let dragAxis: 'x' | 'y' | 'z' | null = null;
-let dragPlane = new Vector3(0, 1, 0);
-let dragPoint = new Vector3();
-let dragStartWorldPos = new Vector3();
-let initialPosition = new Vector3();
-let initialRotation = new Euler();
-let initialScale = new Vector3();
+let dragAxis: "x" | "y" | "z" | null = null;
+const dragStartWorldPos = new Vector3();
+const initialPosition = new Vector3();
+const initialRotation = new Euler();
+const initialScale = new Vector3();
 
 interface GizmoOptions {
   camera: Camera;
@@ -64,17 +74,31 @@ interface GizmoOptions {
   onTransformChanged?: () => void;
 }
 
-export const createGizmoController = (options: GizmoOptions) => {
+export interface GizmoController {
+  selectObject: (obj: Object3D) => void;
+  deselectObject: () => void;
+  saveTransform: () => void;
+  getSavedTransforms: () => ObjectTransform[];
+  exportAsJSON: () => string;
+  exportAsCode: () => string;
+  getState: () => GizmoState;
+  setMode: (mode: TransformMode) => void;
+  getMode: () => TransformMode;
+  getSelectedObject: () => Object3D | null;
+  dispose: () => void;
+}
+
+export const createGizmoController = (options: GizmoOptions): GizmoController => {
   const { camera, scene, container, selectableObjects, onTransformChanged } = options;
   const savedTransforms = new Map<string, ObjectTransform>();
 
   // Create TransformControls for visual 3D gizmo
-  const transformControls = new TransformControls(camera, container);
+  const transformControls = createTransformControls(camera, container);
   transformControls.setSpace("world");
 
   // Add the gizmo visual group to the scene so it renders
-  if ((transformControls as any).gizmoGroup) {
-    scene.add((transformControls as any).gizmoGroup);
+  if (transformControls.gizmoGroup) {
+    scene.add(transformControls.gizmoGroup);
   }
 
   // Listen for changes to update the UI
@@ -219,10 +243,14 @@ export const createGizmoController = (options: GizmoOptions) => {
   };
 
   const createGizmoForMode = (mode: TransformMode): Group => {
-    if (mode === "translate") return createMoveGizmo();
-    if (mode === "rotate") return createRotateGizmo();
-    if (mode === "scale") return createScaleGizmo();
-    return createMoveGizmo();
+    switch (mode) {
+      case "translate":
+        return createMoveGizmo();
+      case "rotate":
+        return createRotateGizmo();
+      case "scale":
+        return createScaleGizmo();
+    }
   };
 
   const onMouseMove = (event: MouseEvent) => {
@@ -231,11 +259,11 @@ export const createGizmoController = (options: GizmoOptions) => {
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     if (isDragging && selectedObject && dragAxis) {
-      raycaster.setFromCamera(mouse, camera as any);
+      raycaster.setFromCamera(mouse, camera);
 
       // Calculate world position at current mouse
       const distance = camera.position.z - selectedObject.position.z;
-      const vFOV = (camera as any).fov * (Math.PI / 180);
+      const vFOV = getVerticalFovRadians(camera);
       const height = 2 * Math.tan(vFOV / 2) * distance;
       const width = height * (container.clientWidth / container.clientHeight);
 
@@ -252,19 +280,19 @@ export const createGizmoController = (options: GizmoOptions) => {
       if (currentMode === "translate") {
         if (dragAxis === "x") selectedObject.position.x = initialPosition.x + delta.x;
         else if (dragAxis === "y") selectedObject.position.y = initialPosition.y + delta.y;
-        else if (dragAxis === "z") selectedObject.position.z = initialPosition.z - delta.y; // Z uses vertical mouse movement
+        else selectedObject.position.z = initialPosition.z - delta.y; // Z uses vertical mouse movement
       } else if (currentMode === "scale") {
         const scaleFactor = 1 + delta.x * 2;
         if (dragAxis === "x") selectedObject.scale.x = Math.max(0.1, initialScale.x * scaleFactor);
         else if (dragAxis === "y") selectedObject.scale.y = Math.max(0.1, initialScale.y * scaleFactor);
-        else if (dragAxis === "z") selectedObject.scale.z = Math.max(0.1, initialScale.z * (1 - delta.y * 2));
+        else selectedObject.scale.z = Math.max(0.1, initialScale.z * (1 - delta.y * 2));
       }
 
       onTransformChanged?.();
       return;
     }
 
-    raycaster.setFromCamera(mouse, camera as any);
+    raycaster.setFromCamera(mouse, camera);
     const objects = getSelectableObjects();
     const intersects = raycaster.intersectObjects(objects, true);
 
@@ -286,24 +314,20 @@ export const createGizmoController = (options: GizmoOptions) => {
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    raycaster.setFromCamera(mouse, camera as any);
+    raycaster.setFromCamera(mouse, camera);
     const objects = getSelectableObjects();
     const intersects = raycaster.intersectObjects(objects, true);
 
-    if (intersects.length > 0) {
-      let target = intersects[0]!.object;
-      let foundAxis: 'x' | 'y' | 'z' | null = null;
+    const firstIntersect = intersects[0];
+    if (firstIntersect) {
+      let target = firstIntersect.object;
+      let foundAxis: "x" | "y" | "z" | null = readAxis(target);
 
-      // Check if we hit a gizmo part (axis indicator)
-      if (target.userData?.["axis"]) {
-        foundAxis = target.userData["axis"];
-      } else {
+      if (!foundAxis) {
         // Traverse up to find a gizmo part
         let current = target;
         while (current.parent && !foundAxis) {
-          if (current.userData?.["axis"]) {
-            foundAxis = current.userData["axis"];
-          }
+          foundAxis = readAxis(current);
           current = current.parent;
         }
       }
@@ -328,7 +352,7 @@ export const createGizmoController = (options: GizmoOptions) => {
 
         // Store world position at drag start
         const distance = camera.position.z - selectedObject.position.z;
-        const vFOV = (camera as any).fov * (Math.PI / 180);
+        const vFOV = getVerticalFovRadians(camera);
         const height = 2 * Math.tan(vFOV / 2) * distance;
         const width = height * (container.clientWidth / container.clientHeight);
         dragStartWorldPos.set(
@@ -497,12 +521,10 @@ export const createGizmoController = (options: GizmoOptions) => {
       container.removeEventListener("mouseup", onMouseUp);
       document.removeEventListener("keydown", onKeyDown);
       deselectObject();
-      if ((transformControls as any).gizmoGroup) {
-        scene.remove((transformControls as any).gizmoGroup);
+      if (transformControls.gizmoGroup) {
+        scene.remove(transformControls.gizmoGroup);
       }
       transformControls.dispose();
     },
   };
 };
-
-export type GizmoController = ReturnType<typeof createGizmoController>;
