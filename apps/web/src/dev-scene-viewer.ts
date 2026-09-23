@@ -10,44 +10,39 @@
 import type { SceneWeather, ScenePhase, LemonsvilleSceneState } from "@lemonade/scene";
 import { createLemonsvilleScene } from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
+import {
+  RENDERER_STRESS_STORAGE_KEY,
+  SCENE_VIEWER_STORAGE_KEY,
+  isRendererStressFixtureEnabled,
+  isSceneViewerEnabled,
+} from "./dev-scene-flags.js";
 // TODO: Integrate gizmo controller for 3D editor tool (game-engine-like scene manipulation)
 // import { createGizmoController } from "@lemonade/scene";
 
-export const isSceneViewerEnabled = (): boolean => {
-  if (typeof localStorage === "undefined") return false;
-  return localStorage.getItem("LEMONADE_DEV_SCENE_VIEWER") === "1";
-};
-
 export const enableSceneViewer = (): void => {
   if (typeof localStorage !== "undefined") {
-    localStorage.setItem("LEMONADE_DEV_SCENE_VIEWER", "1");
+    localStorage.setItem(SCENE_VIEWER_STORAGE_KEY, "1");
     console.log("🎥 Scene viewer enabled! Refresh the page to activate.");
   }
 };
 
 export const disableSceneViewer = (): void => {
   if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("LEMONADE_DEV_SCENE_VIEWER");
+    localStorage.removeItem(SCENE_VIEWER_STORAGE_KEY);
     console.log("🎥 Scene viewer disabled. Refresh the page.");
   }
 };
 
-const RENDERER_STRESS_KEY = "LEMONADE_DEV_RENDERER_STRESS";
-
-export const isRendererStressFixtureEnabled = (): boolean =>
-  typeof localStorage !== "undefined" &&
-  localStorage.getItem(RENDERER_STRESS_KEY) === "1";
-
 export const enableRendererStressFixture = (): void => {
   if (typeof localStorage === "undefined") return;
-  localStorage.setItem(RENDERER_STRESS_KEY, "1");
-  localStorage.setItem("LEMONADE_DEV_SCENE_VIEWER", "1");
+  localStorage.setItem(RENDERER_STRESS_STORAGE_KEY, "1");
+  localStorage.setItem(SCENE_VIEWER_STORAGE_KEY, "1");
   window.location.reload();
 };
 
 export const disableRendererStressFixture = (): void => {
   if (typeof localStorage === "undefined") return;
-  localStorage.removeItem(RENDERER_STRESS_KEY);
+  localStorage.removeItem(RENDERER_STRESS_STORAGE_KEY);
   window.location.reload();
 };
 
@@ -317,3 +312,8 @@ if (typeof window !== "undefined") {
   devWindow.enableRendererStressFixture = enableRendererStressFixture;
   devWindow.disableRendererStressFixture = disableRendererStressFixture;
 }
+
+export {
+  isRendererStressFixtureEnabled,
+  isSceneViewerEnabled,
+} from "./dev-scene-flags.js";
