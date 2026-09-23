@@ -88,9 +88,16 @@ EXAMPLE:
   `);
 };
 
+interface GizmoDevWindow {
+  enableGizmo: typeof enableGizmo;
+  disableGizmo: typeof disableGizmo;
+  gizmoHelp: typeof printGizmoHelp;
+}
+
 // Make dev tools globally available
 if (typeof window !== "undefined") {
-  (window as any).enableGizmo = enableGizmo;
-  (window as any).disableGizmo = disableGizmo;
-  (window as any).gizmoHelp = printGizmoHelp;
+  const devWindow = window as unknown as GizmoDevWindow;
+  devWindow.enableGizmo = enableGizmo;
+  devWindow.disableGizmo = disableGizmo;
+  devWindow.gizmoHelp = printGizmoHelp;
 }
