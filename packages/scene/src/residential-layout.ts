@@ -102,7 +102,6 @@ const resolvePropertyOverlaps = (
       if (a === undefined) continue;
       const aFootprint = propertyFootprint(a);
       let totalPushX = 0;
-      let totalPushZ = 0;
 
       for (let j = i + 1; j < mutable.length; j += 1) {
         const b = mutable[j];
@@ -115,18 +114,19 @@ const resolvePropertyOverlaps = (
 
         if (distX < minDistX && distZ < minDistZ) {
           const pushX = (minDistX - distX) * 0.5;
-          const pushZ = (minDistZ - distZ) * 0.5;
-          totalPushX += Math.sign(b.houseX - a.houseX) * pushX;
-          totalPushZ += Math.sign(b.houseZ - a.houseZ) * pushZ;
+          const direction = b.houseX === a.houseX ? (i % 2 === 0 ? 1 : -1) : Math.sign(b.houseX - a.houseX);
+          totalPushX += direction * pushX;
         }
       }
 
-      if (totalPushX !== 0 || totalPushZ !== 0) {
+      if (totalPushX !== 0) {
         anyMoved = true;
+        const deltaX = -totalPushX;
         mutable[i] = {
           ...a,
-          houseX: a.houseX - totalPushX,
-          houseZ: a.houseZ - totalPushZ,
+          houseX: a.houseX + deltaX,
+          drivewayX: a.drivewayX === null ? null : a.drivewayX + deltaX,
+          mailboxX: a.mailboxX === null ? null : a.mailboxX + deltaX,
         };
       }
     }
