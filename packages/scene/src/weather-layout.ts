@@ -48,33 +48,61 @@ export type TownCloudLayout = Readonly<{
 
 export const CLOUDY_TOWN_CLOUD_LAYOUT: readonly TownCloudLayout[] = Object.freeze([
   Object.freeze({
-    position: [-2, 0.8, -0.3] as const,
-    scale: 1,
+    position: [-7.2, 0.95, -0.55] as const,
+    scale: 0.96,
     driftPhase: 0.25,
   }),
   Object.freeze({
-    position: [-1, 0.6, -0.4] as const,
-    scale: 0.96,
+    position: [-4.3, 0.55, -0.15] as const,
+    scale: 1.02,
     driftPhase: 0.92,
   }),
   Object.freeze({
-    position: [0, 0.7, -0.2] as const,
-    scale: 1.04,
+    position: [-1.5, 1.05, -0.45] as const,
+    scale: 0.98,
     driftPhase: 1.7,
   }),
   Object.freeze({
-    position: [1, 0.5, -0.5] as const,
-    scale: 0.98,
+    position: [1.6, 0.65, -0.05] as const,
+    scale: 1.04,
     driftPhase: 2.38,
   }),
   Object.freeze({
-    position: [2, 0.75, -0.35] as const,
-    scale: 1.06,
+    position: [4.5, 0.9, -0.5] as const,
+    scale: 1,
     driftPhase: 3.05,
   }),
   Object.freeze({
-    position: [2.5, 0.4, -0.45] as const,
+    position: [7.3, 0.5, -0.2] as const,
     scale: 0.94,
     driftPhase: 4.12,
+  }),
+] as const);
+
+export const THUNDERSTORM_TOWN_CLOUD_LAYOUT: readonly TownCloudLayout[] = Object.freeze([
+  Object.freeze({
+    position: [-6.4, 1.3, -0.4] as const,
+    scale: 1.08,
+    driftPhase: 0.15,
+  }),
+  Object.freeze({
+    position: [-3.2, 0.65, -0.15] as const,
+    scale: 0.98,
+    driftPhase: 1.35,
+  }),
+  Object.freeze({
+    position: [0, 1.45, -0.5] as const,
+    scale: 1.12,
+    driftPhase: 2.55,
+  }),
+  Object.freeze({
+    position: [3.2, 0.75, -0.1] as const,
+    scale: 1.02,
+    driftPhase: 3.7,
+  }),
+  Object.freeze({
+    position: [6.4, 1.25, -0.45] as const,
+    scale: 1.06,
+    driftPhase: 4.9,
   }),
 ] as const);
