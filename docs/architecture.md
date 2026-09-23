@@ -262,7 +262,7 @@ The workspace baseline as of September 2026 is:
 - Vite 8 as a thin web build/development layer;
 - Vitest 5;
 - Playwright;
-- ESLint flat configuration with typed rules;
+- Biome 2.5 with strict project- and type-aware rules;
 - Three.js for the 3D renderer;
 - Tauri/Rust only when native capability work begins.
 
