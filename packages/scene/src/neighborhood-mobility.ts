@@ -373,7 +373,7 @@ const residentRoute = (
   const door = propertyDoorPoint(property, seed);
   const path = residentialAccessLayout(property, seed);
   const sidewalk = propertySidewalkPoint(property, seed);
-  return makeRoute("resident:" + property.role, [
+  return makeRoute(`resident:${property.role}`, [
     door,
     { x: path.entryX, z: path.entryZ },
     { x: path.pathCenterX, z: path.pathCenterZ },
@@ -769,7 +769,7 @@ export const createNeighborhoodMobilitySystem = (
         residentRoutes.forEach((route, index) => {
           const property = residents[index];
           if (property === undefined) return;
-          const residentId = "resident:" + String(index);
+          const residentId = `resident:${String(index)}`;
           const startAtMs =
             durationMs *
             (0.04 +
