@@ -36,6 +36,12 @@ import {
 import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
 import { STREET_LAYOUT } from "./street-layout.js";
 import type { StandDetailController } from "./stand-detail.js";
+import {
+  BUYER_PROFILE_INDEX_OFFSET,
+  BUYER_VISUAL_POOL_SIZE,
+  PASSERBY_ACTIVE_LIMIT,
+  PASSERBY_VISUAL_POOL_SIZE,
+} from "./scene-capacity.js";
 import { businessDayFrameAt, type WeatherDetailController } from "./weather-detail.js";
 import {
   buyerPhaseAt,
@@ -79,9 +85,6 @@ export interface LemonsvilleSceneController {
   scene?: Scene; // Three.js Scene for dev tools
   camera?: PerspectiveCamera; // Three.js Camera for dev tools
 }
-
-const PASSERBY_POOL_SIZE = 128;
-const BUYER_POOL_SIZE = 192;
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
@@ -496,13 +499,13 @@ export const createLemonsvilleScene = (
     | Promise<Readonly<{ createPriceSignSurface(priceLabel: string): HTMLCanvasElement }>>
     | null = null;
 
-  const customers = Array.from({ length: PASSERBY_POOL_SIZE }, (_, index) =>
+  const customers = Array.from({ length: PASSERBY_VISUAL_POOL_SIZE }, (_, index) =>
     createPerson(initialState.characterSeed, index),
   );
   for (const customer of customers) scene.add(customer.root);
 
-  const buyers = Array.from({ length: BUYER_POOL_SIZE }, (_, index) =>
-    createPerson(initialState.characterSeed, index + PASSERBY_POOL_SIZE),
+  const buyers = Array.from({ length: BUYER_VISUAL_POOL_SIZE }, (_, index) =>
+    createPerson(initialState.characterSeed, index + BUYER_PROFILE_INDEX_OFFSET),
   );
   const buyerFadeState = new Map<PersonRig, { opacity: number; targetOpacity: number }>();
   for (const buyer of buyers) {
@@ -738,7 +741,7 @@ export const createLemonsvilleScene = (
 
     const visibleCount = Math.min(
       customers.length,
-      Math.max(6, Math.min(36, storyboard.passersBy.length)),
+      Math.max(6, Math.min(PASSERBY_ACTIVE_LIMIT, storyboard.passersBy.length)),
     );
     const poses =
       crowdMotion?.crowdPosesAt(
@@ -944,7 +947,10 @@ export const createLemonsvilleScene = (
 
     const targetCount = Math.min(
       customers.length,
-      Math.max(activeBuyerCount + 1, Math.min(36, storyboard.passersBy.length)),
+      Math.max(
+        activeBuyerCount + 1,
+        Math.min(PASSERBY_ACTIVE_LIMIT, storyboard.passersBy.length),
+      ),
     );
     const poses =
       crowdMotion?.crowdPosesAt(
