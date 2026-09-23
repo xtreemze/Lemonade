@@ -32,6 +32,11 @@ import {
 } from "./renderer-diagnostics.js";
 import { disposeSceneResources } from "./scene-disposal.js";
 import {
+  animationElapsedAt,
+  resumedAnimationEpoch,
+  stateUpdateElapsed,
+} from "./presentation-clock.js";
+import {
   characterGroundClearance,
   WORLD_SCALE,
 } from "./world-scale.js";
@@ -509,6 +514,7 @@ export const createLemonsvilleScene = (
     | null = null;
   let animationFrame: number | null = null;
   let animationEpoch = performance.now();
+  let lastElapsedMs = 0;
   let storyboard = state.storyboard;
 
   let viewportWidth = 1;
@@ -611,7 +617,12 @@ export const createLemonsvilleScene = (
         initialState.characterSeed,
         customers.map((customer) => customer.root),
       );
-      ambientLife.update(state.weather, state.phase, 0, Math.max(1, state.durationMs));
+      ambientLife.update(
+        state.weather,
+        state.phase,
+        lastElapsedMs,
+        Math.max(1, state.durationMs),
+      );
       render();
     })
     .catch(() => undefined);
@@ -628,7 +639,7 @@ export const createLemonsvilleScene = (
       weatherDetail.update(
         state.weather,
         state.phase,
-        0,
+        lastElapsedMs,
         Math.max(1, state.durationMs),
         state.reducedMotion,
       );
@@ -910,10 +921,12 @@ export const createLemonsvilleScene = (
       return;
     }
 
-    const elapsedMs = Math.min(
+    const elapsedMs = animationElapsedAt(
+      timestamp,
+      animationEpoch,
       storyboard.durationMs,
-      Math.max(0, timestamp - animationEpoch),
     );
+    lastElapsedMs = elapsedMs;
     const seconds = elapsedMs / 1000;
     const nextShot =
       state.phase === "simulation" ? sceneShotAt(storyboard, elapsedMs) : "forecast";
@@ -967,6 +980,7 @@ export const createLemonsvilleScene = (
   const syncAnimation = (): void => {
     const shouldAnimate = state.phase !== "idle" && !state.reducedMotion;
     if (shouldAnimate && animationFrame === null) {
+      animationEpoch = resumedAnimationEpoch(performance.now(), lastElapsedMs);
       animationFrame = window.requestAnimationFrame(animate);
     } else if (!shouldAnimate && animationFrame !== null) {
       window.cancelAnimationFrame(animationFrame);
@@ -991,13 +1005,19 @@ export const createLemonsvilleScene = (
     applySellerExpression(seller, state.confidence);
     if (presentationChanged) {
       animationEpoch = performance.now();
+      lastElapsedMs = 0;
       applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
     }
 
+    const updateElapsedMs = stateUpdateElapsed(
+      presentationChanged,
+      lastElapsedMs,
+      Math.max(1, state.durationMs),
+    );
     const dayFrame = businessDayFrameAt(
       state.weather,
       state.phase,
-      0,
+      updateElapsedMs,
       Math.max(1, state.durationMs),
     );
     sunlight.position.set(...dayFrame.sunPosition);
@@ -1005,7 +1025,7 @@ export const createLemonsvilleScene = (
     weatherDetail?.update(
       state.weather,
       state.phase,
-      0,
+      updateElapsedMs,
       Math.max(1, state.durationMs),
       state.reducedMotion,
     );
@@ -1014,8 +1034,8 @@ export const createLemonsvilleScene = (
     ambientLife?.update(
       state.weather,
       state.phase,
-      0,
-      Math.max(1, state.durationMs)
+      updateElapsedMs,
+      Math.max(1, state.durationMs),
     );
     if (state.reducedMotion || state.phase === "idle") resetAnimatedObjects();
 
