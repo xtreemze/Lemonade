@@ -46,12 +46,19 @@ import {
   type RunSnapshot,
 } from "./persistence.js";
 import { createHapticEngine, type HapticCue } from "./haptics.js";
+import { createPresentationDeadline } from "./presentation-deadline.js";
 import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import {
   affordabilityShortfallMessage,
   bankruptcyMessage,
   standLevelTransitionMessage,
 } from "./report-feedback.js";
+import {
+  restoreRunLifecycle,
+  transitionRunLifecycle,
+  type RunLifecycleEvent,
+  type RunLifecycleState,
+} from "./run-lifecycle.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
 import { isGizmoEnabled, printGizmoHelp } from "./dev-gizmo.js";
 import { isSceneLauncherEnabled } from "./dev-scene-launcher-flag.js";
@@ -62,8 +69,6 @@ const ACTIVE_SIMULATION_PRESENTATION_MS = 10_000;
 const ENDING_CLOSEUP_PRESENTATION_MS = 4_000;
 const SIMULATION_PRESENTATION_MS =
   ACTIVE_SIMULATION_PRESENTATION_MS + ENDING_CLOSEUP_PRESENTATION_MS;
-
-type PresentationPhase = "planning" | "simulation" | "report" | "history" | "forecast";
 
 const weatherLabel: Record<DayEnvironment["weather"]["kind"], string> = {
   sunny: "Sunny",
@@ -312,8 +317,8 @@ export class LemonadeApp {
   #game: GameState;
   #environment: DayEnvironment;
   #phase: RunPhase;
-  #presentation: PresentationPhase;
-  #presentationTimer: number | null = null;
+  #lifecycle: RunLifecycleState;
+  readonly #presentationDeadline = createPresentationDeadline();
   #feedbackTimers: number[] = [];
   #glasses: number;
   #signs: number;
@@ -336,7 +341,7 @@ export class LemonadeApp {
     this.#game = initialRun.state;
     this.#environment = initialRun.environment;
     this.#phase = initialRun.phase;
-    this.#presentation = initialRun.phase.kind === "report" ? "report" : "forecast";
+    this.#lifecycle = restoreRunLifecycle(initialRun.phase.kind);
     const initialLimits = decisionLimit(this.#game);
     this.#glasses = Math.min(Number(initialRun.draft.glasses), initialLimits.glasses);
     this.#signs = Math.min(Number(initialRun.draft.signs), initialLimits.signs);
@@ -378,7 +383,6 @@ export class LemonadeApp {
             kind: preset.weather,
           },
         };
-        this.#presentation = preset.phase === "forecast" ? "forecast" : "simulation";
         this.#scenePhaseOverride = preset.phase;
         this.#sceneConfidenceOverride = preset.confidence ?? null;
         this.#sceneSoldOverride = preset.sold ?? null;
@@ -429,7 +433,10 @@ export class LemonadeApp {
       if (this.#environment.weather.kind === "thunderstorm") {
         this.#scheduleStormFeedback(WEATHER_FORECAST_DURATION_MS);
       }
-      this.#schedulePresentation("planning", WEATHER_FORECAST_DURATION_MS);
+      this.#scheduleLifecycleTransition(
+        { type: "forecast-completed" },
+        WEATHER_FORECAST_DURATION_MS,
+      );
     }
   }
 
@@ -451,7 +458,7 @@ export class LemonadeApp {
     this.#elements.runTools.removeEventListener("lemonade-run-reset", this.#onResetRun);
     document.removeEventListener("visibilitychange", this.#onVisibilityChange);
     window.removeEventListener("pagehide", this.#onPageHide);
-    this.#clearPresentationTimer();
+    this.#lifecycle.presentationDeadline.cancel();
     this.#clearFeedbackTimers();
     this.#haptics.dispose();
     this.#scene.dispose();
@@ -460,10 +467,12 @@ export class LemonadeApp {
 
   readonly #onVisibilityChange = (): void => {
     if (document.visibilityState === "hidden") {
+      this.#lifecycle.presentationDeadline.pause();
       this.#clearFeedbackTimers();
       this.#haptics.cancel();
       void this.#audio.suspend();
     } else {
+      this.#lifecycle.presentationDeadline.resume();
       void this.#audio.resume();
     }
   };
@@ -496,6 +505,10 @@ export class LemonadeApp {
 
   readonly #onSell = (): void => {
     if (this.#phase.kind !== "deciding") return;
+    const lifecycleTransition = transitionRunLifecycle(this.#lifecycle, {
+      type: "sale-submitted",
+    });
+    if (!lifecycleTransition.accepted) return;
 
     const affordability = this.#affordability();
     if (!affordability.affordable) return;
@@ -514,7 +527,7 @@ export class LemonadeApp {
     const previousTier = this.#game.tier;
     const previousScaleLevel = operatingScaleForState(this.#game).level;
     this.#phase = Object.freeze({ kind: "report", resolution });
-    this.#presentation = "simulation";
+    this.#lifecycle = lifecycleTransition.state;
     this.#render();
     this.#queueSave("Day report saved locally.");
 
@@ -529,19 +542,31 @@ export class LemonadeApp {
       this.#scheduleStormFeedback(SIMULATION_PRESENTATION_MS);
     }
 
-    this.#schedulePresentation("report", SIMULATION_PRESENTATION_MS, () => {
-      this.#playResolutionCues(resolution, previousTier, previousScaleLevel);
-    });
+    this.#scheduleLifecycleTransition(
+      { type: "simulation-completed" },
+      SIMULATION_PRESENTATION_MS,
+      () => {
+        this.#playResolutionCues(resolution, previousTier, previousScaleLevel);
+      },
+    );
   };
 
   readonly #onReviewHistory = (): void => {
-    if (this.#phase.kind !== "report" || this.#presentation !== "report") return;
-    this.#presentation = "history";
+    if (this.#phase.kind !== "report") return;
+    const transition = transitionRunLifecycle(this.#lifecycle, {
+      type: "history-requested",
+    });
+    if (!transition.accepted) return;
+    this.#lifecycle = transition.state;
     this.#render();
   };
 
   readonly #onNextDay = (): void => {
-    if (this.#phase.kind !== "report" || this.#presentation !== "history") return;
+    if (this.#phase.kind !== "report") return;
+    const lifecycleTransition = transitionRunLifecycle(this.#lifecycle, {
+      type: "next-day-started",
+    });
+    if (!lifecycleTransition.accepted) return;
 
     if (isLegacyBankrupt(this.#phase.resolution.nextState)) {
       void this.#resetRun();
@@ -558,7 +583,7 @@ export class LemonadeApp {
     this.#signs = Math.min(this.#signs, limits.signs);
     this.#price = Math.min(this.#price, limits.price);
     this.#phase = Object.freeze({ kind: "deciding" });
-    this.#presentation = "forecast";
+    this.#lifecycle = lifecycleTransition.state;
     this.#render();
     this.#queueSave("Next day saved locally.");
 
@@ -567,7 +592,10 @@ export class LemonadeApp {
       this.#scheduleStormFeedback(WEATHER_FORECAST_DURATION_MS);
     }
 
-    this.#schedulePresentation("planning", WEATHER_FORECAST_DURATION_MS);
+    this.#scheduleLifecycleTransition(
+      { type: "forecast-completed" },
+      WEATHER_FORECAST_DURATION_MS,
+    );
   };
 
   readonly #onExportRun = (): void => {
@@ -758,26 +786,21 @@ export class LemonadeApp {
     }
   }
 
-  #clearPresentationTimer(): void {
-    if (this.#presentationTimer === null) return;
-    window.clearTimeout(this.#presentationTimer);
-    this.#presentationTimer = null;
-  }
-
-  #schedulePresentation(
-    next: PresentationPhase,
+  #scheduleLifecycleTransition(
+    event: RunLifecycleEvent,
     delayMs: number,
     afterTransition?: () => void,
   ): void {
-    this.#clearPresentationTimer();
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    this.#presentationTimer = window.setTimeout(() => {
-      this.#presentationTimer = null;
+    this.#lifecycle.presentationDeadline.schedule(reducedMotion ? 0 : delayMs, () => {
       if (this.#disposed) return;
-      this.#presentation = next;
+      const transition = transitionRunLifecycle(this.#lifecycle, event);
+      if (!transition.accepted) return;
+      this.#lifecycle = transition.state;
       this.#render();
       afterTransition?.();
-    }, reducedMotion ? 0 : delayMs);
+    });
+    if (document.visibilityState === "hidden") this.#lifecycle.presentationDeadline.pause();
   }
 
   #playResolutionCues(
@@ -814,7 +837,7 @@ export class LemonadeApp {
   }
 
   #renderPresentationState(): void {
-    this.#elements.gameShell.dataset["view"] = this.#presentation;
+    this.#elements.gameShell.dataset["view"] = this.#lifecycle.presentation;
     const bankrupt =
       this.#phase.kind === "report" && isLegacyBankrupt(this.#phase.resolution.nextState);
     this.#elements.historyNextButton.setAttribute(
@@ -823,7 +846,7 @@ export class LemonadeApp {
     );
     this.#elements.historyNextButton.dataset["action"] = bankrupt ? "new-game" : "next-day";
 
-    switch (this.#presentation) {
+    switch (this.#lifecycle.presentation) {
       case "planning":
         this.#elements.sceneKicker.textContent = "";
         this.#elements.sceneTitle.textContent = "";
@@ -869,7 +892,8 @@ export class LemonadeApp {
     const affordability = this.#affordability();
 
     this.#elements.decisionPanel.model = Object.freeze({
-      visible: this.#phase.kind === "deciding",
+      visible:
+        this.#phase.kind === "deciding" && this.#lifecycle.presentation === "planning",
       glasses: this.#glasses,
       signs: this.#signs,
       price: this.#price,
@@ -927,8 +951,8 @@ export class LemonadeApp {
     const resolvedDay = phase.kind === "report" ? phase.resolution.entry : null;
     const scenePhase =
       this.#scenePhaseOverride ??
-      (this.#presentation === "simulation" || this.#presentation === "forecast"
-        ? this.#presentation
+      (this.#lifecycle.presentation === "simulation" || this.#lifecycle.presentation === "forecast"
+        ? this.#lifecycle.presentation
         : "idle");
     const confidence =
       this.#sceneConfidenceOverride ?? legacyConfidenceForState(this.#game);
