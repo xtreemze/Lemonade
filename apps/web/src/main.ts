@@ -56,20 +56,19 @@ const renderRecovery = (error: RunPersistenceError): void => {
   );
 };
 
-const start = async (): Promise<void> => {
+const start = async (): Promise<LemonadeApp | void> => {
   try {
     const restored = await loadCurrentRun();
-    new LemonadeApp(root, restored ?? createFreshRunSnapshot());
+    return new LemonadeApp(root, restored ?? createFreshRunSnapshot());
   } catch (error) {
     if (
       error instanceof RunPersistenceError &&
       (error.code === "storage-unavailable" || error.code === "storage-failed")
     ) {
-      new LemonadeApp(root, createFreshRunSnapshot(), {
+      return new LemonadeApp(root, createFreshRunSnapshot(), {
         persistenceEnabled: false,
         initialPersistenceError: error.message,
       });
-      return;
     }
 
     if (error instanceof RunPersistenceError) {
