@@ -213,7 +213,7 @@ describe("procedural residential layout", () => {
         }));
       expect(
         roadOverlaps,
-        `${property.role} driveway at (${driveway.x?.toFixed(2)}, ${driveway.z?.toFixed(2)}) reaches road`,
+        `${property.role} driveway at (${driveway.x?.toFixed(2) ?? "n/a"}, ${driveway.z?.toFixed(2) ?? "n/a"}) reaches road`,
       ).toEqual([]);
     }
   });
