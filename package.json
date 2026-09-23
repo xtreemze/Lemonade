@@ -13,7 +13,7 @@
     "dev": "pnpm --filter @lemonade/web dev",
     "build": "pnpm -r --if-present build",
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm -r --if-present typecheck",
-    "lint": "eslint . && pnpm lint:antipatterns && pnpm lint:mobile-contract",
+    "lint": "biome lint --error-on-warnings . && pnpm lint:antipatterns && pnpm lint:mobile-contract",
     "test": "pnpm -r --if-present test",
     "test:e2e": "playwright test",
     "certify": "pnpm --filter @lemonade/simulation build && node scripts/certify.mjs",
@@ -21,14 +21,16 @@
     "lint:antipatterns": "node scripts/lint-antipatterns.mjs",
     "lint:mobile-contract": "node scripts/lint-mobile-contract.mjs",
     "test:mobile-contract": "playwright test e2e/mobile-contract.spec.ts",
-    "verify:mobile": "pnpm lint:antipatterns && pnpm lint:mobile-contract && pnpm test:mobile-contract"
+    "verify:mobile": "pnpm lint:antipatterns && pnpm lint:mobile-contract && pnpm test:mobile-contract",
+    "lint:fix": "biome lint --write --unsafe .",
+    "format": "biome format --write .",
+    "format:check": "biome format ."
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.14",
     "@playwright/test": "^1.63.0",
     "@types/node": "^24.13.6",
-    "eslint": "^10.11.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.70.0",
     "vitest": "^5.0.1"
   },
   "repository": {
