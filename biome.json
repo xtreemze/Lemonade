@@ -90,7 +90,8 @@
   "overrides": [
     {
       "includes": [
-        "apps/web/src/app.ts"
+        "apps/web/src/app.ts",
+        "e2e/renderer-stress.spec.ts"
       ],
       "linter": {
         "rules": {
