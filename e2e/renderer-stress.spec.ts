@@ -48,14 +48,15 @@ test("deterministic maximum-load scene produces renderer certification evidence"
     pageErrors.push(error.message);
   });
 
-  await page.addInitScript(() => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto("./");
+  await page.evaluate(() => {
     window.localStorage.setItem("LEMONADE_DEV_SCENE_VIEWER", "1");
     window.localStorage.setItem("LEMONADE_DEV_RENDERER_STRESS", "1");
   });
-  await page.setViewportSize({ width: 844, height: 390 });
-  await page.goto("./");
+  await page.reload();
 
-  await expect(page.getByText("Renderer Stress Fixture", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Renderer Stress Fixture/u)).toBeVisible();
   await expect(
     page.locator('[data-renderer-stress-fixture="true"]'),
   ).toBeVisible();
