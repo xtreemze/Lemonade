@@ -1142,10 +1142,7 @@ const generatePropertyPlantings = (
       if (blockedByHouseFootprint(candidate, allProperties, footprintClearance)) {
         continue;
       }
-      if (
-        yardZone === "back" &&
-        blockedByHouseFront(candidate, allProperties, footprintClearance)
-      ) {
+      if (blockedByHouseFront(candidate, allProperties, footprintClearance)) {
         continue;
       }
       if (
@@ -1188,9 +1185,14 @@ const generatePropertyPlantings = (
 
 const restoreFrontMailboxes = (
   properties: readonly ResidentialPropertySpec[],
+  allProperties: readonly ResidentialPropertySpec[],
   seed: number,
-): readonly ResidentialPropertySpec[] =>
-  Object.freeze(
+): readonly ResidentialPropertySpec[] => {
+  const hardscape = Object.freeze([
+    ...baseExclusions(seed),
+    ...accessExclusions(allProperties, seed),
+  ]);
+  return Object.freeze(
     properties.map((property, index) => {
       if (property.drivewayX === null) return property;
       const drivewaySide: -1 | 1 =
@@ -1199,25 +1201,21 @@ const restoreFrontMailboxes = (
         DRIVEWAY_HALF_WIDTH +
         MAILBOX_CLEARANCE_FROM_DRIVEWAY +
         unit(seed, index * 17 + 31) * 0.18;
-      const driveway = drivewayExclusionRectForProperty(
-        property,
-        property.drivewayX,
-        seed,
-      );
-
       let mailboxX: number | null = null;
       for (let step = 0; step <= 16 && mailboxX === null; step += 1) {
         const offset = preferredOffset + step * 0.24;
         for (const side of [drivewaySide, -drivewaySide] as const) {
           const candidate = property.drivewayX + side * offset;
-          const clearOfStreet = mailboxAnchorIsClear(candidate, seed);
-          const clearOfDriveway = !footprintIntersectsHardscapeRect(
-            driveway,
-            { x: candidate, z: -0.3 },
-            0.3,
-            0.3,
+          const clearOfHardscape = hardscape.every(
+            (rect) =>
+              !footprintIntersectsHardscapeRect(
+                rect,
+                { x: candidate, z: -0.3 },
+                0.3,
+                0.3,
+              ),
           );
-          if (clearOfStreet && clearOfDriveway) {
+          if (clearOfHardscape) {
             mailboxX = candidate;
             break;
           }
@@ -1230,6 +1228,7 @@ const restoreFrontMailboxes = (
       });
     }),
   );
+};
 
 export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): ResidentialLayout => {
   const safeSeed = Number.isFinite(seed) ? Math.trunc(seed) >>> 0 : DEFAULT_RESIDENTIAL_SEED;
@@ -1282,13 +1281,21 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       source.map((property) => byRole.get(property.role) ?? property),
     );
 
-  const resolvedFront = restoreFrontMailboxes(
-    propertiesFor(initialFront),
-    safeSeed,
-  );
+  const accessFront = propertiesFor(initialFront);
   const resolvedMiddle = propertiesFor(initialMiddle);
   const resolvedBack = propertiesFor(initialBack);
   const resolvedOuter = propertiesFor(initialOuter);
+  const accessProperties = Object.freeze([
+    ...accessFront,
+    ...resolvedMiddle,
+    ...resolvedBack,
+    ...resolvedOuter,
+  ]);
+  const resolvedFront = restoreFrontMailboxes(
+    accessFront,
+    accessProperties,
+    safeSeed,
+  );
   const allProperties = Object.freeze([
     ...resolvedFront,
     ...resolvedMiddle,
@@ -1315,7 +1322,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       3_050,
       "back",
       partial,
-      4.2,
+      3.5,
       1.45,
       7,
     ),
@@ -1336,7 +1343,7 @@ export const generateResidentialLayout = (seed = DEFAULT_RESIDENTIAL_SEED): Resi
       fallbackSalt,
       "back",
       partial,
-      4.2,
+      3.5,
       1.45,
       7,
     );
