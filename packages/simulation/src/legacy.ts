@@ -25,6 +25,11 @@ export const legacyOperatingBalanceCents = (
   );
 };
 
+export const isLegacyBankrupt = (
+  state: Pick<GameState, "ledger">,
+): boolean =>
+  legacyOperatingBalanceCents(state) < LEGACY_STARTING_BALANCE_CENTS;
+
 const confidenceAfterEntry = (
   balanceCents: number,
   dailyProfitCents: number,
