@@ -16,6 +16,6 @@
   },
   "dependencies": {
     "@babylonjs/core": "^9.27.1",
-    "@lemonade/scene": "workspace:*"
+    "@lemonade/scene-contracts": "workspace:*"
   }
 }
