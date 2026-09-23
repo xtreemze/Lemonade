@@ -125,13 +125,16 @@ keeps weather/phase/crowd experiments separate from persisted game history.
 ## MCP wire compatibility
 
 The server has no runtime package dependency and therefore does not modify the
-frozen pnpm lockfile. It implements stdio MCP initialization compatible with the
-2025-11-25 protocol. Clients that first probe the newer stateless
-`server/discover` flow receive a method-not-found response so clients with
-legacy fallback can negotiate through `initialize`.
+frozen pnpm lockfile. The small stdio adapter supports both protocol eras:
 
-A future move to the official MCP TypeScript SDK can replace the small wire
-adapter without changing the browser bridge or scene/game tool contract.
+- MCP 2026-07-28 through `server/discover`, per-request protocol metadata, and
+  required `resultType` discrimination;
+- MCP 2025-11-25 through the legacy `initialize` handshake.
+
+This matches the current MCP TypeScript SDK's dual-era serving model while
+keeping the browser relay and scene/game tool contract independent of the MCP
+library. A future move to `@modelcontextprotocol/server` can therefore replace
+only the wire adapter.
 
 ## Three.js references
 
