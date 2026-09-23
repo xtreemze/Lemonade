@@ -208,7 +208,7 @@ describe("unified neighborhood mobility", () => {
           entered.add(id);
         }
 
-        if (prior !== undefined && prior.visible && actor.visible) {
+        if (prior?.visible === true && actor.visible) {
           const displacement = Math.hypot(
             actor.x - prior.x,
             actor.z - prior.z,
