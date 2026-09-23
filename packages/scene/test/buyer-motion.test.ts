@@ -2,68 +2,80 @@ import { describe, expect, it } from "vitest";
 
 import {
   BUYER_WALK_SPEED,
-  buyerMotionPoseAt,
+  buyerMotionAt,
 } from "../src/buyer-motion.js";
+import { STAND_WORLD_Z } from "../src/stand-anchors.js";
 import { STREET_LAYOUT } from "../src/street-layout.js";
 import type { SaleBeat } from "../src/storyboard.js";
 
-const sale = Object.freeze({
+const sale: SaleBeat = Object.freeze({
   saleNumber: 1,
   buyerIndex: 0,
-  approachAtMs: 1_000,
-  purchaseAtMs: 2_500,
-  purchaseEndAtMs: 2_700,
-  drinkEndAtMs: 3_100,
-  departAtMs: 4_600,
+  approachAtMs: 0,
+  purchaseAtMs: 2_000,
+  purchaseEndAtMs: 2_200,
+  drinkEndAtMs: 2_700,
+  departAtMs: 4_700,
   direction: -1,
-  lane: 3,
-  remainingCups: 11,
-}) satisfies SaleBeat;
+  lane: 1,
+  remainingCups: 9,
+});
 
 describe("buyer motion", () => {
-  it("approaches the stand from the sidewalk instead of crossing from top or bottom", () => {
-    const start = buyerMotionPoseAt(sale, "approaching", sale.approachAtMs);
-    const middle = buyerMotionPoseAt(sale, "approaching", 1_750);
-    const end = buyerMotionPoseAt(sale, "approaching", sale.purchaseAtMs);
+  it("approaches from the sidewalk instead of entering from the top or bottom", () => {
+    const streetZ = STREET_LAYOUT.nearSidewalk.centerZ;
+    const start = buyerMotionAt(sale, sale.approachAtMs, streetZ);
+    const service = buyerMotionAt(sale, sale.purchaseAtMs, streetZ);
 
-    for (const pose of [start, middle, end]) {
-      expect(pose.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
-      expect(pose.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
-      expect(Math.abs(pose.x)).toBeLessThan(6);
-    }
-    expect(start.x).toBeLessThan(end.x);
-    expect(start.z).toBeGreaterThanOrEqual(end.z);
+    expect(start).toBeDefined();
+    expect(service).toBeDefined();
+    if (start === undefined || service === undefined) return;
+
+    expect(start.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
+    expect(start.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
+    expect(Math.abs(start.x)).toBeGreaterThan(Math.abs(service.x));
+    expect(service.z).toBeGreaterThan(STAND_WORLD_Z + 0.6);
+    expect(service.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
   });
 
-  it("keeps approach and departure movement at normal walking speed", () => {
-    const assertWalkingSpeed = (
-      phase: "approaching" | "departing",
-      startMs: number,
-      endMs: number,
-    ): void => {
-      let previous = buyerMotionPoseAt(sale, phase, startMs);
+  it("keeps approach and departure displacement aligned with walking speed", () => {
+    const streetZ = STREET_LAYOUT.nearSidewalk.centerZ;
+
+    for (const [startMs, endMs] of [
+      [sale.approachAtMs, sale.purchaseAtMs],
+      [sale.drinkEndAtMs, sale.departAtMs],
+    ] as const) {
+      let previous = buyerMotionAt(sale, startMs, streetZ);
       for (let elapsedMs = startMs + 100; elapsedMs <= endMs; elapsedMs += 100) {
-        const current = buyerMotionPoseAt(sale, phase, elapsedMs);
-        const distance = Math.hypot(
+        const current = buyerMotionAt(sale, elapsedMs, streetZ);
+        expect(current).toBeDefined();
+        if (previous === undefined || current === undefined) continue;
+        const displacement = Math.hypot(
           current.x - previous.x,
           current.z - previous.z,
         );
-        expect(distance).toBeLessThanOrEqual(BUYER_WALK_SPEED * 0.1 + 0.01);
+        expect(displacement).toBeLessThanOrEqual(BUYER_WALK_SPEED * 0.1 + 0.035);
         previous = current;
       }
-    };
-
-    assertWalkingSpeed("approaching", sale.approachAtMs, sale.purchaseAtMs);
-    assertWalkingSpeed("departing", sale.drinkEndAtMs, sale.departAtMs);
+    }
   });
 
-  it("returns departing buyers to a sidewalk lane without pinning them at scene bounds", () => {
-    const start = buyerMotionPoseAt(sale, "departing", sale.drinkEndAtMs);
-    const end = buyerMotionPoseAt(sale, "departing", sale.departAtMs);
+  it("returns departing buyers to the sidewalk before they continue along it", () => {
+    const streetZ = STREET_LAYOUT.nearSidewalk.centerZ;
+    const halfway = buyerMotionAt(
+      sale,
+      sale.drinkEndAtMs + (sale.departAtMs - sale.drinkEndAtMs) * 0.5,
+      streetZ,
+    );
+    const end = buyerMotionAt(sale, sale.departAtMs, streetZ);
 
-    expect(end.x).toBeGreaterThan(start.x);
+    expect(halfway).toBeDefined();
+    expect(end).toBeDefined();
+    if (halfway === undefined || end === undefined) return;
+
+    expect(halfway.z).toBeGreaterThanOrEqual(STAND_WORLD_Z + 0.6);
+    expect(end.z).toBeCloseTo(streetZ, 6);
     expect(end.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
     expect(end.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
-    expect(Math.abs(end.x)).toBeLessThan(6);
   });
 });

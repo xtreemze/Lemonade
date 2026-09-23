@@ -96,41 +96,49 @@ const makePedestrianRoute = (
   });
 };
 
-const contiguousSidewalkRuns = (
+const contiguousSidewalkComponents = (
   strips: readonly StreetStripSpec[],
 ): readonly (readonly StreetStripSpec[])[] => {
   const ordered = [...strips].sort(
     (left, right) =>
       Math.floor(left.segmentIndex / 2) - Math.floor(right.segmentIndex / 2),
   );
-  const runs: StreetStripSpec[][] = [];
+  const components: StreetStripSpec[][] = [];
+
   for (const strip of ordered) {
-    const current = runs.at(-1);
-    if (current === undefined) {
-      runs.push([strip]);
-      continue;
-    }
-    const previous = current.at(-1);
-    if (previous === undefined) {
-      current.push(strip);
+    const current = components.at(-1);
+    const previous = current?.at(-1);
+    if (current === undefined || previous === undefined) {
+      components.push([strip]);
       continue;
     }
 
-    const previousRoadSegment = Math.floor(previous.segmentIndex / 2);
-    const currentRoadSegment = Math.floor(strip.segmentIndex / 2);
+    const previousRoadIndex = Math.floor(previous.segmentIndex / 2);
+    const nextRoadIndex = Math.floor(strip.segmentIndex / 2);
     const previousEnd = sidewalkEndpoint(previous, 1);
-    const currentStart = sidewalkEndpoint(strip, -1);
+    const nextStart = sidewalkEndpoint(strip, -1);
     const gap = Math.hypot(
-      currentStart.x - previousEnd.x,
-      currentStart.z - previousEnd.z,
+      nextStart.x - previousEnd.x,
+      nextStart.z - previousEnd.z,
     );
-    if (currentRoadSegment !== previousRoadSegment + 1 || gap > 0.75) {
-      runs.push([strip]);
-      continue;
+    const maximumJoinGap = Math.max(
+      1.4,
+      (previous.width + strip.width) * 0.9,
+    );
+
+    if (
+      nextRoadIndex !== previousRoadIndex + 1 ||
+      gap > maximumJoinGap
+    ) {
+      components.push([strip]);
+    } else {
+      current.push(strip);
     }
-    current.push(strip);
   }
-  return Object.freeze(runs.map((run) => Object.freeze(run)));
+
+  return Object.freeze(
+    components.map((component) => Object.freeze(component)),
+  );
 };
 
 export const neighborhoodSidewalkRoutes = (
@@ -152,12 +160,13 @@ export const neighborhoodSidewalkRoutes = (
         const separator = key.lastIndexOf(":");
         const streetId = key.slice(0, separator);
         const side: SidewalkSide = key.endsWith(":0") ? "near" : "far";
-        return contiguousSidewalkRuns(strips).map((run, runIndex) =>
+        const components = contiguousSidewalkComponents(strips);
+        return components.map((component, componentIndex) =>
           makePedestrianRoute(
-            key + ":" + String(runIndex),
+            components.length === 1 ? key : key + ":" + String(componentIndex),
             streetId,
             side,
-            run,
+            component,
           ),
         );
       })
@@ -234,11 +243,6 @@ const basePose = (
   routes: readonly PedestrianRoute[],
 ): MutableCrowdPose | undefined => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
-  // Spacing is deliberately keyed to the fixed visual pool capacity, not the
-  // number of currently active actors: that count fluctuates frame to frame
-  // (e.g. as buyers arrive/leave and animatePassersBy raises its target
-  // count), and dividing by it would instantly shift every visible
-  // pedestrian's position along their route whenever it changed.
   const worldSpeed = 1.18 + deterministicUnit(actorIndex, 17) * 0.26;
   const elapsedSeconds =
     Math.max(

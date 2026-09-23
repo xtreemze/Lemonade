@@ -13,6 +13,7 @@ import {
 } from "three";
 
 import { characterProfileFor, type CharacterProfile } from "./characters.js";
+import { buyerMotionAt } from "./buyer-motion.js";
 import {
   createCharacterGeometrySet,
   type CharacterGeometrySet,
@@ -89,11 +90,6 @@ export interface LemonsvilleSceneController {
 }
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
-
-const smoothStep = (value: number): number => {
-  const progress = clamp01(value);
-  return progress * progress * (3 - 2 * progress);
-};
 
 const lerp = (start: number, end: number, progress: number): number =>
   start + (end - start) * progress;
@@ -759,17 +755,6 @@ export const createLemonsvilleScene = (
     applyCameraShot(state.phase === "forecast" ? "forecast" : "stand");
   };
 
-  const constrainToBounds = (
-    pos: { x: number; z: number },
-    minZ: number,
-    maxZ: number,
-    minX = -12,
-    maxX = 12,
-  ): { x: number; z: number } => ({
-    x: Math.max(minX, Math.min(maxX, pos.x)),
-    z: Math.max(minZ, Math.min(maxZ, pos.z)),
-  });
-
   const animateBuyers = (elapsedMs: number): number => {
     const activeBuyerPositions: { x: number; z: number }[] = [];
 
@@ -783,59 +768,14 @@ export const createLemonsvilleScene = (
 
     let activeBuyerCount = 0;
     for (const sale of storyboard.sales) {
-      const phase = buyerPhaseAt(sale, elapsedMs);
-      if (phase === "inactive") continue;
+      const streetZ =
+        crowdMotion?.sidewalkLaneZ(sale.lane) ??
+        STREET_LAYOUT.nearSidewalk.centerZ;
+      const motion = buyerMotionAt(sale, elapsedMs, streetZ);
+      if (motion === undefined) continue;
+
       const buyer = buyers[buyerSlotForSale(sale, buyers.length)];
       if (buyer === undefined) continue;
-
-      const exitX = sale.direction === -1 ? 18 : -18;
-      const streetZ = crowdMotion?.sidewalkLaneZ(sale.lane) ?? 1.4;
-      const exitZ = streetZ + (sale.direction === -1 ? 16 : -16);
-      const counterX = sale.direction === -1 ? -0.72 : 0.72;
-      const counterZ = STAND_WORLD_Z + 1.22;
-      const drinkX = sale.direction === -1 ? -1.35 : 1.35;
-      const drinkZ = STAND_WORLD_Z + 1.78;
-      const approachDurationSeconds =
-        Math.max(1, sale.purchaseAtMs - sale.approachAtMs) / 1_000;
-      const approachTargetDistance = 0.75 * approachDurationSeconds;
-      const approachZDistance = Math.abs(counterZ - streetZ);
-      const approachXDistance = Math.sqrt(
-        Math.max(
-          0.04,
-          approachTargetDistance * approachTargetDistance -
-            approachZDistance * approachZDistance,
-        ),
-      );
-      const streetX =
-        counterX +
-        (sale.direction === -1 ? -approachXDistance : approachXDistance);
-      const approachDistance = Math.hypot(counterX - streetX, counterZ - streetZ);
-      let x = counterX;
-      let z = counterZ;
-      let travelDistance = 0;
-
-      if (phase === "approaching") {
-        const duration = Math.max(1, sale.purchaseAtMs - sale.approachAtMs);
-        const progress = smoothStep((elapsedMs - sale.approachAtMs) / duration);
-        const offscreenZ = streetZ - (sale.direction === -1 ? 20 : -20);
-        x = lerp(streetX, counterX, progress);
-        z = lerp(offscreenZ, counterZ, progress);
-        const actualXDist = Math.abs(counterX - streetX) * progress;
-        const actualZDist = Math.abs(counterZ - offscreenZ) * progress;
-        travelDistance = Math.hypot(actualXDist, actualZDist);
-      } else if (phase === "drinking") {
-        const duration = Math.max(1, sale.drinkEndAtMs - sale.purchaseEndAtMs);
-        const progress = smoothStep((elapsedMs - sale.purchaseEndAtMs) / duration);
-        x = lerp(counterX, drinkX, progress);
-        z = lerp(counterZ, drinkZ, progress);
-      } else if (phase === "departing") {
-        const duration = Math.max(1, sale.departAtMs - sale.drinkEndAtMs);
-        const progress = smoothStep((elapsedMs - sale.drinkEndAtMs) / duration);
-        x = lerp(drinkX, exitX, progress);
-        z = lerp(drinkZ, exitZ, progress);
-        const extendedDepartDistance = Math.hypot(exitX - drinkX, exitZ - drinkZ);
-        travelDistance = approachDistance + extendedDepartDistance * progress;
-      }
 
       const fade = buyerFadeState.get(buyer);
       if (fade) {
@@ -843,40 +783,42 @@ export const createLemonsvilleScene = (
         updateBuyerOpacity(buyer);
       }
       buyer.root.visible = true;
-      let finalPos = { x, z };
-
-      if (phase === "departing") {
-        const sidewalk = sale.direction === -1 ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
-        finalPos = constrainToBounds(finalPos, sidewalk.minZ, sidewalk.maxZ, -12, 12);
-      }
+      let finalPos = { x: motion.x, z: motion.z };
 
       const pedestrianRadius = 0.4;
       for (const otherPos of activeBuyerPositions) {
         const dist = Math.hypot(finalPos.x - otherPos.x, finalPos.z - otherPos.z);
-        if (dist < pedestrianRadius * 2) {
-          const angle = Math.atan2(finalPos.z - otherPos.z, finalPos.x - otherPos.x);
-          const minDist = pedestrianRadius * 2.1;
-          const targetX = otherPos.x + Math.cos(angle) * minDist;
-          const targetZ = otherPos.z + Math.sin(angle) * minDist;
-          const maxAdjust = 0.05;
-          finalPos = {
-            x: Math.sign(targetX - finalPos.x) * Math.min(maxAdjust, Math.abs(targetX - finalPos.x)) + finalPos.x,
-            z: Math.sign(targetZ - finalPos.z) * Math.min(maxAdjust, Math.abs(targetZ - finalPos.z)) + finalPos.z,
-          };
-        }
+        if (dist >= pedestrianRadius * 2) continue;
+
+        const angle = Math.atan2(
+          finalPos.z - otherPos.z,
+          finalPos.x - otherPos.x,
+        );
+        const minDist = pedestrianRadius * 2.1;
+        const targetX = otherPos.x + Math.cos(angle) * minDist;
+        const targetZ = otherPos.z + Math.sin(angle) * minDist;
+        const maxAdjust = 0.05;
+        finalPos = {
+          x:
+            Math.sign(targetX - finalPos.x) *
+              Math.min(maxAdjust, Math.abs(targetX - finalPos.x)) +
+            finalPos.x,
+          z:
+            Math.sign(targetZ - finalPos.z) *
+              Math.min(maxAdjust, Math.abs(targetZ - finalPos.z)) +
+            finalPos.z,
+        };
       }
 
       activeBuyerPositions.push(finalPos);
       buyer.root.position.set(finalPos.x, personGroundY(buyer), finalPos.z);
-      buyer.root.rotation.y =
-        phase === "purchasing" || phase === "drinking"
-          ? sale.direction === -1
-            ? -0.22
-            : 0.22
-          : sale.direction === -1
-            ? Math.PI / 2
-            : -Math.PI / 2;
-      applyBuyerPose(buyer, phase, travelDistance, sale.saleNumber);
+      buyer.root.rotation.y = motion.heading;
+      applyBuyerPose(
+        buyer,
+        motion.phase,
+        motion.travelDistance,
+        sale.saleNumber,
+      );
       activeBuyerCount += 1;
     }
     return activeBuyerCount;
