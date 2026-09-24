@@ -70,10 +70,10 @@ const pointIsOnGeneratedStrip = (
 
 describe("crowd motion", () => {
   it("keeps deterministic pedestrian paths separated and entirely on the sidewalk", () => {
-    const first = crowdPosesAt(beats, 12, 2_750, 6_000);
-    const repeated = crowdPosesAt(beats, 12, 2_750, 6_000);
+    const first = crowdPosesAt(beats, PASSERBY_BASE_ACTIVE_COUNT, 2_750, 6_000);
+    const repeated = crowdPosesAt(beats, PASSERBY_BASE_ACTIVE_COUNT, 2_750, 6_000);
     expect(repeated).toEqual(first);
-    expect(first).toHaveLength(12);
+    expect(first).toHaveLength(PASSERBY_BASE_ACTIVE_COUNT);
 
     expect(new Set(first.map((pose) => pose?.side).filter(Boolean))).toEqual(
       new Set(["near", "far"]),
