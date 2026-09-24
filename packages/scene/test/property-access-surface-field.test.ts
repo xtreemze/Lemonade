@@ -37,7 +37,7 @@ describe("property access surface field", () => {
     const field = createPropertyAccessSurfaceField(specs);
 
     expect(field.anchors).toHaveLength(3);
-    expect(field.anchors.map((anchor) => String(anchor.userData.sceneRole))).toEqual([
+    expect(field.anchors.map((anchor) => String(anchor.userData["sceneRole"]))).toEqual([
       "driveway",
       "front-path",
       "driveway",
