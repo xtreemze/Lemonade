@@ -350,7 +350,9 @@ export const createLemonsvilleScene = (
   for (const weatherObject of Object.values(weatherObjects)) scene.add(weatherObject);
 
   let state = initialState;
+  const neighborhoodSeed = initialState.characterSeed ^ 0x4c_45_4d_4f;
   let crowdMotion: StreetMotion | null = null;
+  let activePedestrianHomeRoles: string[] = [];
   let weatherDetail: WeatherDetailController | null = null;
   let ambientLife:
     | Readonly<{
@@ -556,7 +558,7 @@ export const createLemonsvilleScene = (
   void import("./neighborhood.js")
     .then(({ populateNeighborhood }) => {
       if (disposed) return;
-      populateNeighborhood(scene, initialState.characterSeed ^ 0x4c_45_4d_4f);
+      populateNeighborhood(scene, neighborhoodSeed);
       render();
     })
     .catch(() => undefined);
@@ -575,7 +577,7 @@ export const createLemonsvilleScene = (
   void import("./crowd-motion.js")
     .then(({ initializeStreetMotion }) => {
       if (disposed) return;
-      crowdMotion = initializeStreetMotion(scene, signs);
+      crowdMotion = initializeStreetMotion(scene, signs, neighborhoodSeed);
       resetAnimatedObjects();
       render();
     })
@@ -813,6 +815,7 @@ export const createLemonsvilleScene = (
   };
 
   const animatePassersBy = (elapsedMs: number): void => {
+    activePedestrianHomeRoles = [];
     if (state.phase !== "simulation") {
       for (const customer of customers) customer.root.visible = false;
       return;
@@ -844,6 +847,13 @@ export const createLemonsvilleScene = (
       );
       customer.root.rotation.y = pose.heading;
       applyWalkingPose(customer, pose.travelDistance, false);
+      if (
+        pose.enteringHome &&
+        pose.destinationRole !== null &&
+        !activePedestrianHomeRoles.includes(pose.destinationRole)
+      ) {
+        activePedestrianHomeRoles.push(pose.destinationRole);
+      }
     });
   };
 
@@ -914,6 +924,7 @@ export const createLemonsvilleScene = (
       elapsedMs,
       storyboard.durationMs
     );
+    crowdMotion?.openHomeEntryDoors(activePedestrianHomeRoles);
 
     const remainingStock =
       state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs);
