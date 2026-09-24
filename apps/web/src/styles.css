@@ -961,7 +961,7 @@ body:has(.game-shell[data-view="forecast"]) {
 }
 
 .game-shell[data-view="report"] .report-panel {
-  --report-gap: clamp(4px, 1dvh, 8px);
+  --report-gap: 3px;
 
   position: relative;
   display: grid;
@@ -971,7 +971,7 @@ body:has(.game-shell[data-view="forecast"]) {
   min-width: 0;
   min-height: 0;
   margin: 0;
-  padding: clamp(6px, 1.5dvh, 10px) 6px 74px;
+  padding: 4px 6px 74px;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -1046,10 +1046,11 @@ body:has(.game-shell[data-view="forecast"]) {
   border-width: 1px;
 }
 
-@media (orientation: portrait) {
+@media (orientation: portrait) and (width >= 22rem) {
   .game-shell[data-view="report"] .report-panel {
     --report-gap: clamp(5px, 0.9dvh, 8px);
 
+    padding-top: clamp(6px, 1.5dvh, 10px);
     padding-inline: max(8px, env(safe-area-inset-left));
   }
 
@@ -1151,11 +1152,11 @@ body:has(.game-shell[data-view="forecast"]) {
   display: grid;
   align-self: start;
   grid-template-rows: auto auto auto;
-  gap: 5px;
+  gap: 3px;
   min-width: 0;
   min-height: 0;
   margin: 0;
-  padding: 6px;
+  padding: 4px;
   border-width: 2px;
   overflow: hidden;
 }
@@ -1204,7 +1205,7 @@ body:has(.game-shell[data-view="forecast"]) {
 .game-shell[data-view="report"] .weekly-results-grid > div {
   min-width: 0;
   min-height: 0;
-  padding: 4px 5px;
+  padding: 2px 4px;
   border-width: 1px;
 }
 
@@ -1231,7 +1232,7 @@ body:has(.game-shell[data-view="forecast"]) {
 .game-shell[data-view="report"] .weekly-highlights p {
   gap: 1px;
   min-width: 0;
-  padding: 4px 5px;
+  padding: 3px 4px;
   border-width: 1px;
   font-size: clamp(0.62rem, 2.2vw, 0.72rem);
   line-height: 1.05;
@@ -1239,6 +1240,21 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .game-shell[data-view="report"] .weekly-highlights strong {
   overflow-wrap: anywhere;
+}
+
+@media (width >= 22rem) {
+  .game-shell[data-view="report"] .weekly-report {
+    gap: 5px;
+    padding: 6px;
+  }
+
+  .game-shell[data-view="report"] .weekly-results-grid > div {
+    padding: 4px 5px;
+  }
+
+  .game-shell[data-view="report"] .weekly-highlights p {
+    padding: 4px 5px;
+  }
 }
 
 .game-shell[data-view="report"] .report-notes {
@@ -1258,32 +1274,6 @@ body:has(.game-shell[data-view="forecast"]) {
   overflow-wrap: anywhere;
   font-size: clamp(0.6rem, 2.2vw, 0.7rem);
   line-height: 1.08;
-}
-
-@media (width < 360px) and (orientation: portrait) {
-  .game-shell[data-view="report"] .report-panel {
-    --report-gap: 3px;
-
-    padding-top: 4px;
-  }
-
-  .game-shell[data-view="report"] .results-grid > div {
-    min-height: 3rem;
-    padding: 4px 6px;
-  }
-
-  .game-shell[data-view="report"] .weekly-report {
-    gap: 3px;
-    padding: 4px;
-  }
-
-  .game-shell[data-view="report"] .weekly-results-grid > div {
-    padding: 2px 4px;
-  }
-
-  .game-shell[data-view="report"] .weekly-highlights p {
-    padding: 3px 4px;
-  }
 }
 
 .game-shell[data-view="report"] .history-review-button {
