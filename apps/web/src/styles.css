@@ -1260,6 +1260,32 @@ body:has(.game-shell[data-view="forecast"]) {
   line-height: 1.08;
 }
 
+@media (width < 360px) and (orientation: portrait) {
+  .game-shell[data-view="report"] .report-panel {
+    --report-gap: 3px;
+
+    padding-top: 4px;
+  }
+
+  .game-shell[data-view="report"] .results-grid > div {
+    min-height: 3rem;
+    padding: 4px 6px;
+  }
+
+  .game-shell[data-view="report"] .weekly-report {
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .game-shell[data-view="report"] .weekly-results-grid > div {
+    padding: 2px 4px;
+  }
+
+  .game-shell[data-view="report"] .weekly-highlights p {
+    padding: 3px 4px;
+  }
+}
+
 .game-shell[data-view="report"] .history-review-button {
   position: absolute;
   left: 50%;
