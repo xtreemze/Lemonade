@@ -71,6 +71,16 @@
       "nursery": {
         "noImpliedEval": "error",
         "useExhaustiveSwitchCases": "error"
+      },
+      "correctness": {
+        "useImportExtensions": "off"
+      },
+      "complexity": {
+        "noForEach": "off",
+        "noVoid": "off"
+      },
+      "style": {
+        "useDefaultSwitchClause": "off"
       }
     }
   },
@@ -160,6 +170,70 @@
                 ]
               }
             }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "scripts/**/*.mjs",
+        "apps/web/scripts/**/*.mjs"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/web/src/dev-*.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "playwright*.config.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/web/src/scene-runtime.ts"
+      ],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "scripts/certify.mjs"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnresolvedImports": "off"
           }
         }
       }
