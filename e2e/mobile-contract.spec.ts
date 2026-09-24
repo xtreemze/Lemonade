@@ -121,7 +121,7 @@ const expectViewportContract = async (
       .map(describe);
 
     return {
-      view: shell.dataset.view,
+      view: shell.dataset["view"],
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
       shell: {
