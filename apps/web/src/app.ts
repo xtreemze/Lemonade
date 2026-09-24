@@ -933,14 +933,14 @@ export class LemonadeApp {
   }
 
   #renderPresentationState(): void {
-    this.#elements.gameShell.dataset.view = this.#lifecycle.presentation;
+    this.#elements.gameShell.dataset["view"] = this.#lifecycle.presentation;
     const bankrupt =
       this.#phase.kind === "report" && isLegacyBankrupt(this.#phase.resolution.nextState);
     this.#elements.historyNextButton.setAttribute(
       "aria-label",
       bankrupt ? "Start a new game" : "Plan next day",
     );
-    this.#elements.historyNextButton.dataset.action = bankrupt ? "new-game" : "next-day";
+    this.#elements.historyNextButton.dataset["action"] = bankrupt ? "new-game" : "next-day";
 
     switch (this.#lifecycle.presentation) {
       case "planning":
