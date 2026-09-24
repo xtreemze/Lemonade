@@ -20,7 +20,7 @@ describe("stand detail", () => {
 
     expect(root.children.length).toBeGreaterThanOrEqual(7);
     expect(shutter.children).toHaveLength(2);
-    const detail = root.children.find((child) => child.userData.sceneRole === "stand-detail");
+    const detail = root.children.find((child) => child.userData["sceneRole"] === "stand-detail");
     expect(detail).toBeDefined();
     expect(detail?.children.length).toBeGreaterThanOrEqual(10);
   });
@@ -33,7 +33,7 @@ describe("stand detail", () => {
 
     let signY: number | null = null;
     root.traverse((object) => {
-      if (object.userData.sceneRole === "stand-sign") {
+      if (object.userData["sceneRole"] === "stand-sign") {
         signY = object.position.y;
       }
     });
@@ -53,10 +53,10 @@ describe("stand detail", () => {
     let basket: Group | undefined;
     const lemons: Group[] = [];
     root.traverse((object) => {
-      if (object.userData.sceneRole === "stand-basket") {
+      if (object.userData["sceneRole"] === "stand-basket") {
         basket = object as Group;
       }
-      if (object.userData.sceneRole === "stand-stock-lemon") {
+      if (object.userData["sceneRole"] === "stand-stock-lemon") {
         lemons.push(object as Group);
       }
     });
@@ -100,7 +100,7 @@ describe("stand detail", () => {
     const roleObject = (role: string) => {
       let found: Group | Mesh | undefined;
       root.traverse((object) => {
-        if (object.userData.sceneRole === role) {
+        if (object.userData["sceneRole"] === role) {
           found = object as Group | Mesh;
         }
       });
@@ -125,10 +125,10 @@ describe("stand detail", () => {
     let juice: Mesh | undefined;
     const lemons: Group[] = [];
     root.traverse((object) => {
-      if (object.userData.sceneRole === "stand-juice") {
+      if (object.userData["sceneRole"] === "stand-juice") {
         juice = object as Mesh;
       }
-      if (object.userData.sceneRole === "stand-stock-lemon") {
+      if (object.userData["sceneRole"] === "stand-stock-lemon") {
         lemons.push(object as Group);
       }
     });
