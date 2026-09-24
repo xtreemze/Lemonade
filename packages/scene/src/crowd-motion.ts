@@ -263,15 +263,23 @@ type HomeDestination = Readonly<{
   journeyDistance: number;
 }>;
 
+const pedestrianHomeEntryCache = new Map<
+  number,
+  readonly PedestrianHomeEntry[]
+>();
+
 const pedestrianHomeEntries = (seed: number): readonly PedestrianHomeEntry[] => {
-  const layout = generateResidentialLayout(seed);
+  const safeSeed = Number.isFinite(seed) ? Math.trunc(seed) >>> 0 : DEFAULT_STREET_SEED;
+  const cached = pedestrianHomeEntryCache.get(safeSeed);
+  if (cached !== undefined) return cached;
+  const layout = generateResidentialLayout(safeSeed);
   const properties = [
     ...layout.frontProperties,
     ...layout.middleProperties,
     ...layout.backProperties,
     ...layout.outerProperties,
   ];
-  return Object.freeze(
+  const entries = Object.freeze(
     properties
       .filter(
         (property) =>
@@ -279,7 +287,7 @@ const pedestrianHomeEntries = (seed: number): readonly PedestrianHomeEntry[] => 
           property.role !== "stand-neighbor",
       )
       .map((property) => {
-        const access = residentialAccessLayout(property, seed);
+        const access = residentialAccessLayout(property, safeSeed);
         return Object.freeze({
           role: property.role,
           sidewalk: Object.freeze({
@@ -291,6 +299,8 @@ const pedestrianHomeEntries = (seed: number): readonly PedestrianHomeEntry[] => 
         });
       }),
   );
+  pedestrianHomeEntryCache.set(safeSeed, entries);
+  return entries;
 };
 
 const projectPointToRoute = (
@@ -454,6 +464,7 @@ const basePose = (
   elapsedMs: number,
   durationMs: number,
   routes: readonly PedestrianRoute[],
+  seed: number,
 ): MutableCrowdPose | undefined => {
   const safeDuration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
   const worldSpeed = 1.18 + deterministicUnit(actorIndex, 17) * 0.26;
@@ -572,7 +583,7 @@ const basePose = (
         beat.direction,
         actorIndex,
         travelBudget,
-        DEFAULT_STREET_SEED,
+        seed,
       );
   const distanceTravelled = elapsedSeconds * worldSpeed;
   const sidewalkTravelToHome =
@@ -821,7 +832,7 @@ export const createCrowdSimulation = (
         const beat = beats[(index * 7) % beats.length];
         if (beat === undefined) throw new Error("crowd beat invariant failed");
         if (elapsedMs < beat.startAtMs) return undefined;
-        return basePose(beat, index, elapsedMs, safeDuration, routes);
+        return basePose(beat, index, elapsedMs, safeDuration, routes, seed);
       });
 
       const neighborChecks = separateCrowd(poses);
@@ -879,6 +890,7 @@ export const walkingBodyLift = (
 export type StreetMotion = Readonly<{
   crowdPosesAt: typeof crowdPosesAt;
   sidewalkLaneZ: typeof sidewalkLaneZ;
+  openHomeEntryDoors(propertyRoles: readonly string[]): void;
 }>;
 
 export const initializeStreetMotion = (
@@ -925,8 +937,28 @@ export const initializeStreetMotion = (
     return cachedSimulation.sample(elapsedMs).poses;
   };
 
+  const openHomeEntryDoors = (propertyRoles: readonly string[]): void => {
+    if (propertyRoles.length === 0) return;
+    const active = new Set(propertyRoles);
+    scene.traverse((object) => {
+      if (object.userData["sceneRole"] !== "house-door" || !(object instanceof Group)) {
+        return;
+      }
+      let current = object.parent;
+      while (current !== null) {
+        const propertyRole = current.userData["propertyRole"];
+        if (typeof propertyRole === "string") {
+          if (active.has(propertyRole)) object.rotation.y = -1.08;
+          return;
+        }
+        current = current.parent;
+      }
+    });
+  };
+
   return Object.freeze({
     crowdPosesAt: sampledCrowdPosesAt,
     sidewalkLaneZ,
+    openHomeEntryDoors,
   });
 };
