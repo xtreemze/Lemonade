@@ -30,7 +30,7 @@ Current baseline:
 - no direct esbuild build script, bundler entry point, or IIFE build pipeline; any esbuild package remaining in the dependency graph is transitive tooling owned by upstream packages;
 - Vitest 5;
 - Playwright;
-- Biome 2.5 with the all-stable-rules preset, all project/type/test/Playwright domains, formatting, import organization, and repository-specific policy gates;
+- Biome 2.5 with the complete stable rule set enabled, project/type/test/Playwright domains, formatting, import organization, fatal warnings/errors, scoped advisory rules, and repository-specific policy gates;
 - `pnpm/setup@v1` CI provisioning for pnpm + Node;
 - no Webpack, Babel, Travis, PostCSS compatibility layer, ESLint configuration, or runtime UI framework.
 
