@@ -144,11 +144,11 @@ apps/
 packages/
   simulation/   pure deterministic business rules
   ui/           DOM/SVG reports, projections and accessible charts
-  scene/        Three.js low-poly neighborhood/weather renderer
+  scene/        renderer-neutral world/scene contracts; Three reference during Babylon migration
   audio/        native Web Audio + optional platform adapters
 ```
 
-Lit is used selectively for the run tools, daily decision form, and day report, where it removes repetitive DOM synchronization while preserving native semantic controls. The rest of the application continues to use browser APIs directly: DOM events, `ResizeObserver`, `matchMedia`, SVG, Canvas/WebGL through the scene adapter, IndexedDB, and Web Audio. Three.js remains because replacing a compact 3D scene graph with hand-written WebGL would increase complexity without improving the game architecture.
+Lit is used selectively for the run tools, daily decision form, and day report, where it removes repetitive DOM synchronization while preserving native semantic controls. The rest of the application continues to use browser APIs directly: DOM events, `ResizeObserver`, `matchMedia`, SVG, Canvas/WebGL through the scene adapter, IndexedDB, and Web Audio. Scene and world contracts remain renderer-neutral. Lemonade is actively migrating Lemonsville from Three.js to Babylon.js under #163; Three.js remains the temporary production/reference renderer until Babylon reaches certified parity and #200 completes the cutover and removal.
 
 The simulation accepts state, a three-variable decision, environment, and an injected random source, then returns immutable next state and a typed result. Rendering, audio, persistence, browser APIs, and any future Tauri shell are adapters around that core.
 
@@ -165,8 +165,8 @@ The workspace deliberately keeps build tooling small and current:
 - **Lit 3.3** for a small set of high-churn interactive presentation components.
 - **Vitest 5** for deterministic unit and invariant tests.
 - **Playwright** for browser acceptance and accessibility-critical flows.
-- **ESLint flat config** with type-aware strict rules.
-- **Three.js** only for the 3D rendering problem it materially simplifies.
+- **Biome 2.5** for strict linting/formatting, supplemented by repository-specific anti-pattern and mobile-contract policy gates.
+- **3D rendering:** Three.js remains the temporary reference/runtime while Babylon.js is the target production engine under #163/#200.
 - **Tauri + Rust** only if a native capability later provides a measured benefit.
 
 CI uses the current `pnpm/setup` standalone action to provision both pnpm and Node, then performs a frozen-lockfile install. Exact resolved dependency versions live in `pnpm-lock.yaml`; generated dependency state is never hand-edited.
@@ -217,7 +217,7 @@ Key rules:
 - Do not add a framework or dependency to avoid writing a small amount of straightforward platform code.
 - No `Math.random()` in simulation code; inject a seedable RNG.
 - No floating-point dollars in accounting; use integer cents/fixed precision.
-- No DOM, UI runtime, Three.js, Web Audio, storage, network I/O, ambient clocks, or Tauri imports in the simulation package.
+- No DOM, UI runtime, rendering-engine, Web Audio, storage, network I/O, ambient clocks, or Tauri imports in the simulation package.
 - Responsive CSS is mobile-first: narrow layouts are the default; larger layouts use ascending relative-unit `width >= …` capability queries.
 - Planning, simulation, report, and forecast must each occupy the complete dynamic viewport on every device class. No document scroll, nested scroll, or vertically clipped flow content is permitted; oversized content must be split into sequential screens.
 - The primary mobile action is icon-led, accessible, horizontally centered, and safe-area-aware at the bottom edge.
