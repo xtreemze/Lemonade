@@ -547,7 +547,7 @@ export class LemonadeDayReport extends LitElement {
         <header class="panel-heading">
           <div>
             <p id="report-eyebrow" class="eyebrow">Day ${String(Number(entry.day))} report</p>
-            <h2 id="report-title">
+            <h2 id="report-title" tabindex="-1">
               ${String(Number(entry.sold))} of ${String(Number(entry.decision.glasses))} sold
             </h2>
           </div>

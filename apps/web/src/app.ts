@@ -182,7 +182,7 @@ const SHELL_MARKUP = `
       <span id="finance-summary"></span>
     </aside>
 
-    <section class="stand-stage" aria-label="Lemonsville lemonade stand">
+    <section class="stand-stage" aria-label="Lemonsville lemonade stand" tabindex="-1">
       <div class="scene-overlay" aria-live="polite">
         <p id="scene-kicker" class="eyebrow"></p>
         <strong id="scene-title"></strong>
@@ -261,6 +261,7 @@ type AppElements = Readonly<{
   reportPanel: LemonadeDayReport;
   historyHost: HTMLElement;
   historyNextButton: HTMLButtonElement;
+  standStage: HTMLElement;
   sceneKicker: HTMLElement;
   sceneTitle: HTMLElement;
   sceneCanvas: HTMLCanvasElement;
@@ -287,6 +288,7 @@ const collectElements = (root: HTMLElement): AppElements =>
     reportPanel: requireElement(root, "lemonade-day-report", LemonadeDayReport),
     historyHost: requireElement(root, "#ledger-history-host", HTMLElement),
     historyNextButton: requireElement(root, "#history-next-button", HTMLButtonElement),
+    standStage: requireElement(root, ".stand-stage", HTMLElement),
     sceneKicker: requireElement(root, "#scene-kicker", HTMLElement),
     sceneTitle: requireElement(root, "#scene-title", HTMLElement),
     sceneCanvas: requireElement(root, "#scene-canvas", HTMLCanvasElement),
@@ -329,6 +331,7 @@ export class LemonadeApp {
   #runStatusMessage = "";
   #runErrorMessage: string | null = null;
   #saveChain: Promise<void> = Promise.resolve();
+  #lastRenderedPresentation: RunLifecycleState["presentation"] | null = null;
   #disposed = false;
 
   constructor(
@@ -824,6 +827,12 @@ export class LemonadeApp {
   }
 
   #render(): void {
+    const presentation = this.#lifecycle.presentation;
+    const presentationChanged =
+      this.#lastRenderedPresentation !== null &&
+      this.#lastRenderedPresentation !== presentation;
+    this.#lastRenderedPresentation = presentation;
+
     this.#renderPresentationState();
     this.#renderPersistenceState();
     this.#renderStatus();
@@ -834,6 +843,35 @@ export class LemonadeApp {
     const entries =
       this.#phase.kind === "report" ? this.#phase.resolution.nextState.ledger : this.#game.ledger;
     renderLedgerHistory(this.#elements.historyHost, entries);
+
+    if (presentationChanged) this.#queuePresentationFocus(presentation);
+  }
+
+  #queuePresentationFocus(presentation: RunLifecycleState["presentation"]): void {
+    queueMicrotask(() => {
+      void Promise.all([
+        this.#elements.decisionPanel.updateComplete,
+        this.#elements.reportPanel.updateComplete,
+      ]).then(() => {
+        if (this.#disposed || this.#lifecycle.presentation !== presentation) return;
+
+        const target = (() => {
+          switch (presentation) {
+            case "planning":
+              return this.#elements.decisionPanel.querySelector<HTMLElement>("#glasses");
+            case "report":
+              return this.#elements.reportPanel.querySelector<HTMLElement>("#report-title");
+            case "history":
+              return this.#elements.historyHost.querySelector<HTMLElement>(".ledger-history");
+            case "forecast":
+            case "simulation":
+              return this.#elements.standStage;
+          }
+        })();
+
+        target?.focus({ preventScroll: true });
+      });
+    });
   }
 
   #renderPresentationState(): void {

@@ -25,6 +25,7 @@
     "lint:antipatterns": "node scripts/lint-antipatterns.mjs",
     "lint:mobile-contract": "node scripts/lint-mobile-contract.mjs",
     "test:mobile-contract": "playwright test e2e/mobile-contract.spec.ts",
+    "test:accessibility-contract": "playwright test e2e/accessibility-contract.spec.ts",
     "verify:mobile": "pnpm lint:antipatterns && pnpm lint:mobile-contract && pnpm test:mobile-contract",
     "test:showcase-contract": "node --test scripts/showcase-contract.test.mjs",
     "showcase:capture": "playwright test --config=playwright.showcase.config.ts",
