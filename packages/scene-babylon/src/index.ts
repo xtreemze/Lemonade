@@ -9,6 +9,8 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Scene } from "@babylonjs/core/scene";
 
 import { STAND_WORLD_Z } from "@lemonade/scene-contracts/stand-anchors";
+import { generateStreetNetwork } from "@lemonade/scene-contracts/street-layout";
+import { createBabylonStreetSurfaceField } from "./babylon-street-surface-field.js";
 import {
   sceneCameraComposition,
   sceneShotAt,
@@ -103,6 +105,15 @@ export const createBabylonLemonsvilleScene = (
   groundMaterial.diffuseColor = new Color3(0.57, 0.68, 0.41);
   groundMaterial.specularColor = Color3.Black();
   ground.material = groundMaterial;
+
+  const streetNetwork = generateStreetNetwork(
+    initialState.characterSeed ^ 0x4c_45_4d_4f,
+  );
+  createBabylonStreetSurfaceField(
+    scene,
+    streetNetwork.roads,
+    streetNetwork.sidewalks,
+  );
 
   const stand = MeshBuilder.CreateBox(
     "stand-migration-shell",
