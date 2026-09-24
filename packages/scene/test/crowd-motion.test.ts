@@ -238,10 +238,10 @@ describe("crowd motion", () => {
     ambient.update("sunny", "simulation", 2000, 14_000);
 
     const firstPet = scene.children
-      .filter((object) => object.userData.sceneRole === "ambient-pet")
+      .filter((object) => object.userData["sceneRole"] === "ambient-pet")
       .find((pet) => pet.visible && Math.abs(pet.position.x - firstOwner.position.x) < 2);
     const secondPet = scene.children
-      .filter((object) => object.userData.sceneRole === "ambient-pet")
+      .filter((object) => object.userData["sceneRole"] === "ambient-pet")
       .find((pet) => pet.visible && Math.abs(pet.position.x - secondOwner.position.x) < 2);
     expect(firstPet).toBeDefined();
     expect(secondPet).toBeDefined();
@@ -271,13 +271,13 @@ describe("crowd motion", () => {
     const network = generateStreetNetwork(seed);
 
     const pet = scene.children.find(
-      (object) => object.userData.sceneRole === "ambient-pet" && object.visible,
+      (object) => object.userData["sceneRole"] === "ambient-pet" && object.visible,
     );
     const bicycles = scene.children.filter(
-      (object) => object.userData.sceneRole === "ambient-bicycle" && object.visible,
+      (object) => object.userData["sceneRole"] === "ambient-bicycle" && object.visible,
     );
     const vehicles = scene.children.filter(
-      (object) => object.userData.sceneRole === "ambient-vehicle" && object.visible,
+      (object) => object.userData["sceneRole"] === "ambient-vehicle" && object.visible,
     );
 
     expect(pet).toBeDefined();
@@ -291,7 +291,7 @@ describe("crowd motion", () => {
     expect(vehicles.length).toBeGreaterThan(0);
     for (const actor of [...bicycles, ...vehicles]) {
       expect(Number.isFinite(actor.rotation.y)).toBe(true);
-      const mobilityActorId: unknown = actor.userData.mobilityActorId;
+      const mobilityActorId: unknown = actor.userData["mobilityActorId"];
       if (mobilityActorId === "resident-vehicle") {
         continue;
       }
@@ -307,7 +307,7 @@ describe("crowd motion", () => {
     for (const role of ["ambient-rider", "ambient-driver"] as const) {
       let actor: Group | undefined;
       scene.traverse((object) => {
-        if (object.userData.sceneRole === role && object instanceof Group) {
+        if (object.userData["sceneRole"] === role && object instanceof Group) {
           actor = object;
         }
       });
@@ -318,7 +318,7 @@ describe("crowd motion", () => {
 
       const roles = new Set<string>();
       actor.traverse((object) => {
-        const sceneRole: unknown = object.userData.sceneRole;
+        const sceneRole: unknown = object.userData["sceneRole"];
         if (typeof sceneRole === "string") {
           roles.add(sceneRole);
         }
@@ -328,7 +328,7 @@ describe("crowd motion", () => {
       expect(roles.has("hair-cover")).toBe(true);
       expect(roles.has("hair-detail")).toBe(true);
       expect(roles.has("garment-detail")).toBe(true);
-      expect(actor.userData.characterRig).toBe("shared-three");
+      expect(actor.userData["characterRig"]).toBe("shared-three");
       expect(actor.scale.y).toBeGreaterThan(0.5);
     }
   });
@@ -363,7 +363,7 @@ describe("crowd motion", () => {
     ambient.update("sunny", "simulation", 2000, 10_000);
 
     const birds = scene.children.filter(
-      (object) => object.userData.sceneRole === "ambient-bird" && object.visible,
+      (object) => object.userData["sceneRole"] === "ambient-bird" && object.visible,
     );
     expect(birds).toHaveLength(4);
     expect(birds.some((bird) => Math.abs(bird.rotation.y) < 0.01)).toBe(true);
