@@ -56,14 +56,14 @@
       "project": "all",
       "qwik": "none",
       "react": "none",
-      "reactNative": "none",
       "solid": "none",
       "svelte": "none",
       "tailwind": "none",
       "test": "all",
       "turborepo": "none",
       "types": "all",
-      "vue": "none"
+      "vue": "none",
+      "reactnative": "none"
     },
     "rules": {
       "preset": "all",
