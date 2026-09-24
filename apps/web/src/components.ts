@@ -1,6 +1,6 @@
+import { LitElement, html } from "lit";
 import type { DayEnvironment, DayResolution } from "@lemonade/simulation";
 import type { WeeklyReport } from "@lemonade/ui";
-import { html, LitElement } from "lit";
 
 export type RunToolsModel = Readonly<{
   statusMessage: string;
@@ -40,28 +40,26 @@ export class LemonadeRunTools extends LitElement {
     super.connectedCallback();
     this.addEventListener("click", this.#onClick);
     this.addEventListener("change", this.#onChange);
+    this.addEventListener("keydown", this.#onKeyDown);
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener("click", this.#onClick);
     this.removeEventListener("change", this.#onChange);
+    this.removeEventListener("keydown", this.#onKeyDown);
     super.disconnectedCallback();
   }
 
   readonly #onClick = (event: Event): void => {
     const target = event.target;
-    if (!(target instanceof HTMLButtonElement)) {
-      return;
-    }
+    if (!(target instanceof HTMLButtonElement)) return;
 
     switch (target.id) {
       case "export-run":
         this.dispatchEvent(new Event("lemonade-run-export", { bubbles: true, composed: true }));
         break;
       case "import-run": {
-        if (!this.model.persistenceEnabled) {
-          return;
-        }
+        if (!this.model.persistenceEnabled) return;
         const input = this.querySelector("#import-file");
         if (!(input instanceof HTMLInputElement)) {
           throw new TypeError("Expected run import file input.");
@@ -70,14 +68,14 @@ export class LemonadeRunTools extends LitElement {
         break;
       }
       case "reset-run": {
-        if (!this.model.persistenceEnabled) {
-          return;
-        }
+        if (!this.model.persistenceEnabled) return;
         const dialog = this.querySelector("#reset-dialog");
         if (!(dialog instanceof HTMLDialogElement)) {
           throw new TypeError("Expected reset confirmation dialog.");
         }
         dialog.showModal();
+        const keepRun = dialog.querySelector<HTMLButtonElement>('button[value="cancel"]');
+        keepRun?.focus();
         break;
       }
       case "confirm-reset":
@@ -86,11 +84,27 @@ export class LemonadeRunTools extends LitElement {
     }
   };
 
+  readonly #onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== "Tab") return;
+    const dialog = this.querySelector("#reset-dialog");
+    if (!(dialog instanceof HTMLDialogElement) || !dialog.open) return;
+    const buttons = [...dialog.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
+    const first = buttons[0];
+    const last = buttons.at(-1);
+    if (first === undefined || last === undefined) return;
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   readonly #onChange = (event: Event): void => {
     const input = event.target;
-    if (!(input instanceof HTMLInputElement) || input.id !== "import-file") {
-      return;
-    }
+    if (!(input instanceof HTMLInputElement) || input.id !== "import-file") return;
     const file = input.files?.item(0);
     input.value = "";
     if (file !== null && file !== undefined) {
@@ -250,9 +264,7 @@ export class LemonadeDecisionPanel extends LitElement {
     if (!(input instanceof HTMLInputElement)) {
       throw new TypeError("Expected decision input.");
     }
-    if (!Number.isFinite(input.valueAsNumber)) {
-      return;
-    }
+    if (!Number.isFinite(input.valueAsNumber)) return;
 
     const [minimum, maximum] = this.#decisionBounds(kind);
     const value = Math.min(maximum, Math.max(minimum, Math.trunc(input.valueAsNumber)));
@@ -278,9 +290,7 @@ export class LemonadeDecisionPanel extends LitElement {
 
   readonly #onInput = (event: Event): void => {
     const input = event.target;
-    if (!(input instanceof HTMLInputElement)) {
-      return;
-    }
+    if (!(input instanceof HTMLInputElement)) return;
 
     switch (input.name) {
       case "glasses":
@@ -315,13 +325,9 @@ export class LemonadeDecisionPanel extends LitElement {
   };
 
   readonly #onSubmit = (event: Event): void => {
-    if (!(event.target instanceof HTMLFormElement)) {
-      return;
-    }
+    if (!(event.target instanceof HTMLFormElement)) return;
     event.preventDefault();
-    if (!this.model.affordable) {
-      return;
-    }
+    if (!this.model.affordable) return;
     this.dispatchEvent(new Event("lemonade-decision-submit", { bubbles: true, composed: true }));
   };
 
@@ -537,13 +543,9 @@ export class LemonadeDayReport extends LitElement {
 
   readonly #onClick = (event: Event): void => {
     const target = event.target;
-    if (!(target instanceof Element)) {
-      return;
-    }
+    if (!(target instanceof Element)) return;
     const button = target.closest<HTMLButtonElement>("button#review-history-button");
-    if (button === null || !this.contains(button)) {
-      return;
-    }
+    if (button === null || !this.contains(button)) return;
     this.dispatchEvent(new Event("lemonade-review-history", { bubbles: true, composed: true }));
   };
 
@@ -606,10 +608,9 @@ export class LemonadeDayReport extends LitElement {
           </table>
         </div>
 
-        ${
-          weeklyReport === null
-            ? null
-            : html`
+        ${weeklyReport === null
+          ? null
+          : html`
               <section
                 class="weekly-report"
                 aria-labelledby="weekly-report-title"
@@ -671,8 +672,7 @@ export class LemonadeDayReport extends LitElement {
                   </p>
                 </div>
               </section>
-            `
-        }
+            `}
 
           <div class="report-notes">
             <p id="report-event" class="event-note">${eventLabel[entry.environment.event.kind]}</p>

@@ -1,10 +1,6 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-const putStoredRun = async (
-  page: Page,
-  key: "current" | "recovery",
-  value: string,
-): Promise<void> => {
+const putStoredRun = async (page: Page, key: "current" | "recovery", value: string): Promise<void> => {
   await page.evaluate(
     async ({ storageKey, storageValue }) => {
       const database = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -113,9 +109,7 @@ test("an unsupported current schema is never replaced by an older recovery snaps
 
   const current = await readStoredRun(page, "current");
   const recovery = await readStoredRun(page, "recovery");
-  if (current === null || recovery === null) {
-    throw new Error("Expected both persistence slots.");
-  }
+  if (current === null || recovery === null) throw new Error("Expected both persistence slots.");
 
   const future = JSON.parse(current) as { saveSchemaVersion: number };
   future.saveSchemaVersion += 1;
@@ -140,16 +134,17 @@ test("reset clears the recovery slot before the fresh run is persisted", async (
   expect(await readStoredRun(page, "recovery")).not.toBeNull();
 
   await page.reload();
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "report");
+  await page.getByRole("button", { name: "Review sales history" }).click();
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "history");
+  await page.getByRole("button", { name: "Plan next day" }).click();
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
 
   await page.locator(".run-tools-summary").click();
   await page.getByRole("button", { name: "Reset run" }).click();
-  await page
-    .getByRole("dialog", { name: "Reset this run?" })
-    .getByRole("button", {
-      name: "Reset run",
-    })
-    .click();
+  await page.getByRole("dialog", { name: "Reset this run?" }).getByRole("button", {
+    name: "Reset run",
+  }).click();
 
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
   await expect(page.locator("#run-status")).toHaveText("Run saved locally.");
