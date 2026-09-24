@@ -5,10 +5,10 @@ import { updateNeighborhoodWind } from "../src/neighborhood.js";
 
 const windObject = (phase: number): Group => {
   const object = new Group();
-  object.userData.windResponsive = true;
-  object.userData.windPhase = phase;
-  object.userData.windBaseRotationX = 0;
-  object.userData.windBaseRotationZ = 0;
+  object.userData["windResponsive"] = true;
+  object.userData["windPhase"] = phase;
+  object.userData["windBaseRotationX"] = 0;
+  object.userData["windBaseRotationZ"] = 0;
   return object;
 };
 
