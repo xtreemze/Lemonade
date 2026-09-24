@@ -253,7 +253,7 @@ const expectCompactPortraitHistory = async (
 
     const columns = getComputedStyle(chartGrid).gridTemplateColumns
       .trim()
-      .split(/\\s+/u)
+      .split(/\s+/u)
       .filter(Boolean).length;
 
     return {
