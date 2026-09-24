@@ -14,7 +14,7 @@
     "build": "pnpm -r --if-present build",
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm -r --if-present typecheck",
     "lint": "pnpm lint:biome && pnpm lint:antipatterns && pnpm lint:mobile-contract",
-    "lint:biome": "biome check --error-on-warnings --max-diagnostics=500 .",
+    "lint:biome": "biome check --error-on-warnings --max-diagnostics=10000 .",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "fix": "biome check --write .",
