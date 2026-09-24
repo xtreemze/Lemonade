@@ -28,7 +28,7 @@ describe("street surface field", () => {
 
     expect(field.anchors).toHaveLength(3);
     expect(
-      field.anchors.filter((anchor) => anchor.userData.sceneRole === "paved-road"),
+      field.anchors.filter((anchor) => anchor.userData["sceneRole"] === "paved-road"),
     ).toHaveLength(2);
     expect(field.meshes).toHaveLength(3);
     expect(field.meshes.reduce((total, mesh) => total + mesh.count, 0)).toBe(3);
