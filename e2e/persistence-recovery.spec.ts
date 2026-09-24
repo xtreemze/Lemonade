@@ -133,6 +133,9 @@ test("reset clears the recovery slot before the fresh run is persisted", async (
   await expect(page.locator("#run-status")).toHaveText("Day report saved locally.");
   expect(await readStoredRun(page, "recovery")).not.toBeNull();
 
+  await page.reload();
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
+
   await page.locator(".run-tools-summary").click();
   await page.getByRole("button", { name: "Reset run" }).click();
   await page.getByRole("dialog", { name: "Reset this run?" }).getByRole("button", {
