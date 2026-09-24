@@ -60,7 +60,7 @@ import {
   type RunLifecycleState,
 } from "./run-lifecycle.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
-import { isGizmoEnabled, printGizmoHelp } from "./dev-gizmo.js";
+import { isGizmoEnabled } from "./dev-gizmo-flag.js";
 import { isSceneLauncherEnabled } from "./dev-scene-launcher-flag.js";
 import type { ScenePreset } from "./dev-scene-launcher.js";
 
@@ -357,8 +357,10 @@ export class LemonadeApp {
 
     const gizmoEnabled = isGizmoEnabled();
     if (gizmoEnabled) {
-      console.log("🎨 Gizmo mode enabled - type 'gizmoHelp()' for help");
-      printGizmoHelp();
+      void import("./dev-gizmo.js").then(({ printGizmoHelp }) => {
+        console.log("🎨 Gizmo mode enabled - type 'gizmoHelp()' for help");
+        printGizmoHelp();
+      });
     }
 
     const sceneLauncherEnabled = isSceneLauncherEnabled();
