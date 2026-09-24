@@ -53,7 +53,7 @@ const renderRecovery = (error: RunPersistenceError): void => {
   );
 };
 
-const start = async (): Promise<void> => {
+const start = async (): Promise<LemonadeApp | void> => {
   if (import.meta.env.DEV) {
     const sceneEditor = await import("./dev-scene-viewer.js");
     if (sceneEditor.isSceneViewerEnabled()) {
@@ -64,7 +64,7 @@ const start = async (): Promise<void> => {
 
   try {
     const restored = await loadCurrentRun();
-    new LemonadeApp(
+    return new LemonadeApp(
       root,
       restored?.snapshot ?? createFreshRunSnapshot(),
       restored?.recovered === true
@@ -81,7 +81,7 @@ const start = async (): Promise<void> => {
       error instanceof RunPersistenceError &&
       (error.code === "storage-unavailable" || error.code === "storage-failed")
     ) {
-      new LemonadeApp(root, createFreshRunSnapshot(), {
+      return new LemonadeApp(root, createFreshRunSnapshot(), {
         persistenceEnabled: false,
         initialPersistenceError: error.message,
       });
