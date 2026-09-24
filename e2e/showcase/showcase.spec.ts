@@ -250,7 +250,7 @@ const startCanvasCapture = async (
       };
       (
         window as typeof window & {
-          __lemonadeShowcaseCapture?: CanvasCaptureState;
+          __lemonadeShowcaseCapture: CanvasCaptureState | undefined;
         }
       ).__lemonadeShowcaseCapture = state;
 
@@ -282,7 +282,7 @@ const startCanvasCapture = async (
 const stopCanvasCapture = async (page: Page): Promise<CanvasCaptureResult> =>
   page.evaluate(async () => {
     const scope = window as typeof window & {
-      __lemonadeShowcaseCapture?: CanvasCaptureState;
+      __lemonadeShowcaseCapture: CanvasCaptureState | undefined;
     };
     const state = scope.__lemonadeShowcaseCapture;
     if (state === undefined) {
