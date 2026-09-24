@@ -12,8 +12,8 @@ This review rechecks the Lemonade web stack after the MVP, with two goals: use c
 | Build | Vite 8.3.x | Current stable Vite 8 line; Rolldown-based production build remains a good fit for a static GitHub Pages application. |
 | Runtime | Node 24 LTS | Prefer the active LTS line over Node 26 Current for CI and contributor reproducibility. |
 | Package manager | pnpm 12.5.x | Current stable pnpm 12 line. |
-| Language | TypeScript 6.0.x for now | TypeScript 7 is stable, but stable typescript-eslint currently documents support below TypeScript 6.1. Keep supported typed linting rather than forcing an unsupported pairing. |
-| Lint | ESLint 10.11.x + typescript-eslint 8.70.x + repository policy gate | Keeps strict type-aware rules, enforces simulation purity, and rejects responsive/CSS anti-patterns without adding a CSS-tooling dependency. |
+| Language | TypeScript 6.0.x | Keep the pinned strict compiler baseline for this migration. Treat compiler-major upgrades as a separate compatibility transaction rather than coupling them to lint/build cleanup. |
+| Lint/format | Biome 2.5.13 + repository policy gates | One pinned tool owns linting, formatting, import organization, project/type/test/Playwright analysis, simulation purity restrictions, and general correctness/style policy. All stable rules remain enabled; genuinely inapplicable framework rules are disabled explicitly and context-dependent rules stay advisory rather than being silently dropped. |
 | Unit/invariant tests | Vitest 5.0.x | Current stable major and aligned with Vite. |
 | Browser acceptance | Playwright 1.63.x | Already current stable and directly certifies the production Pages artifact. |
 | 3D | Three.js 0.186.x | Already current; specialized scene-graph/WebGL complexity justifies the dependency. Align its type package to the same release. |
@@ -42,7 +42,7 @@ Framework-bound kits such as React/shadcn, Svelte-only kits, Vue-only kits, and 
 
 The lint contract intentionally combines the strictest practical type-aware TypeScript baseline with project-specific repository rules rather than adding another general-purpose dependency.
 
-ESLint enforces the deterministic-domain boundary directly in `packages/simulation/src`: browser/device globals, network I/O, ambient timers/clocks, `Math.random()`, rendering/UI imports, Node APIs, and platform runtimes are rejected. The general TypeScript surface also keeps unused-disable reporting and explicit high-value correctness/style rules on top of `strictTypeChecked` and `stylisticTypeChecked`.
+Biome enforces the deterministic-domain boundary directly in `packages/simulation/src`: browser/device globals, network I/O, ambient timers/clocks, `Math.random()`, rendering/UI imports, Node APIs, and platform runtimes are rejected. The general repository surface enables the complete stable Biome rule set plus project, type, test, and Playwright domains. Rules that conflict with intentional runtime boundaries or tool conventions are scoped narrowly; advisory style/performance rules remain visible at `info` severity while warnings and errors fail CI.
 
 A dependency-free repository policy check scans authored CSS under `apps/` and `packages/`. It rejects:
 
@@ -59,9 +59,7 @@ The existing narrow-viewport Playwright certification remains the runtime backst
 
 ## TypeScript 7 hold
 
-TypeScript 7.0 is stable and attractive, but is intentionally not adopted in this transaction because the stable typescript-eslint support matrix currently documents TypeScript support only below 6.1.
-
-Revisit TypeScript 7 when typescript-eslint officially supports it, strict typed linting passes without unsupported-version suppression, declaration/build output is stable across workspace packages, and CI/certification performance is measured before and after. Do not disable typed linting merely to reach TypeScript 7 sooner.
+A TypeScript major-version upgrade is intentionally outside this tooling migration. Evaluate it independently against the strict compiler configuration, workspace declaration/build output, tests, certification, and CI performance; do not weaken compiler or Biome checks merely to advance the version.
 
 ## Upgrade policy
 
@@ -80,7 +78,7 @@ Pull-request CI uses two explicit tiers so iteration can be fast without weakeni
 
 ### Draft preflight
 
-A pull request that is still a draft runs only the `preflight` job on open, synchronize, reopen, or conversion back to draft. Preflight installs the frozen dependency graph, runs the complete TypeScript typecheck, and runs ESLint plus the repository policy/mobile static lint gates. It deliberately does not install Playwright browsers, run unit/build certification, run the deterministic balance certification, or build the GitHub Pages artifact.
+A pull request that is still a draft runs only the `preflight` job on open, synchronize, reopen, or conversion back to draft. Preflight installs the frozen dependency graph, runs the complete TypeScript typecheck, and runs Biome `check` plus the repository policy/mobile static lint gates. It deliberately does not install Playwright browsers, run unit/build certification, run the deterministic balance certification, or build the GitHub Pages artifact.
 
 This tier is feedback only. A draft cannot use preflight as merge evidence.
 
