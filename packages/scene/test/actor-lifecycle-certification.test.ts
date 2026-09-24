@@ -14,7 +14,7 @@ const DYNAMIC_ROLES = new Set([
 ]);
 
 const roleOf = (object: Object3D): string | null => {
-  const role: unknown = object.userData.sceneRole;
+  const role: unknown = object.userData["sceneRole"];
   return typeof role === "string" ? role : null;
 };
 
