@@ -69,8 +69,8 @@ export const createThreeCharacterRig = (
 ): ThreeCharacterRig => {
   const profile = characterProfileFor(characterSeed, index);
   const root = new Group();
-  root.userData.characterRig = "shared-three";
-  root.userData.characterProfileIndex = index;
+  root.userData["characterRig"] = "shared-three";
+  root.userData["characterProfileIndex"] = index;
 
   const torso = new Mesh(geometries.torso, material(profile.clothingColor));
   torso.position.y = CHARACTER_ANATOMY.torso.centerY;
