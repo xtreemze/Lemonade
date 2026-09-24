@@ -245,7 +245,9 @@ describe("unified neighborhood mobility", () => {
         actor.id.startsWith("traffic-") ||
         actor.id === "resident:0" ||
         actor.id === "resident:1" ||
-        actor.id === "resident-pet",
+        actor.id === "resident-pet" ||
+        actor.id === "resident-vehicle" ||
+        actor.id === "resident-driver",
     );
     expect(clockDriven.length).toBeGreaterThan(0);
     expect(
@@ -256,41 +258,10 @@ describe("unified neighborhood mobility", () => {
           actor.travelDistance >= 0,
       ),
     ).toBe(true);
-
-    const legacyDrivewayActor = sample.actors.find(
-      (actor) => actor.id === "resident-vehicle",
-    );
-    expect(legacyDrivewayActor?.travelDistance).toBeNull();
   });
 
-  it("drives a resident vehicle into a driveway, parks, and later departs", () => {
+  it("drives a resident vehicle into a driveway, parks, transfers its driver, and later departs", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
-    const parked = system.sample({
-      weather: "cloudy",
-      phase: "simulation",
-      elapsedMs: 7_000,
-      durationMs: 14_000,
-      dayNumber: 2,
-      focus: { x: 0, z: 0 },
-    });
-    const later = system.sample({
-      weather: "cloudy",
-      phase: "simulation",
-      elapsedMs: 12_600,
-      durationMs: 14_000,
-      dayNumber: 2,
-      focus: { x: 0, z: 0 },
-    });
-
-    expect(
-      parked.properties.some((property) => property.vehicleParked),
-    ).toBe(true);
-    const parkedVehicle = parked.actors.find(
-      (actor) => actor.id === "resident-vehicle",
-    );
-    expect(parkedVehicle?.interaction).toBe("parking");
-    expect(parkedVehicle?.speed).toBe(0);
-
     const layout = generateResidentialLayout(MOBILITY_SEED);
     const drivewayProperty =
       layout.frontProperties.find(
@@ -301,46 +272,77 @@ describe("unified neighborhood mobility", () => {
         (property) => property.drivewayX !== null,
       );
     expect(drivewayProperty).toBeDefined();
-    if (drivewayProperty !== undefined && drivewayProperty.drivewayX !== null) {
-      const access = residentialAccessLayout(
-        drivewayProperty,
-        MOBILITY_SEED,
-      );
-      expect(parkedVehicle?.x).toBeCloseTo(drivewayProperty.drivewayX);
-      expect(parkedVehicle?.z).toBeCloseTo(access.parkingZ);
-      expect(
-        layout.exclusions.some(
-          (rect) =>
-            rect.role === "sidewalk" &&
-            parkedVehicle !== undefined &&
-            parkedVehicle.x >= rect.minX &&
-            parkedVehicle.x <= rect.maxX &&
-            parkedVehicle.z >= rect.minZ &&
-            parkedVehicle.z <= rect.maxZ,
-        ),
-      ).toBe(false);
+    if (drivewayProperty === undefined || drivewayProperty.drivewayX === null) {
+      return;
     }
 
-    expect(
-      later.properties.some((property) => property.vehicleParked),
-    ).toBe(false);
+    const access = residentialAccessLayout(
+      drivewayProperty,
+      MOBILITY_SEED,
+    );
+    let parkedVehicle:
+      | NeighborhoodMobilitySample["actors"][number]
+      | undefined;
+    let sawDriverTransfer = false;
+    let sawDepartureAfterParking = false;
+    let hasParked = false;
 
-    const exiting = system.sample({
-      weather: "cloudy",
-      phase: "simulation",
-      elapsedMs: 6_500,
-      durationMs: 14_000,
-      dayNumber: 2,
-      focus: { x: 0, z: 0 },
-    });
+    for (let elapsedMs = 0; elapsedMs <= 24_000; elapsedMs += 50) {
+      const sample = system.sample({
+        weather: "cloudy",
+        phase: "simulation",
+        elapsedMs,
+        durationMs: 14_000,
+        dayNumber: 2,
+        focus: { x: 0, z: 0 },
+      });
+      const vehicle = sample.actors.find(
+        (actor) => actor.id === "resident-vehicle",
+      );
+      const driver = sample.actors.find(
+        (actor) => actor.id === "resident-driver",
+      );
+      const vehicleIsParked = sample.properties.some(
+        (property) =>
+          property.propertyRole === drivewayProperty.role &&
+          property.vehicleParked,
+      );
+
+      if (vehicleIsParked && vehicle?.interaction === "parking") {
+        hasParked = true;
+        parkedVehicle ??= vehicle;
+        expect(vehicle.speed).toBe(0);
+      }
+      if (driver?.visible === true && driver.interaction === "door") {
+        sawDriverTransfer = true;
+      }
+      if (
+        hasParked &&
+        !vehicleIsParked &&
+        vehicle !== undefined &&
+        vehicle.interaction !== "parking"
+      ) {
+        sawDepartureAfterParking = true;
+      }
+    }
+
+    expect(hasParked).toBe(true);
+    expect(sawDriverTransfer).toBe(true);
+    expect(sawDepartureAfterParking).toBe(true);
+    expect(parkedVehicle).toBeDefined();
+    expect(parkedVehicle?.x).toBeCloseTo(drivewayProperty.drivewayX);
+    expect(parkedVehicle?.z).toBeCloseTo(access.parkingZ);
     expect(
-      exiting.actors.some(
-        (actor) =>
-          actor.id === "resident-driver" &&
-          actor.visible &&
-          actor.interaction === "door",
+      layout.exclusions.some(
+        (rect) =>
+          rect.role === "sidewalk" &&
+          parkedVehicle !== undefined &&
+          parkedVehicle.x >= rect.minX &&
+          parkedVehicle.x <= rect.maxX &&
+          parkedVehicle.z >= rect.minZ &&
+          parkedVehicle.z <= rect.maxZ,
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("makes driveway traffic yield to pedestrians and pets crossing the sidewalk", () => {
@@ -573,6 +575,92 @@ describe("unified neighborhood mobility", () => {
     }
 
     expect(sawYield).toBe(true);
+  });
+
+
+  it("drives the resident vehicle and driver from actor-owned physical clocks", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const layout = generateResidentialLayout(MOBILITY_SEED);
+    const property =
+      layout.frontProperties.find(
+        (candidate) =>
+          candidate.role === "east-mid" && candidate.drivewayX !== null,
+      ) ??
+      layout.frontProperties.find(
+        (candidate) => candidate.drivewayX !== null,
+      );
+    expect(property).toBeDefined();
+    if (property === undefined || property.drivewayX === null) return;
+
+    const access = residentialAccessLayout(property, MOBILITY_SEED);
+    const crossingObstacle = {
+      x: access.drivewaySidewalkX,
+      z: access.drivewaySidewalkZ,
+    };
+    const previous = new Map<
+      string,
+      { x: number; z: number; speed: number; travelDistance: number }
+    >();
+    let sawVehicleYield = false;
+    let sawDriver = false;
+
+    for (let elapsedMs = 0; elapsedMs <= 20_000; elapsedMs += 50) {
+      const sample = system.sample({
+        weather: "sunny",
+        phase: "simulation",
+        elapsedMs,
+        durationMs: 14_000,
+        dayNumber: 2,
+        focus: { x: 0, z: 0 },
+        pedestrianObstacles:
+          elapsedMs <= 6_000 ? [crossingObstacle] : [],
+      });
+
+      for (const actorId of ["resident-vehicle", "resident-driver"] as const) {
+        const actor = sample.actors.find((candidate) => candidate.id === actorId);
+        expect(actor).toBeDefined();
+        if (actor === undefined) continue;
+
+        if (actorId === "resident-vehicle" && actor.waiting) {
+          sawVehicleYield = true;
+        }
+        if (actorId === "resident-driver" && actor.visible) {
+          sawDriver = true;
+        }
+
+        if (!actor.visible && actorId === "resident-driver") continue;
+
+        expect(actor.travelDistance).not.toBeNull();
+        if (actor.travelDistance === null) continue;
+        expect(Number.isFinite(actor.travelDistance)).toBe(true);
+
+        const prior = previous.get(actorId);
+        if (prior !== undefined) {
+          const displacement = Math.hypot(
+            actor.x - prior.x,
+            actor.z - prior.z,
+          );
+          const maxObservedSpeed = Math.max(prior.speed, actor.speed);
+          const allowance = actorId === "resident-vehicle" ? 0.08 : 0.03;
+          expect(displacement).toBeLessThanOrEqual(
+            maxObservedSpeed * 0.05 + allowance,
+          );
+          expect(actor.travelDistance).toBeGreaterThanOrEqual(
+            prior.travelDistance,
+          );
+        }
+
+        previous.set(actorId, {
+          x: actor.x,
+          z: actor.z,
+          speed: actor.speed,
+          travelDistance: actor.travelDistance,
+        });
+      }
+    }
+
+    expect(sawVehicleYield).toBe(true);
+    expect(sawDriver).toBe(true);
   });
 
 });
