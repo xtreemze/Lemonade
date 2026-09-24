@@ -1,6 +1,10 @@
 import { PerspectiveCamera, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
+import {
+  environmentBusinessDayProgressAt,
+  environmentLightningFlashAt,
+} from "../src/environment-presentation.js";
 import { sceneCameraComposition } from "../src/storyboard.js";
 import {
   businessDayFrameAt,
@@ -161,6 +165,24 @@ describe("weather backdrop staging", () => {
     expect(lightningFlashAt(2_000, duration)).toBeGreaterThan(0.9);
     expect(lightningFlashAt(3_500, duration)).toBe(0);
     expect(lightningFlashAt(5_700, duration)).toBeGreaterThan(0.9);
+  });
+
+  it("keeps legacy weather helpers aligned with the shared environment presentation contract", () => {
+    const duration = 10_000;
+
+    for (const elapsedMs of [0, 2_000, 5_700, duration] as const) {
+      expect(businessDayProgressAt("simulation", elapsedMs, duration)).toBe(
+        environmentBusinessDayProgressAt("simulation", elapsedMs, duration),
+      );
+      expect(lightningFlashAt(elapsedMs, duration)).toBe(
+        environmentLightningFlashAt(
+          "thunderstorm",
+          "simulation",
+          elapsedMs,
+          duration,
+        ),
+      );
+    }
   });
 
   it("keeps backdrop centers inside portrait and landscape forecast framing", () => {
