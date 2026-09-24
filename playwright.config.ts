@@ -3,6 +3,8 @@ import { defineConfig } from "@playwright/test";
 const isCI = Boolean(process.env["CI"]);
 const basePath = "/Lemonade/";
 const previewOrigin = "http://127.0.0.1:4173";
+const chromiumExecutablePath =
+  process.env["PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"];
 
 export default defineConfig({
   testDir: "./e2e",
@@ -16,6 +18,9 @@ export default defineConfig({
   use: {
     baseURL: `${previewOrigin}${basePath}`,
     trace: "on-first-retry",
+    ...(chromiumExecutablePath === undefined
+      ? {}
+      : { launchOptions: { executablePath: chromiumExecutablePath } }),
   },
   webServer: {
     command: `pnpm --filter @lemonade/web exec vite build --base=${basePath} && pnpm --filter @lemonade/web exec vite preview --host 127.0.0.1 --port 4173 --strictPort --base=${basePath}`,

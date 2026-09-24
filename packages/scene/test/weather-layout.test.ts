@@ -6,10 +6,12 @@ import {
   businessDayFrameAt,
   businessDayProgressAt,
   lightningFlashAt,
+  sunVisualPositionAt,
 } from "../src/weather-detail.js";
 import {
   CLOUDY_TOWN_CLOUD_LAYOUT,
   HOT_DRY_CLOUD_LAYOUT,
+  THUNDERSTORM_TOWN_CLOUD_LAYOUT,
   WEATHER_BACKDROP_LAYOUT,
 } from "../src/weather-layout.js";
 
@@ -58,23 +60,26 @@ describe("weather backdrop staging", () => {
       storm.scale,
       hotAndDry.scale * HOT_DRY_CLOUD_LAYOUT.scale,
       ...CLOUDY_TOWN_CLOUD_LAYOUT.map((cloud) => cloudy.scale * cloud.scale),
+      ...THUNDERSTORM_TOWN_CLOUD_LAYOUT.map((cloud) => storm.scale * cloud.scale),
     ];
     const cloudDepths = [
-      cloudy.position[2],
-      storm.position[2],
       hotAndDry.position[2] +
         HOT_DRY_CLOUD_LAYOUT.position[2] * hotAndDry.scale,
       ...CLOUDY_TOWN_CLOUD_LAYOUT.map(
         (cloud) => cloudy.position[2] + cloud.position[2] * cloudy.scale,
       ),
+      ...THUNDERSTORM_TOWN_CLOUD_LAYOUT.map(
+        (cloud) => storm.position[2] + cloud.position[2] * storm.scale,
+      ),
     ];
     const cloudHeights = [
-      cloudy.position[1],
-      storm.position[1],
       hotAndDry.position[1] +
         HOT_DRY_CLOUD_LAYOUT.position[1] * hotAndDry.scale,
       ...CLOUDY_TOWN_CLOUD_LAYOUT.map(
         (cloud) => cloudy.position[1] + cloud.position[1] * cloudy.scale,
+      ),
+      ...THUNDERSTORM_TOWN_CLOUD_LAYOUT.map(
+        (cloud) => storm.position[1] + cloud.position[1] * storm.scale,
       ),
     ];
 
@@ -91,6 +96,47 @@ describe("weather backdrop staging", () => {
     expect(Math.max(...cloudScales) - Math.min(...cloudScales)).toBeLessThan(0.6);
     expect(new Set(CLOUDY_TOWN_CLOUD_LAYOUT.map((cloud) => cloud.driftPhase)).size)
       .toBe(CLOUDY_TOWN_CLOUD_LAYOUT.length);
+    expect(
+      new Set(THUNDERSTORM_TOWN_CLOUD_LAYOUT.map((cloud) => cloud.driftPhase)).size,
+    ).toBe(THUNDERSTORM_TOWN_CLOUD_LAYOUT.length);
+
+    for (const layout of [
+      CLOUDY_TOWN_CLOUD_LAYOUT,
+      THUNDERSTORM_TOWN_CLOUD_LAYOUT,
+    ] as const) {
+      const sortedX = layout.map((cloud) => cloud.position[0]).sort((a, b) => a - b);
+      expect(Math.max(...sortedX) - Math.min(...sortedX)).toBeGreaterThanOrEqual(12);
+      const adjacentGaps = sortedX.slice(1).map(
+        (value, index) => value - (sortedX[index] ?? value),
+      );
+      for (const gap of adjacentGaps) {
+        expect(gap).toBeGreaterThanOrEqual(2.7);
+      }
+    }
+  });
+
+  it("moves the visible sunny-day sun across the horizon behind the hills", () => {
+    const sunny = WEATHER_BACKDROP_LAYOUT.sunny;
+    const dawn = sunVisualPositionAt(0.04);
+    const noon = sunVisualPositionAt(0.5);
+    const dusk = sunVisualPositionAt(0.96);
+    const toWorld = (position: readonly [number, number, number]) =>
+      [
+        sunny.position[0] + position[0] * sunny.scale,
+        sunny.position[1] + position[1] * sunny.scale,
+        sunny.position[2] + position[2] * sunny.scale,
+      ] as const;
+
+    const dawnWorld = toWorld(dawn);
+    const noonWorld = toWorld(noon);
+    const duskWorld = toWorld(dusk);
+    expect(dawnWorld[0]).toBeLessThan(noonWorld[0]);
+    expect(noonWorld[0]).toBeLessThan(duskWorld[0]);
+    expect(noonWorld[1]).toBeGreaterThan(dawnWorld[1]);
+    expect(noonWorld[1]).toBeGreaterThan(duskWorld[1]);
+    expect(dawnWorld[2]).toBeLessThan(-120);
+    expect(noonWorld[2]).toBeLessThan(-120);
+    expect(duskWorld[2]).toBeLessThan(-120);
   });
 
   it("moves the business simulation from dawn through daylight into night", () => {
