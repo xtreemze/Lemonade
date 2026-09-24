@@ -30,7 +30,6 @@ describe("haptic feedback", () => {
     const vibrate = vi.fn(() => true);
     const engine = createHapticEngine({
       vibrate,
-      reducedMotion: () => false,
       activeDocument: () => true,
     });
 
@@ -38,20 +37,13 @@ describe("haptic feedback", () => {
     expect(vibrate).toHaveBeenCalledWith([...hapticPattern("purchase:payment")]);
   });
 
-  it("suppresses vibration for reduced motion or inactive documents", () => {
+  it("suppresses vibration only when the document is inactive", () => {
     const vibrate = vi.fn(() => true);
-    const reduced = createHapticEngine({
-      vibrate,
-      reducedMotion: () => true,
-      activeDocument: () => true,
-    });
-    expect(reduced.play("purchase:serve")).toBe(false);
-
     const hidden = createHapticEngine({
       vibrate,
-      reducedMotion: () => false,
       activeDocument: () => false,
     });
+
     expect(hidden.play("storm:thunder")).toBe(false);
     expect(vibrate).not.toHaveBeenCalled();
   });
@@ -59,7 +51,6 @@ describe("haptic feedback", () => {
   it("silently tolerates unsupported or failing vibration adapters", () => {
     const unsupported = createHapticEngine({
       vibrate: () => false,
-      reducedMotion: () => false,
       activeDocument: () => true,
     });
     expect(unsupported.play("purchase:drink")).toBe(false);
@@ -68,7 +59,6 @@ describe("haptic feedback", () => {
       vibrate: () => {
         throw new Error("unsupported");
       },
-      reducedMotion: () => false,
       activeDocument: () => true,
     });
     expect(failing.play("purchase:drink")).toBe(false);
