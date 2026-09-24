@@ -446,12 +446,12 @@ const migrateVersionZero = (value: Record<string, unknown>): RunSaveDocumentV1 =
 };
 
 const migrateVersionOne = (value: Record<string, unknown>): Record<string, unknown> => {
-  const run = asRecord(value["run"], "save["run"]");
+  const run = asRecord(value["run"], "save.run");
   return {
     ...value,
     saveSchemaVersion: RUN_SAVE_SCHEMA_VERSION,
     run: {
-      ..["run"],
+      ...run,
       phase: Object.freeze({ kind: "deciding" }),
     },
   };
@@ -542,7 +542,7 @@ export const restoreEnvironmentRandom = (
 
   for (let day = 1; day <= currentDay; day += 1) {
     const generated = generateEnvironment(dayNumber(day), random);
-    const historical = snapshot["state"]["ledger"][day - 1]?["environment"];
+    const historical = snapshot["state"]["ledger"][day - 1]?.environment;
     const expected = day === currentDay ? snapshot["environment"] : historical;
     if (expected === undefined || !environmentsEqual(generated, expected)) {
       return invalidSave(
@@ -557,7 +557,7 @@ export const restoreEnvironmentRandom = (
 
 export const decodeRunSaveDocument = (value: unknown): RunSnapshot => {
   const migrated = asRecord(migrateRunSaveDocument(value), "save");
-  const saveSchemaVersion = asSafeInteger(migrated["saveSchemaVersion"], "save["saveSchemaVersion"]");
+  const saveSchemaVersion = asSafeInteger(migrated["saveSchemaVersion"], "save.saveSchemaVersion");
   if (saveSchemaVersion !== RUN_SAVE_SCHEMA_VERSION) {
     throw new RunPersistenceError(
       "unsupported-save-version",
@@ -567,7 +567,7 @@ export const decodeRunSaveDocument = (value: unknown): RunSnapshot => {
 
   const simulationSchemaVersion = asSafeInteger(
     migrated["simulationSchemaVersion"],
-    "save["simulationSchemaVersion"]",
+    "save.simulationSchemaVersion",
   );
   if (simulationSchemaVersion !== SIMULATION_SCHEMA_VERSION) {
     throw new RunPersistenceError(
@@ -576,16 +576,16 @@ export const decodeRunSaveDocument = (value: unknown): RunSnapshot => {
     );
   }
 
-  const run = asRecord(migrated["run"], "save["run"]");
-  const state = parseGameState(run["state"], "save["run"]["state"]");
-  const environment = parseEnvironment(run["environment"], "save["run"]["environment"]");
-  const draft = parseDecision(run["draft"], "save["run"]["draft"]");
+  const run = asRecord(migrated["run"], "save.run");
+  const state = parseGameState(run["state"], "save.run.state");
+  const environment = parseEnvironment(run["environment"], "save.run.environment");
+  const draft = parseDecision(run["draft"], "save.run.draft");
   const snapshot = Object.freeze({
-    seed: seed(asNonNegativeInteger(run["seed"], "save["run"]["seed"]")),
+    seed: seed(asNonNegativeInteger(run["seed"], "save.run.seed")),
     state,
     environment,
     draft,
-    phase: parsePhase(run["phase"], state, environment, draft, "save["run"]["phase"]"),
+    phase: parsePhase(run["phase"], state, environment, draft, "save.run.phase"),
   }) satisfies RunSnapshot;
 
   restoreEnvironmentRandom(snapshot);
