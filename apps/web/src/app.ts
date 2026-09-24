@@ -45,7 +45,7 @@ import {
   type RunPhase,
   type RunSnapshot,
 } from "./persistence.js";
-import { createHapticEngine, type HapticCue } from "./haptics.js";
+import type { HapticCue, HapticEngine } from "./haptics.js";
 import { createPresentationDeadline } from "./presentation-deadline.js";
 import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import {
@@ -60,7 +60,7 @@ import {
   type RunLifecycleState,
 } from "./run-lifecycle.js";
 import { createLemonsvilleSceneView, type LemonsvilleSceneView } from "./scene.js";
-import { isGizmoEnabled, printGizmoHelp } from "./dev-gizmo.js";
+import { isGizmoEnabled } from "./dev-gizmo-flag.js";
 import { isSceneLauncherEnabled } from "./dev-scene-launcher-flag.js";
 import type { ScenePreset } from "./dev-scene-launcher.js";
 
@@ -313,7 +313,7 @@ export class LemonadeApp {
   readonly #runSeed: Seed;
   readonly #random: RandomSource;
   readonly #audio = createProceduralAudioEngine();
-  readonly #haptics = createHapticEngine();
+  readonly #haptics: Promise<HapticEngine> = import("./haptics.js").then(({ createHapticEngine }) => createHapticEngine());
   readonly #scene: LemonsvilleSceneView;
   readonly #persistenceEnabled: boolean;
 
@@ -357,8 +357,10 @@ export class LemonadeApp {
 
     const gizmoEnabled = isGizmoEnabled();
     if (gizmoEnabled) {
-      console.log("🎨 Gizmo mode enabled - type 'gizmoHelp()' for help");
-      printGizmoHelp();
+      void import("./dev-gizmo.js").then(({ printGizmoHelp }) => {
+        console.log("🎨 Gizmo mode enabled - type 'gizmoHelp()' for help");
+        printGizmoHelp();
+      });
     }
 
     const sceneLauncherEnabled = isSceneLauncherEnabled();
@@ -464,7 +466,7 @@ export class LemonadeApp {
     window.removeEventListener("pagehide", this.#onPageHide);
     this.#presentationDeadline.cancel();
     this.#clearFeedbackTimers();
-    this.#haptics.dispose();
+    void this.#haptics.then((haptics) => haptics.dispose());
     this.#scene.dispose();
     void this.#audio.dispose();
   }
@@ -473,7 +475,7 @@ export class LemonadeApp {
     if (document.visibilityState === "hidden") {
       this.#presentationDeadline.pause();
       this.#clearFeedbackTimers();
-      this.#haptics.cancel();
+      void this.#haptics.then((haptics) => haptics.cancel());
       void this.#audio.suspend();
     } else {
       this.#presentationDeadline.resume();
@@ -517,7 +519,7 @@ export class LemonadeApp {
     const affordability = this.#affordability();
     if (!affordability.affordable) return;
 
-    this.#haptics.play("purchase:serve");
+    void this.#haptics.then((haptics) => haptics.play("purchase:serve"));
 
     const resolution = simulateDay(
       this.#game,
@@ -715,7 +717,7 @@ export class LemonadeApp {
 
   #emitFeedback(audioCue: AudioCue, hapticCue: HapticCue): void {
     if (this.#disposed) return;
-    this.#haptics.play(hapticCue);
+    void this.#haptics.then((haptics) => haptics.play(hapticCue));
     void this.#audio.enable().then((enabled) => {
       if (enabled && !this.#disposed) this.#audio.play(audioCue);
     });
