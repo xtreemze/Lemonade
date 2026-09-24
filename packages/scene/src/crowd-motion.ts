@@ -287,28 +287,28 @@ const basePose = (
         ];
   const fallbackRoutes = viableRoutes.length > 0 ? viableRoutes : routes;
   const usesForegroundCohort = actorIndex < PASSERBY_FOREGROUND_TARGET && beat.startAtMs === 0;
-  const route =
+  const selectedRoute =
     (usesForegroundCohort
       ? (mainRoute ?? foregroundRoute)
       : beat.seesAdvertisement
         ? mainRoute
         : neighborhoodRoute) ?? fallbackRoutes[actorIndex % Math.max(1, fallbackRoutes.length)];
-  if (route === undefined) {
+  if (selectedRoute === undefined) {
     throw new Error("crowd motion requires generated sidewalk routes");
   }
 
-  const availableStartDistance = Math.max(0, route.total - requiredTravelDistance);
+  const availableStartDistance = Math.max(0, selectedRoute.total - requiredTravelDistance);
   const initialDistribution = deterministicUnit(actorIndex, 293 + beat.pedestrianIndex * 19);
   const entersAfterSimulationStart = beat.startAtMs > 0;
   const minimumStartDistance = beat.direction === -1 ? 0 : requiredTravelDistance;
   const maximumStartDistance =
-    beat.direction === -1 ? route.total - requiredTravelDistance : route.total;
+    beat.direction === -1 ? selectedRoute.total - requiredTravelDistance : selectedRoute.total;
   const foregroundSpread = Math.min(28, Math.max(0, maximumStartDistance - minimumStartDistance));
   const centeredStartDistance = Math.max(
     minimumStartDistance,
     Math.min(
       maximumStartDistance,
-      route.total / 2 + (initialDistribution - 0.5) * foregroundSpread,
+      selectedRoute.total / 2 + (initialDistribution - 0.5) * foregroundSpread,
     ),
   );
   const spawnDistance =
@@ -319,23 +319,23 @@ const basePose = (
           ? centeredStartDistance
           : availableStartDistance * initialDistribution
       : entersAfterSimulationStart
-        ? route.total
+        ? selectedRoute.total
         : usesForegroundCohort
           ? centeredStartDistance
-          : route.total - availableStartDistance * initialDistribution;
+          : selectedRoute.total - availableStartDistance * initialDistribution;
   const distanceTravelled = elapsedSeconds * worldSpeed;
   const routeDistance =
     beat.direction === -1 ? spawnDistance + distanceTravelled : spawnDistance - distanceTravelled;
-  if (routeDistance < 0 || routeDistance > route.total) {
+  if (routeDistance < 0 || routeDistance > selectedRoute.total) {
     return undefined;
   }
-  const progress = routeDistance / route.total;
-  const sampled = samplePedestrianRoute(route, routeDistance);
+  const progress = routeDistance / selectedRoute.total;
+  const sampled = samplePedestrianRoute(selectedRoute, routeDistance);
   const travelYaw = sampled.yaw + (beat.direction === -1 ? 0 : Math.PI);
   const normalX = -Math.sin(sampled.yaw);
   const normalZ = Math.cos(sampled.yaw);
   const laneFraction = (Math.abs(Math.trunc(beat.lane)) % 4) / 3;
-  const lateralLimit = Math.max(0.2, route.width / 2 - 0.22);
+  const lateralLimit = Math.max(0.2, selectedRoute.width / 2 - 0.22);
   const laneOffset = (laneFraction - 0.5) * lateralLimit * 1.45;
   const meander = Math.sin(progress * Math.PI * 2 + actorIndex * 0.83) * 0.045;
   const lateralOffset = Math.max(-lateralLimit, Math.min(lateralLimit, laneOffset + meander));
@@ -343,7 +343,7 @@ const basePose = (
   const attention = beat.seesAdvertisement ? Math.exp(-(((progress - 0.5) / 0.13) ** 2)) : 0;
   const signSide = beat.signIndex >= 0 && beat.signIndex % 2 === 0 ? -1 : 1;
   const signPull = attention * signSide * 0.22;
-  const attentionHeading = signSide * (route.side === "near" ? 0.48 : 0.32) * attention;
+  const attentionHeading = signSide * (selectedRoute.side === "near" ? 0.48 : 0.32) * attention;
   const heading = Math.PI / 2 - travelYaw + attentionHeading;
 
   return {
@@ -529,7 +529,7 @@ export const createCrowdSimulation = (
           throw new Error("crowd beat invariant failed");
         }
         if (elapsedMs < beat.startAtMs) {
-          return;
+          return undefined;
         }
         return basePose(beat, index, elapsedMs, safeDuration, routes);
       });
