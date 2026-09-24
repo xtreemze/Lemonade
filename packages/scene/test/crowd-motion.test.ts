@@ -12,6 +12,7 @@ import {
 import {
   createCrowdSimulation,
   crowdGroundClearance,
+  initializeStreetMotion,
   crowdPosesAt,
   neighborhoodSidewalkRoutes,
   walkingBodyLift,
@@ -171,6 +172,21 @@ describe("crowd motion", () => {
         Math.abs(last.z - first.z),
       );
     }
+  });
+
+  it("opens the destination home's door while a pedestrian enters", () => {
+    const scene = new Scene();
+    const property = new Group();
+    property.userData["propertyRole"] = "west-end";
+    const door = new Group();
+    door.userData["sceneRole"] = "house-door";
+    property.add(door);
+    scene.add(property);
+
+    const motion = initializeStreetMotion(scene, []);
+    motion.openHomeEntryDoors(["west-end"]);
+
+    expect(door.rotation.y).toBeCloseTo(-1.08, 6);
   });
 
   it("keeps bicycles and vehicles in paved-road lanes and faces X-axis travel", () => {
