@@ -205,12 +205,12 @@ export const populateWeatherObjects = (
   }
 
   const sunContainer = new Group();
-  sunContainer.userData.sceneRole = "sun-disc";
+  sunContainer.userData["sceneRole"] = "sun-disc";
   addSun(sunContainer, 0.82);
   weather.sunny.add(sunContainer);
 
   const partlySun = new Group();
-  partlySun.userData.sceneRole = "partly-sun";
+  partlySun.userData["sceneRole"] = "partly-sun";
   partlySun.position.set(0, 0.8, -2);
   addSun(partlySun, 0.62);
   weather["hot-and-dry"].add(partlySun);
@@ -223,7 +223,7 @@ export const populateWeatherObjects = (
   ] as const;
   for (const [i, baseLayout] of cloudPositions.entries()) {
     const partlyCloud = new Group();
-    partlyCloud.userData.sceneRole = `partly-cloud-${String(i)}`;
+    partlyCloud.userData["sceneRole"] = `partly-cloud-${String(i)}`;
     partlyCloud.position.set(
       baseLayout.position[0],
       baseLayout.position[1],
@@ -237,9 +237,9 @@ export const populateWeatherObjects = (
 
   const cloudyTownClouds = CLOUDY_TOWN_CLOUD_LAYOUT.map((layout, index) => {
     const cloud = new Group();
-    cloud.userData.sceneRole = "town-cloud";
-    cloud.userData.driftPhase = layout.driftPhase;
-    cloud.userData.baseX = layout.position[0];
+    cloud.userData["sceneRole"] = "town-cloud";
+    cloud.userData["driftPhase"] = layout.driftPhase;
+    cloud.userData["baseX"] = layout.position[0];
     addCloud(cloud, index % 2 === 0 ? 0xcb_d7_d7 : 0xd5_dd_dd);
     cloud.position.set(layout.position[0], layout.position[1], layout.position[2]);
     cloud.scale.setScalar(layout.scale);
@@ -249,11 +249,11 @@ export const populateWeatherObjects = (
 
   const thunderstormClouds = THUNDERSTORM_TOWN_CLOUD_LAYOUT.map((layout) => {
     const cloud = new Group();
-    cloud.userData.turbulentCloud = true;
-    cloud.userData.driftPhase = layout.driftPhase;
-    cloud.userData.baseX = layout.position[0];
-    cloud.userData.baseY = layout.position[1];
-    cloud.userData.baseZ = layout.position[2];
+    cloud.userData["turbulentCloud"] = true;
+    cloud.userData["driftPhase"] = layout.driftPhase;
+    cloud.userData["baseX"] = layout.position[0];
+    cloud.userData["baseY"] = layout.position[1];
+    cloud.userData["baseZ"] = layout.position[2];
     addCloud(cloud, 0x65_77_86);
     cloud.position.set(layout.position[0], layout.position[1], layout.position[2]);
     cloud.scale.setScalar(layout.scale);
@@ -262,7 +262,7 @@ export const populateWeatherObjects = (
   });
 
   const lightning = new Group();
-  lightning.userData.sceneRole = "storm-lightning";
+  lightning.userData["sceneRole"] = "storm-lightning";
   lightning.position.set(0.45, 0, 1.15);
   const lightningMaterials: MeshStandardMaterial[] = [];
   for (const [x, y, length, rotation] of [
@@ -282,9 +282,9 @@ export const populateWeatherObjects = (
 
   const rainGroups = thunderstormClouds.map((cloud, cloudIndex) => {
     const rainGroup = new Group();
-    rainGroup.userData.rainCloudIndex = cloudIndex;
-    rainGroup.userData.baseCloudX = cloud.position.x;
-    rainGroup.userData.baseCloudY = cloud.position.y;
+    rainGroup.userData["rainCloudIndex"] = cloudIndex;
+    rainGroup.userData["baseCloudX"] = cloud.position.x;
+    rainGroup.userData["baseCloudY"] = cloud.position.y;
 
     for (let dropIndex = 0; dropIndex < 6; dropIndex += 1) {
       const drop = new Mesh(
@@ -297,7 +297,7 @@ export const populateWeatherObjects = (
       rainGroup.add(drop);
     }
 
-    rainGroup.position.set(cloud.userData.baseX as number, cloud.userData.baseY as number, 0);
+    rainGroup.position.set(cloud.userData["baseX"] as number, cloud.userData["baseY"] as number, 0);
     weather.thunderstorm.add(rainGroup);
     return rainGroup;
   });
@@ -316,9 +316,9 @@ export const populateWeatherObjects = (
 
       cloudyTownClouds.forEach((cloud, index) => {
         const baseX =
-          typeof cloud.userData.baseX === "number" ? cloud.userData.baseX : cloud.position.x;
+          typeof cloud.userData["baseX"] === "number" ? cloud.userData["baseX"] : cloud.position.x;
         const phaseOffset =
-          typeof cloud.userData.driftPhase === "number" ? cloud.userData.driftPhase : index;
+          typeof cloud.userData["driftPhase"] === "number" ? cloud.userData["driftPhase"] : index;
         const localDrift = reducedMotion
           ? 0
           : Math.sin(elapsedMs * (0.000_16 + index * 0.000_025) + phaseOffset) *
@@ -328,11 +328,11 @@ export const populateWeatherObjects = (
 
       thunderstormClouds.forEach((cloud, cloudIndex) => {
         const baseX =
-          typeof cloud.userData.baseX === "number" ? cloud.userData.baseX : cloud.position.x;
+          typeof cloud.userData["baseX"] === "number" ? cloud.userData["baseX"] : cloud.position.x;
         const baseY =
-          typeof cloud.userData.baseY === "number" ? cloud.userData.baseY : cloud.position.y;
+          typeof cloud.userData["baseY"] === "number" ? cloud.userData["baseY"] : cloud.position.y;
         const phaseOffset =
-          typeof cloud.userData.driftPhase === "number" ? cloud.userData.driftPhase : 0;
+          typeof cloud.userData["driftPhase"] === "number" ? cloud.userData["driftPhase"] : 0;
 
         if (!reducedMotion) {
           const turbulence1 = Math.sin(elapsedMs * 0.0008 + phaseOffset) * 0.6;
