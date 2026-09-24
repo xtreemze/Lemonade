@@ -18,7 +18,7 @@ Delivered:
 
 ## Phase 1 — workspace/tooling migration (#1)
 
-Status: complete in the revival branch.
+Status: complete on the modern workspace.
 
 Current baseline:
 
@@ -26,12 +26,13 @@ Current baseline:
 - pnpm 12 workspace with generated lockfile;
 - TypeScript 6 strict mode;
 - native HTML/DOM/CSS application UI;
-- Vite 8 as a thin development/build layer;
+- Vite 8 as the sole browser development/build layer;
+- no direct esbuild build script, bundler entry point, or IIFE build pipeline; any esbuild package remaining in the dependency graph is transitive tooling owned by upstream packages;
 - Vitest 5;
 - Playwright;
-- ESLint flat config with type-aware rules;
+- Biome 2.5 with the complete stable rule set enabled, project/type/test/Playwright domains, formatting, import organization, fatal warnings/errors, scoped advisory rules, and repository-specific policy gates;
 - `pnpm/setup@v1` CI provisioning for pnpm + Node;
-- no Webpack, Babel, Travis, PostCSS compatibility layer, or runtime UI framework.
+- no Webpack, Babel, Travis, PostCSS compatibility layer, ESLint configuration, or runtime UI framework.
 
 Dependency changes and `pnpm-lock.yaml` remain one generated transaction performed by tooling. Never hand-edit the lockfile.
 

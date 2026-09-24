@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  clampSceneCameraZoom,
   DEFAULT_SCENE_CAMERA_ZOOM,
   MAX_SCENE_CAMERA_ZOOM,
   MIN_SCENE_CAMERA_ZOOM,
-  clampSceneCameraZoom,
   readSceneCameraZoomPreference,
+  type SceneCameraZoomStorage,
   sceneCameraZoomFromPinch,
   sceneCameraZoomFromWheel,
   sceneCameraZoomPreferenceKey,
   writeSceneCameraZoomPreference,
-  type SceneCameraZoomStorage,
 } from "../src/camera-zoom.js";
 
 class MemoryStorage implements SceneCameraZoomStorage {
@@ -39,22 +39,16 @@ describe("scene camera zoom preference", () => {
     const storage = new MemoryStorage();
     const key = sceneCameraZoomPreferenceKey("simulation", "desktop");
 
-    expect(readSceneCameraZoomPreference(storage, key)).toBe(
-      DEFAULT_SCENE_CAMERA_ZOOM,
-    );
+    expect(readSceneCameraZoomPreference(storage, key)).toBe(DEFAULT_SCENE_CAMERA_ZOOM);
 
     writeSceneCameraZoomPreference(storage, key, 1.35);
     expect(readSceneCameraZoomPreference(storage, key)).toBeCloseTo(1.35);
 
     storage.values.set(key, "999");
-    expect(readSceneCameraZoomPreference(storage, key)).toBe(
-      MAX_SCENE_CAMERA_ZOOM,
-    );
+    expect(readSceneCameraZoomPreference(storage, key)).toBe(MAX_SCENE_CAMERA_ZOOM);
 
     storage.values.set(key, "not-a-number");
-    expect(readSceneCameraZoomPreference(storage, key)).toBe(
-      DEFAULT_SCENE_CAMERA_ZOOM,
-    );
+    expect(readSceneCameraZoomPreference(storage, key)).toBe(DEFAULT_SCENE_CAMERA_ZOOM);
   });
 
   it("uses wheel direction to zoom in and out with hard bounds", () => {
@@ -71,8 +65,6 @@ describe("scene camera zoom preference", () => {
   it("maps pinch expansion and contraction to optical zoom", () => {
     expect(sceneCameraZoomFromPinch(1, 100, 130)).toBeCloseTo(1.3);
     expect(sceneCameraZoomFromPinch(1, 100, 80)).toBeCloseTo(0.8);
-    expect(sceneCameraZoomFromPinch(1.4, 0, 120)).toBe(
-      clampSceneCameraZoom(1.4),
-    );
+    expect(sceneCameraZoomFromPinch(1.4, 0, 120)).toBe(clampSceneCameraZoom(1.4));
   });
 });

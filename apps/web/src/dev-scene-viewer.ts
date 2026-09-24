@@ -7,7 +7,7 @@
  * Enable with: `localStorage.setItem('LEMONADE_DEV_SCENE_VIEWER', '1')`
  */
 
-import type { SceneWeather, ScenePhase, LemonsvilleSceneState } from "@lemonade/scene";
+import type { LemonsvilleSceneState, ScenePhase, SceneWeather } from "@lemonade/scene";
 import { createLemonsvilleScene } from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
 // TODO: Integrate gizmo controller for 3D editor tool (game-engine-like scene manipulation)
@@ -182,7 +182,7 @@ export const createPersistentSceneViewer = (
     durationMs,
     confidence: 3,
     nextConfidence: 3,
-    characterSeed: 12345,
+    characterSeed: 12_345,
     dayNumber: 1,
     storyboard: createStreetStoryboard({
       durationMs,

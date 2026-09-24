@@ -1,21 +1,9 @@
-import type {
-  ResidentialLayout,
-  ResidentialPoint,
-} from "./residential-layout.js";
-import {
-  STREET_LAYOUT,
-  type SidewalkSide,
-} from "./street-layout.js";
+import type { ResidentialLayout, ResidentialPoint } from "./residential-layout.js";
+import { type SidewalkSide, STREET_LAYOUT } from "./street-layout.js";
 
-export type NavigationNodeRole =
-  | "sidewalk"
-  | "stand-entry"
-  | "stand-service";
+export type NavigationNodeRole = "sidewalk" | "stand-entry" | "stand-service";
 
-export type NavigationEdgeKind =
-  | "sidewalk"
-  | "crossing"
-  | "stand-access";
+export type NavigationEdgeKind = "sidewalk" | "crossing" | "stand-access";
 
 export type NavigationNode = Readonly<{
   id: string;
@@ -59,11 +47,7 @@ const distinctSorted = (values: readonly number[]): readonly number[] =>
 const verticalRoadCenters = (layout: ResidentialLayout): readonly number[] =>
   distinctSorted(
     layout.exclusions
-      .filter(
-        (rect) =>
-          rect.role === "road" &&
-          rect.maxX - rect.minX < rect.maxZ - rect.minZ,
-      )
+      .filter((rect) => rect.role === "road" && rect.maxX - rect.minX < rect.maxZ - rect.minZ)
       .map((rect) => (rect.minX + rect.maxX) / 2),
   );
 
@@ -73,9 +57,7 @@ const sidewalkAnchors = (layout: ResidentialLayout): readonly number[] =>
     0,
     60,
     ...verticalRoadCenters(layout),
-    ...layout.frontProperties.map((property) =>
-      Math.max(-60, Math.min(60, property.houseX)),
-    ),
+    ...layout.frontProperties.map((property) => Math.max(-60, Math.min(60, property.houseX))),
   ]);
 
 const addDirectedEdge = (
@@ -104,10 +86,7 @@ const addBidirectionalEdge = (
   addDirectedEdge(edges, right, left, kind);
 };
 
-const findNode = (
-  nodes: readonly NavigationNode[],
-  id: string,
-): NavigationNode => {
+const findNode = (nodes: readonly NavigationNode[], id: string): NavigationNode => {
   const node = nodes.find((candidate) => candidate.id === id);
   if (node === undefined) {
     throw new Error(`navigation node not found: ${id}`);
@@ -122,10 +101,7 @@ export const createNeighborhoodNavigationGraph = (
   const nodes: NavigationNode[] = [];
 
   for (const side of ["near", "far"] as const) {
-    const sidewalk =
-      side === "near"
-        ? STREET_LAYOUT.nearSidewalk
-        : STREET_LAYOUT.farSidewalk;
+    const sidewalk = side === "near" ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
     for (const x of anchors) {
       nodes.push(
         Object.freeze({
@@ -197,20 +173,20 @@ export const nearestSidewalkNode = (
   point: ResidentialPoint,
   side: SidewalkSide,
 ): NavigationNode => {
-  const candidates = graph.nodes.filter(
-    (node) => node.role === "sidewalk" && node.side === side,
-  );
+  const candidates = graph.nodes.filter((node) => node.role === "sidewalk" && node.side === side);
   const first = candidates[0];
   if (first === undefined) {
     throw new Error(`navigation graph has no ${side} sidewalk nodes`);
   }
 
-  return candidates.reduce((best, candidate) =>
-    Math.hypot(candidate.x - point.x, candidate.z - point.z) <
-    Math.hypot(best.x - point.x, best.z - point.z)
-      ? candidate
-      : best,
-  first);
+  return candidates.reduce(
+    (best, candidate) =>
+      Math.hypot(candidate.x - point.x, candidate.z - point.z) <
+      Math.hypot(best.x - point.x, best.z - point.z)
+        ? candidate
+        : best,
+    first,
+  );
 };
 
 export const shortestNavigationPath = (
@@ -240,25 +216,29 @@ export const shortestNavigationPath = (
       }
     }
 
-    if (currentId === null || !Number.isFinite(currentDistance)) break;
-    if (currentId === endNodeId) break;
+    if (currentId === null || !Number.isFinite(currentDistance)) {
+      break;
+    }
+    if (currentId === endNodeId) {
+      break;
+    }
     unvisited.delete(currentId);
 
     for (const edge of graph.edges) {
-      if (edge.from !== currentId || !unvisited.has(edge.to)) continue;
+      if (edge.from !== currentId || !unvisited.has(edge.to)) {
+        continue;
+      }
       const candidateDistance = currentDistance + edge.cost;
-      const knownDistance =
-        distances.get(edge.to) ?? Number.POSITIVE_INFINITY;
-      if (candidateDistance >= knownDistance) continue;
+      const knownDistance = distances.get(edge.to) ?? Number.POSITIVE_INFINITY;
+      if (candidateDistance >= knownDistance) {
+        continue;
+      }
       distances.set(edge.to, candidateDistance);
       previous.set(edge.to, currentId);
     }
   }
 
-  if (
-    startNodeId !== endNodeId &&
-    !previous.has(endNodeId)
-  ) {
+  if (startNodeId !== endNodeId && !previous.has(endNodeId)) {
     return Object.freeze([]);
   }
 
@@ -266,7 +246,9 @@ export const shortestNavigationPath = (
   let current = endNodeId;
   while (current !== startNodeId) {
     const parent = previous.get(current);
-    if (parent === undefined) return Object.freeze([]);
+    if (parent === undefined) {
+      return Object.freeze([]);
+    }
     reversed.push(parent);
     current = parent;
   }

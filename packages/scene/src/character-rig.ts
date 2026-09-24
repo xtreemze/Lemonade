@@ -1,18 +1,7 @@
-import {
-  Group,
-  Mesh,
-  MeshStandardMaterial,
-} from "three";
-
-import {
-  CHARACTER_ANATOMY,
-  type CharacterPose,
-} from "./character-model.js";
+import { Group, Mesh, MeshStandardMaterial } from "three";
 import type { CharacterGeometrySet } from "./character-geometry.js";
-import {
-  characterProfileFor,
-  type CharacterProfile,
-} from "./characters.js";
+import { CHARACTER_ANATOMY, type CharacterPose } from "./character-model.js";
+import { type CharacterProfile, characterProfileFor } from "./characters.js";
 import { WORLD_SCALE } from "./world-scale.js";
 
 export type LimbRig = Readonly<{
@@ -48,17 +37,11 @@ const createLimb = (
 ): LimbRig => {
   const root = new Group();
 
-  const upper = new Mesh(
-    foot ? geometries.legUpper : geometries.armUpper,
-    material(upperColor),
-  );
+  const upper = new Mesh(foot ? geometries.legUpper : geometries.armUpper, material(upperColor));
   upper.position.y = -upperLength / 2;
   root.add(upper);
 
-  const joint = new Mesh(
-    foot ? geometries.legJoint : geometries.armJoint,
-    material(lowerColor),
-  );
+  const joint = new Mesh(foot ? geometries.legJoint : geometries.armJoint, material(lowerColor));
   joint.position.y = -upperLength;
   root.add(joint);
 
@@ -71,15 +54,8 @@ const createLimb = (
   lowerMesh.position.y = -lowerLength / 2;
   lower.add(lowerMesh);
 
-  const extremity = new Mesh(
-    foot ? geometries.foot : geometries.hand,
-    material(extremityColor),
-  );
-  extremity.position.set(
-    0,
-    -lowerLength,
-    foot ? CHARACTER_ANATOMY.foot.height * 0.5 : 0,
-  );
+  const extremity = new Mesh(foot ? geometries.foot : geometries.hand, material(extremityColor));
+  extremity.position.set(0, -lowerLength, foot ? CHARACTER_ANATOMY.foot.height * 0.5 : 0);
   lower.add(extremity);
   root.add(lower);
 
@@ -96,16 +72,10 @@ export const createThreeCharacterRig = (
   root.userData["characterRig"] = "shared-three";
   root.userData["characterProfileIndex"] = index;
 
-  const torso = new Mesh(
-    geometries.torso,
-    material(profile.clothingColor),
-  );
+  const torso = new Mesh(geometries.torso, material(profile.clothingColor));
   torso.position.y = CHARACTER_ANATOMY.torso.centerY;
 
-  const head = new Mesh(
-    geometries.head,
-    material(profile.skinColor),
-  );
+  const head = new Mesh(geometries.head, material(profile.skinColor));
   head.scale.set(0.94, 1.04, 0.9);
   head.position.y = CHARACTER_ANATOMY.head.centerY;
   root.add(torso, head);
@@ -143,7 +113,7 @@ export const createThreeCharacterRig = (
     CHARACTER_ANATOMY.leg.lowerLength,
     profile.trouserColor,
     profile.trouserColor,
-    0x30383d,
+    0x30_38_3d,
     true,
   );
   const rightLeg = createLimb(
@@ -152,19 +122,11 @@ export const createThreeCharacterRig = (
     CHARACTER_ANATOMY.leg.lowerLength,
     profile.trouserColor,
     profile.trouserColor,
-    0x30383d,
+    0x30_38_3d,
     true,
   );
-  leftLeg.root.position.set(
-    -CHARACTER_ANATOMY.leg.hipOffsetX,
-    CHARACTER_ANATOMY.leg.hipY,
-    0,
-  );
-  rightLeg.root.position.set(
-    CHARACTER_ANATOMY.leg.hipOffsetX,
-    CHARACTER_ANATOMY.leg.hipY,
-    0,
-  );
+  leftLeg.root.position.set(-CHARACTER_ANATOMY.leg.hipOffsetX, CHARACTER_ANATOMY.leg.hipY, 0);
+  rightLeg.root.position.set(CHARACTER_ANATOMY.leg.hipOffsetX, CHARACTER_ANATOMY.leg.hipY, 0);
   root.add(leftArm.root, rightArm.root, leftLeg.root, rightLeg.root);
 
   root.scale.set(
@@ -196,27 +158,14 @@ export const resetThreeCharacterPose = (rig: ThreeCharacterRig): void => {
   }
 };
 
-export const applyThreeCharacterPose = (
-  rig: ThreeCharacterRig,
-  pose: CharacterPose,
-): void => {
+export const applyThreeCharacterPose = (rig: ThreeCharacterRig, pose: CharacterPose): void => {
   resetThreeCharacterPose(rig);
 
-  rig.torso.position.y =
-    CHARACTER_ANATOMY.torso.centerY + pose.chest.lift;
-  rig.head.position.y =
-    CHARACTER_ANATOMY.head.centerY + pose.head.lift;
+  rig.torso.position.y = CHARACTER_ANATOMY.torso.centerY + pose.chest.lift;
+  rig.head.position.y = CHARACTER_ANATOMY.head.centerY + pose.head.lift;
 
-  rig.torso.rotation.set(
-    pose.chest.rotation.x,
-    pose.chest.rotation.y,
-    pose.chest.rotation.z,
-  );
-  rig.head.rotation.set(
-    pose.head.rotation.x,
-    pose.head.rotation.y,
-    pose.head.rotation.z,
-  );
+  rig.torso.rotation.set(pose.chest.rotation.x, pose.chest.rotation.y, pose.chest.rotation.z);
+  rig.head.rotation.set(pose.head.rotation.x, pose.head.rotation.y, pose.head.rotation.z);
 
   for (const index of [0, 1] as const) {
     const armPose = pose.arms[index];

@@ -42,25 +42,37 @@ export const summarizeCompletedWeek = (
   entries: readonly DailyLedgerEntry[],
 ): WeeklyReport | null => {
   const latest = entries.at(-1);
-  if (latest === undefined) return null;
+  if (latest === undefined) {
+    return null;
+  }
 
   const endDay = Number(latest.day);
-  if (endDay % DAYS_PER_WEEK !== 0 || entries.length < DAYS_PER_WEEK) return null;
+  if (endDay % DAYS_PER_WEEK !== 0 || entries.length < DAYS_PER_WEEK) {
+    return null;
+  }
 
   const startDay = endDay - (DAYS_PER_WEEK - 1);
   const weekEntries = entries.slice(-DAYS_PER_WEEK);
 
   for (const [index, entry] of weekEntries.entries()) {
-    if (Number(entry.day) !== startDay + index) return null;
+    if (Number(entry.day) !== startDay + index) {
+      return null;
+    }
   }
 
   let best = weekEntries[0];
   let worst = weekEntries[0];
-  if (best === undefined || worst === undefined) return null;
+  if (best === undefined || worst === undefined) {
+    return null;
+  }
 
   for (const entry of weekEntries.slice(1)) {
-    if (Number(entry.net) > Number(best.net)) best = entry;
-    if (Number(entry.net) < Number(worst.net)) worst = entry;
+    if (Number(entry.net) > Number(best.net)) {
+      best = entry;
+    }
+    if (Number(entry.net) < Number(worst.net)) {
+      worst = entry;
+    }
   }
 
   const prepared = sum(weekEntries, (entry) => Number(entry.decision.glasses));
@@ -83,8 +95,7 @@ export const summarizeCompletedWeek = (
     expensesCents,
     netCents,
     averageDailyNetCents: Math.round(netCents / DAYS_PER_WEEK),
-    sellThroughBasisPoints:
-      prepared === 0 ? 0 : Math.round((sold / prepared) * 10_000),
+    sellThroughBasisPoints: prepared === 0 ? 0 : Math.round((sold / prepared) * 10_000),
     profitableDays,
     lossDays,
     endingCashCents: Number(latest.endingCash),

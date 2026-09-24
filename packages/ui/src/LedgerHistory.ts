@@ -1,6 +1,6 @@
 import type { DailyLedgerEntry } from "@lemonade/simulation";
 
-import { projectLedger, sellThroughBasisPoints, type LedgerPoint } from "./ledger.js";
+import { type LedgerPoint, projectLedger, sellThroughBasisPoints } from "./ledger.js";
 
 const CHART_WIDTH = 300;
 const CHART_HEIGHT = 200;
@@ -21,7 +21,9 @@ const seriesPoints = (
   maxValue: number,
   chartHeight: number,
 ): string => {
-  if (values.length === 0) return "";
+  if (values.length === 0) {
+    return "";
+  }
 
   const usableWidth = CHART_WIDTH - CHART_PADDING * 2;
   const usableHeight = chartHeight - CHART_PADDING * 2;
@@ -78,7 +80,9 @@ const createElement = <K extends keyof HTMLElementTagNameMap>(
   className?: string,
 ): HTMLElementTagNameMap[K] => {
   const element = document.createElement(tagName);
-  if (className !== undefined) element.className = className;
+  if (className !== undefined) {
+    element.className = className;
+  }
   return element;
 };
 

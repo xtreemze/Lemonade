@@ -56,7 +56,7 @@ export const dayNumber = (value: number): DayNumber => {
 
 export const seed = (value: number): Seed => {
   requireNonNegativeInteger(value, "seed");
-  if (value > 0xffff_ffff) {
+  if (value > 0xff_ff_ff_ff) {
     throw new RangeError("seed must fit in an unsigned 32-bit integer");
   }
   return value as Seed;

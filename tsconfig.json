@@ -2,13 +2,7 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": [
-      "node",
-      "@playwright/test"
-    ]
+    "types": ["node", "@playwright/test"]
   },
-  "include": [
-    "playwright*.config.ts",
-    "e2e/**/*.ts"
-  ]
+  "include": ["playwright*.config.ts", "e2e/**/*.ts"]
 }

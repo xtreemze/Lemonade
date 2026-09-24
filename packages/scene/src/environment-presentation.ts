@@ -1,8 +1,4 @@
-export type EnvironmentWeatherKind =
-  | "sunny"
-  | "cloudy"
-  | "hot-and-dry"
-  | "thunderstorm";
+export type EnvironmentWeatherKind = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
 
 export type EnvironmentPresentationPhase = "idle" | "forecast" | "simulation";
 
@@ -28,24 +24,27 @@ const safeDuration = (durationMs: number): number =>
   Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
 
 const safeElapsed = (elapsedMs: number, durationMs: number): number =>
-  Math.min(
-    safeDuration(durationMs),
-    Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0),
-  );
+  Math.min(safeDuration(durationMs), Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0));
 
 export const environmentBusinessDayProgressAt = (
   phase: EnvironmentPresentationPhase,
   elapsedMs: number,
   durationMs: number,
 ): number => {
-  if (phase === "forecast") return 0.04;
-  if (phase !== "simulation") return 0.56;
+  if (phase === "forecast") {
+    return 0.04;
+  }
+  if (phase !== "simulation") {
+    return 0.56;
+  }
   return 0.06 + clamp01(safeElapsed(elapsedMs, durationMs) / safeDuration(durationMs)) * 0.9;
 };
 
 const flashPulse = (progress: number, center: number, width: number): number => {
   const distance = Math.abs(progress - center);
-  if (distance >= width) return 0;
+  if (distance >= width) {
+    return 0;
+  }
   const normalized = 1 - distance / width;
   return normalized * normalized;
 };
@@ -56,7 +55,9 @@ export const environmentLightningFlashAt = (
   elapsedMs: number,
   durationMs: number,
 ): number => {
-  if (weather !== "thunderstorm" || phase === "idle") return 0;
+  if (weather !== "thunderstorm" || phase === "idle") {
+    return 0;
+  }
   const progress = safeElapsed(elapsedMs, durationMs) / safeDuration(durationMs);
   return Math.max(
     flashPulse(progress, 0.2, 0.022),
@@ -95,53 +96,28 @@ export const environmentOccurrenceSchedule = (
   phase: EnvironmentPresentationPhase,
   durationMs: number,
 ): readonly EnvironmentOccurrence[] => {
-  if (phase === "idle") return Object.freeze([]);
+  if (phase === "idle") {
+    return Object.freeze([]);
+  }
 
   const result: EnvironmentOccurrence[] = [];
 
   if (weather === "thunderstorm") {
     [0.2, 0.57, 0.78].forEach((progress, index) => {
-      result.push(
-        occurrence(
-          phase,
-          weather,
-          "thunder",
-          index,
-          atProgress(durationMs, progress),
-        ),
-      );
+      result.push(occurrence(phase, weather, "thunder", index, atProgress(durationMs, progress)));
     });
     [0.34, 0.72].forEach((progress, index) => {
-      result.push(
-        occurrence(
-          phase,
-          weather,
-          "gust",
-          index,
-          atProgress(durationMs, progress),
-        ),
-      );
+      result.push(occurrence(phase, weather, "gust", index, atProgress(durationMs, progress)));
     });
   }
 
   if (weather === "sunny" && phase === "simulation") {
     [0.14, 0.43, 0.72].forEach((progress, index) => {
-      result.push(
-        occurrence(
-          phase,
-          weather,
-          "birdsong",
-          index,
-          atProgress(durationMs, progress),
-        ),
-      );
+      result.push(occurrence(phase, weather, "birdsong", index, atProgress(durationMs, progress)));
     });
   }
 
-  result.sort(
-    (left, right) =>
-      left.atMs - right.atMs || left.id.localeCompare(right.id),
-  );
+  result.sort((left, right) => left.atMs - right.atMs || left.id.localeCompare(right.id));
   return Object.freeze(result);
 };
 
@@ -168,25 +144,14 @@ export const environmentPresentationFrameAt = (
   durationMs: number,
   reducedMotion: boolean,
 ): EnvironmentPresentationFrame => {
-  const businessDayProgress = environmentBusinessDayProgressAt(
-    phase,
-    elapsedMs,
-    durationMs,
-  );
+  const businessDayProgress = environmentBusinessDayProgressAt(phase, elapsedMs, durationMs);
   const activePresentation = phase === "idle" ? 0 : 1;
   const windPulse =
-    phase === "idle"
-      ? 0
-      : 0.88 + Math.sin(safeElapsed(elapsedMs, durationMs) * 0.00063) * 0.12;
+    phase === "idle" ? 0 : 0.88 + Math.sin(safeElapsed(elapsedMs, durationMs) * 0.000_63) * 0.12;
 
   return Object.freeze({
     businessDayProgress,
-    lightningFlash: environmentLightningFlashAt(
-      weather,
-      phase,
-      elapsedMs,
-      durationMs,
-    ),
+    lightningFlash: environmentLightningFlashAt(weather, phase, elapsedMs, durationMs),
     windIntensity: WEATHER_WIND[weather] * windPulse * activePresentation,
     precipitation: weather === "thunderstorm" && phase !== "idle" ? 1 : 0,
     motionScale: reducedMotion ? 0 : 1,

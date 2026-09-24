@@ -38,19 +38,13 @@ export const WORLD_SCALE = Object.freeze({
 export const renderedCharacterHeight = (heightScale: number): number => {
   const safeScale = Number.isFinite(heightScale) ? heightScale : 1;
   return (
-    WORLD_SCALE.character.modeledStandingHeight *
-    WORLD_SCALE.character.renderScale *
-    safeScale
+    WORLD_SCALE.character.modeledStandingHeight * WORLD_SCALE.character.renderScale * safeScale
   );
 };
 
 export const characterGroundClearance = (heightScale: number): number => {
   const safeScale = Number.isFinite(heightScale) ? heightScale : 1;
-  return (
-    WORLD_SCALE.character.modeledFootDrop *
-    WORLD_SCALE.character.renderScale *
-    safeScale
-  );
+  return WORLD_SCALE.character.modeledFootDrop * WORLD_SCALE.character.renderScale * safeScale;
 };
 
 export const tallestAdultRenderedHeight = (): number =>

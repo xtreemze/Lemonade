@@ -50,48 +50,49 @@
   "linter": {
     "enabled": true,
     "domains": {
-      "project": "recommended",
-      "types": "all",
+      "astro": "none",
+      "drizzle": "none",
+      "next": "none",
+      "playwright": "all",
+      "project": "all",
+      "qwik": "none",
+      "react": "none",
+      "reactNative": "none",
+      "solid": "none",
+      "svelte": "none",
+      "tailwind": "none",
       "test": "all",
-      "playwright": "all"
+      "turborepo": "none",
+      "types": "all",
+      "vue": "none"
     },
     "rules": {
-      "preset": "recommended",
-      "complexity": {
-        "useRegexLiterals": "error"
-      },
-      "correctness": {
-        "useParseIntRadix": "error"
-      },
-      "security": {
-        "noGlobalEval": "error"
-      },
-      "style": {
-        "noNonNullAssertion": "error",
-        "useConsistentObjectDefinitions": "error",
-        "useExportType": "error",
-        "useImportType": "error",
-        "useReadonlyClassProperties": "error",
-        "useThrowOnlyError": "error"
-      },
-      "suspicious": {
-        "noAlert": "error",
-        "noDoubleEquals": "error",
-        "noExplicitAny": "error",
-        "noUnusedExpressions": "error"
-      },
+      "preset": "all",
       "nursery": {
         "noImpliedEval": "error",
         "useExhaustiveSwitchCases": "error"
+      },
+      "correctness": {
+        "useImportExtensions": "off"
+      },
+      "complexity": {
+        "noForEach": "off",
+        "noVoid": "off",
+        "useMaxParams": "info"
+      },
+      "style": {
+        "useDefaultSwitchClause": "off",
+        "useGlobalThis": "info",
+        "noParameterProperties": "info"
+      },
+      "performance": {
+        "useTopLevelRegex": "info"
       }
     }
   },
   "overrides": [
     {
-      "includes": [
-        "apps/web/src/app.ts",
-        "e2e/renderer-stress.spec.ts"
-      ],
+      "includes": ["apps/web/src/app.ts", "e2e/renderer-stress.spec.ts"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -101,9 +102,7 @@
       }
     },
     {
-      "includes": [
-        "packages/simulation/src/**/*.ts"
-      ],
+      "includes": ["packages/simulation/src/**/*.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -172,6 +171,113 @@
                 ]
               }
             }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/**/*.mjs", "apps/web/scripts/**/*.mjs"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/dev-*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["playwright*.config.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/scene-runtime.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/certify.mjs"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnresolvedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["e2e/**/*.ts", "playwright*.config.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "suspicious": {
+            "noMisplacedAssertion": "info"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["e2e/**/*.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnresolvedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.test.ts", "**/*.spec.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noMisplacedAssertion": "info"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/vite.config.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/*/src/index.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "info",
+            "noReExportAll": "info"
           }
         }
       }

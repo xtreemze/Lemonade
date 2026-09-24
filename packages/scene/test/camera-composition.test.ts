@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  SIMULATION_CAMERA_ZOOM,
-  sceneCameraComposition,
-} from "../src/storyboard.js";
+import { SIMULATION_CAMERA_ZOOM, sceneCameraComposition } from "../src/storyboard.js";
 
-const projectionScale = (fovDegrees: number): number =>
-  1 / Math.tan((fovDegrees * Math.PI) / 360);
+const projectionScale = (fovDegrees: number): number => 1 / Math.tan((fovDegrees * Math.PI) / 360);
 
 describe("simulation camera composition", () => {
   it("applies an exact 20% optical zoom to the active simulation shot only", () => {

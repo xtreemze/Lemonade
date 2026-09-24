@@ -1,16 +1,15 @@
-import {
-  LEGACY_STARTING_BALANCE_CENTS,
-  type OperatingScaleRules,
-} from "@lemonade/simulation";
+import { LEGACY_STARTING_BALANCE_CENTS, type OperatingScaleRules } from "@lemonade/simulation";
 
-const formatMoney = (cents: number): string => "$" + (cents / 100).toFixed(2);
+const formatMoney = (cents: number): string => `$${(cents / 100).toFixed(2)}`;
 
 export const affordabilityShortfallMessage = (
   spendCents: number,
   operatingFundsCents: number,
 ): string | null => {
   const shortfallCents = spendCents - operatingFundsCents;
-  if (shortfallCents <= 0) return null;
+  if (shortfallCents <= 0) {
+    return null;
+  }
   return `This plan is ${formatMoney(shortfallCents)} over available operating funds. Reduce glasses or signs.`;
 };
 
@@ -18,10 +17,11 @@ export const standLevelTransitionMessage = (
   previous: OperatingScaleRules,
   next: OperatingScaleRules,
 ): string | null => {
-  if (previous.level === next.level) return null;
+  if (previous.level === next.level) {
+    return null;
+  }
 
-  const envelope =
-    `${String(next.maxGlasses)} cups, ${String(next.maxSigns)} signs, ${formatMoney(next.maxPriceCents)} per cup`;
+  const envelope = `${String(next.maxGlasses)} cups, ${String(next.maxSigns)} signs, ${formatMoney(next.maxPriceCents)} per cup`;
 
   return next.level > previous.level
     ? `Stand level ${String(next.level)} unlocked — tomorrow: up to ${envelope}.`

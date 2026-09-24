@@ -1,27 +1,9 @@
-import type {
-  BasisPoints,
-  CustomerId,
-  DayNumber,
-  MoneyCents,
-  Seed,
-} from "./primitives.js";
-import {
-  basisPoints,
-  customerId,
-  moneyCents,
-  seed,
-} from "./primitives.js";
-import {
-  createSeededRandom,
-  type RandomSource,
-} from "./rng.js";
+import type { BasisPoints, CustomerId, DayNumber, MoneyCents, Seed } from "./primitives.js";
+import { basisPoints, customerId, moneyCents, seed } from "./primitives.js";
+import { createSeededRandom, type RandomSource } from "./rng.js";
 import type { OperatingScaleLevel } from "./scale.js";
 
-export type CustomerType =
-  | "impulse"
-  | "price-sensitive"
-  | "regular"
-  | "destination";
+export type CustomerType = "impulse" | "price-sensitive" | "regular" | "destination";
 
 export type CustomerTraits = Readonly<{
   id: CustomerId;
@@ -103,20 +85,19 @@ export type AudienceScaleTargets = Readonly<{
 
 export const AUDIENCE_MODEL_VERSION = 4 as const;
 
-const AUDIENCE_SCALE_TARGETS: Readonly<
-  Record<OperatingScaleLevel, AudienceScaleTargets>
-> = Object.freeze({
-  1: Object.freeze({ neighborhoodSize: 48, dailyAudience: 24 }),
-  2: Object.freeze({ neighborhoodSize: 144, dailyAudience: 72 }),
-  3: Object.freeze({ neighborhoodSize: 384, dailyAudience: 200 }),
-  4: Object.freeze({ neighborhoodSize: 900, dailyAudience: 480 }),
-});
+const AUDIENCE_SCALE_TARGETS: Readonly<Record<OperatingScaleLevel, AudienceScaleTargets>> =
+  Object.freeze({
+    1: Object.freeze({ neighborhoodSize: 48, dailyAudience: 24 }),
+    2: Object.freeze({ neighborhoodSize: 144, dailyAudience: 72 }),
+    3: Object.freeze({ neighborhoodSize: 384, dailyAudience: 200 }),
+    4: Object.freeze({ neighborhoodSize: 900, dailyAudience: 480 }),
+  });
 
 const hashText = (initial: number, value: string): number => {
   let hash = initial >>> 0;
   for (let index = 0; index < value.length; index += 1) {
     hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x0100_0193);
+    hash = Math.imul(hash, 0x01_00_01_93);
   }
   hash ^= 0xff;
   return hash >>> 0;
@@ -127,18 +108,12 @@ export const deriveMarketSeed = (
   stream: MarketRandomStream,
   scope: MarketRandomScope = Object.freeze({}),
 ): Seed => {
-  let hash = 0x811c_9dc5;
+  let hash = 0x81_1c_9d_c5;
   hash = hashText(hash, `audience-model-${String(AUDIENCE_MODEL_VERSION)}`);
   hash = hashText(hash, String(Number(runSeed)));
   hash = hashText(hash, stream);
-  hash = hashText(
-    hash,
-    scope.day === undefined ? "-" : String(Number(scope.day)),
-  );
-  hash = hashText(
-    hash,
-    scope.customerId === undefined ? "-" : String(Number(scope.customerId)),
-  );
+  hash = hashText(hash, scope.day === undefined ? "-" : String(Number(scope.day)));
+  hash = hashText(hash, scope.customerId === undefined ? "-" : String(Number(scope.customerId)));
   return seed(hash);
 };
 
@@ -148,22 +123,24 @@ export const createMarketRandom = (
   scope: MarketRandomScope = Object.freeze({}),
 ): RandomSource => createSeededRandom(deriveMarketSeed(runSeed, stream, scope));
 
-export const audienceTargetsForLevel = (
-  level: OperatingScaleLevel,
-): AudienceScaleTargets => AUDIENCE_SCALE_TARGETS[level];
+export const audienceTargetsForLevel = (level: OperatingScaleLevel): AudienceScaleTargets =>
+  AUDIENCE_SCALE_TARGETS[level];
 
 const customerTypeFor = (random: RandomSource): CustomerType => {
   const roll = random.nextInt(0, 100);
-  if (roll < 35) return "impulse";
-  if (roll < 65) return "price-sensitive";
-  if (roll < 85) return "regular";
+  if (roll < 35) {
+    return "impulse";
+  }
+  if (roll < 65) {
+    return "price-sensitive";
+  }
+  if (roll < 85) {
+    return "regular";
+  }
   return "destination";
 };
 
-export const customerTraitsFor = (
-  runSeed: Seed,
-  id: CustomerId,
-): CustomerTraits => {
+export const customerTraitsFor = (runSeed: Seed, id: CustomerId): CustomerTraits => {
   const random = createMarketRandom(runSeed, "customer-traits", {
     customerId: id,
   });
@@ -175,10 +152,10 @@ export const customerTraitsFor = (
       customerId: id,
     }),
     intrinsicPriceTolerance: moneyCents(random.nextInt(125, 701)),
-    advertisingResponsiveness: basisPoints(random.nextInt(3_500, 9_501)),
-    familiarity: basisPoints(random.nextInt(1_000, 9_001)),
-    loyalty: basisPoints(random.nextInt(1_500, 9_501)),
-    weatherCommitment: basisPoints(random.nextInt(2_500, 10_001)),
+    advertisingResponsiveness: basisPoints(random.nextInt(3500, 9501)),
+    familiarity: basisPoints(random.nextInt(1000, 9001)),
+    loyalty: basisPoints(random.nextInt(1500, 9501)),
+    weatherCommitment: basisPoints(random.nextInt(2500, 10_001)),
   });
 };
 
@@ -188,28 +165,20 @@ export const dayAudienceFor = (
   level: OperatingScaleLevel,
 ): DayAudience => {
   const targets = audienceTargetsForLevel(level);
-  const ranked = Array.from(
-    { length: targets.neighborhoodSize },
-    (_, index) => {
-      const id = customerId(index);
-      const random = createMarketRandom(runSeed, "audience-selection", {
-        day,
-        customerId: id,
-      });
-      return Object.freeze({ id, score: random.nextUnit() });
-    },
-  );
+  const ranked = Array.from({ length: targets.neighborhoodSize }, (_, index) => {
+    const id = customerId(index);
+    const random = createMarketRandom(runSeed, "audience-selection", {
+      day,
+      customerId: id,
+    });
+    return Object.freeze({ id, score: random.nextUnit() });
+  });
 
-  ranked.sort(
-    (left, right) =>
-      left.score - right.score || Number(left.id) - Number(right.id),
-  );
+  ranked.sort((left, right) => left.score - right.score || Number(left.id) - Number(right.id));
 
   return Object.freeze({
     neighborhoodSize: targets.neighborhoodSize,
-    customerIds: Object.freeze(
-      ranked.slice(0, targets.dailyAudience).map(({ id }) => id),
-    ),
+    customerIds: Object.freeze(ranked.slice(0, targets.dailyAudience).map(({ id }) => id)),
   });
 };
 
@@ -219,9 +188,7 @@ const requireNonNegativeIndex = (value: number, name: string): void => {
   }
 };
 
-export const assertCustomerOutcomeConsistency = (
-  outcome: CustomerOutcome,
-): void => {
+export const assertCustomerOutcomeConsistency = (outcome: CustomerOutcome): void => {
   if (outcome.awareness.kind === "advertising") {
     requireNonNegativeIndex(outcome.awareness.signIndex, "sign index");
   }
@@ -230,13 +197,8 @@ export const assertCustomerOutcomeConsistency = (
   }
 
   if (outcome.awareness.kind === "unaware") {
-    if (
-      outcome.conversion.kind !== "not-evaluated" ||
-      outcome.fulfillment.kind !== "none"
-    ) {
-      throw new RangeError(
-        "unaware customers cannot evaluate price or receive fulfillment",
-      );
+    if (outcome.conversion.kind !== "not-evaluated" || outcome.fulfillment.kind !== "none") {
+      throw new RangeError("unaware customers cannot evaluate price or receive fulfillment");
     }
     return;
   }
@@ -257,9 +219,7 @@ export const assertCustomerOutcomeConsistency = (
   }
 };
 
-export const summarizeAudience = (
-  outcomes: readonly CustomerOutcome[],
-): AudienceSummary => {
+export const summarizeAudience = (outcomes: readonly CustomerOutcome[]): AudienceSummary => {
   let unaware = 0;
   let organicAware = 0;
   let advertisingAware = 0;

@@ -18,10 +18,8 @@ describe("lemonade stand staging", () => {
   });
 
   it("keeps the canopy above the tallest adult without making the kiosk house-sized", () => {
-    const canopyBottom =
-      STAND_LAYOUT.canopy.position[1] - STAND_LAYOUT.canopy.size[1] / 2;
-    const canopyTop =
-      STAND_LAYOUT.canopy.position[1] + STAND_LAYOUT.canopy.size[1] / 2;
+    const canopyBottom = STAND_LAYOUT.canopy.position[1] - STAND_LAYOUT.canopy.size[1] / 2;
+    const canopyTop = STAND_LAYOUT.canopy.position[1] + STAND_LAYOUT.canopy.size[1] / 2;
     expect(canopyBottom).toBeGreaterThan(tallestAdultRenderedHeight() + 0.08);
     expect(canopyTop).toBeLessThan(2.35);
     expect(STAND_LAYOUT.body.size[0]).toBeLessThan(3);
@@ -39,11 +37,10 @@ describe("lemonade stand staging", () => {
   });
 
   it("reserves a clear central sightline between cups and stock", () => {
-    expect(STAND_LAYOUT.stockFootprint.maxX)
-      .toBeLessThan(STAND_LAYOUT.sellerSightline.minX);
-    expect(STAND_LAYOUT.cupFootprint.minX - 0.09)
-      .toBeGreaterThan(STAND_LAYOUT.sellerSightline.maxX);
-    expect(STAND_LAYOUT.stockFootprint.maxX)
-      .toBeLessThan(STAND_LAYOUT.cupFootprint.minX);
+    expect(STAND_LAYOUT.stockFootprint.maxX).toBeLessThan(STAND_LAYOUT.sellerSightline.minX);
+    expect(STAND_LAYOUT.cupFootprint.minX - 0.09).toBeGreaterThan(
+      STAND_LAYOUT.sellerSightline.maxX,
+    );
+    expect(STAND_LAYOUT.stockFootprint.maxX).toBeLessThan(STAND_LAYOUT.cupFootprint.minX);
   });
 });

@@ -1,5 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -16,8 +17,7 @@ const rules = Object.freeze([
   {
     id: "modern-media-range",
     pattern: /@media[^{}]*\(\s*min-width\s*:/iu,
-    message:
-      "Use modern range syntax for responsive enhancement, e.g. @media (width >= 48rem).",
+    message: "Use modern range syntax for responsive enhancement, e.g. @media (width >= 48rem).",
   },
   {
     id: "relative-breakpoints",
@@ -46,8 +46,7 @@ const rules = Object.freeze([
   {
     id: "no-important",
     pattern: /!important\b/iu,
-    message:
-      "Avoid !important; fix cascade ownership and specificity instead.",
+    message: "Avoid !important; fix cascade ownership and specificity instead.",
   },
 ]);
 
@@ -56,7 +55,9 @@ const collectCss = async (directory) => {
   const files = [];
 
   for (const entry of entries) {
-    if (entry.isDirectory() && ignoredDirectories.has(entry.name)) continue;
+    if (entry.isDirectory() && ignoredDirectories.has(entry.name)) {
+      continue;
+    }
 
     const path = resolve(directory, entry.name);
     if (entry.isDirectory()) {
@@ -82,8 +83,7 @@ const lintHoverCapability = (file, source) => {
 
   for (const [index, line] of lines.entries()) {
     const hasFineHoverContext = mediaStack.some(
-      ({ condition }) =>
-        condition.includes("hover: hover") && condition.includes("pointer: fine"),
+      ({ condition }) => condition.includes("hover: hover") && condition.includes("pointer: fine"),
     );
 
     if (line.includes(":hover") && !hasFineHoverContext) {

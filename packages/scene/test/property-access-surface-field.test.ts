@@ -37,13 +37,13 @@ describe("property access surface field", () => {
     const field = createPropertyAccessSurfaceField(specs);
 
     expect(field.anchors).toHaveLength(3);
-    expect(
-      field.anchors.map((anchor) => String(anchor.userData["sceneRole"])),
-    ).toEqual(["driveway", "front-path", "driveway"]);
+    expect(field.anchors.map((anchor) => String(anchor.userData["sceneRole"]))).toEqual([
+      "driveway",
+      "front-path",
+      "driveway",
+    ]);
     expect(field.meshes).toHaveLength(2);
-    expect(
-      field.meshes.reduce((total, mesh) => total + mesh.count, 0),
-    ).toBe(3);
+    expect(field.meshes.reduce((total, mesh) => total + mesh.count, 0)).toBe(3);
   });
 
   it("uses independent batches for driveways and front paths", () => {

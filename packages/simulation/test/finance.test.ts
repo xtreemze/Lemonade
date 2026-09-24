@@ -3,17 +3,17 @@ import { describe, expect, it } from "vitest";
 import {
   availableOperatingFunds,
   createInitialState,
+  type DayDecision,
   dayNumber,
   financeRulesForTier,
+  type GameState,
   glassCount,
   moneyCents,
   neutralEnvironment,
+  type ProgressionTier,
   progressionTierForEquity,
   signCount,
   simulateDay,
-  type DayDecision,
-  type GameState,
-  type ProgressionTier,
 } from "../src/index.js";
 
 const decision = (glasses: number, signs: number, price: number): DayDecision =>
@@ -23,12 +23,7 @@ const decision = (glasses: number, signs: number, price: number): DayDecision =>
     price: moneyCents(price),
   });
 
-const stateFor = (
-  day: number,
-  tier: ProgressionTier,
-  cash: number,
-  loanBalance = 0,
-): GameState =>
+const stateFor = (day: number, tier: ProgressionTier, cash: number, loanBalance = 0): GameState =>
   Object.freeze({
     ...createInitialState(),
     day: dayNumber(day),
@@ -51,11 +46,7 @@ describe("finance progression", () => {
   });
 
   it("advances finance only after the historical first scale threshold", () => {
-    const result = simulateDay(
-      stateFor(6, 0, 9_900),
-      decision(1, 0, 250),
-      neutralEnvironment(),
-    );
+    const result = simulateDay(stateFor(6, 0, 9900), decision(1, 0, 250), neutralEnvironment());
 
     expect(Number(result.entry.endingCash)).toBe(10_050);
     expect(result.entry.tier).toBe(0);
@@ -63,11 +54,7 @@ describe("finance progression", () => {
   });
 
   it("adds supplier fees before taxes", () => {
-    const result = simulateDay(
-      stateFor(7, 1, 20_000),
-      decision(1, 0, 250),
-      neutralEnvironment(),
-    );
+    const result = simulateDay(stateFor(7, 1, 20_000), decision(1, 0, 250), neutralEnvironment());
 
     expect(Number(result.entry.expenses)).toBe(105);
     expect(Number(result.entry.net)).toBe(145);
@@ -76,16 +63,8 @@ describe("finance progression", () => {
   });
 
   it("taxes only positive operating profit", () => {
-    const profit = simulateDay(
-      stateFor(14, 2, 60_000),
-      decision(1, 0, 250),
-      neutralEnvironment(),
-    );
-    const loss = simulateDay(
-      stateFor(14, 2, 60_000),
-      decision(1, 0, 50),
-      neutralEnvironment(),
-    );
+    const profit = simulateDay(stateFor(14, 2, 60_000), decision(1, 0, 250), neutralEnvironment());
+    const loss = simulateDay(stateFor(14, 2, 60_000), decision(1, 0, 50), neutralEnvironment());
 
     const profitTax = profit.entry.lines.find((line) => line.kind === "tax");
     expect(Number(profitTax?.amount ?? 0)).toBe(7);
@@ -118,11 +97,7 @@ describe("finance progression", () => {
   });
 
   it("credits savings interest only when no loan remains", () => {
-    const result = simulateDay(
-      stateFor(21, 3, 100_000),
-      decision(0, 0, 150),
-      neutralEnvironment(),
-    );
+    const result = simulateDay(stateFor(21, 3, 100_000), decision(0, 0, 150), neutralEnvironment());
 
     expect(Number(result.entry.financeIncome)).toBeGreaterThan(0);
     expect(Number(result.entry.net)).toBeGreaterThan(-20);
@@ -134,15 +109,14 @@ describe("finance progression", () => {
     const states = [
       stateFor(14, 2, 60_000),
       stateFor(21, 3, 50),
-      stateFor(21, 3, 1_000, 500),
+      stateFor(21, 3, 1000, 500),
       stateFor(35, 4, 20_000, 250),
     ] as const;
 
     for (const state of states) {
       const result = simulateDay(state, decision(1, 0, 250), neutralEnvironment());
       const openingEquity = Number(state.cash) - Number(state.loanBalance);
-      const endingEquity =
-        Number(result.entry.endingCash) - Number(result.entry.endingLoanBalance);
+      const endingEquity = Number(result.entry.endingCash) - Number(result.entry.endingLoanBalance);
 
       expect(endingEquity).toBe(openingEquity + Number(result.entry.net));
       expect(Number(result.entry.cashDelta)).toBe(

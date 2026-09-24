@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 type RendererSnapshot = Readonly<{
   drawCalls: number;
@@ -42,7 +42,9 @@ test("deterministic maximum-load scene produces renderer certification evidence"
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
   });
   page.on("pageerror", (error) => {
     pageErrors.push(error.message);

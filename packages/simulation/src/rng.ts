@@ -1,15 +1,15 @@
 import type { Seed } from "./primitives.js";
 
 export interface RandomSource {
-  nextUnit(): number;
-  nextInt(minInclusive: number, maxExclusive: number): number;
+  nextUnit: () => number;
+  nextInt: (minInclusive: number, maxExclusive: number) => number;
 }
 
 export const createSeededRandom = (initialSeed: Seed): RandomSource => {
   let state = Number(initialSeed) >>> 0;
 
   const nextUnit = (): number => {
-    state = (state + 0x6d2b_79f5) >>> 0;
+    state = (state + 0x6d_2b_79_f5) >>> 0;
     let value = state;
     value = Math.imul(value ^ (value >>> 15), value | 1);
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
@@ -17,7 +17,7 @@ export const createSeededRandom = (initialSeed: Seed): RandomSource => {
   };
 
   const nextInt = (minInclusive: number, maxExclusive: number): number => {
-    if (!Number.isSafeInteger(minInclusive) || !Number.isSafeInteger(maxExclusive)) {
+    if (!(Number.isSafeInteger(minInclusive) && Number.isSafeInteger(maxExclusive))) {
       throw new RangeError("random integer bounds must be safe integers");
     }
     if (maxExclusive <= minInclusive) {

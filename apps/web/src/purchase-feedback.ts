@@ -29,7 +29,9 @@ export const createPurchaseFeedbackSchedule = (
 ): readonly PurchaseFeedbackBeat[] => {
   const sold = boundedInteger(soldValue, 0);
   const durationMs = boundedInteger(durationValueMs, 1);
-  if (sold === 0) return Object.freeze([]);
+  if (sold === 0) {
+    return Object.freeze([]);
+  }
 
   const saleSpacingMs = durationMs / (sold + 1);
   const serveLeadMs = Math.min(90, Math.max(35, saleSpacingMs * 0.22));

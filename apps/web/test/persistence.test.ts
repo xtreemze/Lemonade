@@ -1,7 +1,4 @@
-import { describe, expect, it } from "vitest";
-
 import {
-  SIMULATION_SCHEMA_VERSION,
   createInitialState,
   createSeededRandom,
   dayNumber,
@@ -9,23 +6,25 @@ import {
   glassCount,
   moneyCents,
   replayLegacyDay,
+  SIMULATION_SCHEMA_VERSION,
   seed,
   signCount,
   simulateDay,
 } from "@lemonade/simulation";
+import { describe, expect, it } from "vitest";
 
 import {
-  RUN_SAVE_SCHEMA_VERSION,
-  RunPersistenceError,
   createRunSaveDocument,
   decodeRunSaveDocument,
   exportRunSnapshot,
   importRunSnapshot,
-  restoreEnvironmentRandom,
+  RUN_SAVE_SCHEMA_VERSION,
+  RunPersistenceError,
   type RunSnapshot,
+  restoreEnvironmentRandom,
 } from "../src/persistence.js";
 
-const RUN_SEED = seed(0x1e_ad_2026);
+const RUN_SEED = seed(0x1e_ad_20_26);
 const decision = Object.freeze({
   glasses: glassCount(5),
   signs: signCount(1),
@@ -87,7 +86,7 @@ describe("run persistence", () => {
     const random = createSeededRandom(RUN_SEED);
     const state = Object.freeze({
       ...createInitialState(),
-      cash: moneyCents(3_000),
+      cash: moneyCents(3000),
     });
     const environment = generateEnvironment(state.day, random);
     const legacyDecision = Object.freeze({
@@ -208,7 +207,9 @@ describe("run persistence", () => {
       });
       throw new Error("expected decode to fail");
     } catch (error) {
-      if (!(error instanceof RunPersistenceError)) throw error;
+      if (!(error instanceof RunPersistenceError)) {
+        throw error;
+      }
       expect(error.code).toBe("unsupported-save-version");
     }
   });
@@ -248,7 +249,9 @@ describe("run persistence", () => {
 
   it("rejects a tampered report resolution", () => {
     const document = createRunSaveDocument(createReportFixture());
-    if (document.run.phase.kind !== "report") throw new Error("expected report fixture");
+    if (document.run.phase.kind !== "report") {
+      throw new Error("expected report fixture");
+    }
 
     const corrupt = {
       ...document,

@@ -71,10 +71,7 @@ const chooseConfidenceRoll = (random: RandomSource): MarketSentiment => {
   }
 };
 
-export const generateEnvironment = (
-  day: DayNumber,
-  random: RandomSource,
-): DayEnvironment =>
+export const generateEnvironment = (day: DayNumber, random: RandomSource): DayEnvironment =>
   Object.freeze({
     weather: chooseWeather(day, random),
     sentiment: chooseConfidenceRoll(random),

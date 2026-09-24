@@ -210,7 +210,7 @@ h2 {
 }
 
 .decision-control strong::before {
-  content: '';
+  content: "";
   display: none;
   width: 28px;
   height: 28px;
@@ -546,11 +546,8 @@ body:has(.game-shell[data-view="forecast"]) {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto minmax(0, 1fr);
-  padding:
-    max(8px, env(safe-area-inset-top))
-    max(10px, env(safe-area-inset-right))
-    max(8px, env(safe-area-inset-bottom))
-    max(10px, env(safe-area-inset-left));
+  padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
 }
 
 .game-shell[data-view="planning"] > .topline,
@@ -939,11 +936,8 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .game-shell[data-view="report"] {
   display: block;
-  padding:
-    max(8px, env(safe-area-inset-top))
-    max(10px, env(safe-area-inset-right))
-    max(8px, env(safe-area-inset-bottom))
-    max(10px, env(safe-area-inset-left));
+  padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
 }
 
 .game-shell[data-view="report"] > .topline,
@@ -1366,10 +1360,7 @@ body:has(.game-shell[data-view="forecast"]) {
   .game-shell[data-view="report"] .report-panel {
     width: min(100%, 88rem);
     margin-inline: auto;
-    padding:
-      clamp(10px, 1.5dvh, 16px)
-      clamp(18px, 2.5vw, 36px)
-      74px;
+    padding: clamp(10px, 1.5dvh, 16px) clamp(18px, 2.5vw, 36px) 74px;
   }
 
   .game-shell[data-view="report"] .report-content,
@@ -1428,11 +1419,8 @@ body:has(.game-shell[data-view="forecast"]) {
 
 .game-shell[data-view="history"] {
   display: block;
-  padding:
-    max(8px, env(safe-area-inset-top))
-    max(10px, env(safe-area-inset-right))
-    max(8px, env(safe-area-inset-bottom))
-    max(10px, env(safe-area-inset-left));
+  padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
 }
 
 .game-shell[data-view="history"] > :not(#ledger-history-host):not(#history-next-button) {
@@ -1567,25 +1555,25 @@ body:has(.game-shell[data-view="forecast"]) {
     padding: 3px 5px;
   }
 
-.game-shell[data-view="report"] .results-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  .game-shell[data-view="report"] .results-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-.game-shell[data-view="report"] .weekly-results-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  .game-shell[data-view="report"] .weekly-results-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-.game-shell[data-view="report"] .history-review-button,
-.game-shell[data-view="history"] > .history-next-button {
-  width: 58px;
-  height: 58px;
-  min-height: 58px;
+  .game-shell[data-view="report"] .history-review-button,
+  .game-shell[data-view="history"] > .history-next-button {
+    width: 58px;
+    height: 58px;
+    min-height: 58px;
   }
 
-.game-shell[data-view="report"] .history-review-icon,
-.game-shell[data-view="history"] .next-day-icon {
-  width: 52px;
-  height: 52px;
+  .game-shell[data-view="report"] .history-review-icon,
+  .game-shell[data-view="history"] .next-day-icon {
+    width: 52px;
+    height: 52px;
   }
 }
 

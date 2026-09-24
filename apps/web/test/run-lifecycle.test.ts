@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   isLegalRunLifecycleState,
-  restoreRunLifecycle,
-  transitionRunLifecycle,
   type RunLifecycleEvent,
   type RunLifecycleState,
+  restoreRunLifecycle,
+  transitionRunLifecycle,
 } from "../src/run-lifecycle.js";
 
 const sequence = (
@@ -93,12 +93,8 @@ describe("run lifecycle", () => {
       expect(isLegalRunLifecycleState(candidate)).toBe(true);
     }
 
-    expect(
-      isLegalRunLifecycleState({ runPhase: "deciding", presentation: "report" }),
-    ).toBe(false);
-    expect(
-      isLegalRunLifecycleState({ runPhase: "report", presentation: "forecast" }),
-    ).toBe(false);
+    expect(isLegalRunLifecycleState({ runPhase: "deciding", presentation: "report" })).toBe(false);
+    expect(isLegalRunLifecycleState({ runPhase: "report", presentation: "forecast" })).toBe(false);
   });
 
   it("never accepts a transition from an impossible state", () => {
@@ -123,8 +119,6 @@ describe("run lifecycle", () => {
     };
     const event = { type: "history-requested" } as const;
 
-    expect(transitionRunLifecycle(current, event)).toEqual(
-      transitionRunLifecycle(current, event),
-    );
+    expect(transitionRunLifecycle(current, event)).toEqual(transitionRunLifecycle(current, event));
   });
 });

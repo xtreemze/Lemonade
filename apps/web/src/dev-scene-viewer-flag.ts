@@ -8,7 +8,9 @@
  */
 
 export const isSceneViewerEnabled = (): boolean => {
-  if (typeof localStorage === "undefined") return false;
+  if (typeof localStorage === "undefined") {
+    return false;
+  }
   return localStorage.getItem("LEMONADE_DEV_SCENE_VIEWER") === "1";
 };
 
@@ -29,18 +31,21 @@ export const disableSceneViewer = (): void => {
 const RENDERER_STRESS_KEY = "LEMONADE_DEV_RENDERER_STRESS";
 
 export const isRendererStressFixtureEnabled = (): boolean =>
-  typeof localStorage !== "undefined" &&
-  localStorage.getItem(RENDERER_STRESS_KEY) === "1";
+  typeof localStorage !== "undefined" && localStorage.getItem(RENDERER_STRESS_KEY) === "1";
 
 export const enableRendererStressFixture = (): void => {
-  if (typeof localStorage === "undefined") return;
+  if (typeof localStorage === "undefined") {
+    return;
+  }
   localStorage.setItem(RENDERER_STRESS_KEY, "1");
   localStorage.setItem("LEMONADE_DEV_SCENE_VIEWER", "1");
   window.location.reload();
 };
 
 export const disableRendererStressFixture = (): void => {
-  if (typeof localStorage === "undefined") return;
+  if (typeof localStorage === "undefined") {
+    return;
+  }
   localStorage.removeItem(RENDERER_STRESS_KEY);
   window.location.reload();
 };

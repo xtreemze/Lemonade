@@ -4,33 +4,26 @@ import {
   Group,
   Mesh,
   MeshStandardMaterial,
-  PlaneGeometry,
-  SphereGeometry,
   type Object3D,
+  PlaneGeometry,
   type Scene,
+  SphereGeometry,
 } from "three";
-
-import {
-  DEFAULT_RESIDENTIAL_SEED,
-  generateResidentialLayout,
-  residentialAccessLayout,
-  residentialFootprintIntersectsHardscape,
-  type ResidentialPropertySpec,
-} from "./residential-layout.js";
-import {
-  generateStreetNetwork,
-  STREET_LAYOUT,
-} from "./street-layout.js";
-import { createStreetSurfaceField } from "./street-surface-field.js";
+import { type PropertyActivity, sprinklerEligibleAt } from "./neighborhood-mobility.js";
 import {
   createPropertyAccessSurfaceField,
   type PropertyAccessSurfaceSpec,
 } from "./property-access-surface-field.js";
-import { WORLD_SCALE } from "./world-scale.js";
 import {
-  sprinklerEligibleAt,
-  type PropertyActivity,
-} from "./neighborhood-mobility.js";
+  DEFAULT_RESIDENTIAL_SEED,
+  generateResidentialLayout,
+  type ResidentialPropertySpec,
+  residentialAccessLayout,
+  residentialFootprintIntersectsHardscape,
+} from "./residential-layout.js";
+import { generateStreetNetwork, STREET_LAYOUT } from "./street-layout.js";
+import { createStreetSurfaceField } from "./street-surface-field.js";
+import { WORLD_SCALE } from "./world-scale.js";
 
 const material = (color: number, flatShading = true): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, flatShading, roughness: 0.92 });
@@ -60,7 +53,9 @@ const road = (
   const mesh = new Mesh(new PlaneGeometry(width, depth), material(color));
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(x, y, z);
-  if (role !== undefined) mesh.userData["sceneRole"] = role;
+  if (role !== undefined) {
+    mesh.userData["sceneRole"] = role;
+  }
   scene.add(mesh);
   return mesh;
 };
@@ -76,11 +71,8 @@ const markWindResponsive = (root: Group, phase: number): Group => {
 const detailedHouse = (color: number): Group => {
   const root = new Group();
   box(root, [5.8, 3.4, 4.5], [0, 1.7, 0], color);
-  box(root, [5.95, 0.18, 4.62], [0, 0.18, 0], 0xc7a980);
-  const roof = new Mesh(
-    new CylinderGeometry(0, 4.4, 2.25, 4),
-    material(0x7f4a43),
-  );
+  box(root, [5.95, 0.18, 4.62], [0, 0.18, 0], 0xc7_a9_80);
+  const roof = new Mesh(new CylinderGeometry(0, 4.4, 2.25, 4), material(0x7f_4a_43));
   roof.rotation.y = Math.PI / 4;
   roof.position.y = 4.45;
   root.add(roof);
@@ -92,7 +84,7 @@ const detailedHouse = (color: number): Group => {
     doorPivot,
     [WORLD_SCALE.house.doorWidth, WORLD_SCALE.house.doorHeight, 0.18],
     [WORLD_SCALE.house.doorWidth / 2, WORLD_SCALE.house.doorHeight / 2, 0],
-    0x486c69,
+    0x48_6c_69,
   );
   door.userData["sceneRole"] = "house-door-panel";
   root.add(doorPivot);
@@ -100,45 +92,40 @@ const detailedHouse = (color: number): Group => {
     root,
     [WORLD_SCALE.house.doorWidth + 0.18, 0.12, 0.12],
     [0, WORLD_SCALE.house.doorHeight + 0.06, 2.47],
-    0xf1dfbd,
+    0xf1_df_bd,
   );
   box(
     root,
     [0.11, WORLD_SCALE.house.doorHeight + 0.12, 0.12],
     [-(WORLD_SCALE.house.doorWidth / 2 + 0.07), WORLD_SCALE.house.doorHeight / 2, 2.47],
-    0xf1dfbd,
+    0xf1_df_bd,
   );
   box(
     root,
     [0.11, WORLD_SCALE.house.doorHeight + 0.12, 0.12],
     [WORLD_SCALE.house.doorWidth / 2 + 0.07, WORLD_SCALE.house.doorHeight / 2, 2.47],
-    0xf1dfbd,
+    0xf1_df_bd,
   );
-  const knob = new Mesh(new SphereGeometry(0.055, 8, 6), material(0xc89a3c));
+  const knob = new Mesh(new SphereGeometry(0.055, 8, 6), material(0xc8_9a_3c));
   knob.position.set(0.3, 1.02, 2.47);
   root.add(knob);
 
   for (const x of [-1.7, 1.7]) {
-    const windowPane = box(
-      root,
-      [0.92, 0.95, 0.14],
-      [x, 2.1, 2.36],
-      0xb8d9d2,
-    );
+    const windowPane = box(root, [0.92, 0.95, 0.14], [x, 2.1, 2.36], 0xb8_d9_d2);
     windowPane.userData["sceneRole"] = "house-window";
-    box(root, [1.08, 0.1, 0.11], [x, 2.62, 2.46], 0xf1dfbd);
-    box(root, [1.08, 0.1, 0.11], [x, 1.58, 2.46], 0xf1dfbd);
-    box(root, [0.1, 1.05, 0.11], [x - 0.51, 2.1, 2.46], 0xf1dfbd);
-    box(root, [0.1, 1.05, 0.11], [x + 0.51, 2.1, 2.46], 0xf1dfbd);
-    box(root, [0.08, 0.95, 0.1], [x, 2.1, 2.47], 0xf1dfbd);
-    box(root, [0.92, 0.08, 0.1], [x, 2.1, 2.47], 0xf1dfbd);
+    box(root, [1.08, 0.1, 0.11], [x, 2.62, 2.46], 0xf1_df_bd);
+    box(root, [1.08, 0.1, 0.11], [x, 1.58, 2.46], 0xf1_df_bd);
+    box(root, [0.1, 1.05, 0.11], [x - 0.51, 2.1, 2.46], 0xf1_df_bd);
+    box(root, [0.1, 1.05, 0.11], [x + 0.51, 2.1, 2.46], 0xf1_df_bd);
+    box(root, [0.08, 0.95, 0.1], [x, 2.1, 2.47], 0xf1_df_bd);
+    box(root, [0.92, 0.08, 0.1], [x, 2.1, 2.47], 0xf1_df_bd);
   }
 
-  box(root, [3.8, 0.22, 1.05], [0, 0.25, 2.62], 0xb99b78);
-  box(root, [2.8, 0.16, 0.52], [0, 0.12, 3.05], 0xc9b08d);
-  box(root, [0.58, 1.15, 0.72], [1.75, 4.75, -0.72], 0x9b5f4f);
+  box(root, [3.8, 0.22, 1.05], [0, 0.25, 2.62], 0xb9_9b_78);
+  box(root, [2.8, 0.16, 0.52], [0, 0.12, 3.05], 0xc9_b0_8d);
+  box(root, [0.58, 1.15, 0.72], [1.75, 4.75, -0.72], 0x9b_5f_4f);
 
-  const porchLamp = new Mesh(new SphereGeometry(0.12, 8, 6), material(0xffd98a, false));
+  const porchLamp = new Mesh(new SphereGeometry(0.12, 8, 6), material(0xff_d9_8a, false));
   porchLamp.position.set(0.92, 1.86, 2.5);
   root.add(porchLamp);
   return root;
@@ -147,10 +134,7 @@ const detailedHouse = (color: number): Group => {
 const distantHouse = (color: number): Group => {
   const root = new Group();
   box(root, [5.8, 3.4, 4.5], [0, 1.7, 0], color);
-  const roof = new Mesh(
-    new CylinderGeometry(0, 4.4, 2.25, 4),
-    material(0x765048),
-  );
+  const roof = new Mesh(new CylinderGeometry(0, 4.4, 2.25, 4), material(0x76_50_48));
   roof.rotation.y = Math.PI / 4;
   roof.position.y = 4.45;
   root.add(roof);
@@ -183,31 +167,18 @@ const distanceLod = (
   return root;
 };
 
-const houseLod = (
-  x: number,
-  z: number,
-  color: number,
-  scale: number,
-  rotationY: number,
-): Group => distanceLod(
-  detailedHouse(color),
-  distantHouse(color),
-  34,
-  x,
-  z,
-  scale,
-  rotationY,
-);
+const houseLod = (x: number, z: number, color: number, scale: number, rotationY: number): Group =>
+  distanceLod(detailedHouse(color), distantHouse(color), 34, x, z, scale, rotationY);
 
 const plantUnit = (seed: number, salt: number): number => {
-  let value = Math.imul((seed ^ salt) >>> 0, 0x9e3779b1);
-  value = Math.imul(value ^ (value >>> 16), 0x21f0aaad);
-  return ((value ^ (value >>> 15)) >>> 0) / 0xffff_ffff;
+  let value = Math.imul((seed ^ salt) >>> 0, 0x9e_37_79_b1);
+  value = Math.imul(value ^ (value >>> 16), 0x21_f0_aa_ad);
+  return ((value ^ (value >>> 15)) >>> 0) / 0xff_ff_ff_ff;
 };
 
 const detailedTree = (color: number, seed: number): Group => {
   const root = new Group();
-  const woodMaterial = material(0x765232);
+  const woodMaterial = material(0x76_52_32);
   const trunkHeight = 2.35 + plantUnit(seed, 11) * 0.75;
   const trunk = new Mesh(
     new CylinderGeometry(
@@ -263,10 +234,7 @@ const detailedTree = (color: number, seed: number): Group => {
 const distantTree = (color: number, seed: number): Group => {
   const root = new Group();
   const trunkHeight = 2.3 + plantUnit(seed, 83) * 0.55;
-  const trunk = new Mesh(
-    new CylinderGeometry(0.2, 0.3, trunkHeight, 5),
-    material(0x765232),
-  );
+  const trunk = new Mesh(new CylinderGeometry(0.2, 0.3, trunkHeight, 5), material(0x76_52_32));
   trunk.position.y = trunkHeight / 2;
   const crown = new Mesh(
     new SphereGeometry(1.9 + plantUnit(seed, 89) * 0.42, 7, 5),
@@ -286,15 +254,8 @@ const treeLod = (
   phase: number,
   seed: number,
 ): Group => {
-  const variant = Math.floor(plantUnit(seed, 101) * 1_000);
-  const root = distanceLod(
-    detailedTree(color, seed),
-    distantTree(color, seed),
-    28,
-    x,
-    z,
-    scale,
-  );
+  const variant = Math.floor(plantUnit(seed, 101) * 1000);
+  const root = distanceLod(detailedTree(color, seed), distantTree(color, seed), 28, x, z, scale);
   root.userData["sceneRole"] = "procedural-tree";
   root.userData["plantVariant"] = variant;
   root.userData["proceduralSeed"] = seed >>> 0;
@@ -317,11 +278,7 @@ const detailedShrub = (color: number, seed: number): Group => {
       size * (0.82 + plantUnit(seed, 137 + index) * 0.3),
       size * (0.88 + plantUnit(seed, 139 + index) * 0.28),
     );
-    crown.position.set(
-      Math.cos(angle) * radius,
-      size * 0.68,
-      Math.sin(angle) * radius * 0.65,
-    );
+    crown.position.set(Math.cos(angle) * radius, size * 0.68, Math.sin(angle) * radius * 0.65);
     root.add(crown);
   }
   return root;
@@ -345,40 +302,26 @@ const shrubLod = (
   phase: number,
   seed: number,
 ): Group => {
-  const root = distanceLod(
-    detailedShrub(color, seed),
-    distantShrub(color, seed),
-    18,
-    x,
-    z,
-    scale,
-  );
+  const root = distanceLod(detailedShrub(color, seed), distantShrub(color, seed), 18, x, z, scale);
   root.userData["sceneRole"] = "procedural-shrub";
-  root.userData["plantVariant"] = Math.floor(plantUnit(seed, 151) * 1_000);
+  root.userData["plantVariant"] = Math.floor(plantUnit(seed, 151) * 1000);
   root.userData["proceduralSeed"] = seed >>> 0;
   root.userData["proceduralTechnique"] = "seeded-distance-lod";
   return markWindResponsive(root, phase);
 };
 
-const flower = (
-  x: number,
-  z: number,
-  color: number,
-  phase: number,
-  seed: number,
-): Group => {
+const flower = (x: number, z: number, color: number, phase: number, seed: number): Group => {
   const root = new Group();
   const stemGeometry = new CylinderGeometry(0.018, 0.025, 1, 5);
   const blossomGeometry = new SphereGeometry(0.055, 7, 5);
-  const stemMaterial = material(0x4f8246);
-  const centerMaterial = material(0xe1ad35);
+  const stemMaterial = material(0x4f_82_46);
+  const centerMaterial = material(0xe1_ad_35);
   const petalMaterial = material(color);
   const flowerCount = 5;
 
   for (let flowerIndex = 0; flowerIndex < flowerCount; flowerIndex += 1) {
     const cluster = new Group();
-    const radius =
-      flowerIndex === 0 ? 0 : 0.12 + plantUnit(seed, 157 + flowerIndex * 11) * 0.18;
+    const radius = flowerIndex === 0 ? 0 : 0.12 + plantUnit(seed, 157 + flowerIndex * 11) * 0.18;
     const angle = plantUnit(seed, 163 + flowerIndex * 13) * Math.PI * 2;
     const height = 0.32 + plantUnit(seed, 167 + flowerIndex * 17) * 0.11;
     const stem = new Mesh(stemGeometry, stemMaterial);
@@ -421,12 +364,12 @@ const FENCE_POST_HALF_THICKNESS = 0.06;
 
 const fenceRun = (x: number, z: number, width: number): Group => {
   const root = new Group();
-  box(root, [width, 0.1, 0.1], [0, 0.56, 0], 0xe9dfc7);
-  box(root, [width, 0.1, 0.1], [0, 0.92, 0], 0xe9dfc7);
+  box(root, [width, 0.1, 0.1], [0, 0.56, 0], 0xe9_df_c7);
+  box(root, [width, 0.1, 0.1], [0, 0.92, 0], 0xe9_df_c7);
   const posts = 6;
   for (let index = 0; index < posts; index += 1) {
     const offset = -width / 2 + (index / (posts - 1)) * width;
-    box(root, [0.12, 1.2, 0.12], [offset, 0.6, 0], 0xf4ead4);
+    box(root, [0.12, 1.2, 0.12], [offset, 0.6, 0], 0xf4_ea_d4);
   }
   root.position.set(x, 0, z);
   root.userData["sceneRole"] = "fence";
@@ -435,10 +378,10 @@ const fenceRun = (x: number, z: number, width: number): Group => {
 
 const mailbox = (x: number, z: number): Group => {
   const root = new Group();
-  box(root, [0.12, 1.05, 0.12], [0, 0.53, 0], 0x6e5a43);
-  box(root, [0.48, 0.32, 0.34], [0, 1.08, 0], 0x547c85);
-  box(root, [0.42, 0.25, 0.035], [0, 1.08, 0.19], 0x456b73);
-  box(root, [0.08, 0.42, 0.08], [0.27, 1.18, 0], 0xc95b4c);
+  box(root, [0.12, 1.05, 0.12], [0, 0.53, 0], 0x6e_5a_43);
+  box(root, [0.48, 0.32, 0.34], [0, 1.08, 0], 0x54_7c_85);
+  box(root, [0.42, 0.25, 0.035], [0, 1.08, 0.19], 0x45_6b_73);
+  box(root, [0.08, 0.42, 0.08], [0.27, 1.18, 0], 0xc9_5b_4c);
   root.position.set(x, 0, z);
   root.rotation.y = -Math.PI / 2;
   root.userData["sceneRole"] = "mailbox";
@@ -446,27 +389,20 @@ const mailbox = (x: number, z: number): Group => {
   return root;
 };
 
-const sprinkler = (
-  x: number,
-  z: number,
-  propertyRole: string,
-): Group => {
+const sprinkler = (x: number, z: number, propertyRole: string): Group => {
   const root = new Group();
   root.position.set(x, 0.03, z);
   root.visible = false;
   root.userData["sceneRole"] = "yard-sprinkler";
   root.userData["propertyRole"] = propertyRole;
-  const hub = new Mesh(
-    new CylinderGeometry(0.08, 0.1, 0.16, 8),
-    material(0x647b83),
-  );
+  const hub = new Mesh(new CylinderGeometry(0.08, 0.1, 0.16, 8), material(0x64_7b_83));
   hub.position.y = 0.08;
   root.add(hub);
   const arm = new Group();
   arm.userData["sceneRole"] = "sprinkler-arm";
-  box(arm, [0.7, 0.035, 0.035], [0, 0.19, 0], 0x7393a0);
-  box(arm, [0.035, 0.035, 0.22], [0.34, 0.19, 0.1], 0x7393a0);
-  box(arm, [0.035, 0.035, 0.22], [-0.34, 0.19, -0.1], 0x7393a0);
+  box(arm, [0.7, 0.035, 0.035], [0, 0.19, 0], 0x73_93_a0);
+  box(arm, [0.035, 0.035, 0.22], [0.34, 0.19, 0.1], 0x73_93_a0);
+  box(arm, [0.035, 0.035, 0.22], [-0.34, 0.19, -0.1], 0x73_93_a0);
   root.add(arm);
   return root;
 };
@@ -524,24 +460,12 @@ export type NeighborhoodStats = Readonly<{
 export type FrontPropertySpec = ResidentialPropertySpec;
 
 const HOUSE_PALETTE = [
-  0xc97d65,
-  0xd56f52,
-  0xd4aa61,
-  0xd5a66d,
-  0x8da9a1,
-  0xc27a68,
-  0xdfb76f,
+  0xc9_7d_65, 0xd5_6f_52, 0xd4_aa_61, 0xd5_a6_6d, 0x8d_a9_a1, 0xc2_7a_68, 0xdf_b7_6f,
 ] as const;
 const TREE_PALETTE = [
-  0x668e53,
-  0x5f8d56,
-  0x507f4b,
-  0x6d985e,
-  0x58854f,
-  0x678f52,
-  0x4f814c,
+  0x66_8e_53, 0x5f_8d_56, 0x50_7f_4b, 0x6d_98_5e, 0x58_85_4f, 0x67_8f_52, 0x4f_81_4c,
 ] as const;
-const FLOWER_PALETTE = [0xe98d9e, 0xf1c75b, 0x9e83c7, 0xf4eee5, 0xd97058] as const;
+const FLOWER_PALETTE = [0xe9_8d_9e, 0xf1_c7_5b, 0x9e_83_c7, 0xf4_ee_e5, 0xd9_70_58] as const;
 
 export const FRONT_PROPERTY_LAYOUT: readonly FrontPropertySpec[] =
   generateResidentialLayout(DEFAULT_RESIDENTIAL_SEED).frontProperties;
@@ -558,7 +482,9 @@ const windRegistryByScene = new WeakMap<Scene, WindRegistry>();
 const refreshWindRegistry = (scene: Scene): WindRegistry => {
   const objects: Object3D[] = [];
   scene.traverse((object) => {
-    if (object.userData["windResponsive"] === true) objects.push(object);
+    if (object.userData["windResponsive"] === true) {
+      objects.push(object);
+    }
   });
   const registry = Object.freeze({
     rootChildCount: scene.children.length,
@@ -597,7 +523,9 @@ export const weatherWindGustAt = (
   const primary = Math.sin(seconds * 1.25 + phase) * 0.62;
   const secondary = Math.sin(seconds * 2.7 + phase * 1.7) * 0.26;
   const flutter = Math.sin(seconds * 5.1 + phase * 0.73) * 0.12;
-  if (weather !== "thunderstorm") return primary + secondary + flutter;
+  if (weather !== "thunderstorm") {
+    return primary + secondary + flutter;
+  }
 
   const gustWindow = Math.max(0, Math.sin(seconds * 0.72 + phase * 0.31 + 0.8));
   const burst = gustWindow * gustWindow * gustWindow * gustWindow;
@@ -612,9 +540,7 @@ export const updateNeighborhoodWind = (
   const strength = weatherWindStrength(weather);
   for (const object of windRegistryFor(scene).objects) {
     const phase =
-      typeof object.userData["windPhase"] === "number"
-        ? object.userData["windPhase"]
-        : 0;
+      typeof object.userData["windPhase"] === "number" ? object.userData["windPhase"] : 0;
     const baseX =
       typeof object.userData["windBaseRotationX"] === "number"
         ? object.userData["windBaseRotationX"]
@@ -626,22 +552,19 @@ export const updateNeighborhoodWind = (
     const gust = weatherWindGustAt(weather, seconds, phase);
     const sceneRole: unknown = object.userData["sceneRole"];
     const response =
-      sceneRole === "garden-flower"
-        ? 1.65
-        : sceneRole === "procedural-shrub"
-          ? 1.3
-          : 1;
+      sceneRole === "garden-flower" ? 1.65 : sceneRole === "procedural-shrub" ? 1.3 : 1;
     object.rotation.x = baseX + gust * strength * response * 0.32;
     object.rotation.z = baseZ + gust * strength * response;
   }
 };
 
-
 const propertyRoleForObject = (object: Object3D): string | null => {
   let current: Object3D | null = object;
   while (current !== null) {
     const role: unknown = current.userData["propertyRole"];
-    if (typeof role === "string") return role;
+    if (typeof role === "string") {
+      return role;
+    }
     current = current.parent;
   }
   return null;
@@ -652,15 +575,17 @@ export const updateNeighborhoodActivity = (
   activities: readonly PropertyActivity[],
   elapsedMs: number,
 ): void => {
-  const byRole = new Map(
-    activities.map((activity) => [activity.propertyRole, activity] as const),
-  );
+  const byRole = new Map(activities.map((activity) => [activity.propertyRole, activity] as const));
   scene.traverse((object) => {
     const sceneRole: unknown = object.userData["sceneRole"];
     const propertyRole = propertyRoleForObject(object);
-    if (propertyRole === null) return;
+    if (propertyRole === null) {
+      return;
+    }
     const activity = byRole.get(propertyRole);
-    if (activity === undefined) return;
+    if (activity === undefined) {
+      return;
+    }
 
     if (sceneRole === "house-door" && object instanceof Group) {
       object.rotation.y = activity.doorOpen ? -1.08 : 0;
@@ -668,12 +593,12 @@ export const updateNeighborhoodActivity = (
     }
 
     if (sceneRole === "house-window" && object instanceof Mesh) {
-      const materials = Array.isArray(object.material)
-        ? object.material
-        : [object.material];
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
       for (const candidate of materials) {
-        if (!(candidate instanceof MeshStandardMaterial)) continue;
-        candidate.emissive.setHex(activity.windowActivity ? 0xffc86a : 0x000000);
+        if (!(candidate instanceof MeshStandardMaterial)) {
+          continue;
+        }
+        candidate.emissive.setHex(activity.windowActivity ? 0xff_c8_6a : 0x00_00_00);
         candidate.emissiveIntensity = activity.windowActivity ? 0.38 : 0;
       }
       return;
@@ -681,10 +606,10 @@ export const updateNeighborhoodActivity = (
 
     if (sceneRole === "yard-sprinkler" && object instanceof Group) {
       object.visible = activity.sprinklerOn;
-      if (!object.visible) return;
-      const arm = object.children.find(
-        (child) => child.userData["sceneRole"] === "sprinkler-arm",
-      );
+      if (!object.visible) {
+        return;
+      }
+      const arm = object.children.find((child) => child.userData["sceneRole"] === "sprinkler-arm");
       if (arm !== undefined) {
         arm.rotation.y = elapsedMs * 0.0045;
       }
@@ -702,24 +627,16 @@ export const populateNeighborhood = (
   let roadSegments = streetNetwork.roads.length + streetNetwork.sidewalks.length;
   const pavedRoads = streetNetwork.roads.length;
 
-  const streetSurfaces = createStreetSurfaceField(
-    streetNetwork.roads,
-    streetNetwork.sidewalks,
-  );
-  for (const anchor of streetSurfaces.anchors) scene.add(anchor);
-  for (const mesh of streetSurfaces.meshes) scene.add(mesh);
+  const streetSurfaces = createStreetSurfaceField(streetNetwork.roads, streetNetwork.sidewalks);
+  for (const anchor of streetSurfaces.anchors) {
+    scene.add(anchor);
+  }
+  for (const mesh of streetSurfaces.meshes) {
+    scene.add(mesh);
+  }
 
   for (let x = -115; x <= 115; x += 7.5) {
-    road(
-      scene,
-      3.2,
-      0.075,
-      x,
-      STREET_LAYOUT.road.centerZ,
-      0xd8c978,
-      0.026,
-      "road-marking",
-    );
+    road(scene, 3.2, 0.075, x, STREET_LAYOUT.road.centerZ, 0xd8_c9_78, 0.026, "road-marking");
   }
 
   const allProperties = [
@@ -762,16 +679,19 @@ export const populateNeighborhood = (
     );
     home.userData["sceneRole"] = layout.frontProperties.includes(property)
       ? property.role
-      : "residential-" + property.role;
+      : `residential-${property.role}`;
     home.userData["propertyRole"] = property.role;
-    home.name = "building-" + property.role;
+    home.name = `building-${property.role}`;
     scene.add(home);
   }
 
-  const propertyAccessField =
-    createPropertyAccessSurfaceField(propertyAccessSurfaces);
-  for (const anchor of propertyAccessField.anchors) scene.add(anchor);
-  for (const mesh of propertyAccessField.meshes) scene.add(mesh);
+  const propertyAccessField = createPropertyAccessSurfaceField(propertyAccessSurfaces);
+  for (const anchor of propertyAccessField.anchors) {
+    scene.add(anchor);
+  }
+  for (const mesh of propertyAccessField.meshes) {
+    scene.add(mesh);
+  }
 
   const housePositions = [
     ...layout.middleProperties,
@@ -791,24 +711,13 @@ export const populateNeighborhood = (
       const magnitude = Math.ceil(attempt / 2) * step;
       const direction = attempt === 0 ? 0 : attempt % 2 === 1 ? 1 : -1;
       const x = preferredX + magnitude * direction;
-      if (
-        !residentialFootprintIntersectsHardscape(
-          { x, z },
-          layout,
-          halfWidth,
-          halfDepth,
-        )
-      ) {
+      if (!residentialFootprintIntersectsHardscape({ x, z }, layout, halfWidth, halfDepth)) {
         return x;
       }
     }
     return null;
   };
-  const addYardDetailIfClear = (
-    detail: Group,
-    halfWidth: number,
-    halfDepth: number,
-  ): void => {
+  const addYardDetailIfClear = (detail: Group, halfWidth: number, halfDepth: number): void => {
     if (
       residentialFootprintIntersectsHardscape(
         { x: detail.position.x, z: detail.position.z },
@@ -826,14 +735,20 @@ export const populateNeighborhood = (
         Math.abs(tree.z - detail.position.z) <= clearance + halfDepth
       );
     });
-    if (intersectsTree) return;
+    if (intersectsTree) {
+      return;
+    }
     yardDetails.push(detail);
   };
 
   for (const property of layout.frontProperties) {
-    if (property.mailboxX === null) continue;
+    if (property.mailboxX === null) {
+      continue;
+    }
     const safeX = clearYardX(property.mailboxX, -0.3, 0.3, 0.3);
-    if (safeX === null) continue;
+    if (safeX === null) {
+      continue;
+    }
     yardDetails.push(mailbox(safeX, -0.3));
   }
 
@@ -846,8 +761,7 @@ export const populateNeighborhood = (
     const access = residentialAccessLayout(property, seed);
     const fenceZ =
       access.entryZ +
-      access.frontDirection *
-        Math.min(1.15, Math.max(0.72, access.pathDepth * 0.18));
+      access.frontDirection * Math.min(1.15, Math.max(0.72, access.pathDepth * 0.18));
     const lotHalfWidth = Math.max(3.8, 4.45 * property.scale);
     const gaps = [
       Object.freeze({
@@ -858,14 +772,8 @@ export const populateNeighborhood = (
         ? []
         : [
             Object.freeze({
-              minX:
-                property.drivewayX -
-                WORLD_SCALE.street.drivewayWidth / 2 -
-                0.28,
-              maxX:
-                property.drivewayX +
-                WORLD_SCALE.street.drivewayWidth / 2 +
-                0.28,
+              minX: property.drivewayX - WORLD_SCALE.street.drivewayWidth / 2 - 0.28,
+              maxX: property.drivewayX + WORLD_SCALE.street.drivewayWidth / 2 + 0.28,
             }),
           ]),
     ]
@@ -898,10 +806,14 @@ export const populateNeighborhood = (
       addYardDetailIfClear(fence, finalWidth / 2 + FENCE_POST_HALF_THICKNESS, 0.06);
     }
   }
-  for (const detail of yardDetails) scene.add(detail);
+  for (const detail of yardDetails) {
+    scene.add(detail);
+  }
 
   allProperties.forEach((property, index) => {
-    if (!sprinklerEligibleAt(index, property, layout, seed)) return;
+    if (!sprinklerEligibleAt(index, property, layout, seed)) {
+      return;
+    }
     const access = residentialAccessLayout(property, seed);
     const lateral = index % 2 === 0 ? 2.15 : -2.15;
     const x = property.houseX + lateral;
@@ -917,7 +829,7 @@ export const populateNeighborhood = (
       planting.scale,
       color,
       index * 0.71,
-      seed ^ Math.imul(index + 1, 0x45d9f3b),
+      seed ^ Math.imul(index + 1, 0x4_5d_9f_3b),
     );
     tree.userData["propertyRole"] = planting.propertyRole;
     tree.userData["yardZone"] = planting.yardZone;
@@ -932,7 +844,7 @@ export const populateNeighborhood = (
       planting.scale,
       color,
       18 + index * 0.83,
-      seed ^ Math.imul(index + 1, 0x27d4eb2d),
+      seed ^ Math.imul(index + 1, 0x27_d4_eb_2d),
     );
     shrub.userData["propertyRole"] = planting.propertyRole;
     shrub.userData["yardZone"] = planting.yardZone;
@@ -946,20 +858,20 @@ export const populateNeighborhood = (
       planting.z,
       color,
       40 + index * 0.91,
-      seed ^ Math.imul(index + 1, 0x165667b1),
+      seed ^ Math.imul(index + 1, 0x16_56_67_b1),
     );
     bed.userData["propertyRole"] = planting.propertyRole;
     bed.userData["yardZone"] = planting.yardZone;
     scene.add(bed);
   });
 
-  distantHill(scene, -94, -102, 34, 13, 0x718967);
-  distantHill(scene, -48, -108, 38, 15, 0x6b8264);
-  distantHill(scene, 4, -112, 42, 16, 0x748b6c);
-  distantHill(scene, 62, -106, 36, 14, 0x677e61);
-  distantHill(scene, 104, -100, 30, 12, 0x718967);
-  atmosphereBand(scene, -82, 12, 260, 42, 0xb9c8bd, 0.08);
-  atmosphereBand(scene, -116, 15, 300, 48, 0xc8d2ca, 0.11);
+  distantHill(scene, -94, -102, 34, 13, 0x71_89_67);
+  distantHill(scene, -48, -108, 38, 15, 0x6b_82_64);
+  distantHill(scene, 4, -112, 42, 16, 0x74_8b_6c);
+  distantHill(scene, 62, -106, 36, 14, 0x67_7e_61);
+  distantHill(scene, 104, -100, 30, 12, 0x71_89_67);
+  atmosphereBand(scene, -82, 12, 260, 42, 0xb9_c8_bd, 0.08);
+  atmosphereBand(scene, -116, 15, 300, 48, 0xc8_d2_ca, 0.11);
 
   refreshWindRegistry(scene);
 
@@ -973,8 +885,7 @@ export const populateNeighborhood = (
     flowers: layout.flowers.length,
     yardDetails: yardDetails.length,
     pavedRoads,
-    windResponsive:
-      layout.trees.length + layout.shrubs.length + layout.flowers.length,
+    windResponsive: layout.trees.length + layout.shrubs.length + layout.flowers.length,
     roadSegments,
     worldSpan,
   });

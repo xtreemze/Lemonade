@@ -13,8 +13,12 @@ describe("buyer visual pool", () => {
     for (let round = 0; round < 24; round += 1) {
       const first = buyers[round % buyers.length];
       const second = buyers[(round * 5) % buyers.length];
-      if (first !== undefined) first.root.visible = true;
-      if (second !== undefined) second.root.visible = true;
+      if (first !== undefined) {
+        first.root.visible = true;
+      }
+      if (second !== undefined) {
+        second.root.visible = true;
+      }
 
       reclaimBuyerVisualPool(buyers);
 

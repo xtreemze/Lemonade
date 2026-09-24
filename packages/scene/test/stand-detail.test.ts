@@ -1,5 +1,5 @@
-import { Box3, Group } from "three";
 import type { Mesh } from "three";
+import { Box3, Group } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -20,9 +20,7 @@ describe("stand detail", () => {
 
     expect(root.children.length).toBeGreaterThanOrEqual(7);
     expect(shutter.children).toHaveLength(2);
-    const detail = root.children.find(
-      (child) => child.userData["sceneRole"] === "stand-detail",
-    );
+    const detail = root.children.find((child) => child.userData["sceneRole"] === "stand-detail");
     expect(detail).toBeDefined();
     expect(detail?.children.length).toBeGreaterThanOrEqual(10);
   });
@@ -35,11 +33,12 @@ describe("stand detail", () => {
 
     let signY: number | null = null;
     root.traverse((object) => {
-      if (object.userData["sceneRole"] === "stand-sign") signY = object.position.y;
+      if (object.userData["sceneRole"] === "stand-sign") {
+        signY = object.position.y;
+      }
     });
 
-    const canopyTop =
-      STAND_LAYOUT.canopy.position[1] + STAND_LAYOUT.canopy.size[1] / 2;
+    const canopyTop = STAND_LAYOUT.canopy.position[1] + STAND_LAYOUT.canopy.size[1] / 2;
     expect(signY).toBe(STAND_SIGN_CENTER_Y);
     expect(STAND_SIGN_CENTER_Y - 0.28).toBeGreaterThan(canopyTop + 0.08);
   });
@@ -54,7 +53,9 @@ describe("stand detail", () => {
     let basket: Group | undefined;
     const lemons: Group[] = [];
     root.traverse((object) => {
-      if (object.userData["sceneRole"] === "stand-basket") basket = object as Group;
+      if (object.userData["sceneRole"] === "stand-basket") {
+        basket = object as Group;
+      }
       if (object.userData["sceneRole"] === "stand-stock-lemon") {
         lemons.push(object as Group);
       }
@@ -62,7 +63,9 @@ describe("stand detail", () => {
 
     expect(basket).toBeDefined();
     expect(lemons).toHaveLength(8);
-    if (basket === undefined) return;
+    if (basket === undefined) {
+      return;
+    }
 
     for (const lemon of lemons) {
       expect(lemon.parent).toBe(basket);
@@ -78,10 +81,13 @@ describe("stand detail", () => {
 
       const fruit = lemon.children[0];
       expect(fruit).toBeDefined();
-      if (fruit === undefined) continue;
+      if (fruit === undefined) {
+        continue;
+      }
       const fruitBounds = new Box3().setFromObject(fruit);
-      expect(fruitBounds.max.x - fruitBounds.min.x)
-        .toBeLessThanOrEqual(WORLD_SCALE.produce.lemonDiameter * 1.2);
+      expect(fruitBounds.max.x - fruitBounds.min.x).toBeLessThanOrEqual(
+        WORLD_SCALE.produce.lemonDiameter * 1.2,
+      );
     }
   });
 
@@ -94,7 +100,9 @@ describe("stand detail", () => {
     const roleObject = (role: string) => {
       let found: Group | Mesh | undefined;
       root.traverse((object) => {
-        if (object.userData["sceneRole"] === role) found = object as Group | Mesh;
+        if (object.userData["sceneRole"] === role) {
+          found = object as Group | Mesh;
+        }
       });
       return found;
     };
@@ -103,12 +111,9 @@ describe("stand detail", () => {
     const basket = roleObject("stand-basket");
     expect(pitcher).toBeDefined();
     expect(basket).toBeDefined();
-    expect((pitcher?.position.x ?? 0) + 0.19)
-      .toBeLessThan(STAND_LAYOUT.sellerSightline.minX);
-    expect((basket?.position.x ?? 0) + 0.27)
-      .toBeLessThan(STAND_LAYOUT.sellerSightline.minX);
-    expect(STAND_LAYOUT.cupFootprint.minX)
-      .toBeGreaterThan(STAND_LAYOUT.sellerSightline.maxX);
+    expect((pitcher?.position.x ?? 0) + 0.19).toBeLessThan(STAND_LAYOUT.sellerSightline.minX);
+    expect((basket?.position.x ?? 0) + 0.27).toBeLessThan(STAND_LAYOUT.sellerSightline.minX);
+    expect(STAND_LAYOUT.cupFootprint.minX).toBeGreaterThan(STAND_LAYOUT.sellerSightline.maxX);
   });
 
   it("reduces visible juice and lemons with completed sales", () => {
@@ -120,7 +125,9 @@ describe("stand detail", () => {
     let juice: Mesh | undefined;
     const lemons: Group[] = [];
     root.traverse((object) => {
-      if (object.userData["sceneRole"] === "stand-juice") juice = object as Mesh;
+      if (object.userData["sceneRole"] === "stand-juice") {
+        juice = object as Mesh;
+      }
       if (object.userData["sceneRole"] === "stand-stock-lemon") {
         lemons.push(object as Group);
       }

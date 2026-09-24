@@ -1,9 +1,4 @@
-import {
-  BoxGeometry,
-  Group,
-  Mesh,
-  MeshStandardMaterial,
-} from "three";
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from "three";
 import { describe, expect, it } from "vitest";
 
 import { disposeSceneResources } from "../src/scene-disposal.js";

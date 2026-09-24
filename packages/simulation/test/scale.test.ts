@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  DecisionOutsideOperatingScaleError,
-  OPERATING_SCALE_THRESHOLDS_CENTS,
   createInitialState,
+  DecisionOutsideOperatingScaleError,
   glassCount,
   isLegacyBankrupt,
   moneyCents,
   neutralEnvironment,
+  OPERATING_SCALE_THRESHOLDS_CENTS,
   operatingScaleForEquity,
   operatingScaleForState,
   signCount,
@@ -56,7 +56,7 @@ describe("operating-scale progression", () => {
     expect(operatingScaleForEquity(50_000).level).toBe(3);
     expect(operatingScaleForEquity(49_999).level).toBe(2);
     expect(operatingScaleForEquity(10_000).level).toBe(2);
-    expect(operatingScaleForEquity(9_999).level).toBe(1);
+    expect(operatingScaleForEquity(9999).level).toBe(1);
   });
 
   it("treats the original $10 operating reserve as the bankruptcy boundary", () => {

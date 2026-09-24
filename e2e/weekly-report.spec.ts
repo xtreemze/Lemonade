@@ -55,27 +55,26 @@ test("shows a weekly report after each completed seven-day cycle", async ({ page
       const action = document.querySelector("#review-history-button");
 
       if (
-        !(shell instanceof HTMLElement) ||
-        !(report instanceof HTMLElement) ||
-        !(reportContent instanceof HTMLElement) ||
-        !(dailyResults instanceof HTMLElement) ||
-        !(reportHeading instanceof HTMLElement) ||
-        !(ledger instanceof HTMLElement) ||
-        !(ledgerHeading instanceof HTMLElement) ||
-        !(ledgerTable instanceof HTMLElement) ||
-        !(weeklyResults instanceof HTMLElement) ||
-        !(weekly instanceof HTMLElement) ||
-        !(weeklyHeading instanceof HTMLElement) ||
-        !(action instanceof HTMLElement)
+        !(
+          shell instanceof HTMLElement &&
+          report instanceof HTMLElement &&
+          reportContent instanceof HTMLElement &&
+          dailyResults instanceof HTMLElement &&
+          reportHeading instanceof HTMLElement &&
+          ledger instanceof HTMLElement &&
+          ledgerHeading instanceof HTMLElement &&
+          ledgerTable instanceof HTMLElement &&
+          weeklyResults instanceof HTMLElement &&
+          weekly instanceof HTMLElement &&
+          weeklyHeading instanceof HTMLElement &&
+          action instanceof HTMLElement
+        )
       ) {
         throw new TypeError("Expected complete responsive report structure.");
       }
 
       const columnCount = (element: HTMLElement): number =>
-        getComputedStyle(element).gridTemplateColumns
-          .trim()
-          .split(/\s+/u)
-          .filter(Boolean).length;
+        getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/u).filter(Boolean).length;
 
       const bounds = (element: HTMLElement) => {
         const rect = element.getBoundingClientRect();

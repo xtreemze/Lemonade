@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, type Page, type TestInfo, test } from "@playwright/test";
 import manifest from "./manifest.json" with { type: "json" };
 
 type Feature = (typeof manifest.features)[number];
@@ -65,7 +65,7 @@ test.beforeEach(async ({ page }) => {
           window as typeof window & {
             __lemonadeShowcaseAudio?: Readonly<{
               stream: MediaStream;
-              enable(): Promise<void>;
+              enable: () => Promise<void>;
             }>;
           }
         ).__lemonadeShowcaseAudio = Object.freeze({
@@ -92,13 +92,19 @@ const getFeature = (id: string): Feature => {
 };
 
 const getFormFactor = (testInfo: TestInfo): FormFactor => {
-  if (testInfo.project.name === "Desktop Showcase") return "desktop";
-  if (testInfo.project.name === "Mobile Showcase") return "mobile";
+  if (testInfo.project.name === "Desktop Showcase") {
+    return "desktop";
+  }
+  if (testInfo.project.name === "Mobile Showcase") {
+    return "mobile";
+  }
   throw new Error(`Unexpected showcase project: ${testInfo.project.name}`);
 };
 
 const getMediaKind = (feature: Feature): MediaKind => {
-  if (feature.media === "video" || feature.media === "screenshot") return feature.media;
+  if (feature.media === "video" || feature.media === "screenshot") {
+    return feature.media;
+  }
   throw new Error(`Unexpected showcase media kind for ${feature.id}: ${String(feature.media)}`);
 };
 
@@ -177,7 +183,7 @@ const startCanvasCapture = async (
         window as typeof window & {
           __lemonadeShowcaseAudio?: Readonly<{
             stream: MediaStream;
-            enable(): Promise<void>;
+            enable: () => Promise<void>;
           }>;
         }
       ).__lemonadeShowcaseAudio;
@@ -194,16 +200,13 @@ const startCanvasCapture = async (
       const videoStream = canvas.captureStream(requestedFps);
       const audioStream = new MediaStream(audioTracks);
       const videoMimeType =
-        [
-          "video/webm;codecs=vp9",
-          "video/webm;codecs=vp8",
-          "video/webm",
-        ].find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? "";
+        ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((candidate) =>
+          MediaRecorder.isTypeSupported(candidate),
+        ) ?? "";
       const audioMimeType =
-        [
-          "audio/webm;codecs=opus",
-          "audio/webm",
-        ].find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? "";
+        ["audio/webm;codecs=opus", "audio/webm"].find((candidate) =>
+          MediaRecorder.isTypeSupported(candidate),
+        ) ?? "";
 
       const videoRecorderOptions: MediaRecorderOptions = {
         videoBitsPerSecond: videoBitrate,
@@ -223,10 +226,14 @@ const startCanvasCapture = async (
       const videoChunks: Blob[] = [];
       const audioChunks: Blob[] = [];
       videoRecorder.addEventListener("dataavailable", (event) => {
-        if (event.data.size > 0) videoChunks.push(event.data);
+        if (event.data.size > 0) {
+          videoChunks.push(event.data);
+        }
       });
       audioRecorder.addEventListener("dataavailable", (event) => {
-        if (event.data.size > 0) audioChunks.push(event.data);
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
       });
 
       const state: CanvasCaptureState = {
@@ -243,7 +250,7 @@ const startCanvasCapture = async (
       };
       (
         window as typeof window & {
-          __lemonadeShowcaseCapture?: CanvasCaptureState;
+          __lemonadeShowcaseCapture: CanvasCaptureState | undefined;
         }
       ).__lemonadeShowcaseCapture = state;
 
@@ -275,7 +282,7 @@ const startCanvasCapture = async (
 const stopCanvasCapture = async (page: Page): Promise<CanvasCaptureResult> =>
   page.evaluate(async () => {
     const scope = window as typeof window & {
-      __lemonadeShowcaseCapture?: CanvasCaptureState;
+      __lemonadeShowcaseCapture: CanvasCaptureState | undefined;
     };
     const state = scope.__lemonadeShowcaseCapture;
     if (state === undefined) {
@@ -297,10 +304,7 @@ const stopCanvasCapture = async (page: Page): Promise<CanvasCaptureResult> =>
         recorder.stop();
       });
 
-    await Promise.all([
-      stopRecorder(state.videoRecorder),
-      stopRecorder(state.audioRecorder),
-    ]);
+    await Promise.all([stopRecorder(state.videoRecorder), stopRecorder(state.audioRecorder)]);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     if (state.videoChunks.length === 0 || state.audioChunks.length === 0) {
@@ -339,10 +343,14 @@ const stopCanvasCapture = async (page: Page): Promise<CanvasCaptureResult> =>
     ]);
 
     const audioTracks = state.audioStream.getAudioTracks().length;
-    for (const track of state.videoStream.getTracks()) track.stop();
-    for (const track of state.audioStream.getTracks()) track.stop();
+    for (const track of state.videoStream.getTracks()) {
+      track.stop();
+    }
+    for (const track of state.audioStream.getTracks()) {
+      track.stop();
+    }
 
-    delete scope.__lemonadeShowcaseCapture;
+    scope.__lemonadeShowcaseCapture = undefined;
     return {
       videoBase64,
       audioBase64,
@@ -363,7 +371,9 @@ const recordFeature = async (
   const formFactor = getFormFactor(testInfo);
   const media = getMediaKind(feature);
   const viewport = page.viewportSize();
-  if (viewport === null) throw new Error("Showcase viewport must be explicit.");
+  if (viewport === null) {
+    throw new Error("Showcase viewport must be explicit.");
+  }
 
   const rawDir = path.join(artifactRoot, "raw", formFactor);
   await mkdir(rawDir, { recursive: true });
@@ -399,7 +409,7 @@ const recordFeature = async (
     return;
   }
 
-  const targetMs = Math.round(feature.durationSeconds * 1_000);
+  const targetMs = Math.round(feature.durationSeconds * 1000);
   const captureInfo = await startCanvasCapture(page, formFactor);
   const startedAt = Date.now();
   await demonstrate();
@@ -462,7 +472,7 @@ const openReport = async (page: Page): Promise<void> => {
   await openPlanning(page, true);
   await page.getByRole("button", { name: "Sell for the day" }).click();
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "report", {
-    timeout: 7_500,
+    timeout: 7500,
   });
   await page.emulateMedia({ reducedMotion: "no-preference" });
 };
@@ -491,10 +501,10 @@ test("01-weather-forecast", async ({ page }, testInfo) => {
 
     await Promise.all([
       expect(page.locator("#scene-canvas")).toHaveAttribute("data-stand-state", "closed", {
-        timeout: 4_000,
+        timeout: 4000,
       }),
       expect(page.locator("#scene-canvas")).toHaveAttribute("data-scene-shot", "forecast", {
-        timeout: 4_000,
+        timeout: 4000,
       }),
     ]);
   });
@@ -519,7 +529,9 @@ test("02-three-decision-plan", async ({ page }, testInfo) => {
     }
 
     const box = await glasses.boundingBox();
-    if (box === null) throw new Error("Expected visible glasses slider.");
+    if (box === null) {
+      throw new Error("Expected visible glasses slider.");
+    }
     await page.touchscreen.tap(box.x + box.width * 0.72, box.y + box.height / 2);
     await expect(glasses).not.toHaveValue(startValue);
     await glasses.fill(startValue);

@@ -1,14 +1,13 @@
-import { describe, expect, it } from "vitest";
-
 import {
   basisPoints,
+  type DailyLedgerEntry,
   dayNumber,
   glassCount,
   moneyCents,
   signCount,
   signedMoneyCents,
-  type DailyLedgerEntry,
 } from "@lemonade/simulation";
+import { describe, expect, it } from "vitest";
 
 import { projectLedger, sellThroughBasisPoints } from "../src/ledger.js";
 
@@ -47,7 +46,9 @@ const entry = (day: number, prepared: number, sold: number): DailyLedgerEntry =>
 
 const onlyPoint = (value: readonly DailyLedgerEntry[]) => {
   const point = projectLedger(value).at(0);
-  if (point === undefined) throw new Error("expected one ledger point");
+  if (point === undefined) {
+    throw new Error("expected one ledger point");
+  }
   return point;
 };
 
@@ -64,7 +65,7 @@ describe("ledger projection", () => {
   });
 
   it("reports sell-through in basis points and handles zero inventory", () => {
-    expect(sellThroughBasisPoints(onlyPoint([entry(1, 20, 15)]))).toBe(7_500);
+    expect(sellThroughBasisPoints(onlyPoint([entry(1, 20, 15)]))).toBe(7500);
     expect(sellThroughBasisPoints(onlyPoint([entry(1, 0, 0)]))).toBe(0);
   });
 });

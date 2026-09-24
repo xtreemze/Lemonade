@@ -1,5 +1,5 @@
-import type { GameState } from "./model.js";
 import { legacyOperatingBalanceCents } from "./legacy.js";
+import type { GameState } from "./model.js";
 
 export type OperatingScaleLevel = 1 | 2 | 3 | 4;
 
@@ -48,15 +48,19 @@ export const operatingScaleForBalance = (balanceCents: number): OperatingScaleRu
     throw new TypeError("operating balance must be a safe integer number of cents");
   }
 
-  if (balanceCents < OPERATING_SCALE_THRESHOLDS_CENTS.level2) return RULES[1];
-  if (balanceCents < OPERATING_SCALE_THRESHOLDS_CENTS.level3) return RULES[2];
-  if (balanceCents < OPERATING_SCALE_THRESHOLDS_CENTS.level4) return RULES[3];
+  if (balanceCents < OPERATING_SCALE_THRESHOLDS_CENTS.level2) {
+    return RULES[1];
+  }
+  if (balanceCents < OPERATING_SCALE_THRESHOLDS_CENTS.level3) {
+    return RULES[2];
+  }
+  if (balanceCents < OPERATING_SCALE_THRESHOLDS_CENTS.level4) {
+    return RULES[3];
+  }
   return RULES[4];
 };
 
 export const operatingScaleForEquity = operatingScaleForBalance;
 
-export const operatingScaleForState = (
-  state: Pick<GameState, "ledger">,
-): OperatingScaleRules =>
+export const operatingScaleForState = (state: Pick<GameState, "ledger">): OperatingScaleRules =>
   operatingScaleForBalance(legacyOperatingBalanceCents(state));

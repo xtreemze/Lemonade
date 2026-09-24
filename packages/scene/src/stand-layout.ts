@@ -16,10 +16,7 @@ const counter = box(
   [2.8, counterThickness, 0.76],
   [0, WORLD_SCALE.stand.counterHeight - counterThickness / 2, 0.28],
 );
-const canopy = box(
-  [2.9, 0.12, 1],
-  [0, WORLD_SCALE.stand.canopyHeight, 0.12],
-);
+const canopy = box([2.9, 0.12, 1], [0, WORLD_SCALE.stand.canopyHeight, 0.12]);
 const counterTopY = counter.position[1] + counter.size[1] / 2;
 const canopyBottomY = canopy.position[1] - canopy.size[1] / 2;
 const postHeight = canopyBottomY - counterTopY;
@@ -62,10 +59,11 @@ export const standCounterBounds = (): Readonly<{
   minZ: number;
   maxZ: number;
   topY: number;
-}> => Object.freeze({
-  minX: counter.position[0] - counter.size[0] / 2,
-  maxX: counter.position[0] + counter.size[0] / 2,
-  minZ: counter.position[2] - counter.size[2] / 2,
-  maxZ: counter.position[2] + counter.size[2] / 2,
-  topY: counterTopY,
-});
+}> =>
+  Object.freeze({
+    minX: counter.position[0] - counter.size[0] / 2,
+    maxX: counter.position[0] + counter.size[0] / 2,
+    minZ: counter.position[2] - counter.size[2] / 2,
+    maxZ: counter.position[2] + counter.size[2] / 2,
+    topY: counterTopY,
+  });

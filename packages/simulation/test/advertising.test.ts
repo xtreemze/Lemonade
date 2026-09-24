@@ -5,15 +5,15 @@ import {
   advertisingFatigueReachPenalty,
   awarenessForCustomer,
   basisPoints,
+  type CustomerTraits,
   customerId,
+  dayNumber,
   effectiveAdvertisingReach,
-  nextAdvertisingFatigue,
   moneyCents,
+  nextAdvertisingFatigue,
   seed,
   signCount,
   weatherAdvertisingAttention,
-  dayNumber,
-  type CustomerTraits,
 } from "../src/index.js";
 
 const traits = Object.freeze({
@@ -21,10 +21,10 @@ const traits = Object.freeze({
   type: "impulse",
   visualSeed: seed(91),
   intrinsicPriceTolerance: moneyCents(250),
-  advertisingResponsiveness: basisPoints(8_000),
-  familiarity: basisPoints(2_000),
-  loyalty: basisPoints(2_000),
-  weatherCommitment: basisPoints(5_000),
+  advertisingResponsiveness: basisPoints(8000),
+  familiarity: basisPoints(2000),
+  loyalty: basisPoints(2000),
+  weatherCommitment: basisPoints(5000),
 }) satisfies CustomerTraits;
 
 describe("advertising awareness", () => {
@@ -49,19 +49,12 @@ describe("advertising awareness", () => {
 
   it("keeps thunderstorm sign attention materially below ordinary weather", () => {
     expect(Number(weatherAdvertisingAttention("sunny"))).toBe(10_000);
-    expect(Number(weatherAdvertisingAttention("thunderstorm"))).toBe(6_500);
+    expect(Number(weatherAdvertisingAttention("thunderstorm"))).toBe(6500);
 
     const fresh = basisPoints(0);
-    const sunnyReach = Number(
-      effectiveAdvertisingReach(signCount(10), traits, "sunny", fresh),
-    );
+    const sunnyReach = Number(effectiveAdvertisingReach(signCount(10), traits, "sunny", fresh));
     const stormReach = Number(
-      effectiveAdvertisingReach(
-        signCount(10),
-        traits,
-        "thunderstorm",
-        fresh,
-      ),
+      effectiveAdvertisingReach(signCount(10), traits, "thunderstorm", fresh),
     );
 
     expect(stormReach).toBeLessThan(sunnyReach);
@@ -70,9 +63,7 @@ describe("advertising awareness", () => {
 
   it("bounds repeated-ad fatigue and recovers when advertising pressure falls", () => {
     let fatigue = basisPoints(0);
-    const freshReach = Number(
-      effectiveAdvertisingReach(signCount(40), traits, "sunny", fatigue),
-    );
+    const freshReach = Number(effectiveAdvertisingReach(signCount(40), traits, "sunny", fatigue));
 
     for (let day = 0; day < 12; day += 1) {
       fatigue = nextAdvertisingFatigue(fatigue, signCount(40), 4);
@@ -83,8 +74,8 @@ describe("advertising awareness", () => {
       effectiveAdvertisingReach(signCount(40), traits, "sunny", fatigue),
     );
 
-    expect(repeatedPenalty).toBeGreaterThan(1_000);
-    expect(repeatedPenalty).toBeLessThanOrEqual(1_800);
+    expect(repeatedPenalty).toBeGreaterThan(1000);
+    expect(repeatedPenalty).toBeLessThanOrEqual(1800);
     expect(repeatedReach).toBeLessThan(freshReach);
 
     const fatigued = fatigue;
@@ -93,9 +84,7 @@ describe("advertising awareness", () => {
     }
 
     expect(Number(fatigue)).toBeLessThan(Number(fatigued));
-    expect(Number(advertisingFatigueReachPenalty(fatigue))).toBeLessThan(
-      repeatedPenalty,
-    );
+    expect(Number(advertisingFatigueReachPenalty(fatigue))).toBeLessThan(repeatedPenalty);
   });
 
   it("can produce organic awareness with zero advertising", () => {
@@ -123,7 +112,7 @@ describe("advertising awareness", () => {
       traits,
       signs: signCount(7),
       weather: "cloudy",
-      advertisingFatigue: basisPoints(2_500),
+      advertisingFatigue: basisPoints(2500),
     });
 
     const first = awarenessForCustomer(input);

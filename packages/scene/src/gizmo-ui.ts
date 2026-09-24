@@ -168,7 +168,7 @@ export const createGizmoUI = (options: GizmoUIOptions): HTMLElement => {
   });
   actionContainer.appendChild(saveBtn);
 
-  const exportJSONBtn = createButton("📋 Export JSON", () => {
+  const exportJsonBtn = createButton("📋 Export JSON", () => {
     const json = gizmoController.exportAsJSON();
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -178,7 +178,7 @@ export const createGizmoUI = (options: GizmoUIOptions): HTMLElement => {
     a.click();
     URL.revokeObjectURL(url);
   });
-  actionContainer.appendChild(exportJSONBtn);
+  actionContainer.appendChild(exportJsonBtn);
 
   const exportCodeBtn = createButton("📝 Export Code", () => {
     const code = gizmoController.exportAsCode();
@@ -218,10 +218,10 @@ export const createGizmoUI = (options: GizmoUIOptions): HTMLElement => {
 
   const updateSavedCount = () => {
     const saved = gizmoController.getSavedTransforms();
-    savedCountContainer.textContent = `Saved: ${String(saved.length)} object${saved.length !== 1 ? "s" : ""}`;
+    savedCountContainer.textContent = `Saved: ${String(saved.length)} object${saved.length === 1 ? "" : "s"}`;
   };
 
-  const updateUI = () => {
+  const updateUi = () => {
     const selected = gizmoController.getSelectedObject();
     if (selected) {
       selectedInfo.textContent = `Selected: ${selected.name || "unnamed"}`;
@@ -242,7 +242,7 @@ export const createGizmoUI = (options: GizmoUIOptions): HTMLElement => {
 
   // Update UI on animation frame
   const updateLoop = () => {
-    updateUI();
+    updateUi();
     requestAnimationFrame(updateLoop);
   };
   updateLoop();

@@ -40,8 +40,7 @@ export const DEFAULT_STREET_SEED = 0x4c_45_4d_4f;
 
 const roadDepth = WORLD_SCALE.street.roadWidth;
 const sidewalkDepth = WORLD_SCALE.street.sidewalkWidth;
-const sidewalkOffset =
-  roadDepth / 2 + WORLD_SCALE.street.curbGap + sidewalkDepth / 2;
+const sidewalkOffset = roadDepth / 2 + WORLD_SCALE.street.curbGap + sidewalkDepth / 2;
 const mainCenterZ = 5;
 
 export const STREET_LAYOUT = Object.freeze({
@@ -69,9 +68,7 @@ const normalizedLane = (lane: number): number =>
   Math.abs(Math.trunc(Number.isFinite(lane) ? lane : 0)) % 4;
 
 export const sidewalkSideForActor = (actorIndex: number): SidewalkSide =>
-  Math.abs(Math.trunc(Number.isFinite(actorIndex) ? actorIndex : 0)) % 2 === 0
-    ? "near"
-    : "far";
+  Math.abs(Math.trunc(Number.isFinite(actorIndex) ? actorIndex : 0)) % 2 === 0 ? "near" : "far";
 
 export const sidewalkSideForZ = (z: number): SidewalkSide => {
   const safeZ = Number.isFinite(z) ? z : STREET_LAYOUT.nearSidewalk.centerZ;
@@ -81,33 +78,20 @@ export const sidewalkSideForZ = (z: number): SidewalkSide => {
     : "far";
 };
 
-export const sidewalkLaneZForSide = (
-  side: SidewalkSide,
-  lane: number,
-): number => {
+export const sidewalkLaneZForSide = (side: SidewalkSide, lane: number): number => {
   const normalized = normalizedLane(lane);
-  const sidewalk =
-    side === "near" ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
+  const sidewalk = side === "near" ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
   const inset = 0.28;
   const usable = sidewalk.depth - inset * 2;
   return sidewalk.minZ + inset + (normalized / 3) * usable;
 };
 
-export const sidewalkLaneZ = (lane: number): number =>
-  sidewalkLaneZForSide("near", lane);
+export const sidewalkLaneZ = (lane: number): number => sidewalkLaneZForSide("near", lane);
 
-export const clampToSidewalk = (
-  z: number,
-  side: SidewalkSide,
-  inset = 0.1,
-): number => {
-  const sidewalk =
-    side === "near" ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
+export const clampToSidewalk = (z: number, side: SidewalkSide, inset = 0.1): number => {
+  const sidewalk = side === "near" ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
   const safeInset = Math.max(0, Math.min(0.35, inset));
-  return Math.min(
-    sidewalk.maxZ - safeInset,
-    Math.max(sidewalk.minZ + safeInset, z),
-  );
+  return Math.min(sidewalk.maxZ - safeInset, Math.max(sidewalk.minZ + safeInset, z));
 };
 
 export const clampToNearSidewalk = (z: number, inset = 0.1): number =>
@@ -116,21 +100,14 @@ export const clampToNearSidewalk = (z: number, inset = 0.1): number =>
 export const clampToNearestSidewalk = (z: number, inset = 0.1): number =>
   clampToSidewalk(z, sidewalkSideForZ(z), inset);
 
-export const roadLaneZ = (
-  kind: StreetTrafficKind,
-  index: number,
-): number => {
+export const roadLaneZ = (kind: StreetTrafficKind, index: number): number => {
   const lane = Math.abs(Math.trunc(Number.isFinite(index) ? index : 0)) % 2;
   if (kind === "bicycle") {
     const edgeInset = 0.45;
-    return lane === 0
-      ? STREET_LAYOUT.road.minZ + edgeInset
-      : STREET_LAYOUT.road.maxZ - edgeInset;
+    return lane === 0 ? STREET_LAYOUT.road.minZ + edgeInset : STREET_LAYOUT.road.maxZ - edgeInset;
   }
   const offset = WORLD_SCALE.street.laneWidth / 2;
-  return lane === 0
-    ? STREET_LAYOUT.road.centerZ - offset
-    : STREET_LAYOUT.road.centerZ + offset;
+  return lane === 0 ? STREET_LAYOUT.road.centerZ - offset : STREET_LAYOUT.road.centerZ + offset;
 };
 
 export type GardenSignPosition = Readonly<{
@@ -140,14 +117,7 @@ export type GardenSignPosition = Readonly<{
   rotationY: number;
 }>;
 
-const STAND_GARDEN_SIGN_COLUMNS = [
-  -7.4,
-  -6.4,
-  -5.75,
-  -3.2,
-  -2.7,
-  -1.8,
-] as const;
+const STAND_GARDEN_SIGN_COLUMNS = [-7.4, -6.4, -5.75, -3.2, -2.7, -1.8] as const;
 
 export const gardenSignPosition = (index: number): GardenSignPosition => {
   const safeIndex = Math.max(0, Math.trunc(Number.isFinite(index) ? index : 0));
@@ -157,19 +127,19 @@ export const gardenSignPosition = (index: number): GardenSignPosition => {
     x: STAND_GARDEN_SIGN_COLUMNS[column] ?? -5.6,
     y: 0,
     z: -0.85 - row * 0.55,
-    rotationY: (safeIndex % 3 - 1) * 0.055,
+    rotationY: ((safeIndex % 3) - 1) * 0.055,
   });
 };
 
 const mix32 = (seed: number, salt: number): number => {
-  let value = (seed ^ Math.imul((salt + 1) >>> 0, 0x9e3779b1)) >>> 0;
-  value = Math.imul(value ^ (value >>> 16), 0x21f0aaad);
-  value = Math.imul(value ^ (value >>> 15), 0x735a2d97);
+  let value = (seed ^ Math.imul((salt + 1) >>> 0, 0x9e_37_79_b1)) >>> 0;
+  value = Math.imul(value ^ (value >>> 16), 0x21_f0_aa_ad);
+  value = Math.imul(value ^ (value >>> 15), 0x73_5a_2d_97);
   return (value ^ (value >>> 15)) >>> 0;
 };
 
 const signedUnit = (seed: number, salt: number): number =>
-  (mix32(seed, salt) / 0xffff_ffff) * 2 - 1;
+  (mix32(seed, salt) / 0xff_ff_ff_ff) * 2 - 1;
 
 const quadraticPoint = (
   start: StreetPoint,
@@ -226,7 +196,9 @@ const curveRoad = (
   return Object.freeze(
     points.slice(0, -1).map((point, index) => {
       const next = points[index + 1];
-      if (next === undefined) throw new Error("street curve segment invariant failed");
+      if (next === undefined) {
+        throw new Error("street curve segment invariant failed");
+      }
       return stripBetween("paved-road", streetId, index, point, next, width);
     }),
   );
@@ -249,26 +221,22 @@ const straightRoad = (
   return Object.freeze(
     points.slice(0, -1).map((point, index) => {
       const next = points[index + 1];
-      if (next === undefined) throw new Error("street line segment invariant failed");
+      if (next === undefined) {
+        throw new Error("street line segment invariant failed");
+      }
       return stripBetween("paved-road", streetId, index, point, next, width);
     }),
   );
 };
 
-const stripProjectionRadius = (
-  strip: StreetStripSpec,
-  axisX: number,
-  axisZ: number,
-): number => {
+const stripProjectionRadius = (strip: StreetStripSpec, axisX: number, axisZ: number): number => {
   const lengthAxisX = Math.cos(strip.rotationY);
   const lengthAxisZ = Math.sin(strip.rotationY);
   const widthAxisX = -lengthAxisZ;
   const widthAxisZ = lengthAxisX;
   return (
-    (strip.length / 2) *
-      Math.abs(axisX * lengthAxisX + axisZ * lengthAxisZ) +
-    (strip.width / 2) *
-      Math.abs(axisX * widthAxisX + axisZ * widthAxisZ)
+    (strip.length / 2) * Math.abs(axisX * lengthAxisX + axisZ * lengthAxisZ) +
+    (strip.width / 2) * Math.abs(axisX * widthAxisX + axisZ * widthAxisZ)
   );
 };
 
@@ -296,10 +264,7 @@ export const streetStripsOverlap = (
   });
 };
 
-const sidewalkForRoad = (
-  road: StreetStripSpec,
-  side: -1 | 1,
-): StreetStripSpec => {
+const sidewalkForRoad = (road: StreetStripSpec, side: -1 | 1): StreetStripSpec => {
   const normalX = -Math.sin(road.rotationY);
   const normalZ = Math.cos(road.rotationY);
   return Object.freeze({
@@ -333,21 +298,11 @@ const stripAabb = (strip: StreetStripSpec): StreetHardscapeRect => {
   });
 };
 
-export const generateStreetNetwork = (
-  seed = DEFAULT_STREET_SEED,
-): GeneratedStreetNetwork => {
-  const safeSeed = Number.isFinite(seed)
-    ? Math.trunc(seed) >>> 0
-    : DEFAULT_STREET_SEED;
+export const generateStreetNetwork = (seed = DEFAULT_STREET_SEED): GeneratedStreetNetwork => {
+  const safeSeed = Number.isFinite(seed) ? Math.trunc(seed) >>> 0 : DEFAULT_STREET_SEED;
   const width = WORLD_SCALE.street.roadWidth;
   const roads = [
-    ...straightRoad(
-      "main",
-      { x: -120, z: mainCenterZ },
-      { x: 120, z: mainCenterZ },
-      18,
-      width,
-    ),
+    ...straightRoad("main", { x: -120, z: mainCenterZ }, { x: 120, z: mainCenterZ }, 18, width),
     ...curveRoad(
       "west-curve",
       { x: -58, z: 42 },
@@ -380,20 +335,8 @@ export const generateStreetNetwork = (
       8,
       width,
     ),
-    ...straightRoad(
-      "front-grid",
-      { x: -120, z: 25 },
-      { x: 120, z: 25 },
-      18,
-      width,
-    ),
-    ...straightRoad(
-      "deep-grid",
-      { x: -120, z: -62 },
-      { x: 120, z: -62 },
-      18,
-      width,
-    ),
+    ...straightRoad("front-grid", { x: -120, z: 25 }, { x: 120, z: 25 }, 18, width),
+    ...straightRoad("deep-grid", { x: -120, z: -62 }, { x: 120, z: -62 }, 18, width),
   ] as const;
 
   const sidewalkCandidates = roads.flatMap((road) => [
@@ -401,8 +344,7 @@ export const generateStreetNetwork = (
     sidewalkForRoad(road, 1),
   ]);
   const sidewalks = sidewalkCandidates.filter(
-    (candidate) =>
-      !roads.some((road) => streetStripsOverlap(candidate, road, 0.01)),
+    (candidate) => !roads.some((road) => streetStripsOverlap(candidate, road, 0.01)),
   );
 
   return Object.freeze({
@@ -416,7 +358,5 @@ export const streetNetworkHardscapeRects = (
   seed = DEFAULT_STREET_SEED,
 ): readonly StreetHardscapeRect[] => {
   const network = generateStreetNetwork(seed);
-  return Object.freeze(
-    [...network.roads, ...network.sidewalks].map(stripAabb),
-  );
+  return Object.freeze([...network.roads, ...network.sidewalks].map(stripAabb));
 };

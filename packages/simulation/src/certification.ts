@@ -2,9 +2,9 @@ import { generateEnvironment, neutralEnvironment } from "./environment.js";
 import { availableOperatingFunds, predictableFixedObligations } from "./finance.js";
 import {
   LEGACY_STARTING_BALANCE_CENTS,
+  type LegacyConfidence,
   legacyOperatingBalanceCents,
   legacyWeatherEffect,
-  type LegacyConfidence,
 } from "./legacy.js";
 import type {
   DailyLedgerEntry,
@@ -16,17 +16,10 @@ import type {
   ProgressionTier,
   Weather,
 } from "./model.js";
-import {
-  basisPoints,
-  glassCount,
-  moneyCents,
-  seed,
-  signCount,
-  type Seed,
-} from "./primitives.js";
+import { basisPoints, glassCount, moneyCents, type Seed, seed, signCount } from "./primitives.js";
 import { createSeededRandom } from "./rng.js";
 import { legacyMarketingEffect, potentialDemand } from "./rules.js";
-import { operatingScaleForState, type OperatingScaleLevel } from "./scale.js";
+import { type OperatingScaleLevel, operatingScaleForState } from "./scale.js";
 import { simulateDay } from "./simulate.js";
 import { createInitialState } from "./state.js";
 import { SIMULATION_SCHEMA_VERSION } from "./version.js";
@@ -34,22 +27,7 @@ import { SIMULATION_SCHEMA_VERSION } from "./version.js";
 export const CERTIFICATION_HORIZON_DAYS = 90 as const;
 
 export const CERTIFICATION_SEEDS = Object.freeze([
-  0x1e_ad_2026,
-  1,
-  2,
-  3,
-  4,
-  5,
-  6,
-  7,
-  8,
-  9,
-  10,
-  11,
-  12,
-  13,
-  14,
-  15,
+  0x1e_ad_20_26, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 ] as const);
 
 export const CERTIFICATION_STRATEGY_NAMES = Object.freeze([
@@ -73,7 +51,7 @@ type ProposedDecision = Readonly<{
 type StrategyDefinition = Readonly<{
   name: CertificationStrategyName;
   description: string;
-  decide(state: GameState, environment: DayEnvironment): DayDecision;
+  decide: (state: GameState, environment: DayEnvironment) => DayDecision;
 }>;
 
 export type FinanceBurden = Readonly<{
@@ -178,20 +156,21 @@ const failCertification = (message: string): never => {
 };
 
 const requireInvariant = (condition: boolean, message: string): void => {
-  if (!condition) failCertification(message);
+  if (!condition) {
+    failCertification(message);
+  }
 };
 
 const valueAt = <Value>(values: readonly Value[], index: number, label: string): Value => {
   const value = values[index];
-  if (value === undefined) return failCertification(`${label} is incomplete`);
+  if (value === undefined) {
+    return failCertification(`${label} is incomplete`);
+  }
   return value;
 };
 
 const variableBudgetCents = (state: GameState): number =>
-  Math.max(
-    0,
-    Number(availableOperatingFunds(state)) - Number(predictableFixedObligations(state)),
-  );
+  Math.max(0, Number(availableOperatingFunds(state)) - Number(predictableFixedObligations(state)));
 
 const affordableDecision = (state: GameState, proposed: ProposedDecision): DayDecision => {
   const budget = variableBudgetCents(state);
@@ -303,10 +282,7 @@ const sumLines = (entry: DailyLedgerEntry, kinds: readonly LedgerLineKind[]): nu
   );
 
 const lineAmount = (entry: DailyLedgerEntry, kind: LedgerLineKind): number =>
-  entry.lines.reduce(
-    (total, line) => total + (line.kind === kind ? Number(line.amount) : 0),
-    0,
-  );
+  entry.lines.reduce((total, line) => total + (line.kind === kind ? Number(line.amount) : 0), 0);
 
 const certifyDailyResolution = (resolution: DayResolution): void => {
   const { previousState, nextState, entry } = resolution;
@@ -335,7 +311,8 @@ const certifyDailyResolution = (resolution: DayResolution): void => {
   requireInvariant(expectedRevenue === Number(entry.revenue), "revenue identity");
   requireInvariant(expenseLines === Number(entry.expenses), "expense identity");
   requireInvariant(
-    Number(entry.revenue) + Number(entry.financeIncome) - Number(entry.expenses) === Number(entry.net),
+    Number(entry.revenue) + Number(entry.financeIncome) - Number(entry.expenses) ===
+      Number(entry.net),
     "net identity",
   );
   requireInvariant(expectedCash === Number(entry.endingCash), "cash-flow identity");
@@ -413,8 +390,7 @@ const runStrategy = (
       firstDayByTier[state.tier] = Number(state.day);
     }
     const operatingScale = operatingScaleForState(state).level;
-    maxOperatingScale =
-      operatingScale > maxOperatingScale ? operatingScale : maxOperatingScale;
+    maxOperatingScale = operatingScale > maxOperatingScale ? operatingScale : maxOperatingScale;
     if (firstDayByOperatingScale[operatingScale - 1] === null) {
       firstDayByOperatingScale[operatingScale - 1] = Number(state.day);
     }
@@ -444,7 +420,9 @@ const runStrategy = (
 };
 
 const percentile = (values: readonly number[], ratio: number): number => {
-  if (values.length === 0) return failCertification("cannot summarize an empty value set");
+  if (values.length === 0) {
+    return failCertification("cannot summarize an empty value set");
+  }
   const ordered = [...values].sort((a, b) => a - b);
   return valueAt(ordered, Math.floor((ordered.length - 1) * ratio), "percentile values");
 };
@@ -538,9 +516,7 @@ const controlledProbes = (): ControlledProbes => {
     [100, 150, 200, 250, 299].map((priceCents) =>
       Object.freeze({
         priceCents,
-        demand: Number(
-          potentialDemand(moneyCents(priceCents), signCount(1), 3, neutral),
-        ),
+        demand: Number(potentialDemand(moneyCents(priceCents), signCount(1), 3, neutral)),
       }),
     ),
   );
@@ -550,9 +526,7 @@ const controlledProbes = (): ControlledProbes => {
       Object.freeze({
         signs,
         effect: legacyMarketingEffect(signCount(signs)),
-        demand: Number(
-          potentialDemand(moneyCents(150), signCount(signs), 3, neutral),
-        ),
+        demand: Number(potentialDemand(moneyCents(150), signCount(signs), 3, neutral)),
       }),
     ),
   );
@@ -563,9 +537,7 @@ const controlledProbes = (): ControlledProbes => {
       return Object.freeze({
         kind,
         effect: legacyWeatherEffect(environment.weather),
-        demand: Number(
-          potentialDemand(moneyCents(150), signCount(1), 3, environment),
-        ),
+        demand: Number(potentialDemand(moneyCents(150), signCount(1), 3, environment)),
       });
     }),
   );
@@ -575,14 +547,7 @@ const controlledProbes = (): ControlledProbes => {
     confidenceValues.map((value) =>
       Object.freeze({
         confidence: value,
-        demand: Number(
-          potentialDemand(
-            moneyCents(150),
-            signCount(1),
-            value,
-            neutral,
-          ),
-        ),
+        demand: Number(potentialDemand(moneyCents(150), signCount(1), value, neutral)),
       }),
     ),
   );
@@ -628,8 +593,7 @@ export const assertBalanceCertification = (report: BalanceCertificationReport): 
   const price = report.probes.priceDemand;
   for (let index = 1; index < price.length; index += 1) {
     requireInvariant(
-      valueAt(price, index - 1, "price probe").demand >
-        valueAt(price, index, "price probe").demand,
+      valueAt(price, index - 1, "price probe").demand > valueAt(price, index, "price probe").demand,
       "2017 inverse-price demand must remain continuously decreasing",
     );
   }

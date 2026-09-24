@@ -18,9 +18,9 @@ export type SemanticFeedbackEvent = Readonly<{
 }>;
 
 export type FeedbackTransport = Readonly<{
-  deliver(event: SemanticFeedbackEvent): void;
-  accepts?(event: SemanticFeedbackEvent): boolean;
-  cancel?(): void;
+  deliver: (event: SemanticFeedbackEvent) => void;
+  accepts?: (event: SemanticFeedbackEvent) => boolean;
+  cancel?: () => void;
 }>;
 
 export type FeedbackRouterOptions = Readonly<{
@@ -30,11 +30,11 @@ export type FeedbackRouterOptions = Readonly<{
 }>;
 
 export type FeedbackRouter = Readonly<{
-  route(events: readonly SemanticFeedbackEvent[]): void;
-  setVisible(visible: boolean): void;
-  setAudioMuted(muted: boolean): void;
-  setHapticsEnabled(enabled: boolean): void;
-  dispose(): void;
+  route: (events: readonly SemanticFeedbackEvent[]) => void;
+  setVisible: (visible: boolean) => void;
+  setAudioMuted: (muted: boolean) => void;
+  setHapticsEnabled: (enabled: boolean) => void;
+  dispose: () => void;
 }>;
 
 const FEEDBACK_PRIORITY: Readonly<Record<SemanticFeedbackKind, number>> = Object.freeze({
@@ -51,8 +51,7 @@ const FEEDBACK_PRIORITY: Readonly<Record<SemanticFeedbackKind, number>> = Object
   birdsong: 0,
 });
 
-const safeAtMs = (value: number): number =>
-  Math.max(0, Number.isFinite(value) ? value : 0);
+const safeAtMs = (value: number): number => Math.max(0, Number.isFinite(value) ? value : 0);
 
 export const compareSemanticFeedbackEvents = (
   left: SemanticFeedbackEvent,
@@ -68,9 +67,7 @@ const canDeliver = (
 ): transport is FeedbackTransport =>
   transport !== undefined && (transport.accepts?.(event) ?? true);
 
-export const createFeedbackRouter = (
-  options: FeedbackRouterOptions = {},
-): FeedbackRouter => {
+export const createFeedbackRouter = (options: FeedbackRouterOptions = {}): FeedbackRouter => {
   const consumed = new Set<string>();
   let visible = true;
   let audioMuted = false;
@@ -86,46 +83,72 @@ export const createFeedbackRouter = (
     transport: FeedbackTransport | undefined,
     event: SemanticFeedbackEvent,
   ): void => {
-    if (canDeliver(transport, event)) transport.deliver(event);
+    if (canDeliver(transport, event)) {
+      transport.deliver(event);
+    }
   };
 
   return Object.freeze({
     route(events): void {
-      if (disposed) return;
+      if (disposed) {
+        return;
+      }
 
       const ordered = [...events].sort(compareSemanticFeedbackEvents);
       for (const event of ordered) {
-        if (consumed.has(event.id)) continue;
+        if (consumed.has(event.id)) {
+          continue;
+        }
         consumed.add(event.id);
 
-        if (!visible) continue;
+        if (!visible) {
+          continue;
+        }
 
-        if (!audioMuted) routeTo(options.audio, event);
-        if (hapticsEnabled) routeTo(options.haptic, event);
+        if (!audioMuted) {
+          routeTo(options.audio, event);
+        }
+        if (hapticsEnabled) {
+          routeTo(options.haptic, event);
+        }
         routeTo(options.accessibility, event);
       }
     },
 
     setVisible(nextVisible): void {
-      if (disposed || visible === nextVisible) return;
+      if (disposed || visible === nextVisible) {
+        return;
+      }
       visible = nextVisible;
-      if (!visible) cancelTransientOutput();
+      if (!visible) {
+        cancelTransientOutput();
+      }
     },
 
     setAudioMuted(muted): void {
-      if (disposed || audioMuted === muted) return;
+      if (disposed || audioMuted === muted) {
+        return;
+      }
       audioMuted = muted;
-      if (audioMuted) options.audio?.cancel?.();
+      if (audioMuted) {
+        options.audio?.cancel?.();
+      }
     },
 
     setHapticsEnabled(enabled): void {
-      if (disposed || hapticsEnabled === enabled) return;
+      if (disposed || hapticsEnabled === enabled) {
+        return;
+      }
       hapticsEnabled = enabled;
-      if (!hapticsEnabled) options.haptic?.cancel?.();
+      if (!hapticsEnabled) {
+        options.haptic?.cancel?.();
+      }
     },
 
     dispose(): void {
-      if (disposed) return;
+      if (disposed) {
+        return;
+      }
       disposed = true;
       options.audio?.cancel?.();
       options.haptic?.cancel?.();

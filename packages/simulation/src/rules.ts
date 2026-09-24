@@ -1,10 +1,6 @@
+import { type LegacyConfidence, legacyConfidenceRoll, legacyWeatherEffect } from "./legacy.js";
 import type { DayEnvironment } from "./model.js";
-import {
-  legacyConfidenceRoll,
-  legacyWeatherEffect,
-  type LegacyConfidence,
-} from "./legacy.js";
-import { glassCount, type GlassCount, type MoneyCents, type SignCount } from "./primitives.js";
+import { type GlassCount, glassCount, type MoneyCents, type SignCount } from "./primitives.js";
 
 export const legacyMarketingEffect = (signs: SignCount): number => {
   const signCount = Number(signs);
@@ -24,11 +20,9 @@ export const potentialDemand = (
   }
 
   const signsEffect = legacyMarketingEffect(signs);
-  const confidenceContribution =
-    legacyConfidenceRoll(environment.sentiment) * confidence;
+  const confidenceContribution = legacyConfidenceRoll(environment.sentiment) * confidence;
   const weatherEffect = legacyWeatherEffect(environment.weather);
-  const demand =
-    ((signsEffect + confidenceContribution) / priceDollars) * weatherEffect;
+  const demand = ((signsEffect + confidenceContribution) / priceDollars) * weatherEffect;
 
   return glassCount(Math.max(0, Math.round(demand)));
 };

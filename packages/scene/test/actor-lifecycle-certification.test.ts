@@ -19,9 +19,7 @@ const roleOf = (object: Object3D): string | null => {
 };
 
 const visibleByRole = (scene: Scene, role: string): number =>
-  scene.children.filter(
-    (object) => object.visible && roleOf(object) === role,
-  ).length;
+  scene.children.filter((object) => object.visible && roleOf(object) === role).length;
 
 const exerciseDay = (
   scene: Scene,
@@ -45,16 +43,9 @@ const exerciseDay = (
     { x: 110, z: 0 },
   ] as const;
 
-  for (let elapsedMs = 0; elapsedMs <= 14_000; elapsedMs += 1_000) {
+  for (let elapsedMs = 0; elapsedMs <= 14_000; elapsedMs += 1000) {
     for (const focus of focuses) {
-      ambient.update(
-        weather,
-        "simulation",
-        elapsedMs,
-        14_000,
-        dayNumber,
-        focus,
-      );
+      ambient.update(weather, "simulation", elapsedMs, 14_000, dayNumber, focus);
 
       expect(visibleByRole(scene, "ambient-vehicle")).toBeLessThanOrEqual(8);
       expect(visibleByRole(scene, "ambient-bicycle")).toBeLessThanOrEqual(3);
@@ -67,7 +58,7 @@ const exerciseDay = (
 describe("long-session ambient actor lifecycle certification", () => {
   it("reaches a stable renderer-object plateau across repeated days", () => {
     const scene = new Scene();
-    const ambient = createAmbientLife(scene, 0x5eed_1234, []);
+    const ambient = createAmbientLife(scene, 0x5e_ed_12_34, []);
 
     for (let day = 1; day <= 7; day += 1) {
       exerciseDay(scene, ambient, day);
@@ -82,7 +73,7 @@ describe("long-session ambient actor lifecycle certification", () => {
 
   it("reclaims all ambient actor visibility when the scene becomes idle", () => {
     const scene = new Scene();
-    const ambient = createAmbientLife(scene, 0x1ead_2026, []);
+    const ambient = createAmbientLife(scene, 0x1e_ad_20_26, []);
 
     exerciseDay(scene, ambient, 3);
     ambient.update("sunny", "idle", 0, 14_000, 3, { x: 0, z: 0 });

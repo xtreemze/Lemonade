@@ -1,9 +1,5 @@
 import { STAND_WORLD_Z } from "./stand-anchors.js";
-import {
-  buyerPhaseAt,
-  type BuyerPhase,
-  type SaleBeat,
-} from "./storyboard.js";
+import { type BuyerPhase, buyerPhaseAt, type SaleBeat } from "./storyboard.js";
 
 export const BUYER_WALK_SPEED = 1.35 as const;
 
@@ -51,7 +47,9 @@ const samplePath = (
   for (let index = 1; index < points.length; index += 1) {
     const previous = points[index - 1];
     const current = points[index];
-    if (previous === undefined || current === undefined) continue;
+    if (previous === undefined || current === undefined) {
+      continue;
+    }
     const segmentLength = Math.max(0.0001, distance(previous, current));
     if (remaining <= segmentLength) {
       const progress = remaining / segmentLength;
@@ -86,48 +84,30 @@ const drinkPoint = (sale: SaleBeat): Point =>
     z: STAND_WORLD_Z + 1.78,
   });
 
-const approachPath = (
-  sale: SaleBeat,
-  streetZ: number,
-): readonly Point[] => {
+const approachPath = (sale: SaleBeat, streetZ: number): readonly Point[] => {
   const service = servicePoint(sale);
   const entry = Object.freeze({
     x: service.x + (sale.direction === -1 ? -0.36 : 0.36),
     z: streetZ,
   });
-  const durationSeconds =
-    Math.max(1, sale.purchaseAtMs - sale.approachAtMs) / 1_000;
+  const durationSeconds = Math.max(1, sale.purchaseAtMs - sale.approachAtMs) / 1000;
   const serviceLeg = distance(entry, service);
-  const sidewalkLeg = Math.max(
-    0.45,
-    BUYER_WALK_SPEED * durationSeconds - serviceLeg,
-  );
+  const sidewalkLeg = Math.max(0.45, BUYER_WALK_SPEED * durationSeconds - serviceLeg);
   const start = Object.freeze({
-    x:
-      entry.x +
-      (sale.direction === -1 ? -sidewalkLeg : sidewalkLeg),
+    x: entry.x + (sale.direction === -1 ? -sidewalkLeg : sidewalkLeg),
     z: streetZ,
   });
   return Object.freeze([start, entry, service]);
 };
 
-const departurePath = (
-  sale: SaleBeat,
-  streetZ: number,
-): readonly Point[] => {
+const departurePath = (sale: SaleBeat, streetZ: number): readonly Point[] => {
   const drink = drinkPoint(sale);
   const sidewalkJoin = Object.freeze({ x: drink.x, z: streetZ });
-  const durationSeconds =
-    Math.max(1, sale.departAtMs - sale.drinkEndAtMs) / 1_000;
+  const durationSeconds = Math.max(1, sale.departAtMs - sale.drinkEndAtMs) / 1000;
   const accessLeg = distance(drink, sidewalkJoin);
-  const sidewalkLeg = Math.max(
-    0.45,
-    BUYER_WALK_SPEED * durationSeconds - accessLeg,
-  );
+  const sidewalkLeg = Math.max(0.45, BUYER_WALK_SPEED * durationSeconds - accessLeg);
   const end = Object.freeze({
-    x:
-      sidewalkJoin.x +
-      (sale.direction === -1 ? sidewalkLeg : -sidewalkLeg),
+    x: sidewalkJoin.x + (sale.direction === -1 ? sidewalkLeg : -sidewalkLeg),
     z: streetZ,
   });
   return Object.freeze([drink, sidewalkJoin, end]);
@@ -144,7 +124,9 @@ export const buyerMotionAt = (
   streetZ: number,
 ): BuyerMotionPose | undefined => {
   const phase = buyerPhaseAt(sale, elapsedMs);
-  if (phase === "inactive") return undefined;
+  if (phase === "inactive") {
+    return undefined;
+  }
 
   const approach = approachPath(sale, streetZ);
   const approachLength = pathLength(approach);
@@ -153,10 +135,7 @@ export const buyerMotionAt = (
 
   if (phase === "approaching") {
     const duration = Math.max(1, sale.purchaseAtMs - sale.approachAtMs);
-    const progress = Math.max(
-      0,
-      Math.min(1, (elapsedMs - sale.approachAtMs) / duration),
-    );
+    const progress = Math.max(0, Math.min(1, (elapsedMs - sale.approachAtMs) / duration));
     const sampled = samplePath(approach, approachLength * progress);
     return Object.freeze({
       phase,
@@ -179,9 +158,7 @@ export const buyerMotionAt = (
 
   if (phase === "drinking") {
     const duration = Math.max(1, sale.drinkEndAtMs - sale.purchaseEndAtMs);
-    const progress = easedUnit(
-      (elapsedMs - sale.purchaseEndAtMs) / duration,
-    );
+    const progress = easedUnit((elapsedMs - sale.purchaseEndAtMs) / duration);
     return Object.freeze({
       phase,
       x: service.x + (drink.x - service.x) * progress,
@@ -194,10 +171,7 @@ export const buyerMotionAt = (
   const departure = departurePath(sale, streetZ);
   const departureLength = pathLength(departure);
   const duration = Math.max(1, sale.departAtMs - sale.drinkEndAtMs);
-  const progress = Math.max(
-    0,
-    Math.min(1, (elapsedMs - sale.drinkEndAtMs) / duration),
-  );
+  const progress = Math.max(0, Math.min(1, (elapsedMs - sale.drinkEndAtMs) / duration));
   const sampled = samplePath(departure, departureLength * progress);
   return Object.freeze({
     phase,

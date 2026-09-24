@@ -1,6 +1,7 @@
+import process from "node:process";
 import { defineConfig } from "@playwright/test";
 
-const isCI = Boolean(process.env["CI"]);
+const isCi = Boolean(process.env["CI"]);
 const basePath = "/Lemonade/";
 const previewOrigin = "http://127.0.0.1:4173";
 
@@ -8,11 +9,11 @@ export default defineConfig({
   testDir: "./e2e",
   testIgnore: ["**/showcase/**"],
   fullyParallel: true,
-  forbidOnly: isCI,
-  retries: isCI ? 2 : 0,
-  reporter: isCI ? "github" : "list",
+  forbidOnly: isCi,
+  retries: isCi ? 2 : 0,
+  reporter: isCi ? "github" : "list",
   expect: {
-    timeout: 7_500,
+    timeout: 7500,
   },
   use: {
     baseURL: `${previewOrigin}${basePath}`,
@@ -21,6 +22,6 @@ export default defineConfig({
   webServer: {
     command: `pnpm --filter @lemonade/web exec vite build --base=${basePath} && pnpm --filter @lemonade/web exec vite preview --host 127.0.0.1 --port 4173 --strictPort --base=${basePath}`,
     url: `${previewOrigin}${basePath}`,
-    reuseExistingServer: !isCI,
+    reuseExistingServer: !isCi,
   },
 });

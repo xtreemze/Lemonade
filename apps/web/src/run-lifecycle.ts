@@ -1,11 +1,6 @@
 export type PersistedRunPhaseKind = "deciding" | "report";
 
-export type PresentationPhase =
-  | "forecast"
-  | "planning"
-  | "simulation"
-  | "report"
-  | "history";
+export type PresentationPhase = "forecast" | "planning" | "simulation" | "report" | "history";
 
 export type RunLifecycleState = Readonly<{
   runPhase: PersistedRunPhaseKind;
@@ -61,9 +56,7 @@ const rejected = (current: RunLifecycleState): RunLifecycleTransition =>
     effects: effects(),
   });
 
-export const restoreRunLifecycle = (
-  phase: PersistedRunPhaseKind,
-): RunLifecycleState =>
+export const restoreRunLifecycle = (phase: PersistedRunPhaseKind): RunLifecycleState =>
   phase === "report" ? state("report", "report") : state("deciding", "forecast");
 
 export const isLegalRunLifecycleState = (candidate: RunLifecycleState): boolean => {
@@ -83,7 +76,9 @@ export const transitionRunLifecycle = (
   current: RunLifecycleState,
   event: RunLifecycleEvent,
 ): RunLifecycleTransition => {
-  if (!isLegalRunLifecycleState(current)) return rejected(current);
+  if (!isLegalRunLifecycleState(current)) {
+    return rejected(current);
+  }
 
   switch (event.type) {
     case "forecast-completed":

@@ -1,6 +1,6 @@
+import { spawnSync } from "node:child_process";
 import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 
 const artifactRoot = path.resolve("artifacts/e2e-media");
 const sourceManifestPath = path.resolve("e2e/showcase/manifest.json");
@@ -127,9 +127,7 @@ const encodeAnimatedWebp = (input, output, width) => {
     "-i",
     input,
     "-vf",
-    `fps=${String(manifest.capture.animatedGraphicFps)},scale=${String(
-      width,
-    )}:-2:flags=lanczos`,
+    `fps=${String(manifest.capture.animatedGraphicFps)},scale=${String(width)}:-2:flags=lanczos`,
     "-an",
     "-c:v",
     "libwebp_anim",
@@ -195,9 +193,7 @@ for (const [formFactor, format] of Object.entries(formFactors)) {
   }
 
   const concatInputs = clips.flatMap((clip) => ["-i", clip]);
-  const concatPads = clips
-    .map((_, index) => `[${String(index)}:v][${String(index)}:a]`)
-    .join("");
+  const concatPads = clips.map((_, index) => `[${String(index)}:v][${String(index)}:a]`).join("");
   const reel = path.join(reelDir, format.reelName);
   run([
     "-y",
@@ -233,11 +229,7 @@ for (const [formFactor, format] of Object.entries(formFactors)) {
     reel,
   ]);
 
-  encodeAnimatedWebp(
-    reel,
-    path.join(reelDir, format.animatedReelName),
-    format.graphicWidth,
-  );
+  encodeAnimatedWebp(reel, path.join(reelDir, format.animatedReelName), format.graphicWidth);
 }
 
 const imageWidth = { desktop: 960, mobile: 390 };
@@ -245,13 +237,9 @@ const mediaExtension = (feature) => (feature.media === "video" ? "webp" : "png")
 const renderSection = (formFactor, heading) => {
   const width = imageWidth[formFactor];
   const animatedReelName =
-    formFactor === "desktop"
-      ? "lemonade-desktop-highlight.webp"
-      : "lemonade-mobile-highlight.webp";
+    formFactor === "desktop" ? "lemonade-desktop-highlight.webp" : "lemonade-mobile-highlight.webp";
   const reelName =
-    formFactor === "desktop"
-      ? "lemonade-desktop-highlight.mp4"
-      : "lemonade-mobile-highlight.mp4";
+    formFactor === "desktop" ? "lemonade-desktop-highlight.mp4" : "lemonade-mobile-highlight.mp4";
   const lines = [
     `### ${heading}`,
     "",
