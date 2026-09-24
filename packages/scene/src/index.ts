@@ -474,7 +474,7 @@ export const createLemonsvilleScene = (
     if (Math.abs(clampedZoom - userCameraZoom) < 0.0001) return;
     userCameraZoom = clampedZoom;
     camera.zoom = userCameraZoom;
-    canvas.dataset["sceneZoom"] = userCameraZoom.toFixed(3);
+    canvas.setAttribute("data-scene-zoom", userCameraZoom.toFixed(3));
     camera.updateProjectionMatrix();
     render();
   };
