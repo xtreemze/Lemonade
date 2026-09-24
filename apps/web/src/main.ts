@@ -85,7 +85,6 @@ const start = async (): Promise<LemonadeApp | undefined> => {
         persistenceEnabled: false,
         initialPersistenceError: error.message,
       });
-      return;
     }
 
     if (error instanceof RunPersistenceError) {
