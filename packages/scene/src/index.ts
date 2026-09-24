@@ -391,8 +391,8 @@ export const createLemonsvilleScene = (
       );
     }
     camera.zoom = userCameraZoom;
-    canvas.dataset.sceneZoom = userCameraZoom.toFixed(3);
-    canvas.dataset.sceneZoomViewport = viewportClass;
+    canvas.setAttribute("data-scene-zoom", userCameraZoom.toFixed(3));
+    canvas.setAttribute("data-scene-zoom-viewport", viewportClass);
   };
 
   const persistSceneCameraZoom = (): void => {
