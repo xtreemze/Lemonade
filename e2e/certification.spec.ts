@@ -170,16 +170,16 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     if (!(element instanceof HTMLCanvasElement)) {
       throw new TypeError("expected scene canvas");
     }
-    element.dataset.shotHistory = "";
+    element.dataset["shotHistory"] = "";
     const recordShot = (): void => {
-      const shot = element.dataset.sceneShot;
+      const shot = element.dataset["sceneShot"];
       if (shot === undefined) {
         return;
       }
-      const history = element.dataset.shotHistory?.split(",").filter(Boolean) ?? [];
+      const history = element.dataset["shotHistory"]?.split(",").filter(Boolean) ?? [];
       if (history.at(-1) !== shot) {
         history.push(shot);
-        element.dataset.shotHistory = history.join(",");
+        element.dataset["shotHistory"] = history.join(",");
       }
     };
     const observer = new MutationObserver(recordShot);
