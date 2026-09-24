@@ -33,7 +33,7 @@ import { WORLD_SCALE } from "../src/world-scale.js";
 // helpers isolate that boundary so callers deal in validated, narrow types
 // instead of propagating `any` through map/filter callbacks.
 const proceduralSeedOf = (object: Object3D): number => {
-  const seed: unknown = object.userData.proceduralSeed;
+  const seed: unknown = object.userData["proceduralSeed"];
   return typeof seed === "number" ? seed : Number.NaN;
 };
 
@@ -74,26 +74,26 @@ describe("neighborhood world scale", () => {
     const treeVariants = new Set<number>();
     const shrubVariants = new Set<number>();
     scene.traverse((object) => {
-      if (object.userData.lodMode === "distance-two-level") {
+      if (object.userData["lodMode"] === "distance-two-level") {
         lodCount += 1;
       }
-      if (object.userData.sceneRole === "stand-home") {
+      if (object.userData["sceneRole"] === "stand-home") {
         standHomeCount += 1;
       }
-      if (object.userData.sceneRole === "stand-neighbor") {
+      if (object.userData["sceneRole"] === "stand-neighbor") {
         standNeighborCount += 1;
       }
-      if (object.userData.sceneRole === "paved-road") {
+      if (object.userData["sceneRole"] === "paved-road") {
         pavedRoadCount += 1;
       }
-      if (object.userData.sceneRole === "garden-flower") {
+      if (object.userData["sceneRole"] === "garden-flower") {
         flowerCount += 1;
       }
-      const variant: unknown = object.userData.plantVariant;
-      if (object.userData.sceneRole === "procedural-tree" && typeof variant === "number") {
+      const variant: unknown = object.userData["plantVariant"];
+      if (object.userData["sceneRole"] === "procedural-tree" && typeof variant === "number") {
         treeVariants.add(variant);
       }
-      if (object.userData.sceneRole === "procedural-shrub" && typeof variant === "number") {
+      if (object.userData["sceneRole"] === "procedural-shrub" && typeof variant === "number") {
         shrubVariants.add(variant);
       }
     });
@@ -103,27 +103,27 @@ describe("neighborhood world scale", () => {
     expect(pavedRoadCount).toBe(stats.pavedRoads);
     expect(flowerCount).toBe(stats.flowers);
     const flowerBeds = scene.children.filter(
-      (object) => object.userData.sceneRole === "garden-flower",
+      (object) => object.userData["sceneRole"] === "garden-flower",
     );
     expect(
-      flowerBeds.every((bed) => bed.userData.flowerCount === 5 && bed.children.length === 5),
+      flowerBeds.every((bed) => bed.userData["flowerCount"] === 5 && bed.children.length === 5),
     ).toBe(true);
-    const fences = scene.children.filter((object) => object.userData.sceneRole === "fence");
+    const fences = scene.children.filter((object) => object.userData["sceneRole"] === "fence");
     expect(fences.length).toBeGreaterThanOrEqual(8);
-    expect(fences.every((fence) => typeof fence.userData.propertyRole === "string")).toBe(true);
+    expect(fences.every((fence) => typeof fence.userData["propertyRole"] === "string")).toBe(true);
     expect(treeVariants.size).toBeGreaterThan(8);
     expect(shrubVariants.size).toBeGreaterThan(4);
 
     const proceduralPlants = scene.children.filter(
       (object) =>
-        object.userData.sceneRole === "procedural-tree" ||
-        object.userData.sceneRole === "procedural-shrub",
+        object.userData["sceneRole"] === "procedural-tree" ||
+        object.userData["sceneRole"] === "procedural-shrub",
     );
     expect(
       proceduralPlants.every(
         (plant) =>
-          plant.userData.proceduralTechnique === "seeded-distance-lod" &&
-          typeof plant.userData.proceduralSeed === "number",
+          plant.userData["proceduralTechnique"] === "seeded-distance-lod" &&
+          typeof plant.userData["proceduralSeed"] === "number",
       ),
     ).toBe(true);
     expect(new Set(proceduralPlants.map((plant) => proceduralSeedOf(plant))).size).toBeGreaterThan(
@@ -142,7 +142,7 @@ describe("neighborhood world scale", () => {
     });
     expect(reusesGeometryWithinPlant).toBe(true);
 
-    expect(flowerBeds.every((bed) => typeof bed.userData.proceduralSeed === "number")).toBe(true);
+    expect(flowerBeds.every((bed) => typeof bed.userData["proceduralSeed"] === "number")).toBe(true);
     const firstFlowerBed = flowerBeds[0];
     expect(firstFlowerBed).toBeDefined();
     if (firstFlowerBed !== undefined) {
@@ -157,7 +157,7 @@ describe("neighborhood world scale", () => {
     }
 
     const residentialHomes = scene.children.filter((object) => {
-      const role: unknown = object.userData.sceneRole;
+      const role: unknown = object.userData["sceneRole"];
       return typeof role === "string" && role.startsWith("residential-");
     });
     expect(residentialHomes.some((home) => home.position.z > 12)).toBe(true);
@@ -203,7 +203,7 @@ describe("neighborhood world scale", () => {
 
     scene.updateMatrixWorld(true);
     scene.traverse((object) => {
-      const role: unknown = object.userData.sceneRole;
+      const role: unknown = object.userData["sceneRole"];
       if (typeof role !== "string" || !checkedRoles.has(role)) {
         return;
       }
@@ -250,7 +250,7 @@ describe("neighborhood world scale", () => {
     const scene = new Scene();
     populateNeighborhood(scene, DEFAULT_RESIDENTIAL_SEED);
 
-    const home = scene.children.find((object) => object.userData.sceneRole === "stand-home");
+    const home = scene.children.find((object) => object.userData["sceneRole"] === "stand-home");
     expect(home).toBeDefined();
     if (home === undefined) {
       return;
@@ -259,11 +259,11 @@ describe("neighborhood world scale", () => {
     let door: Object3D | undefined;
     let window: Mesh | undefined;
     home.traverse((object) => {
-      if (object.userData.sceneRole === "house-door") {
+      if (object.userData["sceneRole"] === "house-door") {
         door = object;
       }
       if (
-        object.userData.sceneRole === "house-window" &&
+        object.userData["sceneRole"] === "house-window" &&
         object instanceof Mesh &&
         window === undefined
       ) {
@@ -274,12 +274,12 @@ describe("neighborhood world scale", () => {
     expect(window).toBeDefined();
 
     const sprinkler = scene.children.find(
-      (object) => object.userData.sceneRole === "yard-sprinkler",
+      (object) => object.userData["sceneRole"] === "yard-sprinkler",
     );
     expect(sprinkler).toBeDefined();
     const sprinklerRole =
-      typeof sprinkler?.userData.propertyRole === "string"
-        ? sprinkler.userData.propertyRole
+      typeof sprinkler?.userData["propertyRole"] === "string"
+        ? sprinkler.userData["propertyRole"]
         : "stand-home";
 
     const roles = new Set(["stand-home", sprinklerRole]);
@@ -369,7 +369,7 @@ describe("neighborhood world scale", () => {
   it("faces every mailbox toward the street independent of house orientation", () => {
     const scene = new Scene();
     populateNeighborhood(scene, 0x5e_ed);
-    const mailboxes = scene.children.filter((object) => object.userData.sceneRole === "mailbox");
+    const mailboxes = scene.children.filter((object) => object.userData["sceneRole"] === "mailbox");
     const expectedCount = FRONT_PROPERTY_LAYOUT.filter(
       (property) => property.mailboxX !== null,
     ).length;
@@ -380,7 +380,7 @@ describe("neighborhood world scale", () => {
     );
     for (const mailbox of mailboxes) {
       expect(mailbox.rotation.y).toBeCloseTo(-Math.PI / 2);
-      const streetFacingYaw: unknown = mailbox.userData.streetFacingYaw;
+      const streetFacingYaw: unknown = mailbox.userData["streetFacingYaw"];
       expect(streetFacingYaw).toBe(-Math.PI / 2);
     }
   });
