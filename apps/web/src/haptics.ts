@@ -17,7 +17,6 @@ export const hapticPattern = (cue: HapticCue): readonly number[] => HAPTIC_PATTE
 
 export type HapticEngineOptions = Readonly<{
   vibrate?: (pattern: number[]) => boolean;
-  reducedMotion?: () => boolean;
   activeDocument?: () => boolean;
 }>;
 
@@ -32,11 +31,6 @@ const browserVibrate = (pattern: number[]): boolean => {
   return navigator.vibrate(pattern);
 };
 
-const browserReducedMotion = (): boolean =>
-  typeof window !== "undefined" &&
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 const browserDocumentActive = (): boolean =>
   typeof document === "undefined" || document.visibilityState === "visible";
 
@@ -44,14 +38,13 @@ export const createHapticEngine = (
   options: HapticEngineOptions = {},
 ): HapticEngine => {
   const vibrate = options.vibrate ?? browserVibrate;
-  const reducedMotion = options.reducedMotion ?? browserReducedMotion;
   const activeDocument = options.activeDocument ?? browserDocumentActive;
   let disposed = false;
   let used = false;
 
   return Object.freeze({
     play(cue): boolean {
-      if (disposed || reducedMotion() || !activeDocument()) return false;
+      if (disposed || !activeDocument()) return false;
       const pattern = [...hapticPattern(cue)];
       try {
         const accepted = vibrate(pattern);
