@@ -29,6 +29,7 @@ const DATABASE_NAME = "lemonade";
 const DATABASE_VERSION = 1;
 const RUN_STORE_NAME = "runs";
 const CURRENT_RUN_KEY = "current";
+const RECOVERY_RUN_KEY = "recovery";
 
 const ledgerLineKinds = [
   "revenue",
@@ -59,6 +60,11 @@ export type RunSnapshot = Readonly<{
   environment: DayEnvironment;
   draft: DayDecision;
   phase: RunPhase;
+}>;
+
+export type LoadedRun = Readonly<{
+  snapshot: RunSnapshot;
+  recovered: boolean;
 }>;
 
 type SerializedDecision = Readonly<{
@@ -664,13 +670,63 @@ const openDatabase = async (): Promise<IDBDatabase> => {
   }
 };
 
+const isUnsupportedStoredRun = (error: unknown): boolean =>
+  error instanceof RunPersistenceError &&
+  (error.code === "unsupported-save-version" ||
+    error.code === "unsupported-simulation-version");
+
+const decodeStoredRun = (stored: unknown, path: string): RunSnapshot | null => {
+  if (stored === undefined) return null;
+  if (typeof stored !== "string") {
+    return invalidSave(path, "expected a text run document");
+  }
+  return importRunSnapshot(stored);
+};
+
+const readStoredSlot = async (
+  database: IDBDatabase,
+  key: string,
+): Promise<unknown> => {
+  const transaction = database.transaction(RUN_STORE_NAME, "readonly");
+  const stored = await requestResult<unknown>(
+    transaction.objectStore(RUN_STORE_NAME).get(key),
+  );
+  await transactionComplete(transaction);
+  return stored;
+};
+
 export const saveCurrentRun = async (snapshot: RunSnapshot): Promise<void> => {
   const database = await openDatabase();
   try {
+    const current = await readStoredSlot(database, CURRENT_RUN_KEY);
+    let priorValidDocument: string | null = null;
+
+    if (current !== undefined) {
+      if (typeof current !== "string") {
+        // A malformed current slot must not replace an existing recovery slot.
+        priorValidDocument = null;
+      } else {
+        try {
+          importRunSnapshot(current);
+          priorValidDocument = current;
+        } catch (error) {
+          // Never overwrite a newer/unsupported save merely because this build
+          // cannot understand it. Corrupt compatible data may be repaired from
+          // an already validated recovery snapshot.
+          if (isUnsupportedStoredRun(error)) throw error;
+        }
+      }
+    }
+
     const transaction = database.transaction(RUN_STORE_NAME, "readwrite");
-    transaction.objectStore(RUN_STORE_NAME).put(exportRunSnapshot(snapshot), CURRENT_RUN_KEY);
+    const store = transaction.objectStore(RUN_STORE_NAME);
+    if (priorValidDocument !== null) {
+      store.put(priorValidDocument, RECOVERY_RUN_KEY);
+    }
+    store.put(exportRunSnapshot(snapshot), CURRENT_RUN_KEY);
     await transactionComplete(transaction);
   } catch (error) {
+    if (error instanceof RunPersistenceError) throw error;
     throw new RunPersistenceError("storage-failed", "Unable to save the current run.", {
       cause: error,
     });
@@ -679,19 +735,53 @@ export const saveCurrentRun = async (snapshot: RunSnapshot): Promise<void> => {
   }
 };
 
-export const loadCurrentRun = async (): Promise<RunSnapshot | null> => {
+export const loadCurrentRun = async (): Promise<LoadedRun | null> => {
   const database = await openDatabase();
   try {
     const transaction = database.transaction(RUN_STORE_NAME, "readonly");
-    const stored = await requestResult<unknown>(
-      transaction.objectStore(RUN_STORE_NAME).get(CURRENT_RUN_KEY),
-    );
+    const store = transaction.objectStore(RUN_STORE_NAME);
+    const [current, recovery] = await Promise.all([
+      requestResult<unknown>(store.get(CURRENT_RUN_KEY)),
+      requestResult<unknown>(store.get(RECOVERY_RUN_KEY)),
+    ]);
     await transactionComplete(transaction);
-    if (stored === undefined) return null;
-    if (typeof stored !== "string") {
-      return invalidSave("browser storage", "expected a text run document");
+
+    if (current === undefined && recovery === undefined) return null;
+
+    let currentError: unknown = null;
+    try {
+      const snapshot = decodeStoredRun(current, "browser storage.current");
+      if (snapshot !== null) {
+        return Object.freeze({ snapshot, recovered: false });
+      }
+    } catch (error) {
+      if (isUnsupportedStoredRun(error)) throw error;
+      currentError = error;
     }
-    return importRunSnapshot(stored);
+
+    try {
+      const snapshot = decodeStoredRun(recovery, "browser storage.recovery");
+      if (snapshot !== null) {
+        return Object.freeze({ snapshot, recovered: true });
+      }
+    } catch (error) {
+      if (isUnsupportedStoredRun(error)) throw error;
+      throw new RunPersistenceError(
+        "invalid-save",
+        "Both current and recovery run snapshots are invalid.",
+        { cause: error },
+      );
+    }
+
+    if (currentError instanceof RunPersistenceError) throw currentError;
+    if (currentError !== null) {
+      throw new RunPersistenceError(
+        "invalid-save",
+        "The current run snapshot is invalid and no recovery snapshot is available.",
+        { cause: currentError },
+      );
+    }
+    return null;
   } catch (error) {
     if (error instanceof RunPersistenceError) throw error;
     throw new RunPersistenceError("storage-failed", "Unable to load the current run.", {
@@ -706,7 +796,9 @@ export const clearCurrentRun = async (): Promise<void> => {
   const database = await openDatabase();
   try {
     const transaction = database.transaction(RUN_STORE_NAME, "readwrite");
-    transaction.objectStore(RUN_STORE_NAME).delete(CURRENT_RUN_KEY);
+    const store = transaction.objectStore(RUN_STORE_NAME);
+    store.delete(CURRENT_RUN_KEY);
+    store.delete(RECOVERY_RUN_KEY);
     await transactionComplete(transaction);
   } catch (error) {
     throw new RunPersistenceError("storage-failed", "Unable to clear the current run.", {
