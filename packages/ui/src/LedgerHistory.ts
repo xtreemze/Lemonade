@@ -223,6 +223,7 @@ export const renderLedgerHistory = (
   const inventory = inventoryTrends(points);
   const section = createElement("section", "ledger-history");
   section.setAttribute("aria-labelledby", "ledger-history-title");
+  section.tabIndex = -1;
 
   const heading = createElement("header", "history-heading");
   const headingText = createElement("div");
