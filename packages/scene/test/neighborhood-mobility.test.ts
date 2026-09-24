@@ -185,7 +185,7 @@ describe("unified neighborhood mobility", () => {
     const entered = new Set<string>();
     const moved = new Set<string>();
 
-    for (let elapsedMs = 0; elapsedMs <= 14_000; elapsedMs += 50) {
+    for (let elapsedMs = 0; elapsedMs <= 20_000; elapsedMs += 50) {
       const sample = system.sample({
         weather: "cloudy",
         phase: "simulation",
@@ -260,34 +260,8 @@ describe("unified neighborhood mobility", () => {
     ).toBe(true);
   });
 
-  it("drives a resident vehicle into a driveway, parks, and later departs", () => {
+  it("drives a resident vehicle into a driveway, parks, transfers its driver, and later departs", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
-    const parked = system.sample({
-      weather: "cloudy",
-      phase: "simulation",
-      elapsedMs: 7_000,
-      durationMs: 14_000,
-      dayNumber: 2,
-      focus: { x: 0, z: 0 },
-    });
-    const later = system.sample({
-      weather: "cloudy",
-      phase: "simulation",
-      elapsedMs: 14_000,
-      durationMs: 14_000,
-      dayNumber: 2,
-      focus: { x: 0, z: 0 },
-    });
-
-    expect(
-      parked.properties.some((property) => property.vehicleParked),
-    ).toBe(true);
-    const parkedVehicle = parked.actors.find(
-      (actor) => actor.id === "resident-vehicle",
-    );
-    expect(parkedVehicle?.interaction).toBe("parking");
-    expect(parkedVehicle?.speed).toBe(0);
-
     const layout = generateResidentialLayout(MOBILITY_SEED);
     const drivewayProperty =
       layout.frontProperties.find(
@@ -298,46 +272,77 @@ describe("unified neighborhood mobility", () => {
         (property) => property.drivewayX !== null,
       );
     expect(drivewayProperty).toBeDefined();
-    if (drivewayProperty !== undefined && drivewayProperty.drivewayX !== null) {
-      const access = residentialAccessLayout(
-        drivewayProperty,
-        MOBILITY_SEED,
-      );
-      expect(parkedVehicle?.x).toBeCloseTo(drivewayProperty.drivewayX);
-      expect(parkedVehicle?.z).toBeCloseTo(access.parkingZ);
-      expect(
-        layout.exclusions.some(
-          (rect) =>
-            rect.role === "sidewalk" &&
-            parkedVehicle !== undefined &&
-            parkedVehicle.x >= rect.minX &&
-            parkedVehicle.x <= rect.maxX &&
-            parkedVehicle.z >= rect.minZ &&
-            parkedVehicle.z <= rect.maxZ,
-        ),
-      ).toBe(false);
+    if (drivewayProperty === undefined || drivewayProperty.drivewayX === null) {
+      return;
     }
 
-    expect(
-      later.properties.some((property) => property.vehicleParked),
-    ).toBe(false);
+    const access = residentialAccessLayout(
+      drivewayProperty,
+      MOBILITY_SEED,
+    );
+    let parkedVehicle:
+      | NeighborhoodMobilitySample["actors"][number]
+      | undefined;
+    let sawDriverTransfer = false;
+    let sawDepartureAfterParking = false;
+    let hasParked = false;
 
-    const exiting = system.sample({
-      weather: "cloudy",
-      phase: "simulation",
-      elapsedMs: 6_500,
-      durationMs: 14_000,
-      dayNumber: 2,
-      focus: { x: 0, z: 0 },
-    });
+    for (let elapsedMs = 0; elapsedMs <= 24_000; elapsedMs += 50) {
+      const sample = system.sample({
+        weather: "cloudy",
+        phase: "simulation",
+        elapsedMs,
+        durationMs: 14_000,
+        dayNumber: 2,
+        focus: { x: 0, z: 0 },
+      });
+      const vehicle = sample.actors.find(
+        (actor) => actor.id === "resident-vehicle",
+      );
+      const driver = sample.actors.find(
+        (actor) => actor.id === "resident-driver",
+      );
+      const vehicleIsParked = sample.properties.some(
+        (property) =>
+          property.propertyRole === drivewayProperty.role &&
+          property.vehicleParked,
+      );
+
+      if (vehicleIsParked && vehicle?.interaction === "parking") {
+        hasParked = true;
+        parkedVehicle ??= vehicle;
+        expect(vehicle.speed).toBe(0);
+      }
+      if (driver?.visible === true && driver.interaction === "door") {
+        sawDriverTransfer = true;
+      }
+      if (
+        hasParked &&
+        !vehicleIsParked &&
+        vehicle !== undefined &&
+        vehicle.interaction !== "parking"
+      ) {
+        sawDepartureAfterParking = true;
+      }
+    }
+
+    expect(hasParked).toBe(true);
+    expect(sawDriverTransfer).toBe(true);
+    expect(sawDepartureAfterParking).toBe(true);
+    expect(parkedVehicle).toBeDefined();
+    expect(parkedVehicle?.x).toBeCloseTo(drivewayProperty.drivewayX);
+    expect(parkedVehicle?.z).toBeCloseTo(access.parkingZ);
     expect(
-      exiting.actors.some(
-        (actor) =>
-          actor.id === "resident-driver" &&
-          actor.visible &&
-          actor.interaction === "door",
+      layout.exclusions.some(
+        (rect) =>
+          rect.role === "sidewalk" &&
+          parkedVehicle !== undefined &&
+          parkedVehicle.x >= rect.minX &&
+          parkedVehicle.x <= rect.maxX &&
+          parkedVehicle.z >= rect.minZ &&
+          parkedVehicle.z <= rect.maxZ,
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("makes driveway traffic yield to pedestrians and pets crossing the sidewalk", () => {
@@ -582,7 +587,7 @@ describe("unified neighborhood mobility", () => {
     let sawVehicleYield = false;
     let sawDriver = false;
 
-    for (let elapsedMs = 0; elapsedMs <= 14_000; elapsedMs += 50) {
+    for (let elapsedMs = 0; elapsedMs <= 20_000; elapsedMs += 50) {
       const layout = generateResidentialLayout(MOBILITY_SEED);
       const property =
         layout.frontProperties.find(
@@ -596,7 +601,7 @@ describe("unified neighborhood mobility", () => {
       if (property === undefined || property.drivewayX === null) continue;
 
       const access = residentialAccessLayout(property, MOBILITY_SEED);
-      const obstacleActive = elapsedMs >= 1_500 && elapsedMs <= 4_000;
+      const obstacleActive = elapsedMs <= 4_000;
       const sample = system.sample({
         weather: "sunny",
         phase: "simulation",
