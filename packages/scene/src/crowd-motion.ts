@@ -269,28 +269,28 @@ const basePose = (
   const neighborhoodRoutes = sideEntryRoutes.filter(
     (route) => route.streetId !== "main",
   );
-  const requestedSide: SidewalkSide = actorIndex % 2 === 0 ? "near" : "far";
-  const mainSideRoutes = mainRoutes
-    .filter((route) => route.side === requestedSide)
+  const foregroundRoutes = [...sideEntryRoutes]
     .sort(
       (left, right) =>
         routeFocusDistance(left) - routeFocusDistance(right) ||
         left.id.localeCompare(right.id),
-    );
-  const mainPool =
-    mainSideRoutes.length > 0 ? mainSideRoutes : mainRoutes;
-  const foregroundMainPool = mainPool.slice(0, Math.min(6, mainPool.length));
+    )
+    .slice(0, Math.min(6, sideEntryRoutes.length));
+  const requestedSide: SidewalkSide = actorIndex % 2 === 0 ? "near" : "far";
   const mainRoute =
-    foregroundMainPool.length === 0
-      ? undefined
-      : foregroundMainPool[
-          Math.floor(
-            deterministicUnit(
-              actorIndex,
-              431 + beat.pedestrianIndex * 23,
-            ) * foregroundMainPool.length,
-          )
-        ];
+    mainRoutes
+      .filter((route) => route.side === requestedSide)
+      .sort((left, right) => {
+        const leftStart = left.points[0]?.x ?? 0;
+        const leftEnd = left.points.at(-1)?.x ?? 0;
+        const rightStart = right.points[0]?.x ?? 0;
+        const rightEnd = right.points.at(-1)?.x ?? 0;
+        return (
+          Math.abs((leftStart + leftEnd) / 2) -
+          Math.abs((rightStart + rightEnd) / 2)
+        );
+      })[0] ??
+    mainRoutes[actorIndex % Math.max(1, mainRoutes.length)];
   const neighborhoodRoute =
     neighborhoodRoutes.length === 0
       ? undefined
@@ -302,12 +302,28 @@ const basePose = (
             ) * neighborhoodRoutes.length,
           )
         ];
+  const foregroundSideRoutes = foregroundRoutes.filter(
+    (route) => route.side === requestedSide,
+  );
+  const foregroundPool =
+    foregroundSideRoutes.length > 0 ? foregroundSideRoutes : foregroundRoutes;
+  const foregroundRoute =
+    foregroundPool.length === 0
+      ? undefined
+      : foregroundPool[
+          Math.floor(
+            deterministicUnit(
+              actorIndex,
+              431 + beat.pedestrianIndex * 23,
+            ) * foregroundPool.length,
+          )
+        ];
   const fallbackRoutes = viableRoutes.length > 0 ? viableRoutes : routes;
   const usesForegroundCohort =
     actorIndex < PASSERBY_FOREGROUND_TARGET && beat.startAtMs === 0;
   const route =
     (usesForegroundCohort
-      ? mainRoute
+      ? mainRoute ?? foregroundRoute
       : beat.seesAdvertisement
         ? mainRoute
         : neighborhoodRoute) ??
