@@ -67,7 +67,7 @@ describe("seeded scene characters", () => {
     const head = new Mesh(new SphereGeometry(0.27, 12, 8), new MeshBasicMaterial());
 
     decorateCharacterHead(head, profile, identity);
-    const crown = head.children.find((object) => object.userData.sceneRole === "hair-cover");
+    const crown = head.children.find((object) => object.userData["sceneRole"] === "hair-cover");
     expect(crown).toBeInstanceOf(Mesh);
     if (!(crown instanceof Mesh)) {
       return;
