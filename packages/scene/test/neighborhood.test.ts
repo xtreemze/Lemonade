@@ -45,7 +45,7 @@ const meshGeometryUuid = (object: Object3D): string | null => {
   if (geometry === null || typeof geometry !== "object") {
     return null;
   }
-  const uuid: unknown = (geometry as Record<string, unknown>).uuid;
+  const uuid: unknown = (geometry as Record<string, unknown>)["uuid"];
   return typeof uuid === "string" ? uuid : null;
 };
 
