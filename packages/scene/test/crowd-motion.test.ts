@@ -593,6 +593,9 @@ describe("crowd motion", () => {
       (pose): pose is NonNullable<typeof pose> => pose !== undefined,
     );
     expect(definedForeground).toHaveLength(PASSERBY_FOREGROUND_TARGET);
+    expect(
+      definedForeground.every((pose) => pose.routeId.startsWith("main:")),
+    ).toBe(true);
     expect(backgroundAtStart.length).toBeGreaterThan(0);
     expect(averageRadius(definedForeground)).toBeLessThan(
       averageRadius(backgroundAtStart),
