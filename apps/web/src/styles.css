@@ -1241,22 +1241,39 @@ body:has(.game-shell[data-view="forecast"]) {
   overflow-wrap: anywhere;
 }
 
-@media (width < 22.5rem) {
+.game-shell[data-view="report"] .weekly-report {
+  gap: 3px;
+  padding: 4px;
+}
+
+.game-shell[data-view="report"] .weekly-results-grid > div {
+  padding: 2px 4px;
+}
+
+.game-shell[data-view="report"] .weekly-highlights {
+  gap: 3px;
+}
+
+.game-shell[data-view="report"] .weekly-highlights p {
+  padding: 3px 4px;
+}
+
+@media (width >= 22.5rem) {
   .game-shell[data-view="report"] .weekly-report {
-    gap: 3px;
-    padding: 4px;
+    gap: 5px;
+    padding: 6px;
   }
 
   .game-shell[data-view="report"] .weekly-results-grid > div {
-    padding: 2px 4px;
+    padding: 4px 5px;
   }
 
   .game-shell[data-view="report"] .weekly-highlights {
-    gap: 3px;
+    gap: 5px;
   }
 
   .game-shell[data-view="report"] .weekly-highlights p {
-    padding: 3px 4px;
+    padding: 4px 5px;
   }
 }
 
