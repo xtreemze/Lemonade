@@ -323,8 +323,8 @@ export class LemonadeApp {
   readonly #runSeed: Seed;
   readonly #random: RandomSource;
   readonly #audio = createProceduralAudioEngine();
-  readonly #haptics: Promise<HapticEngine> = import("./haptics.js").then(
-    ({ createHapticEngine }) => createHapticEngine(),
+  readonly #haptics: Promise<HapticEngine> = import("./haptics.js").then(({ createHapticEngine }) =>
+    createHapticEngine(),
   );
   readonly #scene: LemonsvilleSceneView;
   readonly #persistenceEnabled: boolean;
