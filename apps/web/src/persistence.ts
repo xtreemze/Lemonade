@@ -242,7 +242,10 @@ const parseEnvironment = (value: unknown, path: string): DayEnvironment => {
     sentiment: Object.freeze({
       kind: asLiteral(sentiment["kind"], sentimentKinds, `${path}["sentiment"]["kind"]`),
       demandMultiplier: basisPoints(
-        asNonNegativeInteger(sentiment["demandMultiplier"], `${path}["sentiment"]["demandMultiplier"]`),
+        asNonNegativeInteger(
+          sentiment["demandMultiplier"],
+          `${path}["sentiment"]["demandMultiplier"]`,
+        ),
       ),
     }),
     event: Object.freeze({
@@ -281,7 +284,9 @@ const parseLedgerEntry = (value: unknown, path: string): DailyLedgerEntry => {
     ),
     sold: glassCount(asNonNegativeInteger(record["sold"], `${path}["sold"]`)),
     revenue: moneyCents(asNonNegativeInteger(record["revenue"], `${path}["revenue"]`)),
-    financeIncome: moneyCents(asNonNegativeInteger(record["financeIncome"], `${path}["financeIncome"]`)),
+    financeIncome: moneyCents(
+      asNonNegativeInteger(record["financeIncome"], `${path}["financeIncome"]`),
+    ),
     expenses: moneyCents(asNonNegativeInteger(record["expenses"], `${path}["expenses"]`)),
     net: signedMoneyCents(asSafeInteger(record["net"], `${path}["net"]`)),
     cashDelta: signedMoneyCents(asSafeInteger(record["cashDelta"], `${path}["cashDelta"]`)),
@@ -319,7 +324,10 @@ const parseGameState = (value: unknown, path: string): GameState => {
   }) satisfies GameState;
 
   if (state["ledger"].length !== Number(state["day"]) - 1) {
-    return invalidSave(`${path}["ledger"]`, "ledger length must equal the number of completed days");
+    return invalidSave(
+      `${path}["ledger"]`,
+      "ledger length must equal the number of completed days",
+    );
   }
 
   state["ledger"].forEach((entry, index) => {
@@ -530,7 +538,8 @@ const environmentsEqual = (left: DayEnvironment, right: DayEnvironment): boolean
   left["weather"]["kind"] === right["weather"]["kind"] &&
   Number(left["weather"]["demandMultiplier"]) === Number(right["weather"]["demandMultiplier"]) &&
   left["sentiment"]["kind"] === right["sentiment"]["kind"] &&
-  Number(left["sentiment"]["demandMultiplier"]) === Number(right["sentiment"]["demandMultiplier"]) &&
+  Number(left["sentiment"]["demandMultiplier"]) ===
+    Number(right["sentiment"]["demandMultiplier"]) &&
   left["event"]["kind"] === right["event"]["kind"] &&
   Number(left["event"]["demandMultiplier"]) === Number(right["event"]["demandMultiplier"]);
 
