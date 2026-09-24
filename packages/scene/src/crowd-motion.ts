@@ -347,14 +347,14 @@ const basePose = (
   const heading = Math.PI / 2 - travelYaw + attentionHeading;
 
   return {
-    x: sampled.x + normalX * lateralOffset + (route.streetId === "main" ? signPull : 0),
+    x: sampled.x + normalX * lateralOffset + (selectedRoute.streetId === "main" ? signPull : 0),
     z: sampled.z + normalZ * lateralOffset,
     heading,
     pace: Math.max(0.82, Math.min(1.18, worldSpeed / 1.3)),
     worldSpeed,
     travelDistance: distanceTravelled,
-    side: route.side,
-    routeId: route.id,
+    side: selectedRoute.side,
+    routeId: selectedRoute.id,
     seesAdvertisement: beat.seesAdvertisement,
     centerX: sampled.x,
     centerZ: sampled.z,
