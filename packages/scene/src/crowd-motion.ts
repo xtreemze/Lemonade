@@ -323,7 +323,9 @@ const basePose = (
     actorIndex < PASSERBY_FOREGROUND_TARGET && beat.startAtMs === 0;
   const route =
     (usesForegroundCohort
-      ? mainRoute ?? foregroundRoute
+      ? beat.seesAdvertisement
+        ? mainRoute ?? foregroundRoute
+        : foregroundRoute ?? mainRoute
       : beat.seesAdvertisement
         ? mainRoute
         : neighborhoodRoute) ??
