@@ -34,7 +34,7 @@ const createAnchor = (spec: PropertyAccessSurfaceSpec): Group => {
   const anchor = new Group();
   anchor.position.set(spec.x, y, spec.z);
   anchor.rotation.y = -spec.rotationY;
-  anchor.userData.sceneRole = spec.role;
+  anchor.userData["sceneRole"] = spec.role;
   return anchor;
 };
 
@@ -56,7 +56,7 @@ const createBatch = (
     specs.length,
   );
   mesh.name = role === "driveway" ? "DrivewaySurfaces" : "FrontPathSurfaces";
-  mesh.userData.sceneRole = "property-access-surface-batch";
+  mesh.userData["sceneRole"] = "property-access-surface-batch";
 
   const matrix = new Matrix4();
   const position = new Vector3();
