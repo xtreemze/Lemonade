@@ -22,9 +22,9 @@ const createAnchor = (strip: StreetStripSpec): Group => {
   const anchor = new Group();
   anchor.position.set(strip.x, strip.role === "sidewalk" ? 0.022 : 0.012, strip.z);
   anchor.rotation.y = -strip.rotationY;
-  anchor.userData.sceneRole = strip.role;
-  anchor.userData.streetId = strip.streetId;
-  anchor.userData.streetSegment = strip.segmentIndex;
+  anchor.userData["sceneRole"] = strip.role;
+  anchor.userData["streetId"] = strip.streetId;
+  anchor.userData["streetSegment"] = strip.segmentIndex;
   return anchor;
 };
 
@@ -39,7 +39,7 @@ const createBatch = (
 
   const mesh = new InstancedMesh(new BoxGeometry(1, 1, 1), material(color), strips.length);
   mesh.name = name;
-  mesh.userData.sceneRole = "street-surface-batch";
+  mesh.userData["sceneRole"] = "street-surface-batch";
 
   const matrix = new Matrix4();
   const position = new Vector3();
