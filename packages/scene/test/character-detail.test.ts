@@ -10,7 +10,7 @@ import {
 import { characterProfileFor } from "../src/characters.js";
 
 const sceneRole = (object: Object3D): string => {
-  const role: unknown = object.userData.sceneRole;
+  const role: unknown = object.userData["sceneRole"];
   return typeof role === "string" ? role : "";
 };
 
