@@ -102,6 +102,7 @@ type RouteConflict = Readonly<{
 type TrafficClockRecord = Readonly<{
   clock: MobilityClockState;
   lastElapsedMs: number;
+  completedAtMs?: number | null;
 }>;
 
 const fract = (value: number): number => value - Math.floor(value);
@@ -405,6 +406,7 @@ const pedestrianRoutePose = (
   visible: boolean;
   inside: boolean;
   doorOpen: boolean;
+  completedAtMs: number | null;
 }> => {
   let record = clocks.get(id);
   if (
@@ -418,11 +420,13 @@ const pedestrianRoutePose = (
         maxAcceleration,
       }),
       lastElapsedMs: 0,
+      completedAtMs: null,
     });
   }
 
   let clock = record.clock;
   let cursorMs = record.lastElapsedMs;
+  let completedAtMs = record.completedAtMs ?? null;
   const targetElapsedMs = Math.max(cursorMs, elapsedMs);
   while (cursorMs < targetElapsedMs && clock.lifecycle === "active") {
     if (cursorMs < startAtMs) {
@@ -437,12 +441,20 @@ const pedestrianRoutePose = (
     }
 
     const deltaMs = Math.min(50, targetElapsedMs - cursorMs);
+    const wasActive = clock.lifecycle === "active";
     clock = advanceMobilityClock(clock, {
       deltaMs,
       desiredSpeed,
       motion: "move",
     });
     cursorMs += deltaMs;
+    if (
+      wasActive &&
+      clock.lifecycle === "completed" &&
+      completedAtMs === null
+    ) {
+      completedAtMs = cursorMs;
+    }
   }
 
   clocks.set(
@@ -450,6 +462,7 @@ const pedestrianRoutePose = (
     Object.freeze({
       clock,
       lastElapsedMs: targetElapsedMs,
+      completedAtMs,
     }),
   );
 
@@ -468,6 +481,112 @@ const pedestrianRoutePose = (
     visible,
     inside,
     doorOpen: visible && doorDistance <= 0.9,
+    completedAtMs,
+  });
+};
+
+const drivewayVehicleRoutePose = (
+  id: string,
+  route: Route,
+  elapsedMs: number,
+  startAtMs: number,
+  desiredSpeed: number,
+  crossingDistance: number,
+  crossingOccupied: boolean,
+  clocks: Map<string, TrafficClockRecord>,
+  initialVelocity: number,
+): Readonly<{
+  point: ResidentialPoint;
+  yaw: number;
+  speed: number;
+  travelDistance: number;
+  completedAtMs: number | null;
+  started: boolean;
+  completed: boolean;
+  yielding: boolean;
+  waiting: boolean;
+}> => {
+  let record = clocks.get(id);
+  if (
+    record === undefined ||
+    elapsedMs < record.lastElapsedMs ||
+    Math.abs(record.clock.routeLength - route.total) > 0.001
+  ) {
+    record = Object.freeze({
+      clock: createMobilityClock({
+        routeLength: route.total,
+        maxAcceleration: 4,
+        initialVelocity,
+      }),
+      lastElapsedMs: 0,
+      completedAtMs: null,
+    });
+  }
+
+  let clock = record.clock;
+  let cursorMs = record.lastElapsedMs;
+  let completedAtMs = record.completedAtMs ?? null;
+  const targetElapsedMs = Math.max(cursorMs, elapsedMs);
+  const yieldStart = Math.max(0, crossingDistance - 4.2);
+  const yieldEnd = Math.min(route.total, crossingDistance + 0.15);
+
+  while (cursorMs < targetElapsedMs && clock.lifecycle === "active") {
+    if (cursorMs < startAtMs) {
+      cursorMs += Math.min(
+        50,
+        targetElapsedMs - cursorMs,
+        startAtMs - cursorMs,
+      );
+      continue;
+    }
+
+    const deltaMs = Math.min(50, targetElapsedMs - cursorMs);
+    const yielding =
+      crossingOccupied &&
+      clock.distance >= yieldStart &&
+      clock.distance <= yieldEnd;
+    const wasActive = clock.lifecycle === "active";
+    clock = advanceMobilityClock(clock, {
+      deltaMs,
+      desiredSpeed,
+      motion: yielding ? "yield" : "move",
+    });
+    cursorMs += deltaMs;
+    if (
+      wasActive &&
+      clock.lifecycle === "completed" &&
+      completedAtMs === null
+    ) {
+      completedAtMs = cursorMs;
+    }
+  }
+
+  clocks.set(
+    id,
+    Object.freeze({
+      clock,
+      lastElapsedMs: targetElapsedMs,
+      completedAtMs,
+    }),
+  );
+
+  const sampled = sampleRouteDistance(route, clock.distance);
+  const yielding =
+    crossingOccupied &&
+    clock.lifecycle === "active" &&
+    clock.distance >= yieldStart &&
+    clock.distance <= yieldEnd;
+
+  return Object.freeze({
+    point: sampled.point,
+    yaw: sampled.yaw,
+    speed: clock.velocity,
+    travelDistance: clock.travelDistance,
+    completedAtMs,
+    started: elapsedMs >= startAtMs,
+    completed: clock.lifecycle === "completed",
+    yielding,
+    waiting: yielding && clock.velocity <= 0.05,
   });
 };
 
@@ -742,6 +861,8 @@ export const createNeighborhoodMobilitySystem = (
   const trafficClocks = new Map<string, TrafficClockRecord>();
   const residentClocks = new Map<string, TrafficClockRecord>();
   const petClocks = new Map<string, TrafficClockRecord>();
+  const drivewayClocks = new Map<string, TrafficClockRecord>();
+  const driverClocks = new Map<string, TrafficClockRecord>();
   let trafficContextKey: string | null = null;
   let lastTrafficElapsedMs = 0;
 
@@ -759,6 +880,8 @@ export const createNeighborhoodMobilitySystem = (
         trafficClocks.clear();
         residentClocks.clear();
         petClocks.clear();
+        drivewayClocks.clear();
+        driverClocks.clear();
       }
       trafficContextKey = contextKey;
       lastTrafficElapsedMs = input.elapsedMs;
@@ -881,7 +1004,6 @@ export const createNeighborhoodMobilitySystem = (
           layout.frontProperties.find((property) => property.drivewayX !== null);
         if (drivewayProperty?.drivewayX !== null && drivewayProperty !== undefined) {
           const access = residentialAccessLayout(drivewayProperty, safeSeed);
-          const t = clamp01(input.elapsedMs / durationMs);
           const roadPoint = Object.freeze({
             x: access.roadX,
             z: access.roadCenterZ,
@@ -894,99 +1016,39 @@ export const createNeighborhoodMobilitySystem = (
             x: access.drivewaySidewalkX,
             z: access.drivewaySidewalkZ,
           });
-          const drivewayDistance = Math.max(
-            0.001,
-            pointDistance(roadPoint, parkPoint),
-          );
-          const crossingProgress = clamp01(
-            pointDistance(roadPoint, sidewalkCrossingPoint) / drivewayDistance,
-          );
-          const drivewayYaw = Math.atan2(
-            parkPoint.z - roadPoint.z,
-            parkPoint.x - roadPoint.x,
-          );
-          const sampleDriveway = (progress: number): ResidentialPoint =>
-            Object.freeze({
-              x: roadPoint.x + (parkPoint.x - roadPoint.x) * clamp01(progress),
-              z: roadPoint.z + (parkPoint.z - roadPoint.z) * clamp01(progress),
-            });
+          const roadStart = Object.freeze({
+            x: roadPoint.x - 26,
+            z: roadPoint.z,
+          });
+          const roadEnd = Object.freeze({
+            x: roadPoint.x + 30,
+            z: roadPoint.z,
+          });
           const crossingOccupied = pedestrianPoints.some(
             (point) => pointDistance(point, sidewalkCrossingPoint) <= 2.8,
           );
-          let vehiclePoint = roadPoint;
-          let vehicleYaw = 0;
-          let parked = false;
-          let yieldingAtDriveway = false;
-          if (t < 0.28) {
-            vehiclePoint = Object.freeze({
-              x: roadPoint.x - 26 + 26 * (t / 0.28),
-              z: roadPoint.z,
-            });
-          } else if (t < 0.42) {
-            const p = (t - 0.28) / 0.14;
-            vehiclePoint = sampleDriveway(p);
-            vehicleYaw = drivewayYaw;
-            if (
-              crossingOccupied &&
-              p >= Math.max(0, crossingProgress - 0.18) &&
-              p <= Math.min(1, crossingProgress + 0.12)
-            ) {
-              vehiclePoint = sampleDriveway(
-                Math.max(0, crossingProgress - 0.14),
-              );
-              yieldingAtDriveway = true;
-            }
-          } else if (t < 0.72) {
-            vehiclePoint = parkPoint;
-            vehicleYaw = drivewayYaw;
-            parked = true;
-          } else if (t < 0.84) {
-            const p = (t - 0.72) / 0.12;
-            const drivewayProgress = 1 - p;
-            vehiclePoint = sampleDriveway(drivewayProgress);
-            vehicleYaw = drivewayYaw + Math.PI;
-            if (
-              crossingOccupied &&
-              drivewayProgress <= Math.min(1, crossingProgress + 0.18) &&
-              drivewayProgress >= Math.max(0, crossingProgress - 0.12)
-            ) {
-              vehiclePoint = sampleDriveway(
-                Math.min(1, crossingProgress + 0.14),
-              );
-              yieldingAtDriveway = true;
-            }
-          } else {
-            vehiclePoint = Object.freeze({
-              x: roadPoint.x + 30 * ((t - 0.84) / 0.16),
-              z: roadPoint.z,
-            });
-          }
-          const driverEntering = t >= 0.42 && t < 0.5;
-          const driverInside = t >= 0.5 && t < 0.64;
-          const driverLeaving = t >= 0.64 && t <= 0.72;
-          patchProperty(properties, drivewayProperty.role, {
-            vehicleParked: parked,
-            doorOpen:
-              (driverEntering && t >= 0.46) ||
-              (driverLeaving && t <= 0.69),
-            windowActivity: driverInside,
-          });
-          const drivewayVehicle = makePose(
-            "resident-vehicle",
-            "vehicle",
-            vehiclePoint,
-            vehicleYaw,
-            parked || yieldingAtDriveway ? 0 : 5.2,
-            focus,
-            parked ? "parking" : yieldingAtDriveway ? "crossing" : "none",
-            drivewayProperty.role,
-            yieldingAtDriveway,
-          );
-          actors.push(drivewayVehicle);
-          trafficActors.push(drivewayVehicle);
-          addStatistical(counts, drivewayVehicle);
 
-          const driverRoute = makeRoute("resident-driver", [
+          const ingressRoute = makeRoute("resident-vehicle:ingress", [
+            roadStart,
+            roadPoint,
+            sidewalkCrossingPoint,
+            parkPoint,
+          ]);
+          const ingressCrossingDistance =
+            ingressRoute.cumulative[2] ?? ingressRoute.total;
+          const ingress = drivewayVehicleRoutePose(
+            "resident-vehicle:ingress",
+            ingressRoute,
+            input.elapsedMs,
+            0,
+            5.2,
+            ingressCrossingDistance,
+            crossingOccupied,
+            drivewayClocks,
+            5.2,
+          );
+
+          const driverRoute = makeRoute("resident-driver:enter", [
             parkPoint,
             Object.freeze({
               x: access.entryX,
@@ -995,31 +1057,124 @@ export const createNeighborhoodMobilitySystem = (
             propertyDoorPoint(drivewayProperty, safeSeed),
           ]);
           const driverReturnRoute = reverseRoute(driverRoute, ":return");
+          const driverEnterStartAtMs =
+            ingress.completedAtMs ?? Number.POSITIVE_INFINITY;
+          const driverEnter = pedestrianRoutePose(
+            "resident-driver:enter",
+            driverRoute,
+            input.elapsedMs,
+            driverEnterStartAtMs,
+            NORMAL_PEDESTRIAN_SPEED,
+            3.2,
+            driverClocks,
+          );
+          const driverExitStartAtMs =
+            driverEnter.completedAtMs === null
+              ? Number.POSITIVE_INFINITY
+              : Math.max(
+                  durationMs * 0.64,
+                  driverEnter.completedAtMs + 500,
+                );
+          const driverExit = pedestrianRoutePose(
+            "resident-driver:exit",
+            driverReturnRoute,
+            input.elapsedMs,
+            driverExitStartAtMs,
+            NORMAL_PEDESTRIAN_SPEED,
+            3.2,
+            driverClocks,
+          );
+
+          const egressStartAtMs =
+            driverExit.completedAtMs === null
+              ? Number.POSITIVE_INFINITY
+              : Math.max(durationMs * 0.72, driverExit.completedAtMs);
+          const egressRoute = makeRoute("resident-vehicle:egress", [
+            parkPoint,
+            sidewalkCrossingPoint,
+            roadPoint,
+            roadEnd,
+          ]);
+          const egressCrossingDistance =
+            egressRoute.cumulative[1] ?? egressRoute.total;
+          const egress = drivewayVehicleRoutePose(
+            "resident-vehicle:egress",
+            egressRoute,
+            input.elapsedMs,
+            egressStartAtMs,
+            5.2,
+            egressCrossingDistance,
+            crossingOccupied,
+            drivewayClocks,
+            0,
+          );
+
+          const vehicleDeparting = egress.started;
+          const vehicleCompleted = vehicleDeparting && egress.completed;
+          const vehicleParked = ingress.completed && !vehicleDeparting;
+          const activeVehicleState = vehicleDeparting ? egress : ingress;
+          const vehicleTravelDistance =
+            ingress.travelDistance + egress.travelDistance;
+          const drivewayVehicle = makePose(
+            "resident-vehicle",
+            "vehicle",
+            vehicleParked ? parkPoint : activeVehicleState.point,
+            vehicleParked ? ingress.yaw : activeVehicleState.yaw,
+            vehicleParked ? 0 : activeVehicleState.speed,
+            focus,
+            vehicleParked
+              ? "parking"
+              : activeVehicleState.yielding
+                ? "crossing"
+                : "none",
+            drivewayProperty.role,
+            !vehicleParked && activeVehicleState.waiting,
+            !vehicleCompleted,
+            vehicleTravelDistance,
+          );
+          actors.push(drivewayVehicle);
+          trafficActors.push(drivewayVehicle);
+          addStatistical(counts, drivewayVehicle);
+
+          const driverEntering = driverEnter.visible;
+          const driverLeaving = driverExit.visible;
           const driverMovement = driverEntering || driverLeaving;
-          const driverSample = driverEntering
-            ? sampleRouteProgress(
-                driverRoute,
-                clamp01((t - 0.42) / 0.08),
-              )
-            : sampleRouteProgress(
-                driverReturnRoute,
-                clamp01((t - 0.64) / 0.08),
-              );
+          const activeDriver = driverLeaving ? driverExit : driverEnter;
+          const driverTravelDistance =
+            driverEnter.travelDistance + driverExit.travelDistance;
+          const driverDoorPoint = propertyDoorPoint(
+            drivewayProperty,
+            safeSeed,
+          );
+          const driverNearDoor =
+            driverMovement &&
+            pointDistance(activeDriver.point, driverDoorPoint) <= 0.9;
+          const driverInside =
+            driverEnter.completedAtMs !== null &&
+            input.elapsedMs >= driverEnter.completedAtMs &&
+            input.elapsedMs < driverExitStartAtMs;
+          patchProperty(properties, drivewayProperty.role, {
+            vehicleParked,
+            doorOpen: driverNearDoor,
+            windowActivity: driverInside,
+          });
+
           const residentDriver = makePose(
             "resident-driver",
             "resident",
-            driverSample.point,
-            driverSample.yaw,
-            NORMAL_PEDESTRIAN_SPEED,
+            activeDriver.point,
+            activeDriver.yaw,
+            activeDriver.speed,
             focus,
             "door",
             drivewayProperty.role,
             false,
             driverMovement,
+            driverTravelDistance,
           );
           actors.push(residentDriver);
           if (driverMovement) {
-            pedestrianPoints.push(driverSample.point);
+            pedestrianPoints.push(activeDriver.point);
           }
           addStatistical(counts, residentDriver);
         }
