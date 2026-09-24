@@ -142,7 +142,9 @@ describe("neighborhood world scale", () => {
     });
     expect(reusesGeometryWithinPlant).toBe(true);
 
-    expect(flowerBeds.every((bed) => typeof bed.userData["proceduralSeed"] === "number")).toBe(true);
+    expect(flowerBeds.every((bed) => typeof bed.userData["proceduralSeed"] === "number")).toBe(
+      true,
+    );
     const firstFlowerBed = flowerBeds[0];
     expect(firstFlowerBed).toBeDefined();
     if (firstFlowerBed !== undefined) {
