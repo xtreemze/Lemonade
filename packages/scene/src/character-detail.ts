@@ -44,7 +44,7 @@ export const characterIdentityFor = (
 };
 
 const mark = <T extends Object3D>(object: T, role: string): T => {
-  object.userData.sceneRole = role;
+  object.userData["sceneRole"] = role;
   return object;
 };
 
@@ -226,8 +226,8 @@ export const decorateCharacterBody = (
   profile: CharacterProfile,
   identity: CharacterIdentity,
 ): void => {
-  root.userData.characterGender = identity.gender;
-  root.userData.characterAgeGroup = identity.ageGroup;
+  root.userData["characterGender"] = identity.gender;
+  root.userData["characterAgeGroup"] = identity.ageGroup;
 
   const cloth = material(profile.clothingColor);
   const trim = material(profile.trouserColor);
