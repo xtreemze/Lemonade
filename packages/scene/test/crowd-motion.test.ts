@@ -95,9 +95,11 @@ describe("crowd motion", () => {
       expect(Number.isFinite(pose.x)).toBe(true);
       expect(Number.isFinite(pose.z)).toBe(true);
       expect(generatedRouteIds.has(pose.routeId)).toBe(true);
-      expect(
-        pointIsOnGeneratedStrip(pose.x, pose.z, generatedSidewalks),
-      ).toBe(true);
+      if (!pose.enteringHome) {
+        expect(
+          pointIsOnGeneratedStrip(pose.x, pose.z, generatedSidewalks),
+        ).toBe(true);
+      }
     }
 
     for (let left = 0; left < first.length; left += 1) {
@@ -107,7 +109,7 @@ describe("crowd motion", () => {
         const b = first[right];
         if (b === undefined) continue;
         const distance = Math.hypot(a.x - b.x, a.z - b.z);
-        expect(distance).toBeGreaterThan(0.42);
+        expect(distance).toBeGreaterThan(0.66);
       }
     }
   });
@@ -593,12 +595,16 @@ describe("crowd motion", () => {
       (pose): pose is NonNullable<typeof pose> => pose !== undefined,
     );
     expect(definedForeground).toHaveLength(PASSERBY_FOREGROUND_TARGET);
+    const foregroundRoutes = new Set(
+      definedForeground.map((pose) => pose.routeId),
+    );
+    expect(foregroundRoutes.size).toBeGreaterThanOrEqual(6);
     expect(
-      definedForeground.every((pose) => pose.routeId.startsWith("main:")),
+      definedForeground.some((pose) => !pose.routeId.startsWith("main:")),
     ).toBe(true);
     expect(backgroundAtStart.length).toBeGreaterThan(0);
-    expect(averageRadius(definedForeground)).toBeLessThan(
-      averageRadius(backgroundAtStart),
+    expect(averageRadius(definedForeground)).toBeLessThanOrEqual(
+      averageRadius(backgroundAtStart) + 18,
     );
 
     for (
@@ -626,6 +632,70 @@ describe("crowd motion", () => {
       }
       previous = current;
     }
+  });
+
+  it("only retires an active ordinary pedestrian after a visible home-entry approach", () => {
+    const storyboard = createStreetStoryboard({
+      durationMs: 16_000,
+      prepared: 20,
+      sold: 0,
+      visibleSigns: 0,
+      priceCents: 150,
+      ambientPedestrianCount: 8,
+    });
+    const simulation = createCrowdSimulation(
+      storyboard.passersBy,
+      PASSERBY_BASE_ACTIVE_COUNT,
+      storyboard.durationMs,
+    );
+
+    let previous = simulation.sample(0).poses;
+    let homeEntries = 0;
+    for (let elapsedMs = 100; elapsedMs < storyboard.durationMs; elapsedMs += 100) {
+      const current = simulation.sample(elapsedMs).poses;
+      for (
+        let index = PASSERBY_FOREGROUND_TARGET;
+        index < current.length;
+        index += 1
+      ) {
+        const before = previous[index];
+        const after = current[index];
+        if (before === undefined || after !== undefined) continue;
+        expect(before.enteringHome).toBe(true);
+        expect(before.destinationRole).not.toBeNull();
+        expect(before.destinationRole).not.toBe("stand-home");
+        expect(before.destinationRole).not.toBe("stand-neighbor");
+        homeEntries += 1;
+      }
+      previous = current;
+    }
+
+    expect(homeEntries).toBeGreaterThan(0);
+  });
+
+  it("keeps the foreground crowd distributed instead of forming a stand-side clump", () => {
+    const storyboard = createStreetStoryboard({
+      durationMs: 16_000,
+      prepared: 20,
+      sold: 0,
+      visibleSigns: 0,
+      priceCents: 150,
+      ambientPedestrianCount: 8,
+    });
+    const poses = createCrowdSimulation(
+      storyboard.passersBy,
+      PASSERBY_BASE_ACTIVE_COUNT,
+      storyboard.durationMs,
+    ).sample(4_000).poses
+      .slice(0, PASSERBY_FOREGROUND_TARGET)
+      .filter((pose) => pose !== undefined);
+
+    expect(poses).toHaveLength(PASSERBY_FOREGROUND_TARGET);
+    expect(new Set(poses.map((pose) => pose.routeId)).size).toBeGreaterThanOrEqual(6);
+    const standSideCount = poses.filter(
+      (pose) => Math.abs(pose.x) < 7 && Math.abs(pose.z) < 7,
+    ).length;
+    expect(standSideCount).toBeLessThanOrEqual(5);
   });
 
   it("does not expire a pedestrian mid-route only because its beat window ended", () => {
