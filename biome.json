@@ -77,16 +77,25 @@
       },
       "complexity": {
         "noForEach": "off",
-        "noVoid": "off"
+        "noVoid": "off",
+        "useMaxParams": "info"
       },
       "style": {
-        "useDefaultSwitchClause": "off"
+        "useDefaultSwitchClause": "off",
+        "useGlobalThis": "info",
+        "noParameterProperties": "info"
+      },
+      "performance": {
+        "useTopLevelRegex": "info"
       }
     }
   },
   "overrides": [
     {
-      "includes": ["apps/web/src/app.ts", "e2e/renderer-stress.spec.ts"],
+      "includes": [
+        "apps/web/src/app.ts",
+        "e2e/renderer-stress.spec.ts"
+      ],
       "linter": {
         "rules": {
           "suspicious": {
@@ -96,7 +105,9 @@
       }
     },
     {
-      "includes": ["packages/simulation/src/**/*.ts"],
+      "includes": [
+        "packages/simulation/src/**/*.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -170,7 +181,10 @@
       }
     },
     {
-      "includes": ["scripts/**/*.mjs", "apps/web/scripts/**/*.mjs"],
+      "includes": [
+        "scripts/**/*.mjs",
+        "apps/web/scripts/**/*.mjs"
+      ],
       "linter": {
         "rules": {
           "correctness": {
@@ -183,7 +197,9 @@
       }
     },
     {
-      "includes": ["apps/web/src/dev-*.ts"],
+      "includes": [
+        "apps/web/src/dev-*.ts"
+      ],
       "linter": {
         "rules": {
           "suspicious": {
@@ -193,7 +209,9 @@
       }
     },
     {
-      "includes": ["playwright*.config.ts"],
+      "includes": [
+        "playwright*.config.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -203,7 +221,9 @@
       }
     },
     {
-      "includes": ["apps/web/src/scene-runtime.ts"],
+      "includes": [
+        "apps/web/src/scene-runtime.ts"
+      ],
       "linter": {
         "rules": {
           "performance": {
@@ -213,11 +233,79 @@
       }
     },
     {
-      "includes": ["scripts/certify.mjs"],
+      "includes": [
+        "scripts/certify.mjs"
+      ],
       "linter": {
         "rules": {
           "correctness": {
             "noUnresolvedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "e2e/**/*.ts",
+        "playwright*.config.ts"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "suspicious": {
+            "noMisplacedAssertion": "info"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "e2e/**/*.ts"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnresolvedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/*.test.ts",
+        "**/*.spec.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noMisplacedAssertion": "info"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/web/vite.config.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/*/src/index.ts"
+      ],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "info",
+            "noReExportAll": "info"
           }
         }
       }
