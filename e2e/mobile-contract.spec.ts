@@ -199,8 +199,22 @@ const expectCompactReportComposition = async (
       throw new TypeError("Expected complete report composition.");
     }
 
+    const headingRect = heading.getBoundingClientRect();
+    const headingCopy = heading.firstElementChild;
+    const net = panel.querySelector<HTMLElement>("#report-net");
+
+    if (!(headingCopy instanceof HTMLElement) || net === null) {
+      throw new TypeError("Expected report heading copy and net result.");
+    }
+
+    const copyRect = headingCopy.getBoundingClientRect();
+    const netRect = net.getBoundingClientRect();
+
     return {
       headingDirection: getComputedStyle(heading).flexDirection,
+      heading: { left: headingRect.left, right: headingRect.right },
+      headingCopy: { left: copyRect.left, right: copyRect.right },
+      net: { left: netRect.left, right: netRect.right },
       ledgerHeight: ledger.getBoundingClientRect().height,
       ledgerContentHeight:
         ledgerHeading.getBoundingClientRect().height +
@@ -211,6 +225,9 @@ const expectCompactReportComposition = async (
   expect(layout.headingDirection).toBe("row");
 
   if (viewport.width < 640) {
+    expect(layout.headingCopy.left).toBeLessThanOrEqual(layout.heading.left + 1);
+    expect(layout.net.right).toBeGreaterThanOrEqual(layout.heading.right - 1);
+    expect(layout.headingCopy.right).toBeLessThanOrEqual(layout.net.left);
     expect(layout.ledgerHeight).toBeLessThanOrEqual(layout.ledgerContentHeight + 4);
   }
 };
@@ -229,15 +246,35 @@ const expectCompactPortraitHistory = async (
       throw new TypeError("Expected rendered sales history.");
     }
 
+    const chartGrid = section.querySelector<HTMLElement>(".chart-grid");
+    if (chartGrid === null) {
+      throw new TypeError("Expected sales-history chart grid.");
+    }
+
+    const columns = getComputedStyle(chartGrid).gridTemplateColumns
+      .trim()
+      .split(/\\s+/u)
+      .filter(Boolean).length;
+
     return {
       hostHeight: host.getBoundingClientRect().height,
       sectionHeight: section.getBoundingClientRect().height,
+      chartGridColumns: columns,
       chartHeights: charts.map((chart) => chart.getBoundingClientRect().height),
+      chartWidths: charts.map((chart) => chart.getBoundingClientRect().width),
     };
   });
 
   expect(layout.sectionHeight).toBeLessThan(layout.hostHeight - 4);
   expect(Math.max(...layout.chartHeights)).toBeLessThanOrEqual(169);
+
+  if (viewport.width >= 360) {
+    expect(layout.chartGridColumns).toBe(2);
+    expect(Math.min(...layout.chartWidths)).toBeGreaterThanOrEqual(140);
+    expect(Math.max(...layout.chartHeights)).toBeLessThanOrEqual(145);
+  } else {
+    expect(layout.chartGridColumns).toBe(1);
+  }
 };
 
 const expectDesktopReportComposition = async (
