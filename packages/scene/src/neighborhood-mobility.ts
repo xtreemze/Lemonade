@@ -527,7 +527,9 @@ const drivewayVehicleRoutePose = (
   let cursorMs = record.lastElapsedMs;
   let completedAtMs = record.completedAtMs ?? null;
   const targetElapsedMs = Math.max(cursorMs, elapsedMs);
-  const yieldStart = Math.max(0, crossingDistance - 4.2);
+  const brakingDistance =
+    (desiredSpeed * desiredSpeed) / (2 * 4) + 0.75;
+  const yieldStart = Math.max(0, crossingDistance - brakingDistance);
   const yieldEnd = Math.min(route.total, crossingDistance + 0.15);
 
   while (cursorMs < targetElapsedMs && clock.lifecycle === "active") {
@@ -1041,11 +1043,11 @@ export const createNeighborhoodMobilitySystem = (
             ingressRoute,
             input.elapsedMs,
             0,
-            5.2,
+            7.8,
             ingressCrossingDistance,
             crossingOccupied,
             drivewayClocks,
-            5.2,
+            7.8,
           );
 
           const driverRoute = makeRoute("resident-driver:enter", [
@@ -1102,7 +1104,7 @@ export const createNeighborhoodMobilitySystem = (
             egressRoute,
             input.elapsedMs,
             egressStartAtMs,
-            5.2,
+            7.8,
             egressCrossingDistance,
             crossingOccupied,
             drivewayClocks,
@@ -1133,7 +1135,9 @@ export const createNeighborhoodMobilitySystem = (
             vehicleTravelDistance,
           );
           actors.push(drivewayVehicle);
-          trafficActors.push(drivewayVehicle);
+          if (!vehicleCompleted) {
+            trafficActors.push(drivewayVehicle);
+          }
           addStatistical(counts, drivewayVehicle);
 
           const driverEntering = driverEnter.visible;
