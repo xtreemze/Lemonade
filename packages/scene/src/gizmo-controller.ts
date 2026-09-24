@@ -204,7 +204,7 @@ export const createGizmoController = (options: GizmoOptions): GizmoController =>
     const radius = 2.5;
 
     const createArc = (color: number, axis: "x" | "y" | "z") => {
-      const points = [];
+      const points: Vector3[] = [];
       const segments = 16;
       const range = Math.PI * 1.5;
       for (let i = 0; i <= segments; i++) {
