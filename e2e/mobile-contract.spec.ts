@@ -32,7 +32,7 @@ const expectViewportContract = async (
       throw new TypeError("Expected .game-shell.");
     }
 
-    const rect = shell.getBoundingClientRect();
+    const shellRect = shell.getBoundingClientRect();
     const isVisuallyHidden = (element: HTMLElement): boolean => {
       const style = getComputedStyle(element);
       return (
@@ -125,10 +125,10 @@ const expectViewportContract = async (
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
       shell: {
-        x: rect.x,
-        y: rect.y,
-        width: rect.width,
-        height: rect.height,
+        x: shellRect.x,
+        y: shellRect.y,
+        width: shellRect.width,
+        height: shellRect.height,
       },
       document: {
         clientWidth: document.documentElement.clientWidth,
