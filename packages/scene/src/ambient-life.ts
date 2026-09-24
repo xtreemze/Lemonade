@@ -9,7 +9,20 @@ import {
   type Scene,
 } from "three";
 
-import { characterProfileFor } from "./characters.js";
+import {
+  CHARACTER_ANATOMY,
+  characterPoseAtDistance,
+  seatedCharacterPose,
+} from "./character-model.js";
+import {
+  createCharacterGeometrySet,
+  type CharacterGeometrySet,
+} from "./character-geometry.js";
+import {
+  applyThreeCharacterPose,
+  createThreeCharacterRig,
+  type ThreeCharacterRig,
+} from "./character-rig.js";
 import { decorateCharacter } from "./character-detail.js";
 import {
   updateNeighborhoodActivity,
@@ -220,70 +233,21 @@ const createPet = (color: number): Group => {
   return root;
 };
 
-type TransportCharacterRig = Readonly<{
-  root: Group;
-  head: Mesh;
-  arms: readonly [Group, Group];
-  legs: readonly [Group, Group];
-}>;
+type TransportCharacterRig = ThreeCharacterRig;
 
 const createTransportCharacter = (
+  geometries: CharacterGeometrySet,
   seed: number,
   index: number,
 ): TransportCharacterRig => {
-  const profile = characterProfileFor(seed, index);
-  const root = new Group();
-  root.userData["sceneRole"] = "transport-character";
-
-  const torso = new Mesh(
-    new CylinderGeometry(0.25, 0.34, 0.9, 10),
-    material(profile.clothingColor),
-  );
-  torso.position.y = 1.05;
-  const head = new Mesh(
-    new SphereGeometry(0.27, 12, 8),
-    material(profile.skinColor),
-  );
-  head.position.y = 1.78;
-  root.add(torso, head);
-
-  const arms = [-1, 1].map((direction) => {
-    const arm = new Group();
-    const upper = new Mesh(
-      new CylinderGeometry(0.075, 0.082, 0.42, 8),
-      material(profile.clothingColor),
-    );
-    upper.position.y = -0.21;
-    arm.position.set(direction * 0.34, 1.37, 0);
-    arm.rotation.z = direction * 0.08;
-    arm.add(upper);
-    root.add(arm);
-    return arm;
-  }) as [Group, Group];
-
-  const legs = [-1, 1].map((direction) => {
-    const leg = new Group();
-    const upper = new Mesh(
-      new CylinderGeometry(0.095, 0.105, 0.5, 8),
-      material(profile.trouserColor),
-    );
-    upper.position.y = -0.25;
-    leg.position.set(direction * 0.14, 0.72, 0);
-    leg.add(upper);
-    root.add(leg);
-    return leg;
-  }) as [Group, Group];
-
-  decorateCharacter(root, head, profile, index);
-  return Object.freeze({
-    root,
-    head,
-    arms: Object.freeze(arms),
-    legs: Object.freeze(legs),
-  });
+  const rig = createThreeCharacterRig(geometries, seed, index);
+  rig.root.userData["sceneRole"] = "transport-character";
+  decorateCharacter(rig.root, rig.head, rig.profile, index);
+  return rig;
 };
 
 const createBicycle = (
+  geometries: CharacterGeometrySet,
   color: number,
   seed: number,
   index: number,
@@ -310,15 +274,11 @@ const createBicycle = (
   frame.rotation.z = 0.08;
   root.add(frame);
 
-  const rider = createTransportCharacter(seed, 500 + index);
+  const rider = createTransportCharacter(geometries, seed, 500 + index);
   rider.root.userData["sceneRole"] = "ambient-rider";
-  rider.root.scale.setScalar(0.58);
+  applyThreeCharacterPose(rider, seatedCharacterPose("rider"));
   rider.root.position.set(-0.02, wheelRadius - 0.08, 0);
   rider.root.rotation.z = -0.12;
-  rider.arms[0].rotation.x = -0.92;
-  rider.arms[1].rotation.x = -0.92;
-  rider.legs[0].rotation.x = 0.82;
-  rider.legs[1].rotation.x = -0.52;
   root.add(rider.root);
   return root;
 };
@@ -373,6 +333,7 @@ export const vehicleVariantSpec = (
 };
 
 const createVehicle = (
+  geometries: CharacterGeometrySet,
   color: number,
   seed: number,
   index: number,
@@ -499,18 +460,19 @@ const createVehicle = (
     }
   }
 
-  const driver = createTransportCharacter(seed ^ 0x51a7, 10_100 + index);
-  driver.root.userData["sceneRole"] = "ambient-driver";
-  driver.root.scale.setScalar(0.42);
-  driver.root.position.set(
-    cabinX,
-    spec.wheelRadius + spec.bodyHeight * 0.7,
-    0.12,
+  const driver = createTransportCharacter(
+    geometries,
+    seed ^ 0x51a7,
+    10_100 + index,
   );
-  driver.arms[0].rotation.x = -0.72;
-  driver.arms[1].rotation.x = -0.72;
-  driver.legs[0].rotation.x = 0.62;
-  driver.legs[1].rotation.x = 0.62;
+  driver.root.userData["sceneRole"] = "ambient-driver";
+  applyThreeCharacterPose(driver, seatedCharacterPose("driver"));
+  const roofY = spec.wheelRadius + spec.bodyHeight + spec.cabinHeight;
+  const renderedHeadTop =
+    (driver.head.position.y + CHARACTER_ANATOMY.head.radius * 1.04) *
+    driver.profile.heightScale *
+    WORLD_SCALE.character.renderScale;
+  driver.root.position.set(cabinX, roofY - renderedHeadTop - 0.04, 0.12);
   root.add(driver.root);
 
   return root;
@@ -544,7 +506,11 @@ const actorIdentitySalt = (actorId: string): number => {
   return hash >>> 0;
 };
 
-const createBicycleForActor = (seed: number, actorId: string): Group => {
+const createBicycleForActor = (
+  geometries: CharacterGeometrySet,
+  seed: number,
+  actorId: string,
+): Group => {
   const identitySalt = actorIdentitySalt(actorId);
   const profileSeed = seed ^ identitySalt;
   const color =
@@ -553,6 +519,7 @@ const createBicycleForActor = (seed: number, actorId: string): Group => {
         BICYCLE_COLORS.length
     ] ?? BICYCLE_COLORS[0];
   const bicycle = createBicycle(
+    geometries,
     color,
     profileSeed,
     identitySalt % 20_000,
@@ -561,7 +528,11 @@ const createBicycleForActor = (seed: number, actorId: string): Group => {
   return bicycle;
 };
 
-const createVehicleForActor = (seed: number, actorId: string): Group => {
+const createVehicleForActor = (
+  geometries: CharacterGeometrySet,
+  seed: number,
+  actorId: string,
+): Group => {
   const identitySalt = actorIdentitySalt(actorId);
   const profileSeed = seed ^ identitySalt;
   const variant =
@@ -575,6 +546,7 @@ const createVehicleForActor = (seed: number, actorId: string): Group => {
         VEHICLE_COLORS.length
     ] ?? VEHICLE_COLORS[0];
   const vehicle = createVehicle(
+    geometries,
     color,
     profileSeed,
     identitySalt % 20_000,
@@ -620,15 +592,15 @@ export const transportGaitAt = (
 
 const applyTransportWalk = (
   rig: TransportCharacterRig,
-  elapsedMs: number,
-  speed: number,
+  travelDistance: number,
+  preserveLocomotionPose: boolean,
 ): void => {
-  const gait = transportGaitAt(elapsedMs, speed);
-  rig.legs[0].rotation.x = gait.stride;
-  rig.legs[1].rotation.x = -gait.stride;
-  rig.arms[0].rotation.x = -gait.stride * 0.72;
-  rig.arms[1].rotation.x = gait.stride * 0.72;
-  rig.root.position.y = gait.lift;
+  applyThreeCharacterPose(
+    rig,
+    characterPoseAtDistance(rig.profile, travelDistance, {
+      moving: preserveLocomotionPose,
+    }),
+  );
 };
 
 const REDUCED_DETAIL_ROLES = new Set([
@@ -687,13 +659,23 @@ const placeRig = (
   rig.root.position.set(pose.x, 0, pose.z);
   rig.root.rotation.y = -pose.yaw;
   rig.root.rotation.z = 0;
-  applyTransportWalk(rig, elapsedMs, pose.speed);
+  // Clock-driven actors expose authoritative locomotion distance. Legacy
+  // service/crossing actors remain on a temporary renderer fallback until #212
+  // migrates their motion to the same actor-owned clock.
+  const travelDistance =
+    pose.travelDistance ??
+    (Math.max(0, elapsedMs) / 1_000) * Math.max(0, pose.speed);
+  const preserveLocomotionPose =
+    (pose.travelDistance !== null || pose.speed > 0) &&
+    pose.interaction !== "gardening" &&
+    pose.interaction !== "mailbox";
+  applyTransportWalk(rig, travelDistance, preserveLocomotionPose);
   if (pose.interaction === "gardening") {
-    rig.arms[0].rotation.x = -1.05;
-    rig.arms[1].rotation.x = -0.72;
+    rig.arms[0].root.rotation.x = -1.05;
+    rig.arms[1].root.rotation.x = -0.72;
     rig.root.rotation.z = Math.sin(elapsedMs * 0.004) * 0.08;
   } else if (pose.interaction === "mailbox") {
-    rig.arms[1].rotation.x = -1.15;
+    rig.arms[1].root.rotation.x = -1.15;
   }
 };
 
@@ -703,6 +685,7 @@ export const createAmbientLife = (
   owners: readonly Object3D[] = [],
   mobilitySeed = seed,
 ): AmbientLifeController => {
+  const characterGeometries = createCharacterGeometrySet();
   const pets = [createPet(0xa96f45), createPet(0x3e3a36), createPet(0xd1b48b)];
   const wildlifeProfiles = Array.from({ length: 4 }, (_, index) =>
     birdFlightProfileFor(seed ^ 0x42495244, index),
@@ -714,13 +697,13 @@ export const createAmbientLife = (
     .slice(0, 2)
     .map((_, index) => owners[index]);
   const residents = [
-    createTransportCharacter(seed ^ 0x7341, 12_000),
-    createTransportCharacter(seed ^ 0x7341, 12_001),
-    createTransportCharacter(seed ^ 0x7341, 12_002),
-    createTransportCharacter(seed ^ 0x7341, 12_003),
+    createTransportCharacter(characterGeometries, seed ^ 0x7341, 12_000),
+    createTransportCharacter(characterGeometries, seed ^ 0x7341, 12_001),
+    createTransportCharacter(characterGeometries, seed ^ 0x7341, 12_002),
+    createTransportCharacter(characterGeometries, seed ^ 0x7341, 12_003),
   ];
-  const mailCarrier = createTransportCharacter(seed ^ 0x4d41494c, 12_100);
-  const gardener = createTransportCharacter(seed ^ 0x47415244, 12_200);
+  const mailCarrier = createTransportCharacter(characterGeometries, seed ^ 0x4d41494c, 12_100);
+  const gardener = createTransportCharacter(characterGeometries, seed ^ 0x47415244, 12_200);
   mailCarrier.root.userData["sceneRole"] = "ambient-mail-carrier";
   gardener.root.userData["sceneRole"] = "ambient-gardener";
   residents.forEach((resident, index) => {
@@ -733,7 +716,7 @@ export const createAmbientLife = (
   const bicycleForActor = (actorId: string): Group => {
     const existing = bicycleVisuals.get(actorId);
     if (existing !== undefined) return existing;
-    const bicycle = createBicycleForActor(seed, actorId);
+    const bicycle = createBicycleForActor(characterGeometries, seed, actorId);
     bicycle.visible = false;
     bicycleVisuals.set(actorId, bicycle);
     scene.add(bicycle);
@@ -743,7 +726,7 @@ export const createAmbientLife = (
   const vehicleForActor = (actorId: string): Group => {
     const existing = vehicleVisuals.get(actorId);
     if (existing !== undefined) return existing;
-    const vehicle = createVehicleForActor(seed, actorId);
+    const vehicle = createVehicleForActor(characterGeometries, seed, actorId);
     vehicle.visible = false;
     vehicleVisuals.set(actorId, vehicle);
     scene.add(vehicle);
