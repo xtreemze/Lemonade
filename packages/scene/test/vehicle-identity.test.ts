@@ -4,17 +4,17 @@ import { describe, expect, it } from "vitest";
 import { createAmbientLife } from "../src/ambient-life.js";
 
 const sceneRoleOf = (object: Object3D): string | null => {
-  const role: unknown = object.userData.sceneRole;
+  const role: unknown = object.userData["sceneRole"];
   return typeof role === "string" ? role : null;
 };
 
 const mobilityActorIdOf = (object: Object3D): string | null => {
-  const actorId: unknown = object.userData.mobilityActorId;
+  const actorId: unknown = object.userData["mobilityActorId"];
   return typeof actorId === "string" ? actorId : null;
 };
 
 const vehicleVariantOf = (object: Object3D): string | null => {
-  const variant: unknown = object.userData.vehicleVariant;
+  const variant: unknown = object.userData["vehicleVariant"];
   return typeof variant === "string" ? variant : null;
 };
 
