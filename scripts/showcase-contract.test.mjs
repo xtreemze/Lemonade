@@ -38,6 +38,7 @@ test("showcase config structurally separates desktop and mobile Chromium capture
   assert.ok(config.includes("width: 390, height: 844"));
   assert.ok(config.includes("hasTouch: true"));
   assert.ok(config.includes('video: "off"'));
+  assert.ok(config.includes("--autoplay-policy=no-user-gesture-required"));
 });
 
 test("showcase specs capture dynamic 3D scenes directly and static states as screenshots", async () => {
@@ -45,6 +46,14 @@ test("showcase specs capture dynamic 3D scenes directly and static states as scr
   assert.ok(spec.includes("canvas.captureStream(requestedFps)"));
   assert.ok(spec.includes("new MediaRecorder"));
   assert.ok(spec.includes("videoBitsPerSecond"));
+  assert.ok(spec.includes("audioBitsPerSecond"));
+  assert.ok(spec.includes("getAudioTracks"));
+  assert.ok(spec.includes(".audio.webm"));
+  assert.ok(spec.includes("videoRecorder"));
+  assert.ok(spec.includes("audioRecorder"));
+  assert.ok(spec.includes("createMediaStreamDestination"));
+  assert.ok(spec.includes("AudioNode.prototype"));
+  assert.ok(spec.includes("__lemonadeShowcaseAudio"));
   assert.ok(spec.includes("page.screenshot"));
   assert.ok(spec.includes('media === "screenshot"'));
   assert.ok(spec.includes('media === "video"'));
@@ -58,9 +67,15 @@ test("renderer creates source-quality reels plus mixed PNG and animated WebP pre
   assert.ok(renderer.includes("lemonade-mobile-highlight.webp"));
   assert.ok(renderer.includes("libwebp_anim"));
   assert.ok(renderer.includes("animatedGraphicFps"));
-  assert.ok(renderer.includes('"-loop", "1"'));
+  assert.ok(renderer.includes("const encodeStaticClip"));
   assert.ok(renderer.includes('"-crf",\n    "17"'));
   assert.ok(renderer.includes("flags=lanczos"));
+  assert.ok(renderer.includes('"1:a:0"'));
+  assert.ok(renderer.includes("anullsrc=channel_layout=stereo:sample_rate=48000"));
+  assert.ok(renderer.includes("concat=n="));
+  assert.ok(renderer.includes(":v=1:a=1[outv][outa]"));
+  assert.ok(renderer.includes('"aac"'));
+  assert.ok(renderer.includes('"192k"'));
 });
 
 test("verifier enforces source resolution and high-frame-rate output", async () => {
@@ -71,6 +86,18 @@ test("verifier enforces source resolution and high-frame-rate output", async () 
   assert.ok(verifier.includes("width: 390, height: 844"));
   assert.ok(verifier.includes("animated WebP"));
   assert.ok(verifier.includes("PNG screenshot"));
+  assert.ok(verifier.includes("assertAudio"));
+  assert.ok(verifier.includes("assertAudible"));
+  assert.ok(verifier.includes("volumedetect"));
+  assert.ok(verifier.includes("48000 Hz"));
+});
+
+test("showcase harness mirrors application Web Audio without production hooks", async () => {
+  const spec = await read("e2e/showcase/showcase.spec.ts");
+  assert.ok(spec.includes("class ShowcaseAudioContext extends NativeAudioContext"));
+  assert.ok(spec.includes("captureByContext"));
+  assert.ok(spec.includes("Reflect.apply(nativeConnect"));
+  assert.ok(spec.includes("sampleRate: 48_000"));
 });
 
 test("dedicated showcase workflow is independently runnable and uploads evidence", async () => {
@@ -109,6 +136,6 @@ test("README and docs use animated graphics only for dynamic scenes", async () =
   assert.ok(readme.includes("lemonade-desktop-highlight.webp"));
   assert.ok(readme.includes("lemonade-mobile-highlight.webp"));
   assert.ok(docs.includes("captureStream(60)"));
-  assert.ok(docs.includes("source-resolution H.264 MP4"));
+  assert.ok(docs.includes("source-resolution H.264/AAC MP4"));
   assert.ok(docs.includes("animated WebP"));
 });

@@ -32,17 +32,26 @@ const formFactors = {
   },
 };
 
-const encodeH264 = (inputArgs, output, format, duration) => {
+const videoFilter = (format) =>
+  `fps=${String(manifest.capture.videoFps)},scale=${String(format.width)}:${String(
+    format.height,
+  )}:flags=lanczos,setsar=1`;
+
+const encodeDynamicClip = (videoInput, audioInput, output, format, duration) => {
   run([
     "-y",
-    ...inputArgs,
+    "-i",
+    videoInput,
+    "-i",
+    audioInput,
     "-t",
     String(duration),
+    "-map",
+    "0:v:0",
+    "-map",
+    "1:a:0",
     "-vf",
-    `fps=${String(manifest.capture.videoFps)},scale=${String(format.width)}:${String(
-      format.height,
-    )}:flags=lanczos,setsar=1`,
-    "-an",
+    videoFilter(format),
     "-c:v",
     "libx264",
     "-preset",
@@ -53,6 +62,59 @@ const encodeH264 = (inputArgs, output, format, duration) => {
     "high",
     "-pix_fmt",
     "yuv420p",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "192k",
+    "-ar",
+    "48000",
+    "-ac",
+    "2",
+    "-movflags",
+    "+faststart",
+    output,
+  ]);
+};
+
+const encodeStaticClip = (input, output, format, duration) => {
+  run([
+    "-y",
+    "-loop",
+    "1",
+    "-framerate",
+    String(manifest.capture.videoFps),
+    "-i",
+    input,
+    "-f",
+    "lavfi",
+    "-i",
+    "anullsrc=channel_layout=stereo:sample_rate=48000",
+    "-t",
+    String(duration),
+    "-map",
+    "0:v:0",
+    "-map",
+    "1:a:0",
+    "-vf",
+    videoFilter(format),
+    "-c:v",
+    "libx264",
+    "-preset",
+    "medium",
+    "-crf",
+    "17",
+    "-profile:v",
+    "high",
+    "-pix_fmt",
+    "yuv420p",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "192k",
+    "-ar",
+    "48000",
+    "-ac",
+    "2",
     "-movflags",
     "+faststart",
     output,
@@ -112,18 +174,19 @@ for (const [formFactor, format] of Object.entries(formFactors)) {
     const duration = Number(feature.durationSeconds);
 
     if (feature.media === "video") {
-      const input = path.join(rawDir, `${feature.id}.webm`);
+      const videoInput = path.join(rawDir, `${feature.id}.webm`);
+      const audioInput = path.join(rawDir, `${feature.id}.audio.webm`);
       const video = path.join(videoDir, `${feature.id}.mp4`);
       const graphic = path.join(graphicDir, `${feature.id}.webp`);
 
-      encodeH264(["-i", input], video, format, duration);
+      encodeDynamicClip(videoInput, audioInput, video, format, duration);
       await copyFile(video, clip);
       encodeAnimatedWebp(video, graphic, format.graphicWidth);
     } else if (feature.media === "screenshot") {
       const input = path.join(rawDir, `${feature.id}.png`);
       const graphic = path.join(graphicDir, `${feature.id}.png`);
       await copyFile(input, graphic);
-      encodeH264(["-loop", "1", "-framerate", String(manifest.capture.videoFps), "-i", input], clip, format, duration);
+      encodeStaticClip(input, clip, format, duration);
     } else {
       throw new Error(`Unknown showcase media type: ${String(feature.media)}`);
     }
@@ -132,18 +195,21 @@ for (const [formFactor, format] of Object.entries(formFactors)) {
   }
 
   const concatInputs = clips.flatMap((clip) => ["-i", clip]);
-  const concatPads = clips.map((_, index) => `[${String(index)}:v]`).join("");
+  const concatPads = clips
+    .map((_, index) => `[${String(index)}:v][${String(index)}:a]`)
+    .join("");
   const reel = path.join(reelDir, format.reelName);
   run([
     "-y",
     ...concatInputs,
     "-filter_complex",
-    `${concatPads}concat=n=${String(clips.length)}:v=1:a=0[outv]`,
+    `${concatPads}concat=n=${String(clips.length)}:v=1:a=1[outv][outa]`,
     "-map",
     "[outv]",
+    "-map",
+    "[outa]",
     "-r",
     String(manifest.capture.videoFps),
-    "-an",
     "-c:v",
     "libx264",
     "-preset",
@@ -154,6 +220,14 @@ for (const [formFactor, format] of Object.entries(formFactors)) {
     "high",
     "-pix_fmt",
     "yuv420p",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "192k",
+    "-ar",
+    "48000",
+    "-ac",
+    "2",
     "-movflags",
     "+faststart",
     reel,
@@ -213,7 +287,7 @@ const renderSection = (formFactor, heading) => {
 const readme = [
   "## Product in motion",
   "",
-  "The 3D scenes are captured directly from the real WebGL canvas at source resolution and 60 fps. Static interface and report states use lossless screenshots rather than video frames.",
+  "The 3D scenes are captured directly from the real WebGL canvas at source resolution and 60 fps with the application’s procedural audio. Static interface and report states use lossless screenshots rather than video frames.",
   "",
   ...renderSection("desktop", "Desktop"),
   ...renderSection("mobile", "Mobile"),

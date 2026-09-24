@@ -24,7 +24,7 @@ Weather and sentiment are conditions to reason about, not additional controls. P
 
 ## Product in motion
 
-CI captures the real application in Chromium with media chosen for the content rather than forcing every state through video. Forecast and simulation are recorded directly from the WebGL canvas at source resolution with a requested 60 fps capture rate, then encoded as high-quality H.264. Planning, day report, and sales history remain lossless PNG screenshots. Animated WebP derivatives provide compact motion for Markdown and presentation surfaces without degrading the source video.
+CI captures the real application in Chromium with media chosen for the content rather than forcing every state through video. Forecast and simulation are recorded directly from the WebGL canvas at source resolution with a requested 60 fps capture rate, with the application’s real procedural Web Audio muxed into the recording, then encoded as high-quality H.264/AAC. Planning, day report, and sales history remain lossless PNG screenshots. Animated WebP derivatives provide compact motion for Markdown and presentation surfaces without degrading the source video.
 
 ### Desktop
 
