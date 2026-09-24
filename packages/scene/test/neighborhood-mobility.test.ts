@@ -575,4 +575,93 @@ describe("unified neighborhood mobility", () => {
     expect(sawYield).toBe(true);
   });
 
+
+  it("drives the resident vehicle and driver from actor-owned physical clocks", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const previous = new Map<
+      string,
+      { x: number; z: number; speed: number; travelDistance: number }
+    >();
+    let sawVehicleYield = false;
+    let sawDriver = false;
+
+    for (let elapsedMs = 0; elapsedMs <= 14_000; elapsedMs += 50) {
+      const layout = generateResidentialLayout(MOBILITY_SEED);
+      const property =
+        layout.frontProperties.find(
+          (candidate) =>
+            candidate.role === "east-mid" && candidate.drivewayX !== null,
+        ) ??
+        layout.frontProperties.find(
+          (candidate) => candidate.drivewayX !== null,
+        );
+      expect(property).toBeDefined();
+      if (property === undefined || property.drivewayX === null) continue;
+
+      const access = residentialAccessLayout(property, MOBILITY_SEED);
+      const obstacleActive = elapsedMs >= 4_500 && elapsedMs <= 5_800;
+      const sample = system.sample({
+        weather: "sunny",
+        phase: "simulation",
+        elapsedMs,
+        durationMs: 14_000,
+        dayNumber: 2,
+        focus: { x: 0, z: 0 },
+        pedestrianObstacles: obstacleActive
+          ? [
+              {
+                x: access.drivewaySidewalkX,
+                z: access.drivewaySidewalkZ,
+              },
+            ]
+          : [],
+      });
+
+      for (const actorId of ["resident-vehicle", "resident-driver"] as const) {
+        const actor = sample.actors.find((candidate) => candidate.id === actorId);
+        expect(actor).toBeDefined();
+        if (actor === undefined) continue;
+
+        if (actorId === "resident-vehicle" && actor.waiting) {
+          sawVehicleYield = true;
+        }
+        if (actorId === "resident-driver" && actor.visible) {
+          sawDriver = true;
+        }
+
+        if (!actor.visible && actorId === "resident-driver") continue;
+
+        expect(actor.travelDistance).not.toBeNull();
+        if (actor.travelDistance === null) continue;
+        expect(Number.isFinite(actor.travelDistance)).toBe(true);
+
+        const prior = previous.get(actorId);
+        if (prior !== undefined) {
+          const displacement = Math.hypot(
+            actor.x - prior.x,
+            actor.z - prior.z,
+          );
+          const maxObservedSpeed = Math.max(prior.speed, actor.speed);
+          const allowance = actorId === "resident-vehicle" ? 0.08 : 0.03;
+          expect(displacement).toBeLessThanOrEqual(
+            maxObservedSpeed * 0.05 + allowance,
+          );
+          expect(actor.travelDistance).toBeGreaterThanOrEqual(
+            prior.travelDistance,
+          );
+        }
+
+        previous.set(actorId, {
+          x: actor.x,
+          z: actor.z,
+          speed: actor.speed,
+          travelDistance: actor.travelDistance,
+        });
+      }
+    }
+
+    expect(sawVehicleYield).toBe(true);
+    expect(sawDriver).toBe(true);
+  });
+
 });
