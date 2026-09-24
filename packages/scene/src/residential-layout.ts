@@ -918,7 +918,7 @@ const resolveGeneratedAccess = (
     }
     if (drivewayX === null) {
       throw new Error(
-        "unable to place generated driveway clear of residential footprints for " + property.role,
+        `unable to place generated driveway clear of residential footprints for ${property.role}`,
       );
     }
     return Object.freeze({

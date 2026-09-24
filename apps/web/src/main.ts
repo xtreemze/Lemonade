@@ -53,7 +53,7 @@ const renderRecovery = (error: RunPersistenceError): void => {
   );
 };
 
-const start = async (): Promise<LemonadeApp | void> => {
+const start = async (): Promise<LemonadeApp | undefined> => {
   if (import.meta.env.DEV) {
     const sceneEditor = await import("./dev-scene-viewer.js");
     if (sceneEditor.isSceneViewerEnabled()) {
