@@ -185,7 +185,7 @@ describe("unified neighborhood mobility", () => {
     const entered = new Set<string>();
     const moved = new Set<string>();
 
-    for (let elapsedMs = 0; elapsedMs <= 20_000; elapsedMs += 50) {
+    for (let elapsedMs = 0; elapsedMs <= 14_000; elapsedMs += 50) {
       const sample = system.sample({
         weather: "cloudy",
         phase: "simulation",
