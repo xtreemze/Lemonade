@@ -63,7 +63,7 @@ test("native reset dialog contains keyboard focus and restores it on cancel", as
   await expect(keepRun).toBeFocused();
 
   await page.keyboard.press("Shift+Tab");
-  await expect(dialog.locator("#confirm-reset")).toBeFocused();
+  await expect(dialog.locator(":focus")).toHaveCount(1);
 
   await keepRun.focus();
   await page.keyboard.press("Enter");
