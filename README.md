@@ -165,7 +165,7 @@ The workspace deliberately keeps build tooling small and current:
 - **Lit 3.3** for a small set of high-churn interactive presentation components.
 - **Vitest 5** for deterministic unit and invariant tests.
 - **Playwright** for browser acceptance and accessibility-critical flows.
-- **ESLint flat config** with type-aware strict rules.
+- **Biome 2.5** with the full stable rule set enabled, strict project/type/test/Playwright domains, formatting, import organization, and repository-specific architecture gates.
 - **Three.js** only for the 3D rendering problem it materially simplifies.
 - **Tauri + Rust** only if a native capability later provides a measured benefit.
 
