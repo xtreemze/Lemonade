@@ -147,8 +147,8 @@ export const petFollowPose = (owner: AmbientOwnerAnchor, index: number): PetFoll
 
 const createBird = (profile: BirdFlightProfile): Group => {
   const root = new Group();
-  root.userData.sceneRole = "ambient-bird";
-  root.userData.proceduralFlightProfile = profile;
+  root.userData["sceneRole"] = "ambient-bird";
+  root.userData["proceduralFlightProfile"] = profile;
   root.scale.setScalar(profile.scale);
 
   const plumage = material(profile.color);
@@ -170,7 +170,7 @@ const createBird = (profile: BirdFlightProfile): Group => {
 
   for (const direction of [-1, 1] as const) {
     const wing = new Mesh(wingGeometry, plumage);
-    wing.userData.sceneRole = "ambient-bird-wing";
+    wing.userData["sceneRole"] = "ambient-bird-wing";
     wing.position.set(0, 0.02, direction * 0.16);
     wing.rotation.x = direction * 0.26;
     root.add(wing);
@@ -187,7 +187,7 @@ const createBird = (profile: BirdFlightProfile): Group => {
 
 const createPet = (color: number): Group => {
   const root = new Group();
-  root.userData.sceneRole = "ambient-pet";
+  root.userData["sceneRole"] = "ambient-pet";
   const body = new Mesh(new BoxGeometry(0.5, 0.28, 0.22), material(color));
   body.position.y = 0.3;
   const head = new Mesh(new SphereGeometry(0.16, 8, 6), material(color));
@@ -215,7 +215,7 @@ const createTransportCharacter = (
   index: number,
 ): TransportCharacterRig => {
   const rig = createThreeCharacterRig(geometries, seed, index);
-  rig.root.userData.sceneRole = "transport-character";
+  rig.root.userData["sceneRole"] = "transport-character";
   decorateCharacter(rig.root, rig.head, rig.profile, index);
   return rig;
 };
@@ -227,7 +227,7 @@ const createBicycle = (
   index: number,
 ): Group => {
   const root = new Group();
-  root.userData.sceneRole = "ambient-bicycle";
+  root.userData["sceneRole"] = "ambient-bicycle";
   const wheelMaterial = material(0x2f_34_38);
   const wheelRadius = WORLD_SCALE.bicycle.wheelDiameter / 2;
   const axleX = WORLD_SCALE.bicycle.length * 0.36;
@@ -249,7 +249,7 @@ const createBicycle = (
   root.add(frame);
 
   const rider = createTransportCharacter(geometries, seed, 500 + index);
-  rider.root.userData.sceneRole = "ambient-rider";
+  rider.root.userData["sceneRole"] = "ambient-rider";
   applyThreeCharacterPose(rider, seatedCharacterPose("rider"));
   rider.root.position.set(-0.02, wheelRadius - 0.08, 0);
   rider.root.rotation.z = -0.12;
@@ -313,8 +313,8 @@ const createVehicle = (
 ): Group => {
   const spec = vehicleVariantSpec(variant);
   const root = new Group();
-  root.userData.sceneRole = "ambient-vehicle";
-  root.userData.vehicleVariant = variant;
+  root.userData["sceneRole"] = "ambient-vehicle";
+  root.userData["vehicleVariant"] = variant;
 
   const body = new Mesh(new BoxGeometry(spec.length, spec.bodyHeight, spec.width), material(color));
   body.position.y = spec.wheelRadius + spec.bodyHeight * 0.62;
@@ -393,7 +393,7 @@ const createVehicle = (
   }
 
   const driver = createTransportCharacter(geometries, seed ^ 0x51_a7, 10_100 + index);
-  driver.root.userData.sceneRole = "ambient-driver";
+  driver.root.userData["sceneRole"] = "ambient-driver";
   applyThreeCharacterPose(driver, seatedCharacterPose("driver"));
   const roofY = spec.wheelRadius + spec.bodyHeight + spec.cabinHeight;
   const renderedHeadTop =
@@ -439,7 +439,7 @@ const createBicycleForActor = (
       Math.floor(ambientUnit(profileSeed, 29_001) * BICYCLE_COLORS.length) % BICYCLE_COLORS.length
     ] ?? BICYCLE_COLORS[0];
   const bicycle = createBicycle(geometries, color, profileSeed, identitySalt % 20_000);
-  bicycle.userData.mobilityActorId = actorId;
+  bicycle.userData["mobilityActorId"] = actorId;
   return bicycle;
 };
 
@@ -460,7 +460,7 @@ const createVehicleForActor = (
       Math.floor(ambientUnit(profileSeed, 30_002) * VEHICLE_COLORS.length) % VEHICLE_COLORS.length
     ] ?? VEHICLE_COLORS[0];
   const vehicle = createVehicle(geometries, color, profileSeed, identitySalt % 20_000, variant);
-  vehicle.userData.mobilityActorId = actorId;
+  vehicle.userData["mobilityActorId"] = actorId;
   return vehicle;
 };
 
@@ -521,9 +521,9 @@ const REDUCED_DETAIL_ROLES = new Set([
 ]);
 
 const applyMobilityRenderDetail = (root: Object3D, detail: MobilityPose["detail"]): void => {
-  root.userData.mobilityDetail = detail;
+  root.userData["mobilityDetail"] = detail;
   root.traverse((child) => {
-    const role: unknown = child.userData.sceneRole;
+    const role: unknown = child.userData["sceneRole"];
     if (typeof role !== "string" || !REDUCED_DETAIL_ROLES.has(role)) {
       return;
     }
@@ -610,11 +610,11 @@ export const createAmbientLife = (
   ];
   const mailCarrier = createTransportCharacter(characterGeometries, seed ^ 0x4d_41_49_4c, 12_100);
   const gardener = createTransportCharacter(characterGeometries, seed ^ 0x47_41_52_44, 12_200);
-  mailCarrier.root.userData.sceneRole = "ambient-mail-carrier";
-  gardener.root.userData.sceneRole = "ambient-gardener";
+  mailCarrier.root.userData["sceneRole"] = "ambient-mail-carrier";
+  gardener.root.userData["sceneRole"] = "ambient-gardener";
   residents.forEach((resident, index) => {
-    resident.root.userData.sceneRole = "ambient-resident";
-    resident.root.userData.residentIndex = index;
+    resident.root.userData["sceneRole"] = "ambient-resident";
+    resident.root.userData["residentIndex"] = index;
   });
 
   const mobility = createNeighborhoodMobilitySystem(mobilitySeed);
@@ -768,7 +768,7 @@ export const createAmbientLife = (
         bird.rotation.z =
           profile.direction * Math.sin(progress * Math.PI * 12 + profile.phase) * 0.08;
         for (const child of bird.children) {
-          if (child.userData.sceneRole !== "ambient-bird-wing") {
+          if (child.userData["sceneRole"] !== "ambient-bird-wing") {
             continue;
           }
           const side = Math.sign(child.position.z) || 1;
@@ -786,7 +786,7 @@ export const createAmbientLife = (
       for (const pose of bicyclePoses.slice(0, population.bicycles)) {
         const bicycle = bicycleForActor(pose.id);
         bicycle.visible = true;
-        bicycle.userData.mobilityActorId = pose.id;
+        bicycle.userData["mobilityActorId"] = pose.id;
         applyMobilityRenderDetail(bicycle, pose.detail);
         bicycle.position.set(pose.x, 0.02, pose.z);
         bicycle.rotation.y = -pose.yaw;
@@ -810,7 +810,7 @@ export const createAmbientLife = (
       for (const pose of vehiclePoses) {
         const vehicle = vehicleForActor(pose.id);
         vehicle.visible = true;
-        vehicle.userData.mobilityActorId = pose.id;
+        vehicle.userData["mobilityActorId"] = pose.id;
         applyMobilityRenderDetail(vehicle, pose.detail);
         vehicle.position.set(pose.x, 0.02, pose.z);
         vehicle.rotation.y = -pose.yaw;
