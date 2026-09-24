@@ -12,6 +12,12 @@ import type {
 } from "three";
 
 import {
+  environmentBusinessDayProgressAt,
+  environmentLightningFlashAt,
+  environmentPresentationFrameAt,
+} from "./environment-presentation.js";
+
+import {
   CLOUDY_TOWN_CLOUD_LAYOUT,
   THUNDERSTORM_TOWN_CLOUD_LAYOUT,
   WEATHER_BACKDROP_LAYOUT,
@@ -76,12 +82,7 @@ export const businessDayProgressAt = (
   phase: WeatherPhase,
   elapsedMs: number,
   durationMs: number,
-): number => {
-  if (phase === "forecast") return 0.04;
-  if (phase !== "simulation") return 0.56;
-  const duration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
-  return 0.06 + clamp01(Math.max(0, elapsedMs) / duration) * 0.9;
-};
+): number => environmentBusinessDayProgressAt(phase, elapsedMs, durationMs);
 
 export const businessDayFrameAt = (
   weather: WeatherKind,
@@ -89,7 +90,13 @@ export const businessDayFrameAt = (
   elapsedMs: number,
   durationMs: number,
 ): BusinessDayFrame => {
-  const progress = businessDayProgressAt(phase, elapsedMs, durationMs);
+  const { businessDayProgress: progress } = environmentPresentationFrameAt(
+    weather,
+    phase,
+    elapsedMs,
+    durationMs,
+    false,
+  );
   const dawn = weather === "thunderstorm" ? 0x465765 : 0x8fa9bc;
   const day = DAY_SKY[weather];
   const sunset = weather === "thunderstorm" ? 0x434b59 : 0xd58a6c;
@@ -132,13 +139,6 @@ export const businessDayFrameAt = (
   });
 };
 
-const flashPulse = (progress: number, center: number, width: number): number => {
-  const distance = Math.abs(progress - center);
-  if (distance >= width) return 0;
-  const normalized = 1 - distance / width;
-  return normalized * normalized;
-};
-
 export const sunVisualPositionAt = (
   progress: number,
 ): readonly [number, number, number] => {
@@ -154,17 +154,13 @@ export const sunVisualPositionAt = (
 export const lightningFlashAt = (
   elapsedMs: number,
   durationMs: number,
-): number => {
-  const duration = Math.max(1, Number.isFinite(durationMs) ? durationMs : 1);
-  const progress = clamp01(Math.max(0, elapsedMs) / duration);
-  return Math.max(
-    flashPulse(progress, 0.2, 0.022),
-    flashPulse(progress, 0.235, 0.012) * 0.62,
-    flashPulse(progress, 0.57, 0.026),
-    flashPulse(progress, 0.78, 0.018),
-    flashPulse(progress, 0.805, 0.01) * 0.48,
+): number =>
+  environmentLightningFlashAt(
+    "thunderstorm",
+    "simulation",
+    elapsedMs,
+    durationMs,
   );
-};
 
 const weatherMaterial = (
   color: number,
@@ -406,16 +402,20 @@ export const populateWeatherObjects = (
         reducedMotion && phase === "simulation"
           ? Math.max(1, durationMs) * 0.5
           : elapsedMs;
+      const environmentFrame = environmentPresentationFrameAt(
+        activeWeather,
+        phase,
+        daylightElapsed,
+        durationMs,
+        reducedMotion,
+      );
       const daylight = businessDayFrameAt(
         activeWeather,
         phase,
         daylightElapsed,
         durationMs,
       );
-      const flash =
-        activeWeather === "thunderstorm" && !reducedMotion
-          ? lightningFlashAt(elapsedMs, durationMs)
-          : 0;
+      const flash = environmentFrame.lightningFlash * environmentFrame.motionScale;
 
       renderer.setClearColor(
         flash > 0

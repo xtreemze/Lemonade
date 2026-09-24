@@ -328,7 +328,16 @@ test("01-weather-forecast", async ({ page }, testInfo) => {
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "forecast");
 
+  await page.evaluate(() => {
+    window.localStorage.setItem("LEMONADE_DEV_SCENE_LAUNCHER", "1");
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+
   await recordFeature(page, testInfo, feature, async () => {
+    const forecastPreset = page.getByRole("button", { name: /Sunny Forecast/u });
+    await expect(forecastPreset).toBeVisible();
+    await forecastPreset.click();
+
     await Promise.all([
       expect(page.locator("#scene-canvas")).toHaveAttribute("data-stand-state", "closed", {
         timeout: 4_000,
