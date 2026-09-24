@@ -539,11 +539,16 @@ export const updateNeighborhoodWind = (
 ): void => {
   const strength = weatherWindStrength(weather);
   for (const object of windRegistryFor(scene).objects) {
-    const phase = typeof object.userData["windPhase"] === "number" ? object.userData["windPhase"] : 0;
+    const phase =
+      typeof object.userData["windPhase"] === "number" ? object.userData["windPhase"] : 0;
     const baseX =
-      typeof object.userData["windBaseRotationX"] === "number" ? object.userData["windBaseRotationX"] : 0;
+      typeof object.userData["windBaseRotationX"] === "number"
+        ? object.userData["windBaseRotationX"]
+        : 0;
     const baseZ =
-      typeof object.userData["windBaseRotationZ"] === "number" ? object.userData["windBaseRotationZ"] : 0;
+      typeof object.userData["windBaseRotationZ"] === "number"
+        ? object.userData["windBaseRotationZ"]
+        : 0;
     const gust = weatherWindGustAt(weather, seconds, phase);
     const sceneRole: unknown = object.userData["sceneRole"];
     const response =
