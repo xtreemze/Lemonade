@@ -580,6 +580,23 @@ describe("unified neighborhood mobility", () => {
 
   it("drives the resident vehicle and driver from actor-owned physical clocks", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const layout = generateResidentialLayout(MOBILITY_SEED);
+    const property =
+      layout.frontProperties.find(
+        (candidate) =>
+          candidate.role === "east-mid" && candidate.drivewayX !== null,
+      ) ??
+      layout.frontProperties.find(
+        (candidate) => candidate.drivewayX !== null,
+      );
+    expect(property).toBeDefined();
+    if (property === undefined || property.drivewayX === null) return;
+
+    const access = residentialAccessLayout(property, MOBILITY_SEED);
+    const crossingObstacle = {
+      x: access.drivewaySidewalkX,
+      z: access.drivewaySidewalkZ,
+    };
     const previous = new Map<
       string,
       { x: number; z: number; speed: number; travelDistance: number }
@@ -588,20 +605,6 @@ describe("unified neighborhood mobility", () => {
     let sawDriver = false;
 
     for (let elapsedMs = 0; elapsedMs <= 20_000; elapsedMs += 50) {
-      const layout = generateResidentialLayout(MOBILITY_SEED);
-      const property =
-        layout.frontProperties.find(
-          (candidate) =>
-            candidate.role === "east-mid" && candidate.drivewayX !== null,
-        ) ??
-        layout.frontProperties.find(
-          (candidate) => candidate.drivewayX !== null,
-        );
-      expect(property).toBeDefined();
-      if (property === undefined || property.drivewayX === null) continue;
-
-      const access = residentialAccessLayout(property, MOBILITY_SEED);
-      const obstacleActive = elapsedMs <= 4_000;
       const sample = system.sample({
         weather: "sunny",
         phase: "simulation",
@@ -609,14 +612,8 @@ describe("unified neighborhood mobility", () => {
         durationMs: 14_000,
         dayNumber: 2,
         focus: { x: 0, z: 0 },
-        pedestrianObstacles: obstacleActive
-          ? [
-              {
-                x: access.drivewaySidewalkX,
-                z: access.drivewaySidewalkZ,
-              },
-            ]
-          : [],
+        pedestrianObstacles:
+          elapsedMs <= 6_000 ? [crossingObstacle] : [],
       });
 
       for (const actorId of ["resident-vehicle", "resident-driver"] as const) {
