@@ -300,6 +300,7 @@ const collectElements = (root: HTMLElement): AppElements =>
 export type LemonadeAppOptions = Readonly<{
   persistenceEnabled: boolean;
   initialPersistenceError: string | null;
+  initialPersistenceStatus?: string | null;
 }>;
 
 const DEFAULT_OPTIONS: LemonadeAppOptions = Object.freeze({
@@ -426,7 +427,7 @@ export class LemonadeApp {
     if (options.initialPersistenceError !== null) {
       this.#showPersistenceError(options.initialPersistenceError);
     } else if (this.#persistenceEnabled) {
-      this.#queueSave("Run saved locally.");
+      this.#queueSave(options.initialPersistenceStatus ?? "Run saved locally.");
     } else {
       this.#showPersistenceStatus("Autosave is unavailable in this browser context.");
     }

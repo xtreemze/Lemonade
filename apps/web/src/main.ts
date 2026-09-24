@@ -67,7 +67,18 @@ const start = async (): Promise<void> => {
 
   try {
     const restored = await loadCurrentRun();
-    new LemonadeApp(root, restored ?? createFreshRunSnapshot());
+    new LemonadeApp(
+      root,
+      restored?.snapshot ?? createFreshRunSnapshot(),
+      restored?.recovered === true
+        ? {
+            persistenceEnabled: true,
+            initialPersistenceError: null,
+            initialPersistenceStatus:
+              "Recovered the last known good run after the current local save failed validation.",
+          }
+        : undefined,
+    );
   } catch (error) {
     if (
       error instanceof RunPersistenceError &&
