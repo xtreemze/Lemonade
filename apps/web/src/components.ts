@@ -40,11 +40,13 @@ export class LemonadeRunTools extends LitElement {
     super.connectedCallback();
     this.addEventListener("click", this.#onClick);
     this.addEventListener("change", this.#onChange);
+    this.addEventListener("keydown", this.#onKeyDown);
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener("click", this.#onClick);
     this.removeEventListener("change", this.#onChange);
+    this.removeEventListener("keydown", this.#onKeyDown);
     super.disconnectedCallback();
   }
 
@@ -72,11 +74,31 @@ export class LemonadeRunTools extends LitElement {
           throw new TypeError("Expected reset confirmation dialog.");
         }
         dialog.showModal();
+        const keepRun = dialog.querySelector<HTMLButtonElement>('button[value="cancel"]');
+        keepRun?.focus();
         break;
       }
       case "confirm-reset":
         this.dispatchEvent(new Event("lemonade-run-reset", { bubbles: true, composed: true }));
         break;
+    }
+  };
+
+  readonly #onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== "Tab") return;
+    const dialog = this.querySelector("#reset-dialog");
+    if (!(dialog instanceof HTMLDialogElement) || !dialog.open) return;
+    const buttons = [...dialog.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
+    const first = buttons[0];
+    const last = buttons.at(-1);
+    if (first === undefined || last === undefined) return;
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
     }
   };
 
