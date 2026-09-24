@@ -3,11 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import { characterProfileFor } from "../src/characters.js";
 import { SELLER_Z } from "../src/stand-anchors.js";
-import { STREET_LAYOUT } from "../src/street-layout.js";
-import {
-  createStreetStoryboard,
-  formatPriceLabel,
-} from "../src/storyboard-create.js";
 import {
   buyerPhaseAt,
   buyerSlotForSale,
@@ -20,6 +15,8 @@ import {
   sceneShotAt,
   sceneViewportClass,
 } from "../src/storyboard.js";
+import { createStreetStoryboard, formatPriceLabel } from "../src/storyboard-create.js";
+import { STREET_LAYOUT } from "../src/street-layout.js";
 
 const projectedScreenY = (
   width: number,
@@ -28,12 +25,7 @@ const projectedScreenY = (
   point: readonly [number, number, number],
 ): number => {
   const composition = sceneCameraComposition(width, height, shot);
-  const camera = new PerspectiveCamera(
-    composition.fov,
-    width / height,
-    0.1,
-    180,
-  );
+  const camera = new PerspectiveCamera(composition.fov, width / height, 0.1, 180);
   camera.position.set(...composition.position);
   camera.lookAt(...composition.lookAt);
   camera.updateMatrixWorld(true);
@@ -53,8 +45,7 @@ const visibleWorldSpan = (
   const target = new Vector3(...composition.lookAt);
   const forward = target.sub(cameraPosition).normalize();
   const depth = new Vector3(...point).sub(cameraPosition).dot(forward);
-  const vertical =
-    2 * depth * Math.tan((composition.fov * Math.PI) / 360);
+  const vertical = 2 * depth * Math.tan((composition.fov * Math.PI) / 360);
   return Object.freeze({
     horizontal: vertical * (width / height),
     vertical,
@@ -64,7 +55,7 @@ const visibleWorldSpan = (
 describe("street simulation storyboard", () => {
   it("maps every sale to a buyer lifecycle and decrements inventory on purchase completion", () => {
     const storyboard = createStreetStoryboard({
-      durationMs: 6_000,
+      durationMs: 6000,
       prepared: 20,
       sold: 7,
       visibleSigns: 3,
@@ -72,7 +63,7 @@ describe("street simulation storyboard", () => {
       ambientPedestrianCount: 10,
     });
 
-    expect(storyboard.durationMs).toBe(6_000);
+    expect(storyboard.durationMs).toBe(6000);
     expect(storyboard.sales).toHaveLength(7);
     expect(storyboard.sales.map((sale) => sale.saleNumber)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(storyboard.sales.map((sale) => sale.remainingCups)).toEqual([
@@ -101,7 +92,7 @@ describe("street simulation storyboard", () => {
 
   it("covers the complete restored level-four envelope without truncating sales or signs", () => {
     const storyboard = createStreetStoryboard({
-      durationMs: 6_000,
+      durationMs: 6000,
       prepared: 400,
       sold: 400,
       visibleSigns: 40,
@@ -114,13 +105,13 @@ describe("street simulation storyboard", () => {
     expect(storyboard.sales).toHaveLength(400);
     expect(storyboard.visibleSigns).toBe(40);
     expect(storyboard.sales.at(-1)?.remainingCups).toBe(0);
-    expect(completedSalesAt(storyboard, 6_000)).toBe(400);
-    expect(remainingCupsAt(storyboard, 6_000)).toBe(0);
+    expect(completedSalesAt(storyboard, 6000)).toBe(400);
+    expect(remainingCupsAt(storyboard, 6000)).toBe(0);
   });
 
   it("keeps buyer rig slots stable and collision-free during the maximum-volume lifecycle", () => {
     const storyboard = createStreetStoryboard({
-      durationMs: 6_000,
+      durationMs: 6000,
       prepared: 400,
       sold: 400,
       visibleSigns: 40,
@@ -131,9 +122,13 @@ describe("street simulation storyboard", () => {
 
     for (let index = 0; index < storyboard.sales.length; index += 1) {
       const sale = storyboard.sales[index];
-      if (sale === undefined) continue;
+      if (sale === undefined) {
+        continue;
+      }
       const next = storyboard.sales[index + poolSize];
-      if (next === undefined) continue;
+      if (next === undefined) {
+        continue;
+      }
       expect(buyerSlotForSale(sale, poolSize)).toBe(buyerSlotForSale(next, poolSize));
       expect(sale.departAtMs).toBeLessThanOrEqual(next.approachAtMs);
     }
@@ -141,7 +136,7 @@ describe("street simulation storyboard", () => {
 
   it("keeps non-buyers more numerous and assigns ad viewers only when signs exist", () => {
     const advertised = createStreetStoryboard({
-      durationMs: 6_000,
+      durationMs: 6000,
       prepared: 60,
       sold: 18,
       visibleSigns: 5,
@@ -151,9 +146,9 @@ describe("street simulation storyboard", () => {
 
     expect(advertised.passersBy.length).toBeGreaterThan(advertised.sales.length);
     expect(advertised.adViewerCount).toBeGreaterThan(0);
-    expect(
-      advertised.passersBy.filter((pedestrian) => pedestrian.seesAdvertisement),
-    ).toHaveLength(advertised.adViewerCount);
+    expect(advertised.passersBy.filter((pedestrian) => pedestrian.seesAdvertisement)).toHaveLength(
+      advertised.adViewerCount,
+    );
     expect(
       advertised.passersBy
         .filter((pedestrian) => pedestrian.seesAdvertisement)
@@ -161,7 +156,7 @@ describe("street simulation storyboard", () => {
     ).toBe(true);
 
     const unadvertised = createStreetStoryboard({
-      durationMs: 6_000,
+      durationMs: 6000,
       prepared: 60,
       sold: 18,
       visibleSigns: 0,
@@ -182,7 +177,7 @@ describe("street simulation storyboard", () => {
     expect(formatPriceLabel(999)).toBe("$9.99");
 
     const storyboard = createStreetStoryboard({
-      durationMs: 6_000,
+      durationMs: 6000,
       prepared: 10,
       sold: 4,
       visibleSigns: 2,
@@ -203,10 +198,7 @@ describe("street simulation storyboard", () => {
       ambientPedestrianCount: 8,
     });
 
-    expect(storyboard.shots.map((shot) => shot.kind)).toEqual([
-      "stand",
-      "remaining",
-    ]);
+    expect(storyboard.shots.map((shot) => shot.kind)).toEqual(["stand", "remaining"]);
     expect(storyboard.activeDurationMs).toBe(12_000);
     expect(storyboard.shots[0]?.startAtMs).toBe(0);
     expect(storyboard.shots.at(-1)?.endAtMs).toBe(14_000);
@@ -252,41 +244,19 @@ describe("street simulation storyboard", () => {
     expect(portraitRemaining.lookAt[0]).toBeGreaterThanOrEqual(0.4);
 
     const landscapeStand = sceneCameraComposition(844, 390, "stand");
-    expect(landscapeStand.position[2])
-      .toBeGreaterThan(STREET_LAYOUT.farSidewalk.maxZ + 16);
+    expect(landscapeStand.position[2]).toBeGreaterThan(STREET_LAYOUT.farSidewalk.maxZ + 16);
     expect(landscapeStand.lookAt[2]).toBeGreaterThan(STREET_LAYOUT.road.minZ);
     expect(landscapeStand.lookAt[2]).toBeLessThan(STREET_LAYOUT.road.maxZ);
     expect(landscapeStand.fov).toBeGreaterThanOrEqual(35);
 
-    const portraitForecastExtent = visibleWorldSpan(
-      360,
-      740,
-      "forecast",
-      [0, 1.5, SELLER_Z],
-    );
-    const landscapeForecastExtent = visibleWorldSpan(
-      844,
-      390,
-      "forecast",
-      [0, 1.5, SELLER_Z],
-    );
-    const tabletStandExtent = visibleWorldSpan(
-      1024,
-      768,
-      "stand",
-      [0, 1.5, SELLER_Z],
-    );
-    const desktopStandExtent = visibleWorldSpan(
-      1440,
-      900,
-      "stand",
-      [0, 1.5, SELLER_Z],
-    );
+    const portraitForecastExtent = visibleWorldSpan(360, 740, "forecast", [0, 1.5, SELLER_Z]);
+    const landscapeForecastExtent = visibleWorldSpan(844, 390, "forecast", [0, 1.5, SELLER_Z]);
+    const tabletStandExtent = visibleWorldSpan(1024, 768, "stand", [0, 1.5, SELLER_Z]);
+    const desktopStandExtent = visibleWorldSpan(1440, 900, "stand", [0, 1.5, SELLER_Z]);
 
     expect(portraitForecastExtent.vertical).toBeGreaterThanOrEqual(50);
     expect(landscapeForecastExtent.horizontal).toBeGreaterThanOrEqual(55);
-    expect(desktopStandExtent.horizontal)
-      .toBeGreaterThan(tabletStandExtent.horizontal * 1.15);
+    expect(desktopStandExtent.horizontal).toBeGreaterThan(tabletStandExtent.horizontal * 1.15);
   });
 
   it("keeps the stand and vendor around the lower third in portrait and landscape mobile framing", () => {
@@ -308,11 +278,11 @@ describe("street simulation storyboard", () => {
   });
 
   it("derives stable, varied character appearance and gait from the run seed", () => {
-    const seed = 0x1ead2026;
+    const seed = 0x1e_ad_20_26;
     const first = characterProfileFor(seed, 7);
     const repeated = characterProfileFor(seed, 7);
     const neighbor = characterProfileFor(seed, 8);
-    const otherRun = characterProfileFor(seed ^ 0x55aa55aa, 7);
+    const otherRun = characterProfileFor(seed ^ 0x55_aa_55_aa, 7);
 
     expect(repeated).toEqual(first);
     expect(neighbor).not.toEqual(first);
@@ -325,7 +295,7 @@ describe("street simulation storyboard", () => {
 
   it("is deterministic and never schedules more sales than prepared cups", () => {
     const input = {
-      durationMs: 6_000,
+      durationMs: 6000,
       prepared: 8,
       sold: 12,
       visibleSigns: 2,

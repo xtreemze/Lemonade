@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -23,19 +24,17 @@ const failures = [];
 const fail = (rule, message) => failures.push({ rule, message });
 
 const requireMatch = (source, pattern, rule, message) => {
-  if (!pattern.test(source)) fail(rule, message);
+  if (!pattern.test(source)) {
+    fail(rule, message);
+  }
   pattern.lastIndex = 0;
 };
 
-const stateSelector =
-  String.raw`\.game-shell\[data-view="planning"\],[\s\S]*?\.game-shell\[data-view="report"\],[\s\S]*?\.game-shell\[data-view="history"\],[\s\S]*?\.game-shell\[data-view="simulation"\],[\s\S]*?\.game-shell\[data-view="forecast"\]\s*\{([\s\S]*?)\}`;
+const stateSelector = String.raw`\.game-shell\[data-view="planning"\],[\s\S]*?\.game-shell\[data-view="report"\],[\s\S]*?\.game-shell\[data-view="history"\],[\s\S]*?\.game-shell\[data-view="simulation"\],[\s\S]*?\.game-shell\[data-view="forecast"\]\s*\{([\s\S]*?)\}`;
 
 const stateMatch = styles.match(new RegExp(stateSelector, "u"));
 if (stateMatch?.[1] === undefined) {
-  fail(
-    "mobile-flow-shared-shell",
-    "All five primary states must share one fullscreen shell rule.",
-  );
+  fail("mobile-flow-shared-shell", "All five primary states must share one fullscreen shell rule.");
 } else {
   const declarations = stateMatch[1];
   for (const [property, pattern] of [
@@ -70,7 +69,9 @@ if (/@media[^{}]*(?:max-width\s*:|width\s*(?:<|<=))/iu.test(styles)) {
 }
 
 const flowMarkup = [components, app].join("\n");
-const flowButtons = [...flowMarkup.matchAll(/<button\b([^>]*\bflow-action-button\b[^>]*)>([\s\S]*?)<\/button>/gu)];
+const flowButtons = [
+  ...flowMarkup.matchAll(/<button\b([^>]*\bflow-action-button\b[^>]*)>([\s\S]*?)<\/button>/gu),
+];
 if (flowButtons.length < 3) {
   fail(
     "semantic-icon-actions",
@@ -200,9 +201,11 @@ if (/\b(?:test|test\.describe)\.(?:skip|fixme|fail)\b/u.test(mobileSpec)) {
   );
 }
 
-if (/mobile-contract-(?:ignore|disable|exempt)|mobile-contract:\s*(?:ignore|disable|exempt)/iu.test(
-  [styles, components, app, mobileSpec].join("\n"),
-)) {
+if (
+  /mobile-contract-(?:ignore|disable|exempt)|mobile-contract:\s*(?:ignore|disable|exempt)/iu.test(
+    [styles, components, app, mobileSpec].join("\n"),
+  )
+) {
   fail(
     "no-mobile-contract-source-exemptions",
     "Mobile contract ignore/disable/exempt markers are forbidden. The fullscreen rule has no mobile exceptions.",
@@ -243,5 +246,7 @@ if (failures.length > 0) {
   }
   process.exitCode = 1;
 } else {
-  console.log("Flow contract lint passed: fullscreen, no-scroll, no-clipping, touch-target, mobile-first, icon-only actions enforced across mobile and desktop with no exemptions.");
+  console.log(
+    "Flow contract lint passed: fullscreen, no-scroll, no-clipping, touch-target, mobile-first, icon-only actions enforced across mobile and desktop with no exemptions.",
+  );
 }

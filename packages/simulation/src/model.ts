@@ -3,8 +3,8 @@ import type {
   DayNumber,
   GlassCount,
   MoneyCents,
-  SignedMoneyCents,
   SignCount,
+  SignedMoneyCents,
 } from "./primitives.js";
 
 export type Weather =

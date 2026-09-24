@@ -1,6 +1,6 @@
-import { LitElement, html } from "lit";
 import type { DayEnvironment, DayResolution } from "@lemonade/simulation";
 import type { WeeklyReport } from "@lemonade/ui";
+import { html, LitElement } from "lit";
 
 export type RunToolsModel = Readonly<{
   statusMessage: string;
@@ -50,14 +50,18 @@ export class LemonadeRunTools extends LitElement {
 
   readonly #onClick = (event: Event): void => {
     const target = event.target;
-    if (!(target instanceof HTMLButtonElement)) return;
+    if (!(target instanceof HTMLButtonElement)) {
+      return;
+    }
 
     switch (target.id) {
       case "export-run":
         this.dispatchEvent(new Event("lemonade-run-export", { bubbles: true, composed: true }));
         break;
       case "import-run": {
-        if (!this.model.persistenceEnabled) return;
+        if (!this.model.persistenceEnabled) {
+          return;
+        }
         const input = this.querySelector("#import-file");
         if (!(input instanceof HTMLInputElement)) {
           throw new TypeError("Expected run import file input.");
@@ -66,7 +70,9 @@ export class LemonadeRunTools extends LitElement {
         break;
       }
       case "reset-run": {
-        if (!this.model.persistenceEnabled) return;
+        if (!this.model.persistenceEnabled) {
+          return;
+        }
         const dialog = this.querySelector("#reset-dialog");
         if (!(dialog instanceof HTMLDialogElement)) {
           throw new TypeError("Expected reset confirmation dialog.");
@@ -82,7 +88,9 @@ export class LemonadeRunTools extends LitElement {
 
   readonly #onChange = (event: Event): void => {
     const input = event.target;
-    if (!(input instanceof HTMLInputElement) || input.id !== "import-file") return;
+    if (!(input instanceof HTMLInputElement) || input.id !== "import-file") {
+      return;
+    }
     const file = input.files?.item(0);
     input.value = "";
     if (file !== null && file !== undefined) {
@@ -242,7 +250,9 @@ export class LemonadeDecisionPanel extends LitElement {
     if (!(input instanceof HTMLInputElement)) {
       throw new TypeError("Expected decision input.");
     }
-    if (!Number.isFinite(input.valueAsNumber)) return;
+    if (!Number.isFinite(input.valueAsNumber)) {
+      return;
+    }
 
     const [minimum, maximum] = this.#decisionBounds(kind);
     const value = Math.min(maximum, Math.max(minimum, Math.trunc(input.valueAsNumber)));
@@ -268,7 +278,9 @@ export class LemonadeDecisionPanel extends LitElement {
 
   readonly #onInput = (event: Event): void => {
     const input = event.target;
-    if (!(input instanceof HTMLInputElement)) return;
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
 
     switch (input.name) {
       case "glasses":
@@ -303,9 +315,13 @@ export class LemonadeDecisionPanel extends LitElement {
   };
 
   readonly #onSubmit = (event: Event): void => {
-    if (!(event.target instanceof HTMLFormElement)) return;
+    if (!(event.target instanceof HTMLFormElement)) {
+      return;
+    }
     event.preventDefault();
-    if (!this.model.affordable) return;
+    if (!this.model.affordable) {
+      return;
+    }
     this.dispatchEvent(new Event("lemonade-decision-submit", { bubbles: true, composed: true }));
   };
 
@@ -521,9 +537,13 @@ export class LemonadeDayReport extends LitElement {
 
   readonly #onClick = (event: Event): void => {
     const target = event.target;
-    if (!(target instanceof Element)) return;
+    if (!(target instanceof Element)) {
+      return;
+    }
     const button = target.closest<HTMLButtonElement>("button#review-history-button");
-    if (button === null || !this.contains(button)) return;
+    if (button === null || !this.contains(button)) {
+      return;
+    }
     this.dispatchEvent(new Event("lemonade-review-history", { bubbles: true, composed: true }));
   };
 
@@ -586,9 +606,10 @@ export class LemonadeDayReport extends LitElement {
           </table>
         </div>
 
-        ${weeklyReport === null
-          ? null
-          : html`
+        ${
+          weeklyReport === null
+            ? null
+            : html`
               <section
                 class="weekly-report"
                 aria-labelledby="weekly-report-title"
@@ -650,7 +671,8 @@ export class LemonadeDayReport extends LitElement {
                   </p>
                 </div>
               </section>
-            `}
+            `
+        }
 
           <div class="report-notes">
             <p id="report-event" class="event-note">${eventLabel[entry.environment.event.kind]}</p>

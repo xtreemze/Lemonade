@@ -1,7 +1,7 @@
 import {
-  shortestNavigationPath,
-  type NeighborhoodNavigationGraph,
   type NavigationNode,
+  type NeighborhoodNavigationGraph,
+  shortestNavigationPath,
 } from "./neighborhood-navigation.js";
 import type { SidewalkSide } from "./street-layout.js";
 
@@ -22,11 +22,7 @@ export type AuthoritativeCustomerOutcome = Readonly<{
     | Readonly<{ kind: "stockout" }>;
 }>;
 
-export type CrowdIntentKind =
-  | "pass-through"
-  | "price-reject"
-  | "purchase"
-  | "stockout";
+export type CrowdIntentKind = "pass-through" | "price-reject" | "purchase" | "stockout";
 
 export type CrowdSimulationDetail = "full" | "reduced" | "statistical";
 
@@ -49,13 +45,8 @@ const validateOutcome = (outcome: AuthoritativeCustomerOutcome): void => {
   }
 
   if (outcome.awareness.kind === "unaware") {
-    if (
-      outcome.conversion.kind !== "not-evaluated" ||
-      outcome.fulfillment.kind !== "none"
-    ) {
-      throw new RangeError(
-        "unaware customer cannot evaluate price or receive fulfillment",
-      );
+    if (outcome.conversion.kind !== "not-evaluated" || outcome.fulfillment.kind !== "none") {
+      throw new RangeError("unaware customer cannot evaluate price or receive fulfillment");
     }
     return;
   }
@@ -72,9 +63,7 @@ const validateOutcome = (outcome: AuthoritativeCustomerOutcome): void => {
   }
 
   if (outcome.fulfillment.kind === "none") {
-    throw new RangeError(
-      "willing customer must purchase or encounter stockout",
-    );
+    throw new RangeError("willing customer must purchase or encounter stockout");
   }
 };
 
@@ -99,16 +88,14 @@ const sidewalkTerminals = (
   return [first, last] as const;
 };
 
-const appendPath = (
-  base: readonly string[],
-  next: readonly string[],
-): readonly string[] => {
-  if (base.length === 0) return Object.freeze([...next]);
-  if (next.length === 0) return Object.freeze([...base]);
-  return Object.freeze([
-    ...base,
-    ...(base.at(-1) === next[0] ? next.slice(1) : next),
-  ]);
+const appendPath = (base: readonly string[], next: readonly string[]): readonly string[] => {
+  if (base.length === 0) {
+    return Object.freeze([...next]);
+  }
+  if (next.length === 0) {
+    return Object.freeze([...base]);
+  }
+  return Object.freeze([...base, ...(base.at(-1) === next[0] ? next.slice(1) : next)]);
 };
 
 const routeForOutcome = (
@@ -134,12 +121,16 @@ const routeForOutcome = (
   return appendPath(inbound, outbound);
 };
 
-const intentKind = (
-  outcome: AuthoritativeCustomerOutcome,
-): CrowdIntentKind => {
-  if (outcome.awareness.kind === "unaware") return "pass-through";
-  if (outcome.conversion.kind === "price-rejected") return "price-reject";
-  if (outcome.fulfillment.kind === "purchased") return "purchase";
+const intentKind = (outcome: AuthoritativeCustomerOutcome): CrowdIntentKind => {
+  if (outcome.awareness.kind === "unaware") {
+    return "pass-through";
+  }
+  if (outcome.conversion.kind === "price-rejected") {
+    return "price-reject";
+  }
+  if (outcome.fulfillment.kind === "purchased") {
+    return "purchase";
+  }
   return "stockout";
 };
 
@@ -153,14 +144,8 @@ export const createCrowdDirector = (
       customerId: outcome.id,
       visualSeed: outcome.visualSeed,
       kind: intentKind(outcome),
-      signIndex:
-        outcome.awareness.kind === "advertising"
-          ? outcome.awareness.signIndex
-          : null,
-      saleIndex:
-        outcome.fulfillment.kind === "purchased"
-          ? outcome.fulfillment.saleIndex
-          : null,
+      signIndex: outcome.awareness.kind === "advertising" ? outcome.awareness.signIndex : null,
+      saleIndex: outcome.fulfillment.kind === "purchased" ? outcome.fulfillment.saleIndex : null,
       routeNodeIds: routeForOutcome(graph, outcome),
     });
   });
@@ -168,11 +153,13 @@ export const createCrowdDirector = (
   return Object.freeze({ intents: Object.freeze(intents) });
 };
 
-export const crowdSimulationDetailForDistance = (
-  distance: number,
-): CrowdSimulationDetail => {
+export const crowdSimulationDetailForDistance = (distance: number): CrowdSimulationDetail => {
   const safeDistance = Math.max(0, Number.isFinite(distance) ? distance : 0);
-  if (safeDistance <= 18) return "full";
-  if (safeDistance <= 45) return "reduced";
+  if (safeDistance <= 18) {
+    return "full";
+  }
+  if (safeDistance <= 45) {
+    return "reduced";
+  }
   return "statistical";
 };

@@ -17,9 +17,7 @@ export type LedgerPoint = Readonly<{
   endingDebtCents: number;
 }>;
 
-export const projectLedger = (
-  entries: readonly DailyLedgerEntry[],
-): readonly LedgerPoint[] =>
+export const projectLedger = (entries: readonly DailyLedgerEntry[]): readonly LedgerPoint[] =>
   Object.freeze(
     entries.map((entry) =>
       Object.freeze({

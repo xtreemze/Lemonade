@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertCustomerOutcomeConsistency,
   audienceTargetsForLevel,
+  type CustomerOutcome,
   createMarketRandom,
   customerId,
   customerTraitsFor,
@@ -10,7 +11,6 @@ import {
   dayNumber,
   seed,
   summarizeAudience,
-  type CustomerOutcome,
 } from "../src/index.js";
 
 const outcome = (
@@ -26,19 +26,19 @@ const outcome = (
 
 describe("audience identity and selection", () => {
   it("derives stable customer traits from the run seed and customer id", () => {
-    const runSeed = seed(0x1234_5678);
+    const runSeed = seed(0x12_34_56_78);
     const id = customerId(17);
 
     const first = customerTraitsFor(runSeed, id);
     const repeated = customerTraitsFor(runSeed, id);
 
     expect(repeated).toEqual(first);
-    expect(customerTraitsFor(seed(0x1234_5679), id)).not.toEqual(first);
+    expect(customerTraitsFor(seed(0x12_34_56_79), id)).not.toEqual(first);
     expect(customerTraitsFor(runSeed, customerId(18))).not.toEqual(first);
   });
 
   it("keeps audience selection independent from unrelated named random streams", () => {
-    const runSeed = seed(0xfeed_beef);
+    const runSeed = seed(0xfe_ed_be_ef);
     const day = dayNumber(8);
     const before = dayAudienceFor(runSeed, day, 3);
     const unrelated = createMarketRandom(runSeed, "conversion", {
@@ -67,9 +67,7 @@ describe("audience identity and selection", () => {
       expect(first.neighborhoodSize).toBe(targets.neighborhoodSize);
       expect(first.customerIds).toHaveLength(targets.dailyAudience);
       expect(new Set(ids).size).toBe(ids.length);
-      expect(ids.every((id) => id >= 0 && id < first.neighborhoodSize)).toBe(
-        true,
-      );
+      expect(ids.every((id) => id >= 0 && id < first.neighborhoodSize)).toBe(true);
     }
   });
 
@@ -80,11 +78,11 @@ describe("audience identity and selection", () => {
 
     expect(secondDay.customerIds).not.toEqual(firstDay.customerIds);
 
-    const recurringId = firstDay.customerIds.find((id) =>
-      secondDay.customerIds.includes(id),
-    );
+    const recurringId = firstDay.customerIds.find((id) => secondDay.customerIds.includes(id));
     expect(recurringId).toBeDefined();
-    if (recurringId === undefined) return;
+    if (recurringId === undefined) {
+      return;
+    }
 
     expect(customerTraitsFor(runSeed, recurringId)).toEqual(
       customerTraitsFor(runSeed, recurringId),
@@ -139,9 +137,7 @@ describe("audience outcome contracts", () => {
 
     expect(() => {
       assertCustomerOutcomeConsistency(impossible);
-    }).toThrow(
-      "unaware customers cannot evaluate price or receive fulfillment",
-    );
+    }).toThrow("unaware customers cannot evaluate price or receive fulfillment");
   });
 
   it("rejects price rejection with fulfillment", () => {
@@ -153,9 +149,7 @@ describe("audience outcome contracts", () => {
 
     expect(() => {
       assertCustomerOutcomeConsistency(impossible);
-    }).toThrow(
-      "price-rejected customers cannot be fulfilled",
-    );
+    }).toThrow("price-rejected customers cannot be fulfilled");
   });
 
   it("requires every willing customer to purchase or encounter stockout", () => {
@@ -167,9 +161,7 @@ describe("audience outcome contracts", () => {
 
     expect(() => {
       assertCustomerOutcomeConsistency(impossible);
-    }).toThrow(
-      "willing customers must purchase or encounter stockout",
-    );
+    }).toThrow("willing customers must purchase or encounter stockout");
   });
 
   it("validates zero-based sign and sale indices", () => {
@@ -186,13 +178,9 @@ describe("audience outcome contracts", () => {
 
     expect(() => {
       assertCustomerOutcomeConsistency(invalidSign);
-    }).toThrow(
-      "sign index must be a non-negative safe integer",
-    );
+    }).toThrow("sign index must be a non-negative safe integer");
     expect(() => {
       assertCustomerOutcomeConsistency(invalidSale);
-    }).toThrow(
-      "sale index must be a non-negative safe integer",
-    );
+    }).toThrow("sale index must be a non-negative safe integer");
   });
 });

@@ -1,18 +1,17 @@
-import {
-  SRGBColorSpace,
-  WebGLRenderer,
-} from "three";
+import { SRGBColorSpace, WebGLRenderer } from "three";
 
 export type ThreeRendererBackendKind = "three-webgl";
 
 export interface ThreeRendererBackend {
   readonly kind: ThreeRendererBackendKind;
   readonly renderer: WebGLRenderer;
-  dispose(): void;
+  dispose: () => void;
 }
 
 export const rendererPixelRatio = (devicePixelRatio: number): number => {
-  if (!Number.isFinite(devicePixelRatio) || devicePixelRatio <= 0) return 1;
+  if (!Number.isFinite(devicePixelRatio) || devicePixelRatio <= 0) {
+    return 1;
+  }
   return Math.min(devicePixelRatio, 2);
 };
 
@@ -35,7 +34,7 @@ export const createThreeRendererBackend = (
   renderer.setPixelRatio(rendererPixelRatio(devicePixelRatio));
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.shadowMap.enabled = false;
-  renderer.setClearColor(0x8fa7b8, 1);
+  renderer.setClearColor(0x8f_a7_b8, 1);
 
   return Object.freeze({
     kind: "three-webgl" as const,

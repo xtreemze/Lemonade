@@ -25,12 +25,7 @@ const projectedBackdrop = (
   position: readonly [number, number, number],
 ): Vector3 => {
   const composition = sceneCameraComposition(width, height, "forecast");
-  const camera = new PerspectiveCamera(
-    composition.fov,
-    width / height,
-    0.1,
-    180,
-  );
+  const camera = new PerspectiveCamera(composition.fov, width / height, 0.1, 180);
   camera.position.set(...composition.position);
   camera.lookAt(...composition.lookAt);
   camera.updateMatrixWorld(true);
@@ -67,8 +62,7 @@ describe("weather backdrop staging", () => {
       ...THUNDERSTORM_TOWN_CLOUD_LAYOUT.map((cloud) => storm.scale * cloud.scale),
     ];
     const cloudDepths = [
-      hotAndDry.position[2] +
-        HOT_DRY_CLOUD_LAYOUT.position[2] * hotAndDry.scale,
+      hotAndDry.position[2] + HOT_DRY_CLOUD_LAYOUT.position[2] * hotAndDry.scale,
       ...CLOUDY_TOWN_CLOUD_LAYOUT.map(
         (cloud) => cloudy.position[2] + cloud.position[2] * cloudy.scale,
       ),
@@ -77,8 +71,7 @@ describe("weather backdrop staging", () => {
       ),
     ];
     const cloudHeights = [
-      hotAndDry.position[1] +
-        HOT_DRY_CLOUD_LAYOUT.position[1] * hotAndDry.scale,
+      hotAndDry.position[1] + HOT_DRY_CLOUD_LAYOUT.position[1] * hotAndDry.scale,
       ...CLOUDY_TOWN_CLOUD_LAYOUT.map(
         (cloud) => cloudy.position[1] + cloud.position[1] * cloudy.scale,
       ),
@@ -98,21 +91,19 @@ describe("weather backdrop staging", () => {
     expect(Math.min(...cloudScales)).toBeGreaterThanOrEqual(2.8);
     expect(Math.max(...cloudScales)).toBeLessThanOrEqual(3.6);
     expect(Math.max(...cloudScales) - Math.min(...cloudScales)).toBeLessThan(0.6);
-    expect(new Set(CLOUDY_TOWN_CLOUD_LAYOUT.map((cloud) => cloud.driftPhase)).size)
-      .toBe(CLOUDY_TOWN_CLOUD_LAYOUT.length);
-    expect(
-      new Set(THUNDERSTORM_TOWN_CLOUD_LAYOUT.map((cloud) => cloud.driftPhase)).size,
-    ).toBe(THUNDERSTORM_TOWN_CLOUD_LAYOUT.length);
+    expect(new Set(CLOUDY_TOWN_CLOUD_LAYOUT.map((cloud) => cloud.driftPhase)).size).toBe(
+      CLOUDY_TOWN_CLOUD_LAYOUT.length,
+    );
+    expect(new Set(THUNDERSTORM_TOWN_CLOUD_LAYOUT.map((cloud) => cloud.driftPhase)).size).toBe(
+      THUNDERSTORM_TOWN_CLOUD_LAYOUT.length,
+    );
 
-    for (const layout of [
-      CLOUDY_TOWN_CLOUD_LAYOUT,
-      THUNDERSTORM_TOWN_CLOUD_LAYOUT,
-    ] as const) {
+    for (const layout of [CLOUDY_TOWN_CLOUD_LAYOUT, THUNDERSTORM_TOWN_CLOUD_LAYOUT] as const) {
       const sortedX = layout.map((cloud) => cloud.position[0]).sort((a, b) => a - b);
       expect(Math.max(...sortedX) - Math.min(...sortedX)).toBeGreaterThanOrEqual(12);
-      const adjacentGaps = sortedX.slice(1).map(
-        (value, index) => value - (sortedX[index] ?? value),
-      );
+      const adjacentGaps = sortedX
+        .slice(1)
+        .map((value, index) => value - (sortedX[index] ?? value));
       for (const gap of adjacentGaps) {
         expect(gap).toBeGreaterThanOrEqual(2.7);
       }
@@ -146,13 +137,15 @@ describe("weather backdrop staging", () => {
   it("moves the business simulation from dawn through daylight into night", () => {
     const duration = 10_000;
     const dawn = businessDayFrameAt("sunny", "simulation", 0, duration);
-    const noon = businessDayFrameAt("sunny", "simulation", 5_000, duration);
+    const noon = businessDayFrameAt("sunny", "simulation", 5000, duration);
     const night = businessDayFrameAt("sunny", "simulation", duration, duration);
 
-    expect(businessDayProgressAt("simulation", 0, duration))
-      .toBeLessThan(businessDayProgressAt("simulation", 5_000, duration));
-    expect(businessDayProgressAt("simulation", 5_000, duration))
-      .toBeLessThan(businessDayProgressAt("simulation", duration, duration));
+    expect(businessDayProgressAt("simulation", 0, duration)).toBeLessThan(
+      businessDayProgressAt("simulation", 5000, duration),
+    );
+    expect(businessDayProgressAt("simulation", 5000, duration)).toBeLessThan(
+      businessDayProgressAt("simulation", duration, duration),
+    );
     expect(noon.sunlightIntensity).toBeGreaterThan(dawn.sunlightIntensity);
     expect(noon.sunlightIntensity).toBeGreaterThan(night.sunlightIntensity);
     expect(dawn.skyColor).not.toBe(noon.skyColor);
@@ -162,25 +155,20 @@ describe("weather backdrop staging", () => {
 
   it("flashes lightning in deterministic short pulses instead of leaving a static bolt", () => {
     const duration = 10_000;
-    expect(lightningFlashAt(2_000, duration)).toBeGreaterThan(0.9);
-    expect(lightningFlashAt(3_500, duration)).toBe(0);
-    expect(lightningFlashAt(5_700, duration)).toBeGreaterThan(0.9);
+    expect(lightningFlashAt(2000, duration)).toBeGreaterThan(0.9);
+    expect(lightningFlashAt(3500, duration)).toBe(0);
+    expect(lightningFlashAt(5700, duration)).toBeGreaterThan(0.9);
   });
 
   it("keeps legacy weather helpers aligned with the shared environment presentation contract", () => {
     const duration = 10_000;
 
-    for (const elapsedMs of [0, 2_000, 5_700, duration] as const) {
+    for (const elapsedMs of [0, 2000, 5700, duration] as const) {
       expect(businessDayProgressAt("simulation", elapsedMs, duration)).toBe(
         environmentBusinessDayProgressAt("simulation", elapsedMs, duration),
       );
       expect(lightningFlashAt(elapsedMs, duration)).toBe(
-        environmentLightningFlashAt(
-          "thunderstorm",
-          "simulation",
-          elapsedMs,
-          duration,
-        ),
+        environmentLightningFlashAt("thunderstorm", "simulation", elapsedMs, duration),
       );
     }
   });

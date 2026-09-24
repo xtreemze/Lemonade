@@ -86,10 +86,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "apps/web/src/app.ts",
-        "e2e/renderer-stress.spec.ts"
-      ],
+      "includes": ["apps/web/src/app.ts", "e2e/renderer-stress.spec.ts"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -99,9 +96,7 @@
       }
     },
     {
-      "includes": [
-        "packages/simulation/src/**/*.ts"
-      ],
+      "includes": ["packages/simulation/src/**/*.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -175,10 +170,7 @@
       }
     },
     {
-      "includes": [
-        "scripts/**/*.mjs",
-        "apps/web/scripts/**/*.mjs"
-      ],
+      "includes": ["scripts/**/*.mjs", "apps/web/scripts/**/*.mjs"],
       "linter": {
         "rules": {
           "correctness": {
@@ -191,9 +183,7 @@
       }
     },
     {
-      "includes": [
-        "apps/web/src/dev-*.ts"
-      ],
+      "includes": ["apps/web/src/dev-*.ts"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -203,9 +193,7 @@
       }
     },
     {
-      "includes": [
-        "playwright*.config.ts"
-      ],
+      "includes": ["playwright*.config.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -215,9 +203,7 @@
       }
     },
     {
-      "includes": [
-        "apps/web/src/scene-runtime.ts"
-      ],
+      "includes": ["apps/web/src/scene-runtime.ts"],
       "linter": {
         "rules": {
           "performance": {
@@ -227,9 +213,7 @@
       }
     },
     {
-      "includes": [
-        "scripts/certify.mjs"
-      ],
+      "includes": ["scripts/certify.mjs"],
       "linter": {
         "rules": {
           "correctness": {

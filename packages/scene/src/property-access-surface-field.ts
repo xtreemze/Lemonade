@@ -24,19 +24,17 @@ export interface PropertyAccessSurfaceField {
   readonly meshes: readonly InstancedMesh[];
 }
 
-const roleConfig = (
-  role: PropertyAccessRole,
-): Readonly<{ color: number; y: number }> =>
+const roleConfig = (role: PropertyAccessRole): Readonly<{ color: number; y: number }> =>
   role === "driveway"
-    ? Object.freeze({ color: 0xc9b995, y: 0.019 })
-    : Object.freeze({ color: 0xd8c9aa, y: 0.021 });
+    ? Object.freeze({ color: 0xc9_b9_95, y: 0.019 })
+    : Object.freeze({ color: 0xd8_c9_aa, y: 0.021 });
 
 const createAnchor = (spec: PropertyAccessSurfaceSpec): Group => {
   const { y } = roleConfig(spec.role);
   const anchor = new Group();
   anchor.position.set(spec.x, y, spec.z);
   anchor.rotation.y = -spec.rotationY;
-  anchor.userData["sceneRole"] = spec.role;
+  anchor.userData.sceneRole = spec.role;
   return anchor;
 };
 
@@ -44,7 +42,9 @@ const createBatch = (
   role: PropertyAccessRole,
   specs: readonly PropertyAccessSurfaceSpec[],
 ): InstancedMesh | null => {
-  if (specs.length === 0) return null;
+  if (specs.length === 0) {
+    return null;
+  }
   const { color, y } = roleConfig(role);
   const mesh = new InstancedMesh(
     new BoxGeometry(1, 1, 1),
@@ -56,7 +56,7 @@ const createBatch = (
     specs.length,
   );
   mesh.name = role === "driveway" ? "DrivewaySurfaces" : "FrontPathSurfaces";
-  mesh.userData["sceneRole"] = "property-access-surface-batch";
+  mesh.userData.sceneRole = "property-access-surface-batch";
 
   const matrix = new Matrix4();
   const position = new Vector3();
@@ -81,10 +81,9 @@ export const createPropertyAccessSurfaceField = (
 ): PropertyAccessSurfaceField => {
   const driveways = specs.filter((spec) => spec.role === "driveway");
   const paths = specs.filter((spec) => spec.role === "front-path");
-  const meshes = [
-    createBatch("driveway", driveways),
-    createBatch("front-path", paths),
-  ].filter((mesh): mesh is InstancedMesh => mesh !== null);
+  const meshes = [createBatch("driveway", driveways), createBatch("front-path", paths)].filter(
+    (mesh): mesh is InstancedMesh => mesh !== null,
+  );
 
   return Object.freeze({
     anchors: Object.freeze(specs.map(createAnchor)),

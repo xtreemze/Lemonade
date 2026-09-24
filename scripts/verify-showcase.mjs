@@ -1,6 +1,7 @@
-import { appendFile, readFile, readdir, stat } from "node:fs/promises";
-import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { appendFile, readdir, readFile, stat } from "node:fs/promises";
+import path from "node:path";
+import process from "node:process";
 
 const artifactRoot = path.resolve("artifacts/e2e-media");
 const manifest = JSON.parse(await readFile(path.join(artifactRoot, "manifest.json"), "utf8"));
@@ -41,7 +42,9 @@ const probeStreams = (filePath) => {
 };
 
 const frameRate = (value) => {
-  if (typeof value !== "string") return Number.NaN;
+  if (typeof value !== "string") {
+    return Number.NaN;
+  }
   const [numerator, denominator = "1"] = value.split("/");
   return Number(numerator) / Number(denominator);
 };
@@ -77,18 +80,7 @@ const assertAudio = (filePath) => {
 const assertAudible = (filePath) => {
   const result = spawnSync(
     "ffmpeg",
-    [
-      "-hide_banner",
-      "-i",
-      filePath,
-      "-map",
-      "0:a:0",
-      "-af",
-      "volumedetect",
-      "-f",
-      "null",
-      "-",
-    ],
+    ["-hide_banner", "-i", filePath, "-map", "0:a:0", "-af", "volumedetect", "-f", "null", "-"],
     { encoding: "utf8" },
   );
   if (result.status !== 0) {
@@ -171,15 +163,10 @@ for (const formFactor of ["desktop", "mobile"]) {
   const graphicDir = path.join(artifactRoot, "graphics", formFactor);
   const graphicNames = (await readdir(graphicDir)).sort();
   const expected = manifest.features
-    .map(
-      (feature) =>
-        `${feature.id}.${feature.media === "video" ? "webp" : "png"}`,
-    )
+    .map((feature) => `${feature.id}.${feature.media === "video" ? "webp" : "png"}`)
     .sort();
   if (JSON.stringify(graphicNames) !== JSON.stringify(expected)) {
-    throw new Error(
-      `Expected mixed ${formFactor} presentation assets: ${expected.join(", ")}`,
-    );
+    throw new Error(`Expected mixed ${formFactor} presentation assets: ${expected.join(", ")}`);
   }
 
   let total = 0;
@@ -220,13 +207,9 @@ for (const formFactor of ["desktop", "mobile"]) {
   summary.push(`| **${formFactor} total** | — | — | **${formatMiB(total)}** |`);
 
   const reelName =
-    formFactor === "desktop"
-      ? "lemonade-desktop-highlight.mp4"
-      : "lemonade-mobile-highlight.mp4";
+    formFactor === "desktop" ? "lemonade-desktop-highlight.mp4" : "lemonade-mobile-highlight.mp4";
   const animatedReelName =
-    formFactor === "desktop"
-      ? "lemonade-desktop-highlight.webp"
-      : "lemonade-mobile-highlight.webp";
+    formFactor === "desktop" ? "lemonade-desktop-highlight.webp" : "lemonade-mobile-highlight.webp";
   const reel = path.join(artifactRoot, "reels", reelName);
   const animatedReel = path.join(artifactRoot, "reels", animatedReelName);
   await requireFile(reel);
@@ -256,6 +239,6 @@ summary.push(`| **combined graphics** | — | — | **${formatMiB(combinedGraphi
 await requireFile(path.join(artifactRoot, "README-showcase.md"));
 
 console.log(summary.join("\n"));
-if (process.env["GITHUB_STEP_SUMMARY"] !== undefined) {
-  await appendFile(process.env["GITHUB_STEP_SUMMARY"], `${summary.join("\n")}\n`, "utf8");
+if (process.env.GITHUB_STEP_SUMMARY !== undefined) {
+  await appendFile(process.env.GITHUB_STEP_SUMMARY, `${summary.join("\n")}\n`, "utf8");
 }

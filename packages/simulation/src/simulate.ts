@@ -4,6 +4,7 @@ import {
   financeRulesForTier,
   nextProgressionTier,
 } from "./finance.js";
+import { legacyConfidenceForState } from "./legacy.js";
 import type {
   DailyLedgerEntry,
   DayDecision,
@@ -12,13 +13,7 @@ import type {
   GameState,
   LedgerLine,
 } from "./model.js";
-import {
-  dayNumber,
-  glassCount,
-  moneyCents,
-  signedMoneyCents,
-} from "./primitives.js";
-import { legacyConfidenceForState } from "./legacy.js";
+import { dayNumber, glassCount, moneyCents, signedMoneyCents } from "./primitives.js";
 import { potentialDemand } from "./rules.js";
 import { operatingScaleForState } from "./scale.js";
 import { productionCostForDay } from "./state.js";
@@ -96,10 +91,7 @@ const resolveDay = (
   const operatingFunds = availableOperatingFunds(state);
 
   if (Number(predictableExpenses) > Number(operatingFunds)) {
-    throw new UnaffordableDecisionError(
-      Number(predictableExpenses),
-      Number(operatingFunds),
-    );
+    throw new UnaffordableDecisionError(Number(predictableExpenses), Number(operatingFunds));
   }
 
   const openingCashCents = Number(state.cash);
@@ -119,10 +111,7 @@ const resolveDay = (
   const revenue = moneyCents(Number(sold) * Number(decision.price));
   cashCents += Number(revenue);
 
-  const taxableOperatingProfitCents = Math.max(
-    0,
-    Number(revenue) - Number(predictableExpenses),
-  );
+  const taxableOperatingProfitCents = Math.max(0, Number(revenue) - Number(predictableExpenses));
   const tax = applyBasisPoints(taxableOperatingProfitCents, finance.taxRate);
   cashCents -= Number(tax);
 
@@ -131,10 +120,7 @@ const resolveDay = (
   cashCents -= paidLoanInterestCents;
   loanBalanceCents += Number(loanInterest) - paidLoanInterestCents;
 
-  const availableForRepaymentCents = Math.max(
-    0,
-    cashCents - Number(finance.workingCashReserve),
-  );
+  const availableForRepaymentCents = Math.max(0, cashCents - Number(finance.workingCashReserve));
   const repaidCents = Math.min(loanBalanceCents, availableForRepaymentCents);
   cashCents -= repaidCents;
   loanBalanceCents -= repaidCents;
@@ -147,21 +133,14 @@ const resolveDay = (
 
   const borrowed = moneyCents(initialBorrowCents);
   const repaid = moneyCents(repaidCents);
-  const expenses = moneyCents(
-    Number(predictableExpenses) + Number(tax) + Number(loanInterest),
-  );
+  const expenses = moneyCents(Number(predictableExpenses) + Number(tax) + Number(loanInterest));
   const financeIncome = savingsInterest;
-  const net = signedMoneyCents(
-    Number(revenue) + Number(financeIncome) - Number(expenses),
-  );
+  const net = signedMoneyCents(Number(revenue) + Number(financeIncome) - Number(expenses));
   const endingCash = moneyCents(cashCents);
   const endingLoanBalance = moneyCents(loanBalanceCents);
   const cashDelta = signedMoneyCents(Number(endingCash) - openingCashCents);
   const nextDay = dayNumber(Number(state.day) + 1);
-  const nextTier = nextProgressionTier(
-    state.tier,
-    Number(endingCash) - Number(endingLoanBalance),
-  );
+  const nextTier = nextProgressionTier(state.tier, Number(endingCash) - Number(endingLoanBalance));
 
   const lines: LedgerLine[] = [
     ledgerLine("revenue", "Lemonade sales", revenue, "credit"),
@@ -180,9 +159,7 @@ const resolveDay = (
   ];
 
   if (Number(finance.supplierFee) > 0) {
-    lines.push(
-      ledgerLine("operating-fee", "Supplier delivery", finance.supplierFee, "debit"),
-    );
+    lines.push(ledgerLine("operating-fee", "Supplier delivery", finance.supplierFee, "debit"));
   }
   if (Number(finance.bankFee) > 0) {
     lines.push(ledgerLine("bank-fee", "Bank account fee", finance.bankFee, "debit"));
@@ -200,9 +177,7 @@ const resolveDay = (
     lines.push(ledgerLine("loan-repayment", "Automatic credit repayment", repaid, "debit"));
   }
   if (Number(savingsInterest) > 0) {
-    lines.push(
-      ledgerLine("savings-interest", "Cash-account interest", savingsInterest, "credit"),
-    );
+    lines.push(ledgerLine("savings-interest", "Cash-account interest", savingsInterest, "credit"));
   }
 
   const entry: DailyLedgerEntry = Object.freeze({

@@ -1,4 +1,4 @@
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 
 const distUrl = new URL("../dist/", import.meta.url);
 const assetsUrl = new URL("assets/", distUrl);

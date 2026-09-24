@@ -9,15 +9,15 @@ describe("presentation deadline", () => {
       const deadline = createPresentationDeadline();
       const completed = vi.fn();
 
-      deadline.schedule(6_000, completed);
-      vi.advanceTimersByTime(2_000);
+      deadline.schedule(6000, completed);
+      vi.advanceTimersByTime(2000);
       deadline.pause();
       vi.advanceTimersByTime(10_000);
 
       expect(completed).not.toHaveBeenCalled();
 
       deadline.resume();
-      vi.advanceTimersByTime(3_999);
+      vi.advanceTimersByTime(3999);
       expect(completed).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(1);
@@ -37,7 +37,7 @@ describe("presentation deadline", () => {
       vi.advanceTimersByTime(100);
       deadline.pause();
       deadline.resume();
-      vi.advanceTimersByTime(1_000);
+      vi.advanceTimersByTime(1000);
 
       expect(completed).toHaveBeenCalledTimes(1);
     } finally {
@@ -52,7 +52,7 @@ describe("presentation deadline", () => {
       const first = vi.fn();
       const second = vi.fn();
 
-      deadline.schedule(1_000, first);
+      deadline.schedule(1000, first);
       vi.advanceTimersByTime(250);
       deadline.schedule(500, second);
       vi.advanceTimersByTime(500);
@@ -70,10 +70,10 @@ describe("presentation deadline", () => {
       const deadline = createPresentationDeadline();
       const completed = vi.fn();
 
-      deadline.schedule(1_000, completed);
+      deadline.schedule(1000, completed);
       vi.advanceTimersByTime(400);
       deadline.cancel();
-      vi.advanceTimersByTime(5_000);
+      vi.advanceTimersByTime(5000);
 
       expect(completed).not.toHaveBeenCalled();
       expect(deadline.pending).toBe(false);

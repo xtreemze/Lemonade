@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { Group, Matrix4, Vector3 } from "three";
+import { describe, expect, it } from "vitest";
 
 import {
   attachLemonadeCupToHand,
@@ -73,9 +73,7 @@ describe("original-art 3D lemonade cups", () => {
   it("compresses high-level inventory into a proportional compact stack", () => {
     expect(visibleCupCountForStock(15, 15)).toBe(15);
     expect(visibleCupCountForStock(400, 400)).toBe(MAX_VISIBLE_PREPARED_CUPS);
-    expect(visibleCupCountForStock(200, 400)).toBe(
-      MAX_VISIBLE_PREPARED_CUPS / 2,
-    );
+    expect(visibleCupCountForStock(200, 400)).toBe(MAX_VISIBLE_PREPARED_CUPS / 2);
     expect(visibleCupCountForStock(0, 400)).toBe(0);
   });
 });

@@ -4,8 +4,8 @@ import {
   createSeededRandom,
   dayNumber,
   generateNeighborhoodOccurrences,
-  seed,
   type NeighborhoodSemanticLayout,
+  seed,
 } from "../src/index.js";
 
 const layout: NeighborhoodSemanticLayout = Object.freeze({
@@ -20,7 +20,7 @@ const schedule = (
   weather: "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm" = "sunny",
 ) =>
   generateNeighborhoodOccurrences({
-    runSeed: seed(0x4c45_4d4f),
+    runSeed: seed(0x4c_45_4d_4f),
     day: dayNumber(day),
     weather,
     layout,
@@ -37,27 +37,25 @@ describe("neighborhood occurrence ledger", () => {
     for (let index = 0; index < first.length; index += 1) {
       const occurrence = first[index];
       expect(occurrence).toBeDefined();
-      if (occurrence === undefined) continue;
+      if (occurrence === undefined) {
+        continue;
+      }
 
       expect(occurrence.startMinute).toBeGreaterThanOrEqual(0);
       expect(occurrence.endMinute).toBeGreaterThan(occurrence.startMinute);
-      expect(occurrence.endMinute).toBeLessThanOrEqual(1_440);
+      expect(occurrence.endMinute).toBeLessThanOrEqual(1440);
       expect(occurrence.economicEffect).toBe("none");
 
       const previous = first[index - 1];
       if (previous !== undefined) {
-        expect(occurrence.startMinute).toBeGreaterThanOrEqual(
-          previous.startMinute,
-        );
+        expect(occurrence.startMinute).toBeGreaterThanOrEqual(previous.startMinute);
       }
     }
   });
 
   it("schedules mail as a morning route over semantic mailboxes", () => {
     const occurrences = schedule(2, "cloudy");
-    const mail = occurrences.filter(
-      (occurrence) => occurrence.kind === "mail-delivery",
-    );
+    const mail = occurrences.filter((occurrence) => occurrence.kind === "mail-delivery");
 
     expect(mail).toHaveLength(layout.mailboxHouseholds.length);
     expect(
@@ -71,10 +69,9 @@ describe("neighborhood occurrence ledger", () => {
   });
 
   it("schedules gardening on exactly one weekday in each seven-day cycle", () => {
-    const gardeningDays = Array.from({ length: 7 }, (_, index) => index + 1)
-      .filter((day) =>
-        schedule(day).some((occurrence) => occurrence.kind === "gardening"),
-      );
+    const gardeningDays = Array.from({ length: 7 }, (_, index) => index + 1).filter((day) =>
+      schedule(day).some((occurrence) => occurrence.kind === "gardening"),
+    );
 
     expect(gardeningDays).toHaveLength(1);
     const gardening = schedule(gardeningDays[0] ?? 1).find(
@@ -85,15 +82,9 @@ describe("neighborhood occurrence ledger", () => {
   });
 
   it("allows sprinklers only for sunny or hot-and-dry mornings", () => {
-    const sunny = schedule(4, "sunny").filter(
-      (occurrence) => occurrence.kind === "sprinkler",
-    );
-    const hot = schedule(4, "hot-and-dry").filter(
-      (occurrence) => occurrence.kind === "sprinkler",
-    );
-    const cloudy = schedule(4, "cloudy").filter(
-      (occurrence) => occurrence.kind === "sprinkler",
-    );
+    const sunny = schedule(4, "sunny").filter((occurrence) => occurrence.kind === "sprinkler");
+    const hot = schedule(4, "hot-and-dry").filter((occurrence) => occurrence.kind === "sprinkler");
+    const cloudy = schedule(4, "cloudy").filter((occurrence) => occurrence.kind === "sprinkler");
     const storm = schedule(4, "thunderstorm").filter(
       (occurrence) => occurrence.kind === "sprinkler",
     );
@@ -104,9 +95,7 @@ describe("neighborhood occurrence ledger", () => {
     expect(storm).toHaveLength(0);
     expect(
       [...sunny, ...hot].every(
-        (occurrence) =>
-          occurrence.startMinute >= 6 * 60 &&
-          occurrence.endMinute <= 9 * 60,
+        (occurrence) => occurrence.startMinute >= 6 * 60 && occurrence.endMinute <= 9 * 60,
       ),
     ).toBe(true);
   });
@@ -117,21 +106,19 @@ describe("neighborhood occurrence ledger", () => {
     for (let household = 0; household < layout.householdCount; household += 1) {
       const departures = occurrences.filter(
         (occurrence) =>
-          occurrence.kind === "resident-departure" &&
-          occurrence.household === household,
+          occurrence.kind === "resident-departure" && occurrence.household === household,
       );
       const arrivals = occurrences.filter(
         (occurrence) =>
-          occurrence.kind === "resident-arrival" &&
-          occurrence.household === household,
+          occurrence.kind === "resident-arrival" && occurrence.household === household,
       );
 
-      if (departures.length === 0 || arrivals.length === 0) continue;
+      if (departures.length === 0 || arrivals.length === 0) {
+        continue;
+      }
       expect(departures).toHaveLength(1);
       expect(arrivals).toHaveLength(1);
-      expect(departures[0]?.endMinute).toBeLessThan(
-        arrivals[0]?.startMinute ?? 0,
-      );
+      expect(departures[0]?.endMinute).toBeLessThan(arrivals[0]?.startMinute ?? 0);
     }
   });
 

@@ -4,12 +4,9 @@ import "./history.css";
 import "./finance.css";
 import "./persistence.css";
 
-import { LemonadeApp, createFreshRunSnapshot } from "./app.js";
-import {
-  isRendererStressFixtureEnabled,
-  isSceneViewerEnabled,
-} from "./dev-scene-viewer-flag.js";
-import { RunPersistenceError, clearCurrentRun, loadCurrentRun } from "./persistence.js";
+import { createFreshRunSnapshot, LemonadeApp } from "./app.js";
+import { isRendererStressFixtureEnabled, isSceneViewerEnabled } from "./dev-scene-viewer-flag.js";
+import { clearCurrentRun, loadCurrentRun, RunPersistenceError } from "./persistence.js";
 
 const root = document.querySelector("#root");
 if (!(root instanceof HTMLElement)) {
@@ -31,7 +28,7 @@ const renderRecovery = (error: RunPersistenceError): void => {
 
   const errorElement = root.querySelector("#recovery-error");
   const discardButton = root.querySelector("#discard-saved-run");
-  if (!(errorElement instanceof HTMLElement) || !(discardButton instanceof HTMLButtonElement)) {
+  if (!(errorElement instanceof HTMLElement && discardButton instanceof HTMLButtonElement)) {
     throw new TypeError("Expected saved-run recovery controls.");
   }
 
@@ -102,11 +99,6 @@ const start = async (): Promise<void> => {
 
 if (isSceneViewerEnabled()) {
   const stress = isRendererStressFixtureEnabled();
-  console.log(
-    stress
-      ? "Renderer stress fixture activated"
-      : "🎥 Scene Viewer mode activated - launching persistent 3D scene",
-  );
   void import("./dev-scene-viewer.js").then(({ createPersistentSceneViewer }) => {
     createPersistentSceneViewer(root, {
       enableGizmo: true,

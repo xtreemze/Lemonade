@@ -15,7 +15,9 @@ describe("advertising sign field", () => {
   it("keeps logical sign transforms while hiding inactive instances", () => {
     const field = createAdvertisingSignField(2);
     field.signs[0]?.root.position.set(4, 0, -3);
-    if (field.signs[0]) field.signs[0].root.visible = true;
+    if (field.signs[0]) {
+      field.signs[0].root.visible = true;
+    }
     field.sync();
 
     const visible = new Matrix4();

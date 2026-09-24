@@ -17,26 +17,23 @@ import {
   walkingBodyLift,
 } from "../src/crowd-motion.js";
 import { walkingCycleAtDistance } from "../src/gait.js";
-import {
-  PASSERBY_BASE_ACTIVE_COUNT,
-  PASSERBY_FOREGROUND_TARGET,
-} from "../src/scene-capacity.js";
-import {
-  generateStreetNetwork,
-  STREET_LAYOUT,
-  roadLaneZ,
-  type StreetStripSpec,
-} from "../src/street-layout.js";
+import { PASSERBY_BASE_ACTIVE_COUNT, PASSERBY_FOREGROUND_TARGET } from "../src/scene-capacity.js";
 import type { PasserbyBeat } from "../src/storyboard.js";
 import { createStreetStoryboard } from "../src/storyboard-create.js";
+import {
+  generateStreetNetwork,
+  roadLaneZ,
+  STREET_LAYOUT,
+  type StreetStripSpec,
+} from "../src/street-layout.js";
 
 const beats: readonly PasserbyBeat[] = Object.freeze(
   Array.from({ length: 12 }, (_, index) =>
     Object.freeze({
       pedestrianIndex: index,
       startAtMs: 0,
-      endAtMs: 6_000,
-      direction: index % 2 === 0 ? -1 as const : 1 as const,
+      endAtMs: 6000,
+      direction: index % 2 === 0 ? (-1 as const) : (1 as const),
       lane: index % 4,
       seesAdvertisement: index < 3,
       signIndex: index < 3 ? index : -1,
@@ -57,8 +54,7 @@ const pointIsInsideStrip = (
   const localX = cos * dx + sin * dz;
   const localZ = -sin * dx + cos * dz;
   return (
-    Math.abs(localX) <= strip.length / 2 + margin &&
-    Math.abs(localZ) <= strip.width / 2 + margin
+    Math.abs(localX) <= strip.length / 2 + margin && Math.abs(localZ) <= strip.width / 2 + margin
   );
 };
 
@@ -70,8 +66,8 @@ const pointIsOnGeneratedStrip = (
 
 describe("crowd motion", () => {
   it("keeps deterministic pedestrian paths separated and entirely on the sidewalk", () => {
-    const first = crowdPosesAt(beats, 12, 2_750, 6_000);
-    const repeated = crowdPosesAt(beats, 12, 2_750, 6_000);
+    const first = crowdPosesAt(beats, 12, 2750, 6000);
+    const repeated = crowdPosesAt(beats, 12, 2750, 6000);
     expect(repeated).toEqual(first);
     expect(first).toHaveLength(12);
 
@@ -86,26 +82,28 @@ describe("crowd motion", () => {
     expect(routeIds.size).toBeGreaterThan(4);
     expect([...routeIds].some((routeId) => routeId.startsWith("main:0"))).toBe(true);
     expect([...routeIds].some((routeId) => routeId.startsWith("main:1"))).toBe(true);
-    const generatedRouteIds = new Set(
-      neighborhoodSidewalkRoutes().map((route) => route.id),
-    );
+    const generatedRouteIds = new Set(neighborhoodSidewalkRoutes().map((route) => route.id));
     const generatedSidewalks = generateStreetNetwork().sidewalks;
     for (const pose of first) {
-      if (pose === undefined) continue;
+      if (pose === undefined) {
+        continue;
+      }
       expect(Number.isFinite(pose.x)).toBe(true);
       expect(Number.isFinite(pose.z)).toBe(true);
       expect(generatedRouteIds.has(pose.routeId)).toBe(true);
-      expect(
-        pointIsOnGeneratedStrip(pose.x, pose.z, generatedSidewalks),
-      ).toBe(true);
+      expect(pointIsOnGeneratedStrip(pose.x, pose.z, generatedSidewalks)).toBe(true);
     }
 
     for (let left = 0; left < first.length; left += 1) {
       const a = first[left];
-      if (a === undefined) continue;
+      if (a === undefined) {
+        continue;
+      }
       for (let right = left + 1; right < first.length; right += 1) {
         const b = first[right];
-        if (b === undefined) continue;
+        if (b === undefined) {
+          continue;
+        }
         const distance = Math.hypot(a.x - b.x, a.z - b.z);
         expect(distance).toBeGreaterThan(0.42);
       }
@@ -118,7 +116,9 @@ describe("crowd motion", () => {
       for (let index = 1; index < route.strips.length; index += 1) {
         const previous = route.strips[index - 1];
         const current = route.strips[index];
-        if (previous === undefined || current === undefined) continue;
+        if (previous === undefined || current === undefined) {
+          continue;
+        }
         expect(Math.floor(current.segmentIndex / 2)).toBe(
           Math.floor(previous.segmentIndex / 2) + 1,
         );
@@ -141,33 +141,35 @@ describe("crowd motion", () => {
       for (let index = 0; index < current.length; index += 1) {
         const before = previous[index];
         const after = current[index];
-        if (before === undefined || after === undefined) continue;
-        expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeLessThan(
-          1.25,
-        );
+        if (before === undefined || after === undefined) {
+          continue;
+        }
+        expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeLessThan(1.25);
       }
       previous = current;
     }
   });
 
   it("uses left/right side-entry routes instead of top/bottom pedestrian approaches", () => {
-    const sample = crowdPosesAt(beats, 12, 2_750, 6_000);
-    const routes = new Map(
-      neighborhoodSidewalkRoutes().map((route) => [route.id, route] as const),
-    );
+    const sample = crowdPosesAt(beats, 12, 2750, 6000);
+    const routes = new Map(neighborhoodSidewalkRoutes().map((route) => [route.id, route] as const));
     for (const pose of sample) {
-      if (pose === undefined) continue;
+      if (pose === undefined) {
+        continue;
+      }
       const route = routes.get(pose.routeId);
       expect(route).toBeDefined();
-      if (route === undefined) continue;
+      if (route === undefined) {
+        continue;
+      }
       const first = route.points[0];
       const last = route.points.at(-1);
       expect(first).toBeDefined();
       expect(last).toBeDefined();
-      if (first === undefined || last === undefined) continue;
-      expect(Math.abs(last.x - first.x)).toBeGreaterThanOrEqual(
-        Math.abs(last.z - first.z),
-      );
+      if (first === undefined || last === undefined) {
+        continue;
+      }
+      expect(Math.abs(last.x - first.x)).toBeGreaterThanOrEqual(Math.abs(last.z - first.z));
     }
   });
 
@@ -220,7 +222,6 @@ describe("crowd motion", () => {
     expect(Math.abs(farPet.yaw)).toBeCloseTo(Math.PI);
   });
 
-
   it("does not rebind a visible pet to another pedestrian when its owner disappears", () => {
     const scene = new Scene();
     const firstOwner = new Group();
@@ -233,32 +234,23 @@ describe("crowd motion", () => {
     secondOwner.rotation.y = Math.PI / 2;
     scene.add(firstOwner, secondOwner);
 
-    const ambient = createAmbientLife(scene, 0x51a7, [
-      firstOwner,
-      secondOwner,
-    ]);
-    ambient.update("sunny", "simulation", 2_000, 14_000);
+    const ambient = createAmbientLife(scene, 0x51_a7, [firstOwner, secondOwner]);
+    ambient.update("sunny", "simulation", 2000, 14_000);
 
     const firstPet = scene.children
-      .filter((object) => object.userData["sceneRole"] === "ambient-pet")
-      .find(
-        (pet) =>
-          pet.visible &&
-          Math.abs(pet.position.x - firstOwner.position.x) < 2,
-      );
+      .filter((object) => object.userData.sceneRole === "ambient-pet")
+      .find((pet) => pet.visible && Math.abs(pet.position.x - firstOwner.position.x) < 2);
     const secondPet = scene.children
-      .filter((object) => object.userData["sceneRole"] === "ambient-pet")
-      .find(
-        (pet) =>
-          pet.visible &&
-          Math.abs(pet.position.x - secondOwner.position.x) < 2,
-      );
+      .filter((object) => object.userData.sceneRole === "ambient-pet")
+      .find((pet) => pet.visible && Math.abs(pet.position.x - secondOwner.position.x) < 2);
     expect(firstPet).toBeDefined();
     expect(secondPet).toBeDefined();
-    if (firstPet === undefined || secondPet === undefined) return;
+    if (firstPet === undefined || secondPet === undefined) {
+      return;
+    }
 
     firstOwner.visible = false;
-    ambient.update("sunny", "simulation", 2_016, 14_000);
+    ambient.update("sunny", "simulation", 2016, 14_000);
 
     expect(firstPet.visible).toBe(false);
     expect(secondPet.visible).toBe(true);
@@ -275,95 +267,86 @@ describe("crowd motion", () => {
 
     const seed = 17;
     const ambient = createAmbientLife(scene, seed, [owner]);
-    ambient.update("sunny", "simulation", 2_000, 6_000);
+    ambient.update("sunny", "simulation", 2000, 6000);
     const network = generateStreetNetwork(seed);
 
     const pet = scene.children.find(
-      (object) =>
-        object.userData["sceneRole"] === "ambient-pet" && object.visible,
+      (object) => object.userData.sceneRole === "ambient-pet" && object.visible,
     );
     const bicycles = scene.children.filter(
-      (object) =>
-        object.userData["sceneRole"] === "ambient-bicycle" && object.visible,
+      (object) => object.userData.sceneRole === "ambient-bicycle" && object.visible,
     );
     const vehicles = scene.children.filter(
-      (object) =>
-        object.userData["sceneRole"] === "ambient-vehicle" && object.visible,
+      (object) => object.userData.sceneRole === "ambient-vehicle" && object.visible,
     );
 
     expect(pet).toBeDefined();
     expect(pet?.position.x).toBeLessThan(owner.position.x);
     expect(
       pet !== undefined &&
-        pointIsOnGeneratedStrip(
-          pet.position.x,
-          pet.position.z,
-          network.sidewalks,
-        ),
+        pointIsOnGeneratedStrip(pet.position.x, pet.position.z, network.sidewalks),
     ).toBe(true);
 
     expect(bicycles.length).toBeGreaterThan(0);
     expect(vehicles.length).toBeGreaterThan(0);
     for (const actor of [...bicycles, ...vehicles]) {
       expect(Number.isFinite(actor.rotation.y)).toBe(true);
-      const mobilityActorId: unknown = actor.userData["mobilityActorId"];
-      if (mobilityActorId === "resident-vehicle") continue;
-      expect(
-        pointIsOnGeneratedStrip(
-          actor.position.x,
-          actor.position.z,
-          network.roads,
-        ),
-      ).toBe(true);
+      const mobilityActorId: unknown = actor.userData.mobilityActorId;
+      if (mobilityActorId === "resident-vehicle") {
+        continue;
+      }
+      expect(pointIsOnGeneratedStrip(actor.position.x, actor.position.z, network.roads)).toBe(true);
     }
   });
 
   it("gives cyclists and drivers the same facial hair and clothing detail system", () => {
     const scene = new Scene();
-    const ambient = createAmbientLife(scene, 0x1ead2026, []);
-    ambient.update("sunny", "simulation", 2_000, 6_000);
+    const ambient = createAmbientLife(scene, 0x1e_ad_20_26, []);
+    ambient.update("sunny", "simulation", 2000, 6000);
 
     for (const role of ["ambient-rider", "ambient-driver"] as const) {
       let actor: Group | undefined;
       scene.traverse((object) => {
-        if (object.userData["sceneRole"] === role && object instanceof Group) {
+        if (object.userData.sceneRole === role && object instanceof Group) {
           actor = object;
         }
       });
       expect(actor).toBeDefined();
-      if (actor === undefined) continue;
+      if (actor === undefined) {
+        continue;
+      }
 
       const roles = new Set<string>();
       actor.traverse((object) => {
-        const sceneRole: unknown = object.userData["sceneRole"];
-        if (typeof sceneRole === "string") roles.add(sceneRole);
+        const sceneRole: unknown = object.userData.sceneRole;
+        if (typeof sceneRole === "string") {
+          roles.add(sceneRole);
+        }
       });
       expect(roles.has("eye-white")).toBe(true);
       expect(roles.has("eye-pupil")).toBe(true);
       expect(roles.has("hair-cover")).toBe(true);
       expect(roles.has("hair-detail")).toBe(true);
       expect(roles.has("garment-detail")).toBe(true);
-      expect(actor.userData["characterRig"]).toBe("shared-three");
+      expect(actor.userData.characterRig).toBe("shared-three");
       expect(actor.scale.y).toBeGreaterThan(0.5);
     }
   });
 
   it("derives deterministic varied bird flight profiles from the scene seed", () => {
     const first = Array.from({ length: 4 }, (_, index) =>
-      birdFlightProfileFor(0x1ead2026, index),
+      birdFlightProfileFor(0x1e_ad_20_26, index),
     );
     const repeated = Array.from({ length: 4 }, (_, index) =>
-      birdFlightProfileFor(0x1ead2026, index),
+      birdFlightProfileFor(0x1e_ad_20_26, index),
     );
     const alternate = Array.from({ length: 4 }, (_, index) =>
-      birdFlightProfileFor(0x1ead2027, index),
+      birdFlightProfileFor(0x1e_ad_20_27, index),
     );
 
     expect(repeated).toEqual(first);
     expect(alternate).not.toEqual(first);
-    expect(new Set(first.map((profile) => profile.direction))).toEqual(
-      new Set([-1, 1]),
-    );
+    expect(new Set(first.map((profile) => profile.direction))).toEqual(new Set([-1, 1]));
     expect(new Set(first.map((profile) => profile.depth)).size).toBe(4);
     expect(new Set(first.map((profile) => profile.altitude)).size).toBe(4);
     for (const profile of first) {
@@ -376,33 +359,33 @@ describe("crowd motion", () => {
 
   it("flies sunny-day birds across town in both street directions", () => {
     const scene = new Scene();
-    const ambient = createAmbientLife(scene, 0x1ead2026, []);
-    ambient.update("sunny", "simulation", 2_000, 10_000);
+    const ambient = createAmbientLife(scene, 0x1e_ad_20_26, []);
+    ambient.update("sunny", "simulation", 2000, 10_000);
 
     const birds = scene.children.filter(
-      (object) => object.userData["sceneRole"] === "ambient-bird" && object.visible,
+      (object) => object.userData.sceneRole === "ambient-bird" && object.visible,
     );
     expect(birds).toHaveLength(4);
     expect(birds.some((bird) => Math.abs(bird.rotation.y) < 0.01)).toBe(true);
     expect(birds.some((bird) => Math.abs(Math.abs(bird.rotation.y) - Math.PI) < 0.01)).toBe(true);
 
-    ambient.update("cloudy", "simulation", 2_000, 10_000);
-    expect(
-      birds.every((bird) => !bird.visible),
-    ).toBe(true);
+    ambient.update("cloudy", "simulation", 2000, 10_000);
+    expect(birds.every((bird) => !bird.visible)).toBe(true);
   });
 
   it("uses a reusable spatial crowd sampler with travel-aligned gait speed", () => {
-    const simulation = createCrowdSimulation(beats, 12, 6_000);
-    const sample = simulation.sample(2_750);
-    const repeated = simulation.sample(2_750);
+    const simulation = createCrowdSimulation(beats, 12, 6000);
+    const sample = simulation.sample(2750);
+    const repeated = simulation.sample(2750);
 
     expect(repeated.poses).toEqual(sample.poses);
     expect(sample.poses).toHaveLength(12);
-    expect(sample.neighborChecks).toBeLessThan(12 * 11 / 2);
+    expect(sample.neighborChecks).toBeLessThan((12 * 11) / 2);
 
     for (const pose of sample.poses) {
-      if (pose === undefined) continue;
+      if (pose === undefined) {
+        continue;
+      }
       expect(pose.worldSpeed).toBeGreaterThan(0);
       expect(pose.pace).toBeGreaterThan(0);
       expect(Number.isFinite(pose.heading)).toBe(true);
@@ -411,41 +394,25 @@ describe("crowd motion", () => {
   });
 
   it("advances gait phase from measured world-space travel distance", () => {
-    const earlier = crowdPosesAt(beats, 1, 1_000, 6_000)[0];
-    const later = crowdPosesAt(beats, 1, 1_100, 6_000)[0];
+    const earlier = crowdPosesAt(beats, 1, 1000, 6000)[0];
+    const later = crowdPosesAt(beats, 1, 1100, 6000)[0];
     expect(earlier).toBeDefined();
     expect(later).toBeDefined();
-    if (earlier === undefined || later === undefined) return;
+    if (earlier === undefined || later === undefined) {
+      return;
+    }
 
-    expect(later.travelDistance - earlier.travelDistance).toBeCloseTo(
-      earlier.worldSpeed * 0.1,
-      5,
-    );
-    expect(
-      walkingCycleAtDistance(later.travelDistance, 1, 1, 0),
-    ).toBeGreaterThan(
+    expect(later.travelDistance - earlier.travelDistance).toBeCloseTo(earlier.worldSpeed * 0.1, 5);
+    expect(walkingCycleAtDistance(later.travelDistance, 1, 1, 0)).toBeGreaterThan(
       walkingCycleAtDistance(earlier.travelDistance, 1, 1, 0),
     );
   });
 
   it("keeps walkers moving through the wider neighborhood at normal walking speed", () => {
-    const early = crowdPosesAt(
-      beats,
-      PASSERBY_BASE_ACTIVE_COUNT,
-      250,
-      6_000,
-    );
-    const late = crowdPosesAt(
-      beats,
-      PASSERBY_BASE_ACTIVE_COUNT,
-      5_750,
-      6_000,
-    );
+    const early = crowdPosesAt(beats, PASSERBY_BASE_ACTIVE_COUNT, 250, 6000);
+    const late = crowdPosesAt(beats, PASSERBY_BASE_ACTIVE_COUNT, 5750, 6000);
     const allPoses = [...early, ...late].filter((pose) => pose !== undefined);
-    const extent = allPoses.reduce(
-      (max, pose) => Math.max(max, Math.abs(pose.x)),
-      0,
-    );
+    const extent = allPoses.reduce((max, pose) => Math.max(max, Math.abs(pose.x)), 0);
     expect(extent).toBeGreaterThan(42);
     for (const pose of allPoses) {
       expect(pose.worldSpeed).toBeGreaterThanOrEqual(1.18);
@@ -456,21 +423,23 @@ describe("crowd motion", () => {
   it("starts late pedestrians at a route boundary and moves them immediately", () => {
     const lateBeat: PasserbyBeat = Object.freeze({
       pedestrianIndex: 0,
-      startAtMs: 1_000,
-      endAtMs: 5_000,
+      startAtMs: 1000,
+      endAtMs: 5000,
       direction: -1,
       lane: 0,
       seesAdvertisement: true,
       signIndex: 0,
     });
-    const simulation = createCrowdSimulation([lateBeat], 1, 6_000);
+    const simulation = createCrowdSimulation([lateBeat], 1, 6000);
 
     expect(simulation.sample(999).poses[0]).toBeUndefined();
-    const spawned = simulation.sample(1_000).poses[0];
-    const moved = simulation.sample(1_100).poses[0];
+    const spawned = simulation.sample(1000).poses[0];
+    const moved = simulation.sample(1100).poses[0];
     expect(spawned).toBeDefined();
     expect(moved).toBeDefined();
-    if (spawned === undefined || moved === undefined) return;
+    if (spawned === undefined || moved === undefined) {
+      return;
+    }
 
     expect(spawned.travelDistance).toBeCloseTo(0, 6);
     expect(moved.travelDistance).toBeCloseTo(moved.worldSpeed * 0.1, 5);
@@ -530,7 +499,9 @@ describe("crowd motion", () => {
       for (let index = 0; index < current.length; index += 1) {
         const before = previous[index];
         const after = current[index];
-        if (before === undefined || after === undefined) continue;
+        if (before === undefined || after === undefined) {
+          continue;
+        }
         const displacement = Math.hypot(after.x - before.x, after.z - before.z);
         const expectedTravel = Math.max(before.worldSpeed, after.worldSpeed) * 0.05;
         expect(displacement).toBeLessThanOrEqual(expectedTravel + 0.28);
@@ -542,8 +513,8 @@ describe("crowd motion", () => {
   it("keeps ordinary pedestrians within a normal walking-speed envelope", () => {
     const simulation = createCrowdSimulation(beats, 12, 12_000);
     const sampled = [
-      ...simulation.sample(1_000).poses,
-      ...simulation.sample(6_000).poses,
+      ...simulation.sample(1000).poses,
+      ...simulation.sample(6000).poses,
       ...simulation.sample(11_000).poses,
     ].filter((pose) => pose !== undefined);
 
@@ -554,7 +525,6 @@ describe("crowd motion", () => {
     }
   });
 
-
   it("keeps twenty foreground pedestrians present and moving for the full simulation presentation", () => {
     const storyboard = createStreetStoryboard({
       durationMs: 16_000,
@@ -564,9 +534,7 @@ describe("crowd motion", () => {
       priceCents: 150,
       ambientPedestrianCount: 4,
     });
-    expect(storyboard.passersBy.length).toBeGreaterThanOrEqual(
-      PASSERBY_FOREGROUND_TARGET,
-    );
+    expect(storyboard.passersBy.length).toBeGreaterThanOrEqual(PASSERBY_FOREGROUND_TARGET);
 
     const simulation = createCrowdSimulation(
       storyboard.passersBy,
@@ -574,54 +542,42 @@ describe("crowd motion", () => {
       storyboard.durationMs,
     );
     let previous = simulation.sample(0).poses;
-    expect(
-      previous.filter((pose) => pose !== undefined).length,
-    ).toBeGreaterThanOrEqual(PASSERBY_FOREGROUND_TARGET);
+    expect(previous.filter((pose) => pose !== undefined).length).toBeGreaterThanOrEqual(
+      PASSERBY_FOREGROUND_TARGET,
+    );
 
     const foregroundAtStart = previous.slice(0, PASSERBY_FOREGROUND_TARGET);
     const backgroundAtStart = previous
       .slice(PASSERBY_FOREGROUND_TARGET)
       .filter((pose) => pose !== undefined);
-    const averageRadius = (
-      poses: readonly NonNullable<(typeof previous)[number]>[],
-    ): number =>
-      poses.reduce(
-        (total, pose) => total + Math.hypot(pose.x, pose.z),
-        0,
-      ) / Math.max(1, poses.length);
+    const averageRadius = (poses: readonly NonNullable<(typeof previous)[number]>[]): number =>
+      poses.reduce((total, pose) => total + Math.hypot(pose.x, pose.z), 0) /
+      Math.max(1, poses.length);
     const definedForeground = foregroundAtStart.filter(
       (pose): pose is NonNullable<typeof pose> => pose !== undefined,
     );
     expect(definedForeground).toHaveLength(PASSERBY_FOREGROUND_TARGET);
-    expect(
-      definedForeground.every((pose) => pose.routeId.startsWith("main:")),
-    ).toBe(true);
+    expect(definedForeground.every((pose) => pose.routeId.startsWith("main:"))).toBe(true);
     expect(backgroundAtStart.length).toBeGreaterThan(0);
-    expect(averageRadius(definedForeground)).toBeLessThan(
-      averageRadius(backgroundAtStart),
-    );
+    expect(averageRadius(definedForeground)).toBeLessThan(averageRadius(backgroundAtStart));
 
-    for (
-      let elapsedMs = 250;
-      elapsedMs < storyboard.durationMs;
-      elapsedMs += 250
-    ) {
+    for (let elapsedMs = 250; elapsedMs < storyboard.durationMs; elapsedMs += 250) {
       const current = simulation.sample(elapsedMs).poses;
       const foreground = current.slice(0, PASSERBY_FOREGROUND_TARGET);
-      expect(
-        foreground.filter((pose) => pose !== undefined).length,
-      ).toBe(PASSERBY_FOREGROUND_TARGET);
+      expect(foreground.filter((pose) => pose !== undefined).length).toBe(
+        PASSERBY_FOREGROUND_TARGET,
+      );
 
       for (let index = 0; index < PASSERBY_FOREGROUND_TARGET; index += 1) {
         const before = previous[index];
         const after = current[index];
         expect(before).toBeDefined();
         expect(after).toBeDefined();
-        if (before === undefined || after === undefined) continue;
+        if (before === undefined || after === undefined) {
+          continue;
+        }
 
-        expect(
-          Math.hypot(after.x - before.x, after.z - before.z),
-        ).toBeGreaterThan(0.04);
+        expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeGreaterThan(0.04);
         expect(after.travelDistance).toBeGreaterThan(before.travelDistance);
       }
       previous = current;
@@ -640,29 +596,19 @@ describe("crowd motion", () => {
     });
     const simulation = createCrowdSimulation([shortBeat], 1, 12_000);
     const beforeBeatEnd = simulation.sample(800).poses[0];
-    const afterBeatEnd = simulation.sample(1_200).poses[0];
-    const muchLater = simulation.sample(8_000).poses[0];
+    const afterBeatEnd = simulation.sample(1200).poses[0];
+    const muchLater = simulation.sample(8000).poses[0];
 
     expect(beforeBeatEnd).toBeDefined();
     expect(afterBeatEnd).toBeDefined();
     expect(muchLater).toBeDefined();
-    if (
-      beforeBeatEnd === undefined ||
-      afterBeatEnd === undefined ||
-      muchLater === undefined
-    ) {
+    if (beforeBeatEnd === undefined || afterBeatEnd === undefined || muchLater === undefined) {
       return;
     }
 
     expect(
-      Math.hypot(
-        afterBeatEnd.x - beforeBeatEnd.x,
-        afterBeatEnd.z - beforeBeatEnd.z,
-      ),
+      Math.hypot(afterBeatEnd.x - beforeBeatEnd.x, afterBeatEnd.z - beforeBeatEnd.z),
     ).toBeGreaterThan(0.1);
-    expect(muchLater.travelDistance).toBeGreaterThan(
-      afterBeatEnd.travelDistance,
-    );
+    expect(muchLater.travelDistance).toBeGreaterThan(afterBeatEnd.travelDistance);
   });
-
 });

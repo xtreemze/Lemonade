@@ -2,22 +2,20 @@ import { describe, expect, it } from "vitest";
 
 import {
   basisPoints,
+  type CustomerTraits,
   customerId,
   deriveMarketMemory,
   glassCount,
+  type MarketMemoryObservation,
   marketMemoryToleranceMultiplier,
   moneyCents,
   neutralMarketMemory,
   nextMarketMemory,
   seed,
   signCount,
-  type CustomerTraits,
-  type MarketMemoryObservation,
 } from "../src/index.js";
 
-const observation = (
-  overrides: Partial<MarketMemoryObservation> = {},
-): MarketMemoryObservation =>
+const observation = (overrides: Partial<MarketMemoryObservation> = {}): MarketMemoryObservation =>
   Object.freeze({
     price: moneyCents(300),
     signs: signCount(1),
@@ -31,12 +29,12 @@ const observation = (
 const traits: CustomerTraits = Object.freeze({
   id: customerId(4),
   type: "regular",
-  visualSeed: seed(0x1234_abcd),
+  visualSeed: seed(0x12_34_ab_cd),
   intrinsicPriceTolerance: moneyCents(300),
-  advertisingResponsiveness: basisPoints(8_000),
-  familiarity: basisPoints(5_000),
-  loyalty: basisPoints(5_000),
-  weatherCommitment: basisPoints(5_000),
+  advertisingResponsiveness: basisPoints(8000),
+  familiarity: basisPoints(5000),
+  loyalty: basisPoints(5000),
+  weatherCommitment: basisPoints(5000),
 });
 
 describe("market memory", () => {
@@ -46,7 +44,7 @@ describe("market memory", () => {
       advertisingFatigue: basisPoints(0),
       stockoutPressure: basisPoints(0),
       excessPressure: basisPoints(0),
-      satisfaction: basisPoints(5_000),
+      satisfaction: basisPoints(5000),
     });
   });
 
@@ -89,24 +87,16 @@ describe("market memory", () => {
       repeated = nextMarketMemory(repeated, stockoutDay);
     }
 
-    expect(Number(repeated.stockoutPressure)).toBeGreaterThan(
-      Number(isolated.stockoutPressure),
-    );
-    expect(Number(repeated.satisfaction)).toBeLessThan(
-      Number(isolated.satisfaction),
-    );
+    expect(Number(repeated.stockoutPressure)).toBeGreaterThan(Number(isolated.stockoutPressure));
+    expect(Number(repeated.satisfaction)).toBeLessThan(Number(isolated.satisfaction));
 
     let recovered = repeated;
     for (let day = 0; day < 10; day += 1) {
       recovered = nextMarketMemory(recovered, healthyDay);
     }
 
-    expect(Number(recovered.stockoutPressure)).toBeLessThan(
-      Number(repeated.stockoutPressure),
-    );
-    expect(Number(recovered.satisfaction)).toBeGreaterThan(
-      Number(repeated.satisfaction),
-    );
+    expect(Number(recovered.stockoutPressure)).toBeLessThan(Number(repeated.stockoutPressure));
+    expect(Number(recovered.satisfaction)).toBeGreaterThan(Number(repeated.satisfaction));
   });
 
   it("distinguishes sudden price spikes from a gradual path to the same price", () => {
@@ -116,10 +106,7 @@ describe("market memory", () => {
       observation({ price: moneyCents(300) }),
     ];
 
-    const sudden = deriveMarketMemory([
-      ...stablePrefix,
-      observation({ price: moneyCents(600) }),
-    ]);
+    const sudden = deriveMarketMemory([...stablePrefix, observation({ price: moneyCents(600) })]);
     const gradual = deriveMarketMemory([
       observation({ price: moneyCents(300) }),
       observation({ price: moneyCents(400) }),
@@ -129,9 +116,7 @@ describe("market memory", () => {
 
     expect(Number(sudden.expectedPrice)).toBeGreaterThan(300);
     expect(Number(sudden.expectedPrice)).toBeLessThan(600);
-    expect(Number(gradual.expectedPrice)).toBeGreaterThan(
-      Number(sudden.expectedPrice),
-    );
+    expect(Number(gradual.expectedPrice)).toBeGreaterThan(Number(sudden.expectedPrice));
   });
 
   it("keeps excess-production effects materially smaller than stockout effects", () => {
@@ -156,12 +141,8 @@ describe("market memory", () => {
       );
     }
 
-    const excessMultiplier = Number(
-      marketMemoryToleranceMultiplier(traits, excess),
-    );
-    const stockoutMultiplier = Number(
-      marketMemoryToleranceMultiplier(traits, stockout),
-    );
+    const excessMultiplier = Number(marketMemoryToleranceMultiplier(traits, excess));
+    const stockoutMultiplier = Number(marketMemoryToleranceMultiplier(traits, stockout));
 
     expect(10_000 - excessMultiplier).toBeLessThanOrEqual(200);
     expect(stockoutMultiplier).toBeLessThan(excessMultiplier);
@@ -171,18 +152,12 @@ describe("market memory", () => {
     let memory = neutralMarketMemory();
 
     for (let day = 0; day < 8; day += 1) {
-      memory = nextMarketMemory(
-        memory,
-        observation({ signs: signCount(3) }),
-      );
+      memory = nextMarketMemory(memory, observation({ signs: signCount(3) }));
     }
     const pressured = Number(memory.advertisingFatigue);
 
     for (let day = 0; day < 8; day += 1) {
-      memory = nextMarketMemory(
-        memory,
-        observation({ signs: signCount(0) }),
-      );
+      memory = nextMarketMemory(memory, observation({ signs: signCount(0) }));
     }
 
     expect(pressured).toBeGreaterThan(0);
@@ -191,10 +166,7 @@ describe("market memory", () => {
 
   it("rejects impossible fulfillment summaries", () => {
     expect(() =>
-      nextMarketMemory(
-        neutralMarketMemory(),
-        observation({ willing: 4, purchased: 5 }),
-      ),
+      nextMarketMemory(neutralMarketMemory(), observation({ willing: 4, purchased: 5 })),
     ).toThrow(/purchased/i);
   });
 });

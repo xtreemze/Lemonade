@@ -1,11 +1,5 @@
-import {
-  BoxGeometry,
-  CylinderGeometry,
-  Mesh,
-  MeshStandardMaterial,
-  SphereGeometry,
-} from "three";
 import type { Group, Object3D } from "three";
+import { BoxGeometry, CylinderGeometry, Mesh, MeshStandardMaterial, SphereGeometry } from "three";
 
 import type { CharacterProfile } from "./characters.js";
 
@@ -32,15 +26,13 @@ export const characterIdentityFor = (
 ): CharacterIdentity => {
   const actorIndex = Number.isFinite(index) ? Math.abs(Math.trunc(index)) : 0;
   const identityIndex = (profile.hairStyle + profile.accessory + actorIndex) & 3;
-  const ageGroup =
-    actorIndex >= 10_000 || Math.floor(actorIndex / 2) % 3 !== 2
-      ? "adult"
-      : "child";
-  const bagStyle = actorIndex >= 10_000
-    ? 0
-    : ageGroup === "child"
-      ? ((actorIndex % 3) + 1) as 1 | 2 | 3
-      : ((identityIndex + actorIndex) & 3) as 0 | 1 | 2 | 3;
+  const ageGroup = actorIndex >= 10_000 || Math.floor(actorIndex / 2) % 3 !== 2 ? "adult" : "child";
+  const bagStyle =
+    actorIndex >= 10_000
+      ? 0
+      : ageGroup === "child"
+        ? (((actorIndex % 3) + 1) as 1 | 2 | 3)
+        : (((identityIndex + actorIndex) & 3) as 0 | 1 | 2 | 3);
   return Object.freeze({
     gender: actorIndex % 2 === 0 ? "male" : "female",
     ageGroup,
@@ -52,7 +44,7 @@ export const characterIdentityFor = (
 };
 
 const mark = <T extends Object3D>(object: T, role: string): T => {
-  object.userData["sceneRole"] = role;
+  object.userData.sceneRole = role;
   return object;
 };
 
@@ -82,8 +74,8 @@ export const decorateCharacterHead = (
   head.scale.x *= profile.headWidthScale;
   head.scale.y *= profile.headHeightScale;
 
-  const eyeWhiteMaterial = material(0xf5f2e8);
-  const pupilMaterial = material(0x263238);
+  const eyeWhiteMaterial = material(0xf5_f2_e8);
+  const pupilMaterial = material(0x26_32_38);
   for (const direction of [-1, 1] as const) {
     const white = mark(
       new Mesh(new SphereGeometry(0.038, 9, 7), eyeWhiteMaterial.clone()),
@@ -101,15 +93,12 @@ export const decorateCharacterHead = (
     head.add(pupil);
   }
 
-  const nose = new Mesh(
-    new SphereGeometry(0.038, 8, 6),
-    material(profile.skinColor),
-  );
+  const nose = new Mesh(new SphereGeometry(0.038, 8, 6), material(profile.skinColor));
   nose.scale.set(0.8, 1, 1.25);
   nose.position.set(0, -0.015, 0.258);
   head.add(nose);
 
-  const expressionColor = 0x4d302d;
+  const expressionColor = 0x4d_30_2d;
   const browTilt =
     identity.expression === "curious"
       ? 0.16
@@ -118,20 +107,8 @@ export const decorateCharacterHead = (
         : identity.expression === "smile"
           ? 0.06
           : 0;
-  addFaceBar(
-    head,
-    0.075,
-    [-profile.eyeSpacing, 0.112, 0.264],
-    browTilt,
-    expressionColor,
-  );
-  addFaceBar(
-    head,
-    0.075,
-    [profile.eyeSpacing, 0.112, 0.264],
-    -browTilt,
-    expressionColor,
-  );
+  addFaceBar(head, 0.075, [-profile.eyeSpacing, 0.112, 0.264], browTilt, expressionColor);
+  addFaceBar(head, 0.075, [profile.eyeSpacing, 0.112, 0.264], -browTilt, expressionColor);
 
   if (includeMouth) {
     const mouthTilt =
@@ -143,8 +120,8 @@ export const decorateCharacterHead = (
             ? 0.08
             : 0;
     const mouthY = identity.expression === "focused" ? -0.098 : -0.105;
-    addFaceBar(head, 0.07, [-0.035, mouthY, 0.266], -mouthTilt, 0x8b4c48);
-    addFaceBar(head, 0.07, [0.035, mouthY, 0.266], mouthTilt, 0x8b4c48);
+    addFaceBar(head, 0.07, [-0.035, mouthY, 0.266], -mouthTilt, 0x8b_4c_48);
+    addFaceBar(head, 0.07, [0.035, mouthY, 0.266], mouthTilt, 0x8b_4c_48);
   }
 
   // Every hairstyle starts with a full crown shell. Style-specific geometry sits
@@ -180,11 +157,7 @@ export const decorateCharacterHead = (
       new Mesh(new SphereGeometry(0.12, 9, 7), material(profile.hairColor)),
       "hair-cover",
     );
-    bun.position.set(
-      identity.gender === "female" ? 0.14 : -0.12,
-      0.255,
-      -0.12,
-    );
+    bun.position.set(identity.gender === "female" ? 0.14 : -0.12, 0.255, -0.12);
     head.add(bun);
   }
 
@@ -215,11 +188,7 @@ export const decorateCharacterHead = (
       "hair-detail",
     );
     ponytail.scale.set(0.72, 1.45, 0.72);
-    ponytail.position.set(
-      identity.gender === "female" ? 0.15 : -0.13,
-      0.03,
-      -0.255,
-    );
+    ponytail.position.set(identity.gender === "female" ? 0.15 : -0.13, 0.03, -0.255);
     ponytail.rotation.z = identity.gender === "female" ? -0.22 : 0.22;
     head.add(ponytail);
   } else {
@@ -239,17 +208,13 @@ export const decorateCharacterHead = (
     brim.position.set(0, 0.23, 0.05);
     head.add(brim);
   } else if (profile.accessory === 2) {
-    const bridge = new Mesh(new BoxGeometry(0.18, 0.018, 0.018), material(0x273036));
+    const bridge = new Mesh(new BoxGeometry(0.18, 0.018, 0.018), material(0x27_30_36));
     bridge.position.set(0, 0.035, 0.275);
     head.add(bridge);
   }
 };
 
-const addGarment = (
-  root: Group,
-  mesh: Mesh,
-  position: readonly [number, number, number],
-): Mesh => {
+const addGarment = (root: Group, mesh: Mesh, position: readonly [number, number, number]): Mesh => {
   mark(mesh, "garment-detail");
   mesh.position.set(...position);
   root.add(mesh);
@@ -261,8 +226,8 @@ export const decorateCharacterBody = (
   profile: CharacterProfile,
   identity: CharacterIdentity,
 ): void => {
-  root.userData["characterGender"] = identity.gender;
-  root.userData["characterAgeGroup"] = identity.ageGroup;
+  root.userData.characterGender = identity.gender;
+  root.userData.characterAgeGroup = identity.ageGroup;
 
   const cloth = material(profile.clothingColor);
   const trim = material(profile.trouserColor);
@@ -296,11 +261,11 @@ export const decorateCharacterBody = (
     stripe.rotation.z = 0.015;
   } else if (identity.garmentStyle === 1) {
     for (const direction of [-1, 1] as const) {
-      const panel = addGarment(
-        root,
-        new Mesh(new BoxGeometry(0.2, 0.68, 0.045), cloth.clone()),
-        [direction * 0.115, 1.03, 0.305],
-      );
+      const panel = addGarment(root, new Mesh(new BoxGeometry(0.2, 0.68, 0.045), cloth.clone()), [
+        direction * 0.115,
+        1.03,
+        0.305,
+      ]);
       panel.rotation.z = direction * 0.035;
     }
   } else if (identity.garmentStyle === 2) {
@@ -445,18 +410,10 @@ export const applySellerConfidenceGesture: SellerGestureApplier = (
   confidence,
 ): void => {
   const closeup = Math.min(1, Math.max(0, progress));
-  const gestureProgress = Math.min(
-    1,
-    Math.max(0, (closeup - 0.32) / 0.68),
-  );
-  const strength =
-    gestureProgress * gestureProgress * (3 - 2 * gestureProgress);
-  const normalizedConfidence = Math.min(
-    1,
-    Math.max(0, confidence / 5),
-  );
-  const mix = (low: number, high: number): number =>
-    low + (high - low) * normalizedConfidence;
+  const gestureProgress = Math.min(1, Math.max(0, (closeup - 0.32) / 0.68));
+  const strength = gestureProgress * gestureProgress * (3 - 2 * gestureProgress);
+  const normalizedConfidence = Math.min(1, Math.max(0, confidence / 5));
+  const mix = (low: number, high: number): number => low + (high - low) * normalizedConfidence;
 
   torso.position.y += mix(-0.035, 0.055) * strength;
   head.rotation.x += mix(0.075, -0.05) * strength;
@@ -472,29 +429,22 @@ export const decorateSellerExpression = (
   eyebrows: readonly [Group, Group],
   mouth: readonly [Group, Group],
 ): void => {
-  const expressionMaterial = material(0x3a2a25);
+  const expressionMaterial = material(0x3a_2a_25);
   for (const brow of eyebrows) {
     const mesh = mark(
-      new Mesh(
-        new BoxGeometry(0.11, 0.018, 0.018),
-        expressionMaterial.clone(),
-      ),
+      new Mesh(new BoxGeometry(0.11, 0.018, 0.018), expressionMaterial.clone()),
       "face-expression",
     );
     brow.add(mesh);
   }
   for (const half of mouth) {
     const mesh = mark(
-      new Mesh(
-        new BoxGeometry(0.12, 0.018, 0.018),
-        expressionMaterial.clone(),
-      ),
+      new Mesh(new BoxGeometry(0.12, 0.018, 0.018), expressionMaterial.clone()),
       "face-expression",
     );
     half.add(mesh);
   }
 };
-
 
 export type DecoratableCharacter = Readonly<{
   root: Group;
@@ -513,12 +463,7 @@ export const decorateSceneCharacters = (
     decorateCharacter(person.root, person.head, person.profile, index);
   });
   buyers.forEach((person, index) => {
-    decorateCharacter(
-      person.root,
-      person.head,
-      person.profile,
-      index + customers.length,
-    );
+    decorateCharacter(person.root, person.head, person.profile, index + customers.length);
   });
   decorateCharacter(seller.root, seller.head, seller.profile, 10_001, false);
   decorateSellerExpression(eyebrows, mouth);

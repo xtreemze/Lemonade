@@ -19,12 +19,10 @@ describe("street zoning", () => {
       expect(z).toBeLessThan(STREET_LAYOUT.nearSidewalk.maxZ);
       expect(z).toBeLessThan(STREET_LAYOUT.road.minZ);
     }
-    expect(STREET_LAYOUT.nearSidewalk.depth).toBeCloseTo(
-      WORLD_SCALE.street.sidewalkWidth,
+    expect(STREET_LAYOUT.nearSidewalk.depth).toBeCloseTo(WORLD_SCALE.street.sidewalkWidth);
+    expect(STREET_LAYOUT.road.minZ - STREET_LAYOUT.nearSidewalk.maxZ).toBeGreaterThanOrEqual(
+      WORLD_SCALE.street.curbGap - 0.001,
     );
-    expect(
-      STREET_LAYOUT.road.minZ - STREET_LAYOUT.nearSidewalk.maxZ,
-    ).toBeGreaterThanOrEqual(WORLD_SCALE.street.curbGap - 0.001);
   });
 
   it("provides deterministic lanes on both sidewalks", () => {
@@ -41,36 +39,31 @@ describe("street zoning", () => {
   });
 
   it("generates deterministic curved streets while keeping sidewalks off roadway geometry", () => {
-    const first = generateStreetNetwork(0x1234abcd);
-    const repeated = generateStreetNetwork(0x1234abcd);
-    const alternate = generateStreetNetwork(0x1234abce);
+    const first = generateStreetNetwork(0x12_34_ab_cd);
+    const repeated = generateStreetNetwork(0x12_34_ab_cd);
+    const alternate = generateStreetNetwork(0x12_34_ab_ce);
 
     expect(repeated).toEqual(first);
     expect(alternate.roads).not.toEqual(first.roads);
     expect(first.roads.length).toBeGreaterThan(30);
     expect(first.sidewalks.length).toBeGreaterThan(40);
-    expect(
-      first.roads.filter((strip) => Math.abs(strip.rotationY) > 0.08).length,
-    ).toBeGreaterThan(8);
+    expect(first.roads.filter((strip) => Math.abs(strip.rotationY) > 0.08).length).toBeGreaterThan(
+      8,
+    );
 
     for (const road of first.roads) {
       expect(road.width).toBeCloseTo(WORLD_SCALE.street.roadWidth);
     }
     for (const sidewalk of first.sidewalks) {
       expect(sidewalk.width).toBeCloseTo(WORLD_SCALE.street.sidewalkWidth);
-      expect(
-        first.roads.some((road) => streetStripsOverlap(sidewalk, road)),
-      ).toBe(false);
+      expect(first.roads.some((road) => streetStripsOverlap(sidewalk, road))).toBe(false);
     }
 
-    expect(Math.max(...first.roads.map((strip) => Math.abs(strip.x))))
-      .toBeGreaterThan(100);
+    expect(Math.max(...first.roads.map((strip) => Math.abs(strip.x)))).toBeGreaterThan(100);
     expect(first.roads.some((strip) => strip.streetId === "front-grid")).toBe(true);
     expect(first.roads.some((strip) => strip.streetId === "deep-grid")).toBe(true);
 
-    const mainSidewalks = first.sidewalks.filter(
-      (strip) => strip.streetId === "main",
-    );
+    const mainSidewalks = first.sidewalks.filter((strip) => strip.streetId === "main");
     expect(mainSidewalks.length).toBeGreaterThanOrEqual(12);
   });
 

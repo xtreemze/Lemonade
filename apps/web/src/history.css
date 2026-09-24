@@ -183,7 +183,6 @@
   }
 }
 
-
 /* Fullscreen history review keeps complete trend series while bounding the tabular snapshot. */
 .game-shell[data-view="history"] .ledger-history {
   display: grid;

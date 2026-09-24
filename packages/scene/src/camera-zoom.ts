@@ -3,8 +3,8 @@ import type { SceneViewportClass } from "./storyboard.js";
 export type SceneCameraZoomPhase = "forecast" | "idle" | "simulation";
 
 export interface SceneCameraZoomStorage {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
 }
 
 export const DEFAULT_SCENE_CAMERA_ZOOM = 1;
@@ -16,7 +16,9 @@ const WHEEL_ZOOM_SENSITIVITY = 0.0015;
 const WHEEL_LINE_PIXELS = 16;
 
 export const clampSceneCameraZoom = (value: number): number => {
-  if (!Number.isFinite(value)) return DEFAULT_SCENE_CAMERA_ZOOM;
+  if (!Number.isFinite(value)) {
+    return DEFAULT_SCENE_CAMERA_ZOOM;
+  }
   return Math.min(MAX_SCENE_CAMERA_ZOOM, Math.max(MIN_SCENE_CAMERA_ZOOM, value));
 };
 
@@ -29,10 +31,14 @@ export const readSceneCameraZoomPreference = (
   storage: SceneCameraZoomStorage | null,
   key: string,
 ): number => {
-  if (storage === null) return DEFAULT_SCENE_CAMERA_ZOOM;
+  if (storage === null) {
+    return DEFAULT_SCENE_CAMERA_ZOOM;
+  }
   try {
     const stored = storage.getItem(key);
-    if (stored === null) return DEFAULT_SCENE_CAMERA_ZOOM;
+    if (stored === null) {
+      return DEFAULT_SCENE_CAMERA_ZOOM;
+    }
     return clampSceneCameraZoom(Number.parseFloat(stored));
   } catch {
     return DEFAULT_SCENE_CAMERA_ZOOM;
@@ -44,7 +50,9 @@ export const writeSceneCameraZoomPreference = (
   key: string,
   zoom: number,
 ): void => {
-  if (storage === null) return;
+  if (storage === null) {
+    return;
+  }
   try {
     storage.setItem(key, String(clampSceneCameraZoom(zoom)));
   } catch {
@@ -52,14 +60,16 @@ export const writeSceneCameraZoomPreference = (
   }
 };
 
-const wheelDeltaPixels = (
-  deltaY: number,
-  deltaMode: number,
-  viewportHeight: number,
-): number => {
-  if (!Number.isFinite(deltaY)) return 0;
-  if (deltaMode === 1) return deltaY * WHEEL_LINE_PIXELS;
-  if (deltaMode === 2) return deltaY * Math.max(1, viewportHeight);
+const wheelDeltaPixels = (deltaY: number, deltaMode: number, viewportHeight: number): number => {
+  if (!Number.isFinite(deltaY)) {
+    return 0;
+  }
+  if (deltaMode === 1) {
+    return deltaY * WHEEL_LINE_PIXELS;
+  }
+  if (deltaMode === 2) {
+    return deltaY * Math.max(1, viewportHeight);
+  }
   return deltaY;
 };
 
@@ -71,10 +81,7 @@ export const sceneCameraZoomFromWheel = (
 ): number =>
   clampSceneCameraZoom(
     clampSceneCameraZoom(currentZoom) *
-      Math.exp(
-        -wheelDeltaPixels(deltaY, deltaMode, viewportHeight) *
-          WHEEL_ZOOM_SENSITIVITY,
-      ),
+      Math.exp(-wheelDeltaPixels(deltaY, deltaMode, viewportHeight) * WHEEL_ZOOM_SENSITIVITY),
   );
 
 export const sceneCameraZoomFromPinch = (
@@ -83,15 +90,12 @@ export const sceneCameraZoomFromPinch = (
   currentDistance: number,
 ): number => {
   if (
-    !Number.isFinite(startDistance) ||
-    !Number.isFinite(currentDistance) ||
+    !(Number.isFinite(startDistance) && Number.isFinite(currentDistance)) ||
     startDistance <= 0 ||
     currentDistance <= 0
   ) {
     return clampSceneCameraZoom(startZoom);
   }
 
-  return clampSceneCameraZoom(
-    clampSceneCameraZoom(startZoom) * (currentDistance / startDistance),
-  );
+  return clampSceneCameraZoom(clampSceneCameraZoom(startZoom) * (currentDistance / startDistance));
 };

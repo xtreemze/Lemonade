@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 const openPlanningView = async (page: Page): Promise<void> => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -65,7 +65,9 @@ test("supports precise numeric entry synchronized with sliders", async ({ page }
 
   await glassesExact.fill("9999");
   const maximumGlasses = await glassesSlider.getAttribute("max");
-  if (maximumGlasses === null) throw new Error("expected glasses maximum");
+  if (maximumGlasses === null) {
+    throw new Error("expected glasses maximum");
+  }
   await expect(glassesExact).toHaveValue(maximumGlasses);
   await expect(glassesSlider).toHaveValue(maximumGlasses);
 });
@@ -122,7 +124,9 @@ test("restores both report and next-day phases across reloads", async ({ page })
 
   const reportHeading = page.getByRole("heading", { name: /sold$/ });
   const reportText = await reportHeading.textContent();
-  if (reportText === null) throw new Error("expected a day report heading");
+  if (reportText === null) {
+    throw new Error("expected a day report heading");
+  }
   await expect(page.locator("#run-status")).toContainText("Day report saved locally");
 
   await page.reload();
@@ -144,8 +148,8 @@ test("restores both report and next-day phases across reloads", async ({ page })
 });
 
 test("exports and imports a progressed run into a clean browser profile", async ({ browser }) => {
-  const baseURL = "http://127.0.0.1:4173/Lemonade/";
-  const source = await browser.newContext({ baseURL, acceptDownloads: true });
+  const baseUrl = "http://127.0.0.1:4173/Lemonade/";
+  const source = await browser.newContext({ baseURL: baseUrl, acceptDownloads: true });
   const sourcePage = await source.newPage();
   await openPlanningView(sourcePage);
   await sourcePage.getByRole("button", { name: "Sell for the day" }).click();
@@ -162,7 +166,7 @@ test("exports and imports a progressed run into a clean browser profile", async 
   const downloadPath = await download.path();
   const runDocument = await readFile(downloadPath);
 
-  const target = await browser.newContext({ baseURL });
+  const target = await browser.newContext({ baseURL: baseUrl });
   const targetPage = await target.newPage();
   await openPlanningView(targetPage);
   await expect(targetPage.locator("#status-day")).toHaveText("1");

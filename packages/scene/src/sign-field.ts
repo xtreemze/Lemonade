@@ -17,7 +17,7 @@ export interface AdvertisingSignField {
   readonly signs: readonly AdvertisingSignAnchor[];
   readonly labelMaterial: MeshStandardMaterial;
   readonly meshes: readonly InstancedMesh[];
-  sync(): void;
+  sync: () => void;
 }
 
 const material = (color: number): MeshStandardMaterial =>
@@ -26,9 +26,7 @@ const material = (color: number): MeshStandardMaterial =>
 const localMatrix = (x: number, y: number, z: number): Matrix4 =>
   new Matrix4().makeTranslation(x, y, z);
 
-export const createAdvertisingSignField = (
-  count: number,
-): AdvertisingSignField => {
+export const createAdvertisingSignField = (count: number): AdvertisingSignField => {
   const safeCount = Math.max(0, Math.trunc(count));
   const signs = Array.from({ length: safeCount }, () => {
     const root = new Group();
@@ -36,31 +34,19 @@ export const createAdvertisingSignField = (
     return Object.freeze({ root });
   });
 
-  const postMaterial = material(0x644c34);
-  const boardMaterial = material(0xf5d34c);
+  const postMaterial = material(0x64_4c_34);
+  const boardMaterial = material(0xf5_d3_4c);
   const labelMaterial = new MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0xffffff,
+    color: 0xff_ff_ff,
+    emissive: 0xff_ff_ff,
     emissiveIntensity: 0.35,
     roughness: 0.9,
     side: DoubleSide,
   });
 
-  const postMesh = new InstancedMesh(
-    new BoxGeometry(0.1, 0.85, 0.1),
-    postMaterial,
-    safeCount,
-  );
-  const boardMesh = new InstancedMesh(
-    new BoxGeometry(0.95, 0.62, 0.12),
-    boardMaterial,
-    safeCount,
-  );
-  const labelMesh = new InstancedMesh(
-    new PlaneGeometry(0.86, 0.52),
-    labelMaterial,
-    safeCount,
-  );
+  const postMesh = new InstancedMesh(new BoxGeometry(0.1, 0.85, 0.1), postMaterial, safeCount);
+  const boardMesh = new InstancedMesh(new BoxGeometry(0.95, 0.62, 0.12), boardMaterial, safeCount);
+  const labelMesh = new InstancedMesh(new PlaneGeometry(0.86, 0.52), labelMaterial, safeCount);
   postMesh.name = "AdvertisingSignPosts";
   boardMesh.name = "AdvertisingSignBoards";
   labelMesh.name = "AdvertisingSignLabels";
@@ -77,10 +63,7 @@ export const createAdvertisingSignField = (
   const hidden = new Matrix4().makeScale(0, 0, 0);
   const composed = new Matrix4();
 
-  const syncMesh = (
-    mesh: InstancedMesh,
-    local: Matrix4,
-  ): void => {
+  const syncMesh = (mesh: InstancedMesh, local: Matrix4): void => {
     signs.forEach((sign, index) => {
       if (!sign.root.visible) {
         mesh.setMatrixAt(index, hidden);

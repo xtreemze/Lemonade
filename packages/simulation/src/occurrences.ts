@@ -1,9 +1,5 @@
 import type { Weather } from "./model.js";
-import {
-  seed,
-  type DayNumber,
-  type Seed,
-} from "./primitives.js";
+import { type DayNumber, type Seed, seed } from "./primitives.js";
 import { createSeededRandom, type RandomSource } from "./rng.js";
 
 export type NeighborhoodAnchorRole =
@@ -90,7 +86,7 @@ const hashText = (initial: number, value: string): number => {
   let hash = initial >>> 0;
   for (let index = 0; index < value.length; index += 1) {
     hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x0100_0193);
+    hash = Math.imul(hash, 0x01_00_01_93);
   }
   hash ^= 0xff;
   return hash >>> 0;
@@ -102,7 +98,7 @@ const deriveNeighborhoodSeed = (
   day: DayNumber | null,
   scope: string,
 ): Seed => {
-  let hash = 0x811c_9dc5;
+  let hash = 0x81_1c_9d_c5;
   hash = hashText(hash, "neighborhood-occurrences-v1");
   hash = hashText(hash, String(Number(runSeed)));
   hash = hashText(hash, stream);
@@ -116,30 +112,17 @@ const randomFor = (
   stream: NeighborhoodRandomStream,
   day: DayNumber | null,
   scope: string,
-): RandomSource =>
-  createSeededRandom(deriveNeighborhoodSeed(runSeed, stream, day, scope));
+): RandomSource => createSeededRandom(deriveNeighborhoodSeed(runSeed, stream, day, scope));
 
-const requireHouseholdSlot = (
-  household: number,
-  count: number,
-  field: string,
-): void => {
-  if (
-    !Number.isSafeInteger(household) ||
-    household < 0 ||
-    household >= count
-  ) {
+const requireHouseholdSlot = (household: number, count: number, field: string): void => {
+  if (!Number.isSafeInteger(household) || household < 0 || household >= count) {
     throw new RangeError(
       `${field} household slot ${String(household)} is outside the household range`,
     );
   }
 };
 
-const validateUniqueSlots = (
-  slots: readonly number[],
-  count: number,
-  field: string,
-): void => {
+const validateUniqueSlots = (slots: readonly number[], count: number, field: string): void => {
   const seen = new Set<number>();
   for (const household of slots) {
     requireHouseholdSlot(household, count, field);
@@ -151,53 +134,29 @@ const validateUniqueSlots = (
 };
 
 const validateLayout = (layout: NeighborhoodSemanticLayout): void => {
-  if (
-    !Number.isSafeInteger(layout.householdCount) ||
-    layout.householdCount < 0
-  ) {
+  if (!Number.isSafeInteger(layout.householdCount) || layout.householdCount < 0) {
     throw new RangeError("household count must be a non-negative safe integer");
   }
 
-  validateUniqueSlots(
-    layout.drivewayHouseholds,
-    layout.householdCount,
-    "driveway",
-  );
-  validateUniqueSlots(
-    layout.frontYardHouseholds,
-    layout.householdCount,
-    "front-yard",
-  );
-  validateUniqueSlots(
-    layout.mailboxHouseholds,
-    layout.householdCount,
-    "mailbox",
-  );
+  validateUniqueSlots(layout.drivewayHouseholds, layout.householdCount, "driveway");
+  validateUniqueSlots(layout.frontYardHouseholds, layout.householdCount, "front-yard");
+  validateUniqueSlots(layout.mailboxHouseholds, layout.householdCount, "mailbox");
 };
 
-const anchor = (
-  role: NeighborhoodAnchorRole,
-  household: number | null,
-): NeighborhoodAnchorRef => Object.freeze({ role, household });
+const anchor = (role: NeighborhoodAnchorRole, household: number | null): NeighborhoodAnchorRef =>
+  Object.freeze({ role, household });
 
-const visualSeedFor = (
-  runSeed: Seed,
-  actorId: string,
-): Seed =>
+const visualSeedFor = (runSeed: Seed, actorId: string): Seed =>
   deriveNeighborhoodSeed(runSeed, "visual", null, actorId);
 
 const occurrence = (
   runSeed: Seed,
-  value: Omit<
-    NeighborhoodOccurrence,
-    "visualSeed" | "economicEffect"
-  >,
+  value: Omit<NeighborhoodOccurrence, "visualSeed" | "economicEffect">,
 ): NeighborhoodOccurrence => {
   if (
-    !Number.isSafeInteger(value.startMinute) ||
-    !Number.isSafeInteger(value.endMinute) ||
+    !(Number.isSafeInteger(value.startMinute) && Number.isSafeInteger(value.endMinute)) ||
     value.startMinute < 0 ||
-    value.endMinute > 1_440 ||
+    value.endMinute > 1440 ||
     value.endMinute <= value.startMinute
   ) {
     throw new RangeError("occurrence time window must fit within one day");
@@ -211,11 +170,13 @@ const occurrence = (
   });
 };
 
-const householdMotion = (
-  weather: Weather["kind"],
-): NeighborhoodMotion => {
-  if (weather === "thunderstorm") return "hurried";
-  if (weather === "sunny") return "relaxed";
+const householdMotion = (weather: Weather["kind"]): NeighborhoodMotion => {
+  if (weather === "thunderstorm") {
+    return "hurried";
+  }
+  if (weather === "sunny") {
+    return "relaxed";
+  }
   return "normal";
 };
 
@@ -225,17 +186,8 @@ const residentOccurrences = (
   const result: NeighborhoodOccurrence[] = [];
   const drivewaySet = new Set(input.layout.drivewayHouseholds);
 
-  for (
-    let household = 0;
-    household < input.layout.householdCount;
-    household += 1
-  ) {
-    const commute = randomFor(
-      input.runSeed,
-      "commute",
-      input.day,
-      String(household),
-    );
+  for (let household = 0; household < input.layout.householdCount; household += 1) {
+    const commute = randomFor(input.runSeed, "commute", input.day, String(household));
     const active = commute.nextUnit() < 0.78;
     if (active) {
       const departureStart = 7 * 60 + commute.nextInt(0, 121);
@@ -313,12 +265,7 @@ const residentOccurrences = (
       }
     }
 
-    const windowRandom = randomFor(
-      input.runSeed,
-      "window",
-      input.day,
-      String(household),
-    );
+    const windowRandom = randomFor(input.runSeed, "window", input.day, String(household));
     if (windowRandom.nextUnit() < 0.7) {
       const start =
         windowRandom.nextUnit() < 0.45
@@ -332,7 +279,7 @@ const residentOccurrences = (
           actorId: `household:${String(household)}`,
           household,
           startMinute: start,
-          endMinute: Math.min(1_440, start + 30 + windowRandom.nextInt(0, 61)),
+          endMinute: Math.min(1440, start + 30 + windowRandom.nextInt(0, 61)),
           anchors: [anchor("residence", household)],
           motion: "stationary",
         }),
@@ -340,12 +287,7 @@ const residentOccurrences = (
     }
 
     if (input.weather !== "thunderstorm") {
-      const petRandom = randomFor(
-        input.runSeed,
-        "pet",
-        input.day,
-        String(household),
-      );
+      const petRandom = randomFor(input.runSeed, "pet", input.day, String(household));
       if (petRandom.nextUnit() < 0.34) {
         const morning = petRandom.nextUnit() < 0.5;
         const start = morning
@@ -375,28 +317,20 @@ const residentOccurrences = (
   return Object.freeze(result);
 };
 
-const mailOccurrences = (
-  input: NeighborhoodOccurrenceInput,
-): readonly NeighborhoodOccurrence[] => {
+const mailOccurrences = (input: NeighborhoodOccurrenceInput): readonly NeighborhoodOccurrence[] => {
   const mailboxes = input.layout.mailboxHouseholds;
   const count = mailboxes.length;
-  if (count === 0) return Object.freeze([]);
+  if (count === 0) {
+    return Object.freeze([]);
+  }
 
   const result: NeighborhoodOccurrence[] = [];
   const base = 8 * 60;
   const span = 80;
 
   mailboxes.forEach((household, index) => {
-    const random = randomFor(
-      input.runSeed,
-      "mail",
-      input.day,
-      String(household),
-    );
-    const start =
-      base +
-      Math.floor((index * span) / Math.max(1, count)) +
-      random.nextInt(0, 5);
+    const random = randomFor(input.runSeed, "mail", input.day, String(household));
+    const start = base + Math.floor((index * span) / Math.max(1, count)) + random.nextInt(0, 5);
     result.push(
       occurrence(input.runSeed, {
         id: `day:${String(Number(input.day))}:mail:${String(household)}`,
@@ -419,37 +353,25 @@ const mailOccurrences = (
   return Object.freeze(result);
 };
 
-const gardenerOccurrence = (
-  input: NeighborhoodOccurrenceInput,
-): NeighborhoodOccurrence | null => {
-  if (
-    input.layout.frontYardHouseholds.length === 0 ||
-    input.weather === "thunderstorm"
-  ) {
+const gardenerOccurrence = (input: NeighborhoodOccurrenceInput): NeighborhoodOccurrence | null => {
+  if (input.layout.frontYardHouseholds.length === 0 || input.weather === "thunderstorm") {
     return null;
   }
 
-  const weekdayRandom = randomFor(
-    input.runSeed,
-    "gardener",
-    null,
-    "weekly-cadence",
-  );
+  const weekdayRandom = randomFor(input.runSeed, "gardener", null, "weekly-cadence");
   const gardenerWeekday = weekdayRandom.nextInt(0, 5);
   const dayIndex = (Number(input.day) - 1) % 7;
-  if (dayIndex !== gardenerWeekday) return null;
+  if (dayIndex !== gardenerWeekday) {
+    return null;
+  }
 
   const week = Math.floor((Number(input.day) - 1) / 7);
-  const weeklyRandom = randomFor(
-    input.runSeed,
-    "gardener",
-    input.day,
-    `week:${String(week)}`,
-  );
+  const weeklyRandom = randomFor(input.runSeed, "gardener", input.day, `week:${String(week)}`);
   const households = input.layout.frontYardHouseholds;
-  const household =
-    households[weeklyRandom.nextInt(0, households.length)] ?? households[0];
-  if (household === undefined) return null;
+  const household = households[weeklyRandom.nextInt(0, households.length)] ?? households[0];
+  if (household === undefined) {
+    return null;
+  }
 
   const start = 9 * 60 + weeklyRandom.nextInt(0, 121);
   return occurrence(input.runSeed, {
@@ -460,10 +382,7 @@ const gardenerOccurrence = (
     household,
     startMinute: start,
     endMinute: Math.min(13 * 60, start + weeklyRandom.nextInt(45, 91)),
-    anchors: [
-      anchor("sidewalk", household),
-      anchor("front-yard", household),
-    ],
+    anchors: [anchor("sidewalk", household), anchor("front-yard", household)],
     motion: "normal",
   });
 };
@@ -471,45 +390,32 @@ const gardenerOccurrence = (
 const sprinklerOccurrences = (
   input: NeighborhoodOccurrenceInput,
 ): readonly NeighborhoodOccurrence[] => {
-  if (
-    input.weather !== "sunny" &&
-    input.weather !== "hot-and-dry"
-  ) {
+  if (input.weather !== "sunny" && input.weather !== "hot-and-dry") {
     return Object.freeze([]);
   }
 
   const yards = input.layout.frontYardHouseholds;
-  if (yards.length === 0) return Object.freeze([]);
+  if (yards.length === 0) {
+    return Object.freeze([]);
+  }
 
   let selected = yards.filter((household) => {
-    const random = randomFor(
-      input.runSeed,
-      "sprinkler",
-      input.day,
-      `select:${String(household)}`,
-    );
+    const random = randomFor(input.runSeed, "sprinkler", input.day, `select:${String(household)}`);
     return random.nextUnit() < 0.42;
   });
 
   if (selected.length === 0) {
-    const fallback = randomFor(
-      input.runSeed,
-      "sprinkler",
-      input.day,
-      "fallback",
-    ).nextInt(0, yards.length);
+    const fallback = randomFor(input.runSeed, "sprinkler", input.day, "fallback").nextInt(
+      0,
+      yards.length,
+    );
     const household = yards[fallback];
     selected = household === undefined ? [] : [household];
   }
 
   return Object.freeze(
     selected.map((household) => {
-      const random = randomFor(
-        input.runSeed,
-        "sprinkler",
-        input.day,
-        `time:${String(household)}`,
-      );
+      const random = randomFor(input.runSeed, "sprinkler", input.day, `time:${String(household)}`);
       const start = 6 * 60 + random.nextInt(0, 91);
       return occurrence(input.runSeed, {
         id: `day:${String(Number(input.day))}:sprinkler:${String(household)}`,
@@ -540,12 +446,7 @@ const bicycleOccurrences = (
   const result: NeighborhoodOccurrence[] = [];
 
   for (let index = 0; index < count; index += 1) {
-    const random = randomFor(
-      input.runSeed,
-      "bicycle",
-      input.day,
-      String(index),
-    );
+    const random = randomFor(input.runSeed, "bicycle", input.day, String(index));
     const start = 10 * 60 + random.nextInt(0, 8 * 60);
     result.push(
       occurrence(input.runSeed, {
@@ -556,11 +457,7 @@ const bicycleOccurrences = (
         household: null,
         startMinute: start,
         endMinute: start + 8,
-        anchors: [
-          anchor("street", null),
-          anchor("crossing", null),
-          anchor("street", null),
-        ],
+        anchors: [anchor("street", null), anchor("crossing", null), anchor("street", null)],
         motion: input.weather === "sunny" ? "relaxed" : "normal",
       }),
     );
@@ -581,7 +478,9 @@ export const generateNeighborhoodOccurrences = (
     ...bicycleOccurrences(input),
   ];
   const gardening = gardenerOccurrence(input);
-  if (gardening !== null) result.push(gardening);
+  if (gardening !== null) {
+    result.push(gardening);
+  }
 
   result.sort(
     (left, right) =>

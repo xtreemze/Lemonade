@@ -22,9 +22,7 @@ export type RendererDiagnostics = Readonly<{
   textures: number;
 }>;
 
-export const rendererDiagnostics = (
-  info: RendererInfoSource,
-): RendererDiagnostics =>
+export const rendererDiagnostics = (info: RendererInfoSource): RendererDiagnostics =>
   Object.freeze({
     frame: info.render.frame,
     drawCalls: info.render.calls,

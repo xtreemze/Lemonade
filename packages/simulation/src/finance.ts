@@ -1,10 +1,5 @@
 import type { GameState, ProgressionTier } from "./model.js";
-import {
-  basisPoints,
-  moneyCents,
-  type BasisPoints,
-  type MoneyCents,
-} from "./primitives.js";
+import { type BasisPoints, basisPoints, type MoneyCents, moneyCents } from "./primitives.js";
 
 export type FinanceRules = Readonly<{
   tier: ProgressionTier;
@@ -68,11 +63,11 @@ const RULES: Readonly<Record<ProgressionTier, FinanceRules>> = Object.freeze({
   4: Object.freeze({
     tier: 4,
     supplierFee: moneyCents(15),
-    taxRate: basisPoints(1_000),
+    taxRate: basisPoints(1000),
     bankFee: moneyCents(10),
     savingsInterestRate: basisPoints(15),
     loanInterestRate: basisPoints(60),
-    creditLimit: moneyCents(2_000),
+    creditLimit: moneyCents(2000),
     workingCashReserve: moneyCents(500),
   }),
 });
@@ -80,10 +75,18 @@ const RULES: Readonly<Record<ProgressionTier, FinanceRules>> = Object.freeze({
 export const financeRulesForTier = (tier: ProgressionTier): FinanceRules => RULES[tier];
 
 export const progressionTierForEquity = (equityCents: number): ProgressionTier => {
-  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier1) return 0;
-  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier2) return 1;
-  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier3) return 2;
-  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier4) return 3;
+  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier1) {
+    return 0;
+  }
+  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier2) {
+    return 1;
+  }
+  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier3) {
+    return 2;
+  }
+  if (equityCents < EQUITY_TIER_THRESHOLDS_CENTS.tier4) {
+    return 3;
+  }
   return 4;
 };
 
@@ -92,7 +95,9 @@ export const nextProgressionTier = (
   equityCents: number,
 ): ProgressionTier => {
   const candidate = progressionTierForEquity(equityCents);
-  if (candidate <= currentTier) return currentTier;
+  if (candidate <= currentTier) {
+    return currentTier;
+  }
 
   switch (currentTier) {
     case 0:

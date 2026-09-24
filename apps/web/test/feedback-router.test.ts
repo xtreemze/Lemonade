@@ -7,11 +7,8 @@ import {
   type SemanticFeedbackEvent,
 } from "../src/feedback-router.js";
 
-const event = (
-  id: string,
-  kind: SemanticFeedbackEvent["kind"],
-  atMs = 0,
-): SemanticFeedbackEvent => Object.freeze({ id, kind, atMs });
+const event = (id: string, kind: SemanticFeedbackEvent["kind"], atMs = 0): SemanticFeedbackEvent =>
+  Object.freeze({ id, kind, atMs });
 
 const transport = (
   accepts?: (candidate: SemanticFeedbackEvent) => boolean,
@@ -108,8 +105,8 @@ describe("semantic feedback router", () => {
   });
 
   it("lets transports explicitly reject unsupported semantic events", () => {
-    const haptic = transport((candidate) =>
-      candidate.kind === "thunder" || candidate.kind === "gust",
+    const haptic = transport(
+      (candidate) => candidate.kind === "thunder" || candidate.kind === "gust",
     );
     const router = createFeedbackRouter({ haptic: haptic.adapter });
 
@@ -142,10 +139,9 @@ describe("semantic feedback router", () => {
 
   it("uses timestamp before priority for deterministic chronological delivery", () => {
     expect(
-      [
-        event("late-thunder", "thunder", 900),
-        event("early-bird", "birdsong", 100),
-      ].sort(compareSemanticFeedbackEvents).map((candidate) => candidate.id),
+      [event("late-thunder", "thunder", 900), event("early-bird", "birdsong", 100)]
+        .sort(compareSemanticFeedbackEvents)
+        .map((candidate) => candidate.id),
     ).toEqual(["early-bird", "late-thunder"]);
   });
 

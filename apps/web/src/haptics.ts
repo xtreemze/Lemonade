@@ -21,22 +21,22 @@ export type HapticEngineOptions = Readonly<{
 }>;
 
 export type HapticEngine = Readonly<{
-  play(cue: HapticCue): boolean;
-  cancel(): void;
-  dispose(): void;
+  play: (cue: HapticCue) => boolean;
+  cancel: () => void;
+  dispose: () => void;
 }>;
 
 const browserVibrate = (pattern: number[]): boolean => {
-  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return false;
+  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+    return false;
+  }
   return navigator.vibrate(pattern);
 };
 
 const browserDocumentActive = (): boolean =>
   typeof document === "undefined" || document.visibilityState === "visible";
 
-export const createHapticEngine = (
-  options: HapticEngineOptions = {},
-): HapticEngine => {
+export const createHapticEngine = (options: HapticEngineOptions = {}): HapticEngine => {
   const vibrate = options.vibrate ?? browserVibrate;
   const activeDocument = options.activeDocument ?? browserDocumentActive;
   let disposed = false;
@@ -44,7 +44,9 @@ export const createHapticEngine = (
 
   return Object.freeze({
     play(cue): boolean {
-      if (disposed || !activeDocument()) return false;
+      if (disposed || !activeDocument()) {
+        return false;
+      }
       const pattern = [...hapticPattern(cue)];
       try {
         const accepted = vibrate(pattern);
@@ -55,7 +57,9 @@ export const createHapticEngine = (
       }
     },
     cancel(): void {
-      if (!used) return;
+      if (!used) {
+        return;
+      }
       try {
         vibrate([0]);
       } catch {
@@ -63,9 +67,13 @@ export const createHapticEngine = (
       }
     },
     dispose(): void {
-      if (disposed) return;
+      if (disposed) {
+        return;
+      }
       disposed = true;
-      if (!used) return;
+      if (!used) {
+        return;
+      }
       try {
         vibrate([0]);
       } catch {

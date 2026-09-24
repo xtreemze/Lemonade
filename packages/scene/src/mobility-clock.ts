@@ -41,18 +41,15 @@ const exactVelocityStep = (
   const timeToTarget = Math.abs(deltaVelocity) / maxAcceleration;
 
   if (timeToTarget >= deltaSeconds) {
-    const nextVelocity =
-      velocity + direction * maxAcceleration * deltaSeconds;
+    const nextVelocity = velocity + direction * maxAcceleration * deltaSeconds;
     return Object.freeze({
       velocity: nextVelocity,
       distance: (velocity + nextVelocity) * 0.5 * deltaSeconds,
     });
   }
 
-  const acceleratedDistance =
-    (velocity + targetVelocity) * 0.5 * timeToTarget;
-  const cruiseDistance =
-    targetVelocity * (deltaSeconds - timeToTarget);
+  const acceleratedDistance = (velocity + targetVelocity) * 0.5 * timeToTarget;
+  const cruiseDistance = targetVelocity * (deltaSeconds - timeToTarget);
   return Object.freeze({
     velocity: targetVelocity,
     distance: acceleratedDistance + cruiseDistance,
@@ -66,18 +63,13 @@ export const createMobilityClock = (input: {
   initialVelocity?: number;
 }): MobilityClockState => {
   const routeLength = finiteNonNegative(input.routeLength);
-  const distance = Math.min(
-    routeLength,
-    finiteNonNegative(input.initialDistance ?? 0),
-  );
+  const distance = Math.min(routeLength, finiteNonNegative(input.initialDistance ?? 0));
   const completed = distance >= routeLength;
 
   return Object.freeze({
     distance,
     travelDistance: 0,
-    velocity: completed
-      ? 0
-      : finiteNonNegative(input.initialVelocity ?? 0),
+    velocity: completed ? 0 : finiteNonNegative(input.initialVelocity ?? 0),
     routeLength,
     maxAcceleration: finiteNonNegative(input.maxAcceleration),
     lifecycle: completed ? "completed" : "active",
@@ -88,9 +80,11 @@ export const advanceMobilityClock = (
   state: MobilityClockState,
   step: MobilityClockStep,
 ): MobilityClockState => {
-  if (state.lifecycle === "completed") return state;
+  if (state.lifecycle === "completed") {
+    return state;
+  }
 
-  const deltaSeconds = finiteNonNegative(step.deltaMs) / 1_000;
+  const deltaSeconds = finiteNonNegative(step.deltaMs) / 1000;
   const motion = step.motion ?? "move";
 
   if (motion === "dwell") {
@@ -100,18 +94,14 @@ export const advanceMobilityClock = (
     });
   }
 
-  const targetVelocity =
-    motion === "yield" ? 0 : finiteNonNegative(step.desiredSpeed);
+  const targetVelocity = motion === "yield" ? 0 : finiteNonNegative(step.desiredSpeed);
   const advanced = exactVelocityStep(
     finiteNonNegative(state.velocity),
     targetVelocity,
     finiteNonNegative(state.maxAcceleration),
     deltaSeconds,
   );
-  const distance = Math.min(
-    state.routeLength,
-    state.distance + Math.max(0, advanced.distance),
-  );
+  const distance = Math.min(state.routeLength, state.distance + Math.max(0, advanced.distance));
   const completed = distance >= state.routeLength;
   const travelled = Math.max(0, distance - state.distance);
 

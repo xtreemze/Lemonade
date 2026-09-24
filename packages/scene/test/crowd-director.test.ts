@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  type AuthoritativeCustomerOutcome,
   createCrowdDirector,
   crowdSimulationDetailForDistance,
-  type AuthoritativeCustomerOutcome,
 } from "../src/crowd-director.js";
 import { createNeighborhoodNavigationGraph } from "../src/neighborhood-navigation.js";
 import { generateResidentialLayout } from "../src/residential-layout.js";
@@ -50,9 +50,7 @@ const outcomes: readonly AuthoritativeCustomerOutcome[] = Object.freeze([
 
 describe("authoritative crowd director", () => {
   it("projects economic outcomes into deterministic semantic intents", () => {
-    const graph = createNeighborhoodNavigationGraph(
-      generateResidentialLayout(456),
-    );
+    const graph = createNeighborhoodNavigationGraph(generateResidentialLayout(456));
     const first = createCrowdDirector(outcomes, graph);
     const repeated = createCrowdDirector(outcomes, graph);
 
@@ -63,18 +61,11 @@ describe("authoritative crowd director", () => {
       "purchase",
       "stockout",
     ]);
-    expect(first.intents.map((intent) => intent.visualSeed)).toEqual([
-      100,
-      101,
-      102,
-      103,
-    ]);
+    expect(first.intents.map((intent) => intent.visualSeed)).toEqual([100, 101, 102, 103]);
   });
 
   it("only assigns a sign glance to advertising-aware customers", () => {
-    const graph = createNeighborhoodNavigationGraph(
-      generateResidentialLayout(456),
-    );
+    const graph = createNeighborhoodNavigationGraph(generateResidentialLayout(456));
     const director = createCrowdDirector(outcomes, graph);
 
     expect(director.intents[0]?.signIndex).toBeNull();
@@ -84,9 +75,7 @@ describe("authoritative crowd director", () => {
   });
 
   it("routes price rejection to the stand edge and fulfillment to service", () => {
-    const graph = createNeighborhoodNavigationGraph(
-      generateResidentialLayout(456),
-    );
+    const graph = createNeighborhoodNavigationGraph(generateResidentialLayout(456));
     const director = createCrowdDirector(outcomes, graph);
     const rejected = director.intents[1];
     const purchased = director.intents[2];
@@ -101,18 +90,16 @@ describe("authoritative crowd director", () => {
   });
 
   it("crosses sidewalks when an authoritative far-side customer approaches", () => {
-    const graph = createNeighborhoodNavigationGraph(
-      generateResidentialLayout(456),
-    );
+    const graph = createNeighborhoodNavigationGraph(generateResidentialLayout(456));
     const director = createCrowdDirector(outcomes, graph);
     const rejected = director.intents[1];
-    if (rejected === undefined) throw new Error("expected rejected intent");
+    if (rejected === undefined) {
+      throw new Error("expected rejected intent");
+    }
 
     const routeEdges = rejected.routeNodeIds.slice(0, -1).map((nodeId, index) => {
       const next = rejected.routeNodeIds[index + 1];
-      return graph.edges.find(
-        (edge) => edge.from === nodeId && edge.to === next,
-      );
+      return graph.edges.find((edge) => edge.from === nodeId && edge.to === next);
     });
     expect(routeEdges.some((edge) => edge?.kind === "crossing")).toBe(true);
   });
@@ -121,8 +108,6 @@ describe("authoritative crowd director", () => {
     expect(crowdSimulationDetailForDistance(10)).toBe("full");
     expect(crowdSimulationDetailForDistance(30)).toBe("reduced");
     expect(crowdSimulationDetailForDistance(70)).toBe("statistical");
-    expect(crowdSimulationDetailForDistance(Number.POSITIVE_INFINITY)).toBe(
-      "full",
-    );
+    expect(crowdSimulationDetailForDistance(Number.POSITIVE_INFINITY)).toBe("full");
   });
 });

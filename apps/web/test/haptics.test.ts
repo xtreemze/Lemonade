@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createHapticEngine, hapticPattern, type HapticCue } from "../src/haptics.js";
+import { createHapticEngine, type HapticCue, hapticPattern } from "../src/haptics.js";
 
 const cues: readonly HapticCue[] = [
   "purchase:serve",

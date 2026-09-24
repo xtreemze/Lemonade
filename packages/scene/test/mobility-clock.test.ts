@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  advanceMobilityClock,
-  createMobilityClock,
-} from "../src/mobility-clock.js";
+import { advanceMobilityClock, createMobilityClock } from "../src/mobility-clock.js";
 
 describe("actor-owned mobility clock", () => {
   it("advances route distance from physical velocity with bounded acceleration", () => {
@@ -78,7 +75,7 @@ describe("actor-owned mobility clock", () => {
       initialDistance: 8.25,
     });
     const dwell = advanceMobilityClock(moving, {
-      deltaMs: 4_000,
+      deltaMs: 4000,
       desiredSpeed: 1.4,
       motion: "dwell",
     });
@@ -108,7 +105,7 @@ describe("actor-owned mobility clock", () => {
 
     expect(
       advanceMobilityClock(completed, {
-        deltaMs: 5_000,
+        deltaMs: 5000,
         desiredSpeed: 10,
       }),
     ).toBe(completed);
@@ -122,7 +119,7 @@ describe("actor-owned mobility clock", () => {
     });
 
     const coarse = advanceMobilityClock(initial, {
-      deltaMs: 1_000,
+      deltaMs: 1000,
       desiredSpeed: 1.4,
     });
 

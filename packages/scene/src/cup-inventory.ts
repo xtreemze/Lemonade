@@ -1,3 +1,4 @@
+import type { Group, Object3D } from "three";
 import {
   BoxGeometry,
   CylinderGeometry,
@@ -7,7 +8,6 @@ import {
   Mesh,
   MeshStandardMaterial,
 } from "three";
-import type { Group, Object3D } from "three";
 
 import { STAND_LAYOUT } from "./stand-layout.js";
 
@@ -15,7 +15,7 @@ export const MAX_VISIBLE_PREPARED_CUPS = 48;
 
 export type CupInventory = Readonly<{
   meshes: readonly InstancedMesh[];
-  setStock(remaining: number, prepared: number): void;
+  setStock: (remaining: number, prepared: number) => void;
 }>;
 
 const HELD_CUP_GRIP = Object.freeze({
@@ -33,26 +33,24 @@ export const attachLemonadeCupToHand = (hand: Object3D, cup: Group): void => {
 const finiteStock = (value: number): number =>
   Math.max(0, Number.isFinite(value) ? Math.trunc(value) : 0);
 
-export const visibleCupCountForStock = (
-  remaining: number,
-  prepared: number,
-): number => {
+export const visibleCupCountForStock = (remaining: number, prepared: number): number => {
   const safePrepared = finiteStock(prepared);
   const safeRemaining = Math.min(safePrepared, finiteStock(remaining));
-  if (safeRemaining === 0 || safePrepared === 0) return 0;
-  if (safePrepared <= MAX_VISIBLE_PREPARED_CUPS) return safeRemaining;
+  if (safeRemaining === 0 || safePrepared === 0) {
+    return 0;
+  }
+  if (safePrepared <= MAX_VISIBLE_PREPARED_CUPS) {
+    return safeRemaining;
+  }
   return Math.min(
     MAX_VISIBLE_PREPARED_CUPS,
-    Math.max(
-      1,
-      Math.ceil((safeRemaining / safePrepared) * MAX_VISIBLE_PREPARED_CUPS),
-    ),
+    Math.max(1, Math.ceil((safeRemaining / safePrepared) * MAX_VISIBLE_PREPARED_CUPS)),
   );
 };
 
 const glassMaterial = (): MeshStandardMaterial =>
   new MeshStandardMaterial({
-    color: 0xaeffff,
+    color: 0xae_ff_ff,
     transparent: true,
     opacity: 0.44,
     roughness: 0.22,
@@ -63,7 +61,7 @@ const glassMaterial = (): MeshStandardMaterial =>
 
 const lemonadeBackMaterial = (): MeshStandardMaterial =>
   new MeshStandardMaterial({
-    color: 0xe8b06a,
+    color: 0xe8_b0_6a,
     transparent: true,
     opacity: 0.45,
     roughness: 0.73,
@@ -71,7 +69,7 @@ const lemonadeBackMaterial = (): MeshStandardMaterial =>
 
 const lemonadeFrontMaterial = (): MeshStandardMaterial =>
   new MeshStandardMaterial({
-    color: 0xefff00,
+    color: 0xef_ff_00,
     transparent: true,
     opacity: 0.56,
     roughness: 0.68,
@@ -79,26 +77,20 @@ const lemonadeFrontMaterial = (): MeshStandardMaterial =>
 
 const iceMaterial = (): MeshStandardMaterial =>
   new MeshStandardMaterial({
-    color: 0xf3fff3,
+    color: 0xf3_ff_f3,
     transparent: true,
     opacity: 0.88,
     roughness: 0.42,
   });
 
 const strawMaterial = (): MeshStandardMaterial =>
-  new MeshStandardMaterial({ color: 0xff551d, roughness: 0.92 });
+  new MeshStandardMaterial({ color: 0xff_55_1d, roughness: 0.92 });
 
 export const decorateLemonadeCup = (cup: Group): void => {
-  const glass = new Mesh(
-    new CylinderGeometry(0.075, 0.09, 0.19, 8, 1, true),
-    glassMaterial(),
-  );
+  const glass = new Mesh(new CylinderGeometry(0.075, 0.09, 0.19, 8, 1, true), glassMaterial());
   cup.add(glass);
 
-  const liquidBack = new Mesh(
-    new CylinderGeometry(0.061, 0.073, 0.118, 8),
-    lemonadeBackMaterial(),
-  );
+  const liquidBack = new Mesh(new CylinderGeometry(0.061, 0.073, 0.118, 8), lemonadeBackMaterial());
   liquidBack.position.y = -0.021;
   cup.add(liquidBack);
 
@@ -122,10 +114,7 @@ export const decorateLemonadeCup = (cup: Group): void => {
     cup.add(ice);
   }
 
-  const straw = new Mesh(
-    new CylinderGeometry(0.008, 0.008, 0.25, 6),
-    strawMaterial(),
-  );
+  const straw = new Mesh(new CylinderGeometry(0.008, 0.008, 0.25, 6), strawMaterial());
   straw.position.set(0.028, 0.085, 0.008);
   straw.rotation.z = -0.2;
   cup.add(straw);
@@ -182,12 +171,8 @@ export const createCupInventory = (): CupInventory => {
   const columns = 6;
   const rows = 3;
   const cupsPerLayer = columns * rows;
-  const xStep =
-    (STAND_LAYOUT.cupFootprint.maxX - STAND_LAYOUT.cupFootprint.minX) /
-    (columns - 1);
-  const zStep =
-    (STAND_LAYOUT.cupFootprint.maxZ - STAND_LAYOUT.cupFootprint.minZ) /
-    (rows - 1);
+  const xStep = (STAND_LAYOUT.cupFootprint.maxX - STAND_LAYOUT.cupFootprint.minX) / (columns - 1);
+  const zStep = (STAND_LAYOUT.cupFootprint.maxZ - STAND_LAYOUT.cupFootprint.minZ) / (rows - 1);
 
   for (let index = 0; index < MAX_VISIBLE_PREPARED_CUPS; index += 1) {
     const layer = Math.floor(index / cupsPerLayer);
@@ -238,7 +223,9 @@ export const createCupInventory = (): CupInventory => {
     meshes,
     setStock(remaining: number, prepared: number): void {
       const visible = visibleCupCountForStock(remaining, prepared);
-      for (const mesh of meshes) mesh.count = visible;
+      for (const mesh of meshes) {
+        mesh.count = visible;
+      }
     },
   });
 };

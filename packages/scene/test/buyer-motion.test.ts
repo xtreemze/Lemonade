@@ -1,21 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  BUYER_WALK_SPEED,
-  buyerMotionAt,
-} from "../src/buyer-motion.js";
+import { BUYER_WALK_SPEED, buyerMotionAt } from "../src/buyer-motion.js";
 import { STAND_WORLD_Z } from "../src/stand-anchors.js";
-import { STREET_LAYOUT } from "../src/street-layout.js";
 import type { SaleBeat } from "../src/storyboard.js";
+import { STREET_LAYOUT } from "../src/street-layout.js";
 
 const sale: SaleBeat = Object.freeze({
   saleNumber: 1,
   buyerIndex: 0,
   approachAtMs: 0,
-  purchaseAtMs: 2_000,
-  purchaseEndAtMs: 2_200,
-  drinkEndAtMs: 2_700,
-  departAtMs: 4_700,
+  purchaseAtMs: 2000,
+  purchaseEndAtMs: 2200,
+  drinkEndAtMs: 2700,
+  departAtMs: 4700,
   direction: -1,
   lane: 1,
   remainingCups: 9,
@@ -29,7 +26,9 @@ describe("buyer motion", () => {
 
     expect(start).toBeDefined();
     expect(service).toBeDefined();
-    if (start === undefined || service === undefined) return;
+    if (start === undefined || service === undefined) {
+      return;
+    }
 
     expect(start.z).toBeGreaterThanOrEqual(STREET_LAYOUT.nearSidewalk.minZ);
     expect(start.z).toBeLessThanOrEqual(STREET_LAYOUT.nearSidewalk.maxZ);
@@ -49,11 +48,10 @@ describe("buyer motion", () => {
       for (let elapsedMs = startMs + 100; elapsedMs <= endMs; elapsedMs += 100) {
         const current = buyerMotionAt(sale, elapsedMs, streetZ);
         expect(current).toBeDefined();
-        if (previous === undefined || current === undefined) continue;
-        const displacement = Math.hypot(
-          current.x - previous.x,
-          current.z - previous.z,
-        );
+        if (previous === undefined || current === undefined) {
+          continue;
+        }
+        const displacement = Math.hypot(current.x - previous.x, current.z - previous.z);
         expect(displacement).toBeLessThanOrEqual(BUYER_WALK_SPEED * 0.1 + 0.035);
         previous = current;
       }
@@ -71,7 +69,9 @@ describe("buyer motion", () => {
 
     expect(halfway).toBeDefined();
     expect(end).toBeDefined();
-    if (halfway === undefined || end === undefined) return;
+    if (halfway === undefined || end === undefined) {
+      return;
+    }
 
     expect(halfway.z).toBeGreaterThanOrEqual(STAND_WORLD_Z + 0.6);
     expect(end.z).toBeCloseTo(streetZ, 6);

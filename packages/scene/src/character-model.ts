@@ -57,37 +57,21 @@ export type CharacterPoseOptions = Readonly<{
 
 export type SeatedCharacterKind = "driver" | "rider";
 
-const rotation = (x = 0, y = 0, z = 0): Rotation3 =>
-  Object.freeze({ x, y, z });
+const rotation = (x = 0, y = 0, z = 0): Rotation3 => Object.freeze({ x, y, z });
 
-const joint = (
-  x = 0,
-  y = 0,
-  z = 0,
-  lift = 0,
-): JointPose =>
+const joint = (x = 0, y = 0, z = 0, lift = 0): JointPose =>
   Object.freeze({
     rotation: rotation(x, y, z),
     lift,
   });
 
-const arm = (
-  shoulder = joint(),
-  elbow = joint(),
-  wrist = joint(),
-): ArmPose =>
+const arm = (shoulder = joint(), elbow = joint(), wrist = joint()): ArmPose =>
   Object.freeze({ shoulder, elbow, wrist });
 
-const leg = (
-  hip = joint(),
-  knee = joint(),
-  ankle = joint(),
-): LegPose =>
+const leg = (hip = joint(), knee = joint(), ankle = joint()): LegPose =>
   Object.freeze({ hip, knee, ankle });
 
-const expression = (
-  values: Partial<CharacterExpressionPose> = {},
-): CharacterExpressionPose =>
+const expression = (values: Partial<CharacterExpressionPose> = {}): CharacterExpressionPose =>
   Object.freeze({
     valence: values.valence ?? 0,
     browTilt: values.browTilt ?? 0,
@@ -98,33 +82,21 @@ const expression = (
     blink: values.blink ?? 0,
   });
 
-const createPose = (
-  values: Partial<CharacterPose> = {},
-): CharacterPose =>
+const createPose = (values: Partial<CharacterPose> = {}): CharacterPose =>
   Object.freeze({
     root: values.root ?? Object.freeze({ lift: 0, scale: 1 }),
     pelvis: values.pelvis ?? joint(),
     chest: values.chest ?? joint(),
     neck: values.neck ?? joint(),
     head: values.head ?? joint(),
-    arms:
-      values.arms ??
-      (Object.freeze([arm(), arm()]) as readonly [ArmPose, ArmPose]),
-    legs:
-      values.legs ??
-      (Object.freeze([leg(), leg()]) as readonly [LegPose, LegPose]),
+    arms: values.arms ?? (Object.freeze([arm(), arm()]) as readonly [ArmPose, ArmPose]),
+    legs: values.legs ?? (Object.freeze([leg(), leg()]) as readonly [LegPose, LegPose]),
     expression: values.expression ?? expression(),
     rightHandOccupancy: values.rightHandOccupancy ?? "none",
   });
 
 export const CHARACTER_ANATOMY = Object.freeze({
-  hierarchy: Object.freeze([
-    "root",
-    "pelvis",
-    "chest",
-    "neck",
-    "head",
-  ] as const),
+  hierarchy: Object.freeze(["root", "pelvis", "chest", "neck", "head"] as const),
   modeledStandingHeight: WORLD_SCALE.character.modeledStandingHeight,
   renderScale: WORLD_SCALE.character.renderScale,
   torso: Object.freeze({
@@ -164,14 +136,16 @@ export const characterPoseAtDistance = (
 ): CharacterPose => {
   const moving = options.moving ?? true;
   const carryingCup = options.carryingCup ?? false;
-  if (!moving && !carryingCup) return neutralCharacterPose();
+  if (!(moving || carryingCup)) {
+    return neutralCharacterPose();
+  }
 
   if (!moving) {
     return createPose({
-      arms: Object.freeze([
-        arm(),
-        arm(joint(-0.54), joint(-1.05), joint()),
-      ]) as readonly [ArmPose, ArmPose],
+      arms: Object.freeze([arm(), arm(joint(-0.54), joint(-1.05), joint())]) as readonly [
+        ArmPose,
+        ArmPose,
+      ],
       rightHandOccupancy: "cup",
     });
   }
@@ -190,9 +164,7 @@ export const characterPoseAtDistance = (
   const leftShoulder = -stride * 0.78;
   const rightShoulder = carryingCup ? -0.54 : stride * 0.78;
   const leftElbow = -0.12 - Math.max(0, stride) * 0.22;
-  const rightElbow = carryingCup
-    ? -1.05
-    : -0.12 - Math.max(0, -stride) * 0.22;
+  const rightElbow = carryingCup ? -1.05 : -0.12 - Math.max(0, -stride) * 0.22;
   const leftKnee = Math.max(0, -Math.sin(cycle)) * 0.62;
   const rightKnee = Math.max(0, Math.sin(cycle)) * 0.62;
 
@@ -205,19 +177,13 @@ export const characterPoseAtDistance = (
     ]) as readonly [ArmPose, ArmPose],
     legs: Object.freeze([
       leg(joint(stride), joint(leftKnee), joint(-leftKnee * 0.22)),
-      leg(
-        joint(oppositeStride),
-        joint(rightKnee),
-        joint(-rightKnee * 0.22),
-      ),
+      leg(joint(oppositeStride), joint(rightKnee), joint(-rightKnee * 0.22)),
     ]) as readonly [LegPose, LegPose],
     rightHandOccupancy: carryingCup ? "cup" : "none",
   });
 };
 
-export const seatedCharacterPose = (
-  kind: SeatedCharacterKind,
-): CharacterPose => {
+export const seatedCharacterPose = (kind: SeatedCharacterKind): CharacterPose => {
   if (kind === "rider") {
     return createPose({
       pelvis: joint(-0.12),
@@ -252,35 +218,19 @@ export const seatedCharacterPose = (
 const clamp01 = (value: number): number =>
   Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
 
-const lerp = (low: number, high: number, progress: number): number =>
-  low + (high - low) * progress;
+const lerp = (low: number, high: number, progress: number): number => low + (high - low) * progress;
 
-export const sellerConfidencePose = (
-  confidence: number,
-): CharacterPose => {
+export const sellerConfidencePose = (confidence: number): CharacterPose => {
   const progress = clamp01(confidence / 5);
   const valence = progress * 2 - 1;
   const armSpread = lerp(0.06, 0.5, progress);
 
   return createPose({
-    chest: joint(
-      lerp(0.17, -0.025, progress),
-      0,
-      0,
-      lerp(-0.035, 0.055, progress),
-    ),
+    chest: joint(lerp(0.17, -0.025, progress), 0, 0, lerp(-0.035, 0.055, progress)),
     head: joint(lerp(0.2, -0.06, progress)),
     arms: Object.freeze([
-      arm(
-        joint(lerp(0.28, -0.18, progress), 0, -armSpread),
-        joint(),
-        joint(),
-      ),
-      arm(
-        joint(lerp(0.22, -0.14, progress), 0, armSpread),
-        joint(),
-        joint(),
-      ),
+      arm(joint(lerp(0.28, -0.18, progress), 0, -armSpread), joint(), joint()),
+      arm(joint(lerp(0.22, -0.14, progress), 0, armSpread), joint(), joint()),
     ]) as readonly [ArmPose, ArmPose],
     expression: expression({
       valence,
@@ -291,25 +241,16 @@ export const sellerConfidencePose = (
   });
 };
 
-export const blinkAmountAt = (
-  identitySeed: number,
-  elapsedMs: number,
-): number => {
-  const seed = Number.isFinite(identitySeed)
-    ? Math.abs(Math.trunc(identitySeed)) >>> 0
-    : 0;
-  const intervalMs = 2_600 + (seed % 1_700);
+export const blinkAmountAt = (identitySeed: number, elapsedMs: number): number => {
+  const seed = Number.isFinite(identitySeed) ? Math.abs(Math.trunc(identitySeed)) >>> 0 : 0;
+  const intervalMs = 2600 + (seed % 1700);
   const offsetMs = (seed >>> 8) % intervalMs;
-  const phase =
-    (Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0) + offsetMs) %
-    intervalMs;
+  const phase = (Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0) + offsetMs) % intervalMs;
   const durationMs = 160;
   const startMs = intervalMs - durationMs;
-  if (phase < startMs) return 0;
+  if (phase < startMs) {
+    return 0;
+  }
   const progress = (phase - startMs) / durationMs;
-  return clamp01(
-    progress <= 0.5
-      ? progress * 2
-      : (1 - progress) * 2,
-  );
+  return clamp01(progress <= 0.5 ? progress * 2 : (1 - progress) * 2);
 };

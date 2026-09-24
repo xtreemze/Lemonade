@@ -7,7 +7,7 @@
  * Enable with: `localStorage.setItem('LEMONADE_DEV_SCENE_VIEWER', '1')`
  */
 
-import type { SceneWeather, ScenePhase, LemonsvilleSceneState } from "@lemonade/scene";
+import type { LemonsvilleSceneState, ScenePhase, SceneWeather } from "@lemonade/scene";
 import { createLemonsvilleScene } from "@lemonade/scene";
 import { createStreetStoryboard } from "@lemonade/scene/storyboard-create";
 // TODO: Integrate gizmo controller for 3D editor tool (game-engine-like scene manipulation)
@@ -46,7 +46,7 @@ export const createPersistentSceneViewer = (
 
   // Create main container with flexbox (scene on left, sidebar on right)
   const container = document.createElement("div");
-  container.dataset["rendererStressFixture"] = options.stress === true ? "true" : "false";
+  container.dataset.rendererStressFixture = options.stress === true ? "true" : "false";
   container.style.cssText = `
     width: 100vw;
     height: 100vh;
@@ -128,7 +128,7 @@ export const createPersistentSceneViewer = (
   panel.appendChild(info);
 
   const diagnostics = document.createElement("div");
-  diagnostics.dataset["rendererDiagnostics"] = "true";
+  diagnostics.dataset.rendererDiagnostics = "true";
   diagnostics.style.cssText = `
     background: #111;
     border: 1px solid #444;
@@ -182,7 +182,7 @@ export const createPersistentSceneViewer = (
     durationMs,
     confidence: 3,
     nextConfidence: 3,
-    characterSeed: 12345,
+    characterSeed: 12_345,
     dayNumber: 1,
     storyboard: createStreetStoryboard({
       durationMs,

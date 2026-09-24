@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertBalanceCertification,
   CERTIFICATION_HORIZON_DAYS,
   CERTIFICATION_SEEDS,
   CERTIFICATION_STRATEGY_NAMES,
-  assertBalanceCertification,
   formatBalanceCertification,
   runBalanceCertification,
 } from "../src/index.js";
@@ -17,9 +17,7 @@ describe("balance certification", () => {
     expect(second).toEqual(first);
     expect(first.horizonDays).toBe(CERTIFICATION_HORIZON_DAYS);
     expect(first.seeds).toEqual(CERTIFICATION_SEEDS);
-    expect(first.profiles.map((profile) => profile.strategy)).toEqual(
-      CERTIFICATION_STRATEGY_NAMES,
-    );
+    expect(first.profiles.map((profile) => profile.strategy)).toEqual(CERTIFICATION_STRATEGY_NAMES);
   });
 
   it("passes 2017 equation, accounting, and progression guardrails", () => {

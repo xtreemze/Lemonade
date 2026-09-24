@@ -1,13 +1,15 @@
-import type { GameState } from "./model.js";
 import {
   LEGACY_CUP_COST_CENTS,
   LEGACY_SIGN_COST_CENTS,
   LEGACY_STARTING_BALANCE_CENTS,
 } from "./legacy.js";
-import { dayNumber, moneyCents, type DayNumber, type MoneyCents } from "./primitives.js";
+import type { GameState } from "./model.js";
+import { type DayNumber, dayNumber, type MoneyCents, moneyCents } from "./primitives.js";
 
 export const productionCostForDay = (day: DayNumber): MoneyCents => {
-  if (Number(day) < 1) throw new RangeError("day must be positive");
+  if (Number(day) < 1) {
+    throw new RangeError("day must be positive");
+  }
   return moneyCents(LEGACY_CUP_COST_CENTS);
 };
 

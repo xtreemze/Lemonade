@@ -34,20 +34,20 @@ export type WeatherMelodyMetadata = Readonly<{
   phraseBoundary: string;
 }>;
 
-export const WEATHER_FORECAST_DURATION_MS = 6_000;
+export const WEATHER_FORECAST_DURATION_MS = 6000;
 
 export interface MusicalOutputAdapter {
-  play(cue: AudioCue, tones: readonly ScheduledTone[]): void | Promise<void>;
-  dispose(): void | Promise<void>;
+  play: (cue: AudioCue, tones: readonly ScheduledTone[]) => void | Promise<void>;
+  dispose: () => void | Promise<void>;
 }
 
 export interface ProceduralAudioEngine {
-  enable(): Promise<boolean>;
-  play(cue: AudioCue): void;
-  setMuted(muted: boolean): void;
-  suspend(): Promise<void>;
-  resume(): Promise<void>;
-  dispose(): Promise<void>;
+  enable: () => Promise<boolean>;
+  play: (cue: AudioCue) => void;
+  setMuted: (muted: boolean) => void;
+  suspend: () => Promise<void>;
+  resume: () => Promise<void>;
+  dispose: () => Promise<void>;
 }
 
 type MotifNote = Readonly<{
@@ -74,7 +74,8 @@ const WEATHER_MELODY_METADATA: Readonly<Record<WeatherAudioCue, WeatherMelodyMet
       title: "Ranz des Vaches (Call to the Dairy Cows)",
       attribution: "Gioachino Rossini · William Tell Overture",
       historicalSource: "1979 Apple II Lemonade Stand sunny-weather excerpt",
-      referenceMidi: "https://www.flutetunes.com/tunes/rossini-william-tell-ranz-des-vaches-trio.mid",
+      referenceMidi:
+        "https://www.flutetunes.com/tunes/rossini-william-tell-ranz-des-vaches-trio.mid",
       phraseBoundary: "complete cow-call motif",
     }),
     "forecast:cloudy": Object.freeze({
@@ -276,9 +277,7 @@ const compileAppleWeatherExcerpt = (
 const compileWeatherCue = (cue: WeatherAudioCue): readonly ScheduledTone[] =>
   compileAppleWeatherExcerpt(cue).tones;
 
-const compileModernCue = (
-  cue: Exclude<AudioCue, WeatherAudioCue>,
-): readonly ScheduledTone[] => {
+const compileModernCue = (cue: Exclude<AudioCue, WeatherAudioCue>): readonly ScheduledTone[] => {
   let cursor = 0;
   const tones: ScheduledTone[] = [];
 
@@ -314,7 +313,9 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
   let disposed = false;
 
   const enable = async (): Promise<boolean> => {
-    if (disposed) return false;
+    if (disposed) {
+      return false;
+    }
 
     if (context === null) {
       try {
@@ -332,7 +333,9 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
 
   const play = (cue: AudioCue): void => {
     const activeContext = context;
-    if (muted || disposed || activeContext === null || activeContext.state === "closed") return;
+    if (muted || disposed || activeContext === null || activeContext.state === "closed") {
+      return;
+    }
 
     const baseTime = activeContext.currentTime + 0.012;
     for (const tone of compileCue(cue)) {
@@ -344,10 +347,7 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
       oscillator.type = tone.waveform;
       oscillator.frequency.setValueAtTime(midiToFrequency(tone.midiNote), start);
       if (tone.endMidiNote !== undefined && tone.endMidiNote !== tone.midiNote) {
-        oscillator.frequency.exponentialRampToValueAtTime(
-          midiToFrequency(tone.endMidiNote),
-          end,
-        );
+        oscillator.frequency.exponentialRampToValueAtTime(midiToFrequency(tone.endMidiNote), end);
       }
       envelope.gain.setValueAtTime(0.0001, start);
       envelope.gain.exponentialRampToValueAtTime(
@@ -372,16 +372,22 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
   };
 
   const suspend = async (): Promise<void> => {
-    if (context !== null && context.state === "running") await context.suspend();
+    if (context !== null && context.state === "running") {
+      await context.suspend();
+    }
   };
 
   const resume = async (): Promise<void> => {
-    if (!disposed && context !== null && context.state === "suspended") await context.resume();
+    if (!disposed && context !== null && context.state === "suspended") {
+      await context.resume();
+    }
   };
 
   const dispose = async (): Promise<void> => {
     disposed = true;
-    if (context !== null && context.state !== "closed") await context.close();
+    if (context !== null && context.state !== "closed") {
+      await context.close();
+    }
     context = null;
   };
 

@@ -1,32 +1,47 @@
 import type {
   CustomerActivity,
   LemonsvilleSceneController,
+  LemonsvilleSceneOptions,
   LemonsvilleSceneState,
   ScenePhase,
-  LemonsvilleSceneOptions,
 } from "@lemonade/scene";
-import {
-  createStreetStoryboard,
-  MIN_STREET_PEDESTRIANS,
-} from "@lemonade/scene/storyboard-create";
+import { createStreetStoryboard, MIN_STREET_PEDESTRIANS } from "@lemonade/scene/storyboard-create";
 import type { DayEnvironment } from "@lemonade/simulation";
 
 import type { createLemonsvilleScene } from "./scene-runtime.js";
 
 const activityForConfidence = (confidence: number): CustomerActivity => {
-  if (confidence <= 0) return "quiet";
-  if (confidence === 1) return "light";
-  if (confidence === 2) return "steady";
-  if (confidence === 3) return "lively";
+  if (confidence <= 0) {
+    return "quiet";
+  }
+  if (confidence === 1) {
+    return "light";
+  }
+  if (confidence === 2) {
+    return "steady";
+  }
+  if (confidence === 3) {
+    return "lively";
+  }
   return "busy";
 };
 
 const sellerMoodForConfidence = (confidence: number): string => {
-  if (confidence <= 0) return "discouraged";
-  if (confidence === 1) return "uncertain";
-  if (confidence === 2) return "cautious";
-  if (confidence === 3) return "steady";
-  if (confidence === 4) return "optimistic";
+  if (confidence <= 0) {
+    return "discouraged";
+  }
+  if (confidence === 1) {
+    return "uncertain";
+  }
+  if (confidence === 2) {
+    return "cautious";
+  }
+  if (confidence === 3) {
+    return "steady";
+  }
+  if (confidence === 4) {
+    return "optimistic";
+  }
   return "radiant";
 };
 
@@ -57,8 +72,8 @@ export type LemonsvilleSceneViewOptions = Readonly<{
 }>;
 
 export type LemonsvilleSceneView = Readonly<{
-  update(input: LemonsvilleSceneInput): void;
-  dispose(): void;
+  update: (input: LemonsvilleSceneInput) => void;
+  dispose: () => void;
 }>;
 
 type SceneElements = Readonly<{
@@ -96,8 +111,8 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
 
   const price =
     input.priceCents < 100
-      ? String(Math.max(0, input.priceCents)) + "¢"
-      : "$" + (Math.max(0, input.priceCents) / 100).toFixed(2);
+      ? `${String(Math.max(0, input.priceCents))}¢`
+      : `$${(Math.max(0, input.priceCents) / 100).toFixed(2)}`;
 
   return `${weather} weather; the seller looks ${sellerMoodForConfidence(input.confidence)}; ${String(input.visibleSigns)} advertising signs at ${price} per cup; ${String(input.prepared)} glasses prepared; ${activity}.`;
 };
@@ -155,12 +170,7 @@ export const createLemonsvilleSceneView = (
   const initializeController = async (): Promise<void> => {
     try {
       const { createLemonsvilleScene } = await loadSceneRuntime();
-      if (
-        disposed ||
-        controller !== null ||
-        lastInput === null ||
-        lastInput.phase === "idle"
-      ) {
+      if (disposed || controller !== null || lastInput === null || lastInput.phase === "idle") {
         return;
       }
 
@@ -194,32 +204,29 @@ export const createLemonsvilleSceneView = (
   };
 
   const ensureController = (): void => {
-    if (
-      controller !== null ||
-      initialization !== null ||
-      disposed ||
-      lastInput?.phase === "idle"
-    ) {
+    if (controller !== null || initialization !== null || disposed || lastInput?.phase === "idle") {
       return;
     }
     initialization = initializeController();
   };
 
   const update = (input: LemonsvilleSceneInput): void => {
-    if (disposed) return;
+    if (disposed) {
+      return;
+    }
     lastInput = input;
 
     const description = describeScene(input);
     const state = createState(input, reducedMotion);
     elements.canvas.setAttribute("aria-label", description);
-    elements.canvas.dataset["presentationDurationMs"] = String(Math.max(0, input.durationMs));
-    elements.canvas.dataset["preparedCups"] = String(Math.max(0, input.prepared));
-    elements.canvas.dataset["plannedSales"] = String(Math.max(0, input.sold));
-    elements.canvas.dataset["priceCents"] = String(Math.max(0, input.priceCents));
-    elements.canvas.dataset["characterSeed"] = String(input.characterSeed >>> 0);
-    elements.canvas.dataset["dayNumber"] = String(Math.max(1, Math.trunc(input.dayNumber)));
-    elements.canvas.dataset["sellerMood"] = sellerMoodForConfidence(input.confidence);
-    elements.canvas.dataset["nextSellerMood"] = sellerMoodForConfidence(input.nextConfidence);
+    elements.canvas.dataset.presentationDurationMs = String(Math.max(0, input.durationMs));
+    elements.canvas.dataset.preparedCups = String(Math.max(0, input.prepared));
+    elements.canvas.dataset.plannedSales = String(Math.max(0, input.sold));
+    elements.canvas.dataset.priceCents = String(Math.max(0, input.priceCents));
+    elements.canvas.dataset.characterSeed = String(input.characterSeed >>> 0);
+    elements.canvas.dataset.dayNumber = String(Math.max(1, Math.trunc(input.dayNumber)));
+    elements.canvas.dataset.sellerMood = sellerMoodForConfidence(input.confidence);
+    elements.canvas.dataset.nextSellerMood = sellerMoodForConfidence(input.nextConfidence);
     elements.equivalent.textContent = description;
     elements.fallbackDescription.textContent = description;
 
@@ -232,14 +239,18 @@ export const createLemonsvilleSceneView = (
 
   const onReducedMotionChange = (): void => {
     reducedMotion = reducedMotionQuery.matches;
-    if (lastInput !== null) update(lastInput);
+    if (lastInput !== null) {
+      update(lastInput);
+    }
   };
   reducedMotionQuery.addEventListener("change", onReducedMotionChange);
 
   return Object.freeze({
     update,
     dispose(): void {
-      if (disposed) return;
+      if (disposed) {
+        return;
+      }
       disposed = true;
       reducedMotionQuery.removeEventListener("change", onReducedMotionChange);
       observer?.disconnect();

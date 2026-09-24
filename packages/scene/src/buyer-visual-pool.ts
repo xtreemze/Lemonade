@@ -4,9 +4,7 @@ export type ReclaimableBuyerVisual = Readonly<{
   };
 }>;
 
-export const reclaimBuyerVisualPool = (
-  buyers: readonly ReclaimableBuyerVisual[],
-): void => {
+export const reclaimBuyerVisualPool = (buyers: readonly ReclaimableBuyerVisual[]): void => {
   for (const buyer of buyers) {
     buyer.root.visible = false;
   }

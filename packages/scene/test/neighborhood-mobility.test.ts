@@ -5,12 +5,9 @@ import {
   mobilityDetailForDistance,
   type NeighborhoodMobilitySample,
 } from "../src/neighborhood-mobility.js";
-import {
-  generateResidentialLayout,
-  residentialAccessLayout,
-} from "../src/residential-layout.js";
+import { generateResidentialLayout, residentialAccessLayout } from "../src/residential-layout.js";
 
-const MOBILITY_SEED = 0x5eed1234;
+const MOBILITY_SEED = 0x5e_ed_12_34;
 
 const sampleDay = (
   dayNumber: number,
@@ -22,20 +19,20 @@ const sampleDay = (
     weather,
     phase,
     elapsedMs,
-    durationMs: phase === "forecast" ? 6_000 : 14_000,
+    durationMs: phase === "forecast" ? 6000 : 14_000,
     dayNumber,
     focus: { x: 0, z: 0 },
   });
 
 describe("unified neighborhood mobility", () => {
   it("is deterministic for the same seed, day, phase, and presentation time", () => {
-    const first = sampleDay(4, 5_200);
-    const repeated = sampleDay(4, 5_200);
+    const first = sampleDay(4, 5200);
+    const repeated = sampleDay(4, 5200);
     expect(repeated).toEqual(first);
   });
 
   it("coordinates road traffic, bicycles, pedestrians, and pets in one sample", () => {
-    const sample = sampleDay(3, 5_000);
+    const sample = sampleDay(3, 5000);
     expect(sample.actors.some((actor) => actor.kind === "vehicle")).toBe(true);
     expect(sample.actors.some((actor) => actor.kind === "bicycle")).toBe(true);
     expect(sample.actors.some((actor) => actor.kind === "resident")).toBe(true);
@@ -48,9 +45,9 @@ describe("unified neighborhood mobility", () => {
   });
 
   it("routes through-traffic across every generated neighborhood street", () => {
-    const sample = sampleDay(3, 5_000);
-    const trafficVehicles = sample.actors.filter(
-      (actor) => actor.id.startsWith("traffic-vehicle:"),
+    const sample = sampleDay(3, 5000);
+    const trafficVehicles = sample.actors.filter((actor) =>
+      actor.id.startsWith("traffic-vehicle:"),
     );
     expect(trafficVehicles).toHaveLength(14);
     expect(new Set(trafficVehicles.map((actor) => actor.id))).toEqual(
@@ -72,18 +69,14 @@ describe("unified neighborhood mobility", () => {
   });
 
   it("routes bicycles across multiple neighborhood street groups", () => {
-    const sample = sampleDay(3, 5_000);
+    const sample = sampleDay(3, 5000);
     const bicycleIds = sample.actors
       .filter((actor) => actor.kind === "bicycle")
       .map((actor) => actor.id);
 
     expect(bicycleIds).toHaveLength(3);
     expect(new Set(bicycleIds)).toEqual(
-      new Set([
-        "traffic-bicycle:main",
-        "traffic-bicycle:front-grid",
-        "traffic-bicycle:deep-grid",
-      ]),
+      new Set(["traffic-bicycle:main", "traffic-bicycle:front-grid", "traffic-bicycle:deep-grid"]),
     );
   });
 
@@ -150,21 +143,15 @@ describe("unified neighborhood mobility", () => {
       }),
     );
 
+    expect(samples.some((sample) => sample.properties.some((property) => property.doorOpen))).toBe(
+      true,
+    );
     expect(
-      samples.some((sample) =>
-        sample.properties.some((property) => property.doorOpen),
-      ),
+      samples.some((sample) => sample.properties.some((property) => property.windowActivity)),
     ).toBe(true);
     expect(
       samples.some((sample) =>
-        sample.properties.some((property) => property.windowActivity),
-      ),
-    ).toBe(true);
-    expect(
-      samples.some((sample) =>
-        sample.actors.some(
-          (actor) => actor.kind === "pet" && actor.interaction === "door",
-        ),
+        sample.actors.some((actor) => actor.kind === "pet" && actor.interaction === "door"),
       ),
     ).toBe(true);
   });
@@ -174,14 +161,13 @@ describe("unified neighborhood mobility", () => {
     const layout = generateResidentialLayout(MOBILITY_SEED);
     const property = layout.frontProperties[1];
     expect(property).toBeDefined();
-    if (property === undefined) return;
+    if (property === undefined) {
+      return;
+    }
 
     const access = residentialAccessLayout(property, MOBILITY_SEED);
     const door = { x: access.doorX, z: access.doorZ };
-    const previous = new Map<
-      string,
-      { x: number; z: number; visible: boolean }
-    >();
+    const previous = new Map<string, { x: number; z: number; visible: boolean }>();
     const entered = new Set<string>();
     const moved = new Set<string>();
 
@@ -198,23 +184,22 @@ describe("unified neighborhood mobility", () => {
       for (const id of ["resident:0", "resident-pet"] as const) {
         const actor = sample.actors.find((candidate) => candidate.id === id);
         expect(actor).toBeDefined();
-        if (actor === undefined) continue;
+        if (actor === undefined) {
+          continue;
+        }
 
         const prior = previous.get(id);
         if (actor.visible && (prior === undefined || !prior.visible)) {
-          expect(Math.hypot(actor.x - door.x, actor.z - door.z)).toBeLessThan(
-            0.15,
-          );
+          expect(Math.hypot(actor.x - door.x, actor.z - door.z)).toBeLessThan(0.15);
           entered.add(id);
         }
 
         if (prior?.visible === true && actor.visible) {
-          const displacement = Math.hypot(
-            actor.x - prior.x,
-            actor.z - prior.z,
-          );
+          const displacement = Math.hypot(actor.x - prior.x, actor.z - prior.z);
           expect(displacement).toBeLessThanOrEqual(0.09);
-          if (displacement > 0.005) moved.add(id);
+          if (displacement > 0.005) {
+            moved.add(id);
+          }
         }
 
         previous.set(id, {
@@ -234,7 +219,7 @@ describe("unified neighborhood mobility", () => {
     const sample = system.sample({
       weather: "cloudy",
       phase: "simulation",
-      elapsedMs: 5_000,
+      elapsedMs: 5000,
       durationMs: 14_000,
       dayNumber: 5,
       focus: { x: 0, z: 0 },
@@ -265,24 +250,15 @@ describe("unified neighborhood mobility", () => {
     const layout = generateResidentialLayout(MOBILITY_SEED);
     const drivewayProperty =
       layout.frontProperties.find(
-        (property) =>
-          property.role === "east-mid" && property.drivewayX !== null,
-      ) ??
-      layout.frontProperties.find(
-        (property) => property.drivewayX !== null,
-      );
+        (property) => property.role === "east-mid" && property.drivewayX !== null,
+      ) ?? layout.frontProperties.find((property) => property.drivewayX !== null);
     expect(drivewayProperty).toBeDefined();
     if (drivewayProperty === undefined || drivewayProperty.drivewayX === null) {
       return;
     }
 
-    const access = residentialAccessLayout(
-      drivewayProperty,
-      MOBILITY_SEED,
-    );
-    let parkedVehicle:
-      | NeighborhoodMobilitySample["actors"][number]
-      | undefined;
+    const access = residentialAccessLayout(drivewayProperty, MOBILITY_SEED);
+    let parkedVehicle: NeighborhoodMobilitySample["actors"][number] | undefined;
     let sawDriverTransfer = false;
     let sawDepartureAfterParking = false;
     let hasParked = false;
@@ -296,16 +272,10 @@ describe("unified neighborhood mobility", () => {
         dayNumber: 2,
         focus: { x: 0, z: 0 },
       });
-      const vehicle = sample.actors.find(
-        (actor) => actor.id === "resident-vehicle",
-      );
-      const driver = sample.actors.find(
-        (actor) => actor.id === "resident-driver",
-      );
+      const vehicle = sample.actors.find((actor) => actor.id === "resident-vehicle");
+      const driver = sample.actors.find((actor) => actor.id === "resident-driver");
       const vehicleIsParked = sample.properties.some(
-        (property) =>
-          property.propertyRole === drivewayProperty.role &&
-          property.vehicleParked,
+        (property) => property.propertyRole === drivewayProperty.role && property.vehicleParked,
       );
 
       if (vehicleIsParked && vehicle?.interaction === "parking") {
@@ -350,13 +320,13 @@ describe("unified neighborhood mobility", () => {
     const layout = generateResidentialLayout(MOBILITY_SEED);
     const property =
       layout.frontProperties.find(
-        (candidate) =>
-          candidate.role === "east-mid" && candidate.drivewayX !== null,
-      ) ??
-      layout.frontProperties.find((candidate) => candidate.drivewayX !== null);
+        (candidate) => candidate.role === "east-mid" && candidate.drivewayX !== null,
+      ) ?? layout.frontProperties.find((candidate) => candidate.drivewayX !== null);
     expect(property).toBeDefined();
     const drivewayX = property?.drivewayX;
-    if (typeof drivewayX !== "number" || property === undefined) return;
+    if (typeof drivewayX !== "number" || property === undefined) {
+      return;
+    }
 
     const access = residentialAccessLayout(property, MOBILITY_SEED);
     const crossingObstacle = {
@@ -379,9 +349,7 @@ describe("unified neighborhood mobility", () => {
       .flatMap((sample) => sample.actors)
       .find(
         (actor) =>
-          actor.id === "resident-vehicle" &&
-          actor.waiting &&
-          actor.interaction === "crossing",
+          actor.id === "resident-vehicle" && actor.waiting && actor.interaction === "crossing",
       );
     expect(yielding).toBeDefined();
     expect(yielding?.speed).toBe(0);
@@ -391,15 +359,13 @@ describe("unified neighborhood mobility", () => {
         weather: "sunny",
         phase: "simulation",
         elapsedMs:
-          crossingSamples.findIndex((sample) =>
+          (crossingSamples.findIndex((sample) =>
             sample.actors.some(
               (actor) =>
-                actor.id === yielding.id &&
-                actor.waiting &&
-                actor.interaction === "crossing",
+                actor.id === yielding.id && actor.waiting && actor.interaction === "crossing",
             ),
           ) /
-            16 *
+            16) *
             0.139 *
             14_000 +
           0.28 * 14_000,
@@ -408,10 +374,9 @@ describe("unified neighborhood mobility", () => {
         focus: { x: 0, z: 0 },
         pedestrianObstacles: [],
       });
-      expect(
-        sameTimeClear.actors.find((actor) => actor.id === "resident-vehicle")
-          ?.waiting,
-      ).toBe(false);
+      expect(sameTimeClear.actors.find((actor) => actor.id === "resident-vehicle")?.waiting).toBe(
+        false,
+      );
     }
   });
 
@@ -421,25 +386,20 @@ describe("unified neighborhood mobility", () => {
       system.sample({
         weather: "cloudy",
         phase: "forecast",
-        elapsedMs: 4_500,
-        durationMs: 6_000,
+        elapsedMs: 4500,
+        durationMs: 6000,
         dayNumber: index + 1,
         focus: { x: 0, z: 0 },
       }),
     );
 
     expect(
-      mailDays.every((sample) =>
-        sample.actors.some((actor) => actor.kind === "mail-carrier"),
-      ),
+      mailDays.every((sample) => sample.actors.some((actor) => actor.kind === "mail-carrier")),
     ).toBe(true);
     expect(
       mailDays
         .flatMap((sample) => sample.actors)
-        .filter(
-          (actor) =>
-            actor.kind === "mail-carrier" && actor.interaction !== "mailbox",
-        )
+        .filter((actor) => actor.kind === "mail-carrier" && actor.interaction !== "mailbox")
         .every((actor) => actor.speed === 1.42),
     ).toBe(true);
     const gardenerDays = mailDays.filter((sample) =>
@@ -449,23 +409,18 @@ describe("unified neighborhood mobility", () => {
     expect(
       gardenerDays
         .flatMap((sample) => sample.actors)
-        .filter(
-          (actor) =>
-            actor.kind === "gardener" && actor.interaction !== "gardening",
-        )
+        .filter((actor) => actor.kind === "gardener" && actor.interaction !== "gardening")
         .every((actor) => actor.speed === 1.42),
     ).toBe(true);
     expect(
-      mailDays.some((sample) =>
-        sample.properties.some((property) => property.mailServiced),
-      ),
+      mailDays.some((sample) => sample.properties.some((property) => property.mailServiced)),
     ).toBe(true);
   });
 
   it("runs sprinklers only during a sunny morning forecast", () => {
-    const sunny = sampleDay(3, 2_500, "forecast", "sunny");
-    const cloudy = sampleDay(3, 2_500, "forecast", "cloudy");
-    const simulation = sampleDay(3, 2_500, "simulation", "sunny");
+    const sunny = sampleDay(3, 2500, "forecast", "sunny");
+    const cloudy = sampleDay(3, 2500, "forecast", "cloudy");
+    const simulation = sampleDay(3, 2500, "simulation", "sunny");
 
     expect(sunny.properties.some((property) => property.sprinklerOn)).toBe(true);
     expect(cloudy.properties.some((property) => property.sprinklerOn)).toBe(false);
@@ -477,7 +432,7 @@ describe("unified neighborhood mobility", () => {
     const baseInput = {
       weather: "sunny" as const,
       phase: "simulation" as const,
-      elapsedMs: 6_300,
+      elapsedMs: 6300,
       durationMs: 12_000,
       dayNumber: 3,
     };
@@ -503,34 +458,27 @@ describe("unified neighborhood mobility", () => {
       }));
 
     expect(behavior(far)).toEqual(behavior(near));
-    expect(far.actors.every((actor) => actor.detail === "statistical")).toBe(
-      true,
-    );
+    expect(far.actors.every((actor) => actor.detail === "statistical")).toBe(true);
   });
 
   it("uses independent simulation LOD and collapses distant actors statistically", () => {
     expect(mobilityDetailForDistance(12)).toBe("full");
     expect(mobilityDetailForDistance(50)).toBe("reduced");
     expect(mobilityDetailForDistance(120)).toBe("statistical");
-    expect(mobilityDetailForDistance(Number.POSITIVE_INFINITY)).toBe(
-      "statistical",
-    );
+    expect(mobilityDetailForDistance(Number.POSITIVE_INFINITY)).toBe("statistical");
 
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const distant = system.sample({
       weather: "sunny",
       phase: "simulation",
-      elapsedMs: 5_000,
+      elapsedMs: 5000,
       durationMs: 14_000,
       dayNumber: 1,
-      focus: { x: 1_000, z: 1_000 },
+      focus: { x: 1000, z: 1000 },
     });
     expect(distant.actors.every((actor) => !actor.visible)).toBe(true);
     expect(
-      Object.values(distant.statisticalCounts).reduce(
-        (total, value) => total + value,
-        0,
-      ),
+      Object.values(distant.statisticalCounts).reduce((total, value) => total + value, 0),
     ).toBeGreaterThan(0);
   });
 
@@ -556,15 +504,15 @@ describe("unified neighborhood mobility", () => {
         ) {
           continue;
         }
-        if (actor.waiting) sawYield = true;
+        if (actor.waiting) {
+          sawYield = true;
+        }
 
         const prior = previous.get(actor.id);
         if (prior !== undefined) {
           const displacement = Math.hypot(actor.x - prior.x, actor.z - prior.z);
           const maxObservedSpeed = Math.max(prior.speed, actor.speed);
-          expect(displacement).toBeLessThanOrEqual(
-            maxObservedSpeed * 0.1 + 0.55,
-          );
+          expect(displacement).toBeLessThanOrEqual(maxObservedSpeed * 0.1 + 0.55);
         }
         previous.set(actor.id, {
           x: actor.x,
@@ -577,20 +525,17 @@ describe("unified neighborhood mobility", () => {
     expect(sawYield).toBe(true);
   });
 
-
   it("drives the resident vehicle and driver from actor-owned physical clocks", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const layout = generateResidentialLayout(MOBILITY_SEED);
     const property =
       layout.frontProperties.find(
-        (candidate) =>
-          candidate.role === "east-mid" && candidate.drivewayX !== null,
-      ) ??
-      layout.frontProperties.find(
-        (candidate) => candidate.drivewayX !== null,
-      );
+        (candidate) => candidate.role === "east-mid" && candidate.drivewayX !== null,
+      ) ?? layout.frontProperties.find((candidate) => candidate.drivewayX !== null);
     expect(property).toBeDefined();
-    if (property === undefined || property.drivewayX === null) return;
+    if (property === undefined || property.drivewayX === null) {
+      return;
+    }
 
     const access = residentialAccessLayout(property, MOBILITY_SEED);
     const crossingObstacle = {
@@ -612,14 +557,15 @@ describe("unified neighborhood mobility", () => {
         durationMs: 14_000,
         dayNumber: 2,
         focus: { x: 0, z: 0 },
-        pedestrianObstacles:
-          elapsedMs <= 6_000 ? [crossingObstacle] : [],
+        pedestrianObstacles: elapsedMs <= 6000 ? [crossingObstacle] : [],
       });
 
       for (const actorId of ["resident-vehicle", "resident-driver"] as const) {
         const actor = sample.actors.find((candidate) => candidate.id === actorId);
         expect(actor).toBeDefined();
-        if (actor === undefined) continue;
+        if (actor === undefined) {
+          continue;
+        }
 
         if (actorId === "resident-vehicle" && actor.waiting) {
           sawVehicleYield = true;
@@ -628,26 +574,23 @@ describe("unified neighborhood mobility", () => {
           sawDriver = true;
         }
 
-        if (!actor.visible && actorId === "resident-driver") continue;
+        if (!actor.visible && actorId === "resident-driver") {
+          continue;
+        }
 
         expect(actor.travelDistance).not.toBeNull();
-        if (actor.travelDistance === null) continue;
+        if (actor.travelDistance === null) {
+          continue;
+        }
         expect(Number.isFinite(actor.travelDistance)).toBe(true);
 
         const prior = previous.get(actorId);
         if (prior !== undefined) {
-          const displacement = Math.hypot(
-            actor.x - prior.x,
-            actor.z - prior.z,
-          );
+          const displacement = Math.hypot(actor.x - prior.x, actor.z - prior.z);
           const maxObservedSpeed = Math.max(prior.speed, actor.speed);
           const allowance = actorId === "resident-vehicle" ? 0.08 : 0.03;
-          expect(displacement).toBeLessThanOrEqual(
-            maxObservedSpeed * 0.05 + allowance,
-          );
-          expect(actor.travelDistance).toBeGreaterThanOrEqual(
-            prior.travelDistance,
-          );
+          expect(displacement).toBeLessThanOrEqual(maxObservedSpeed * 0.05 + allowance);
+          expect(actor.travelDistance).toBeGreaterThanOrEqual(prior.travelDistance);
         }
 
         previous.set(actorId, {
@@ -662,5 +605,4 @@ describe("unified neighborhood mobility", () => {
     expect(sawVehicleYield).toBe(true);
     expect(sawDriver).toBe(true);
   });
-
 });

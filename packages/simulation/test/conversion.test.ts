@@ -2,40 +2,34 @@ import { describe, expect, it } from "vitest";
 
 import {
   basisPoints,
+  type CustomerTraits,
   confidenceToleranceMultiplier,
   conversionForCustomer,
   customerId,
   customerTypeToleranceMultiplier,
   dayNumber,
   effectivePriceTolerance,
+  type MarketMemory,
   marketMemoryToleranceMultiplier,
   moneyCents,
   priceAcceptanceProbability,
   seed,
   weatherToleranceMultiplier,
-  type CustomerTraits,
-  type MarketMemory,
 } from "../src/index.js";
 
-const traits = (
-  type: CustomerTraits["type"],
-  weatherCommitment = 5_000,
-): CustomerTraits =>
+const traits = (type: CustomerTraits["type"], weatherCommitment = 5000): CustomerTraits =>
   Object.freeze({
     id: customerId(7),
     type,
     visualSeed: seed(91),
     intrinsicPriceTolerance: moneyCents(300),
-    advertisingResponsiveness: basisPoints(8_000),
-    familiarity: basisPoints(2_000),
-    loyalty: basisPoints(2_000),
+    advertisingResponsiveness: basisPoints(8000),
+    familiarity: basisPoints(2000),
+    loyalty: basisPoints(2000),
     weatherCommitment: basisPoints(weatherCommitment),
   });
 
-const memory = (
-  expectedPrice = 300,
-  satisfaction = 5_000,
-): MarketMemory =>
+const memory = (expectedPrice = 300, satisfaction = 5000): MarketMemory =>
   Object.freeze({
     expectedPrice: moneyCents(expectedPrice),
     advertisingFatigue: basisPoints(0),
@@ -54,7 +48,7 @@ describe("customer price conversion", () => {
 
     expect(probabilities[0]).toBeGreaterThan(probabilities[1] ?? 0);
     expect(probabilities[1]).toBeGreaterThan(probabilities[2] ?? 0);
-    expect(probabilities[2]).toBe(5_000);
+    expect(probabilities[2]).toBe(5000);
     expect(probabilities[2]).toBeGreaterThan(probabilities[3] ?? 0);
     expect(probabilities[3]).toBeGreaterThan(probabilities[4] ?? 0);
   });
@@ -64,25 +58,17 @@ describe("customer price conversion", () => {
 
     expect(Number(weatherToleranceMultiplier("cloudy", customer))).toBe(10_000);
     expect(Number(weatherToleranceMultiplier("sunny", customer))).toBe(11_200);
-    expect(Number(weatherToleranceMultiplier("hot-and-dry", customer))).toBe(
-      11_500,
-    );
+    expect(Number(weatherToleranceMultiplier("hot-and-dry", customer))).toBe(11_500);
   });
 
   it("lets weather-committed regulars and destination customers retain more storm tolerance", () => {
-    const impulse = traits("impulse", 2_000);
-    const regular = traits("regular", 8_000);
-    const destination = traits("destination", 9_000);
+    const impulse = traits("impulse", 2000);
+    const regular = traits("regular", 8000);
+    const destination = traits("destination", 9000);
 
-    const impulseStorm = Number(
-      weatherToleranceMultiplier("thunderstorm", impulse),
-    );
-    const regularStorm = Number(
-      weatherToleranceMultiplier("thunderstorm", regular),
-    );
-    const destinationStorm = Number(
-      weatherToleranceMultiplier("thunderstorm", destination),
-    );
+    const impulseStorm = Number(weatherToleranceMultiplier("thunderstorm", impulse));
+    const regularStorm = Number(weatherToleranceMultiplier("thunderstorm", regular));
+    const destinationStorm = Number(weatherToleranceMultiplier("thunderstorm", destination));
 
     expect(regularStorm).toBeGreaterThan(impulseStorm);
     expect(destinationStorm).toBeGreaterThan(regularStorm);
@@ -104,17 +90,13 @@ describe("customer price conversion", () => {
   it("keeps confidence and price-memory effects bounded", () => {
     const customer = traits("regular");
 
-    expect(Number(confidenceToleranceMultiplier(0))).toBe(9_600);
+    expect(Number(confidenceToleranceMultiplier(0))).toBe(9600);
     expect(Number(confidenceToleranceMultiplier(5))).toBe(10_400);
 
-    const lowMemory = Number(
-      marketMemoryToleranceMultiplier(customer, memory(100, 0)),
-    );
-    const highMemory = Number(
-      marketMemoryToleranceMultiplier(customer, memory(900, 10_000)),
-    );
+    const lowMemory = Number(marketMemoryToleranceMultiplier(customer, memory(100, 0)));
+    const highMemory = Number(marketMemoryToleranceMultiplier(customer, memory(900, 10_000)));
 
-    expect(lowMemory).toBeGreaterThanOrEqual(9_200);
+    expect(lowMemory).toBeGreaterThanOrEqual(9200);
     expect(highMemory).toBeLessThanOrEqual(10_800);
     expect(highMemory).toBeGreaterThan(lowMemory);
   });
@@ -124,10 +106,10 @@ describe("customer price conversion", () => {
       runSeed: seed(0xab_cd_12_34),
       day: dayNumber(6),
       price: moneyCents(325),
-      traits: traits("regular", 8_000),
+      traits: traits("regular", 8000),
       weather: "sunny" as const,
       confidence: 3 as const,
-      memory: memory(300, 5_500),
+      memory: memory(300, 5500),
     });
 
     const tolerance = effectivePriceTolerance(input);

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  WEATHER_FORECAST_DURATION_MS,
-  compileCue,
-  weatherMelodyMetadata,
   type AudioCue,
+  compileCue,
+  WEATHER_FORECAST_DURATION_MS,
   type WeatherAudioCue,
+  weatherMelodyMetadata,
 } from "../src/index.js";
 
 const cues: readonly AudioCue[] = [
@@ -98,7 +98,7 @@ describe("procedural cue compiler", () => {
   });
 
   it("does not append unverified notes after the Apple II weather excerpt", () => {
-    expect(WEATHER_FORECAST_DURATION_MS).toBe(6_000);
+    expect(WEATHER_FORECAST_DURATION_MS).toBe(6000);
 
     for (const [cue, notes] of Object.entries(weatherMelodies) as readonly [
       WeatherAudioCue,
@@ -110,7 +110,9 @@ describe("procedural cue compiler", () => {
 
       const lastTone = tones.at(-1);
       expect(lastTone).toBeDefined();
-      if (lastTone === undefined) throw new Error("expected weather melody tone");
+      if (lastTone === undefined) {
+        throw new Error("expected weather melody tone");
+      }
 
       expect(lastTone.startSeconds + lastTone.durationSeconds).toBeLessThan(3);
     }
@@ -165,12 +167,9 @@ describe("procedural cue compiler", () => {
       throw new Error("expected hot-and-dry melody phrase");
     }
 
-    const normalGap = secondTone.startSeconds - (
-      firstTone.startSeconds + firstTone.durationSeconds
-    );
-    const restGap = afterRest.startSeconds - (
-      beforeRest.startSeconds + beforeRest.durationSeconds
-    );
+    const normalGap =
+      secondTone.startSeconds - (firstTone.startSeconds + firstTone.durationSeconds);
+    const restGap = afterRest.startSeconds - (beforeRest.startSeconds + beforeRest.durationSeconds);
     expect(restGap).toBeGreaterThan(normalGap + 0.15);
   });
 });

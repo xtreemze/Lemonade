@@ -1,6 +1,6 @@
 import type { DailyLedgerEntry, GameState, MarketSentiment, Weather } from "./model.js";
 
-export const LEGACY_STARTING_BALANCE_CENTS = 1_000 as const;
+export const LEGACY_STARTING_BALANCE_CENTS = 1000 as const;
 export const LEGACY_CUP_COST_CENTS = 100 as const;
 export const LEGACY_SIGN_COST_CENTS = 50 as const;
 
@@ -15,9 +15,7 @@ const coreOperatingNetCents = (entry: DailyLedgerEntry): number => {
   return Number(entry.revenue) - operatingExpenses;
 };
 
-export const legacyOperatingBalanceCents = (
-  state: Pick<GameState, "ledger">,
-): number => {
+export const legacyOperatingBalanceCents = (state: Pick<GameState, "ledger">): number => {
   const startingBalanceCents: number = LEGACY_STARTING_BALANCE_CENTS;
   return state.ledger.reduce<number>(
     (balance, entry) => balance + coreOperatingNetCents(entry),
@@ -25,9 +23,7 @@ export const legacyOperatingBalanceCents = (
   );
 };
 
-export const isLegacyBankrupt = (
-  state: Pick<GameState, "ledger">,
-): boolean =>
+export const isLegacyBankrupt = (state: Pick<GameState, "ledger">): boolean =>
   legacyOperatingBalanceCents(state) < LEGACY_STARTING_BALANCE_CENTS;
 
 const confidenceAfterEntry = (
@@ -35,17 +31,20 @@ const confidenceAfterEntry = (
   dailyProfitCents: number,
   completedDaysBeforeEntry: number,
 ): LegacyConfidence => {
-  if (balanceCents < LEGACY_STARTING_BALANCE_CENTS) return 0;
-  if (dailyProfitCents === 0) return 2;
+  if (balanceCents < LEGACY_STARTING_BALANCE_CENTS) {
+    return 0;
+  }
+  if (dailyProfitCents === 0) {
+    return 2;
+  }
 
-  const averageCents =
-    (balanceCents - dailyProfitCents) / completedDaysBeforeEntry;
-  if (dailyProfitCents < averageCents) return 1;
+  const averageCents = (balanceCents - dailyProfitCents) / completedDaysBeforeEntry;
+  if (dailyProfitCents < averageCents) {
+    return 1;
+  }
 
-  if (dailyProfitCents - averageCents < 6_000) {
-    return Math.round(
-      (dailyProfitCents - averageCents) / 2_000 + 2,
-    ) as LegacyConfidence;
+  if (dailyProfitCents - averageCents < 6000) {
+    return Math.round((dailyProfitCents - averageCents) / 2000 + 2) as LegacyConfidence;
   }
 
   return 5;
@@ -56,9 +55,7 @@ const confidenceAfterEntry = (
  * ledger. This preserves the original first-day division-by-zero behavior:
  * the average is +Infinity and a positive first-day profit yields confidence 1.
  */
-export const legacyConfidenceForState = (
-  state: Pick<GameState, "ledger">,
-): LegacyConfidence => {
+export const legacyConfidenceForState = (state: Pick<GameState, "ledger">): LegacyConfidence => {
   let balanceCents = LEGACY_STARTING_BALANCE_CENTS;
   let confidence: LegacyConfidence = 3;
 
@@ -94,9 +91,7 @@ export const legacyWeatherEffect = (weather: Weather): number => {
  * 40%/40%/20%. The modern environment stores that deterministic roll in the
  * existing sentiment union so older serialized document shapes remain compact.
  */
-export const legacyConfidenceRoll = (
-  sentiment: MarketSentiment,
-): LegacyConfidenceRoll => {
+export const legacyConfidenceRoll = (sentiment: MarketSentiment): LegacyConfidenceRoll => {
   switch (sentiment.kind) {
     case "cold":
     case "very-cold":

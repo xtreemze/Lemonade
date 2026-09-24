@@ -8,6 +8,8 @@
  */
 
 export const isSceneLauncherEnabled = (): boolean => {
-  if (typeof localStorage === "undefined") return false;
+  if (typeof localStorage === "undefined") {
+    return false;
+  }
   return localStorage.getItem("LEMONADE_DEV_SCENE_LAUNCHER") === "1";
 };

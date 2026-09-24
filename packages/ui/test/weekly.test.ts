@@ -1,14 +1,13 @@
-import { describe, expect, it } from "vitest";
-
 import {
   basisPoints,
+  type DailyLedgerEntry,
   dayNumber,
   glassCount,
   moneyCents,
   signCount,
   signedMoneyCents,
-  type DailyLedgerEntry,
 } from "@lemonade/simulation";
+import { describe, expect, it } from "vitest";
 
 import { summarizeCompletedWeek } from "../src/weekly.js";
 
@@ -67,7 +66,7 @@ describe("weekly report summary", () => {
         expensesCents: 196,
         netCents: 84,
         averageDailyNetCents: 12,
-        sellThroughBasisPoints: 2_857,
+        sellThroughBasisPoints: 2857,
         profitableDays: 5,
         lossDays: 2,
         endingCashCents: 307,

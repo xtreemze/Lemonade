@@ -1,26 +1,26 @@
 import {
-  DecisionOutsideOperatingScaleError,
-  SIMULATION_SCHEMA_VERSION,
   basisPoints,
   createSeededRandom,
-  dayNumber,
-  generateEnvironment,
-  glassCount,
-  moneyCents,
-  replayLegacyDay,
-  seed,
-  signedMoneyCents,
-  signCount,
-  simulateDay,
+  type DailyLedgerEntry,
   type DayDecision,
   type DayEnvironment,
-  type DailyLedgerEntry,
   type DayResolution,
+  DecisionOutsideOperatingScaleError,
+  dayNumber,
   type GameState,
+  generateEnvironment,
+  glassCount,
   type LedgerLine,
+  moneyCents,
   type ProgressionTier,
   type RandomSource,
+  replayLegacyDay,
   type Seed,
+  SIMULATION_SCHEMA_VERSION,
+  seed,
+  signCount,
+  signedMoneyCents,
+  simulateDay,
 } from "@lemonade/simulation";
 
 export const RUN_SAVE_SCHEMA_VERSION = 2 as const;
@@ -185,7 +185,9 @@ const asSafeInteger = (value: unknown, path: string): number => {
 
 const asNonNegativeInteger = (value: unknown, path: string): number => {
   const integer = asSafeInteger(value, path);
-  if (integer < 0) return invalidSave(path, "expected a non-negative integer");
+  if (integer < 0) {
+    return invalidSave(path, "expected a non-negative integer");
+  }
   return integer;
 };
 
@@ -209,45 +211,44 @@ const asLiteral = <const Values extends readonly string[]>(
 
 const asTier = (value: unknown, path: string): ProgressionTier => {
   const tier = asSafeInteger(value, path);
-  if (tier < 0 || tier > 4) return invalidSave(path, "expected progression tier 0 through 4");
+  if (tier < 0 || tier > 4) {
+    return invalidSave(path, "expected progression tier 0 through 4");
+  }
   return tier as ProgressionTier;
 };
 
 const parseDecision = (value: unknown, path: string): DayDecision => {
   const record = asRecord(value, path);
   return Object.freeze({
-    glasses: glassCount(asNonNegativeInteger(record["glasses"], `${path}.glasses`)),
-    signs: signCount(asNonNegativeInteger(record["signs"], `${path}.signs`)),
-    price: moneyCents(asNonNegativeInteger(record["price"], `${path}.price`)),
+    glasses: glassCount(asNonNegativeInteger(record.glasses, `${path}.glasses`)),
+    signs: signCount(asNonNegativeInteger(record.signs, `${path}.signs`)),
+    price: moneyCents(asNonNegativeInteger(record.price, `${path}.price`)),
   });
 };
 
 const parseEnvironment = (value: unknown, path: string): DayEnvironment => {
   const record = asRecord(value, path);
-  const weather = asRecord(record["weather"], `${path}.weather`);
-  const sentiment = asRecord(record["sentiment"], `${path}.sentiment`);
-  const event = asRecord(record["event"], `${path}.event`);
+  const weather = asRecord(record.weather, `${path}.weather`);
+  const sentiment = asRecord(record.sentiment, `${path}.sentiment`);
+  const event = asRecord(record.event, `${path}.event`);
 
   return Object.freeze({
     weather: Object.freeze({
-      kind: asLiteral(weather["kind"], weatherKinds, `${path}.weather.kind`),
+      kind: asLiteral(weather.kind, weatherKinds, `${path}.weather.kind`),
       demandMultiplier: basisPoints(
-        asNonNegativeInteger(weather["demandMultiplier"], `${path}.weather.demandMultiplier`),
+        asNonNegativeInteger(weather.demandMultiplier, `${path}.weather.demandMultiplier`),
       ),
     }),
     sentiment: Object.freeze({
-      kind: asLiteral(sentiment["kind"], sentimentKinds, `${path}.sentiment.kind`),
+      kind: asLiteral(sentiment.kind, sentimentKinds, `${path}.sentiment.kind`),
       demandMultiplier: basisPoints(
-        asNonNegativeInteger(
-          sentiment["demandMultiplier"],
-          `${path}.sentiment.demandMultiplier`,
-        ),
+        asNonNegativeInteger(sentiment.demandMultiplier, `${path}.sentiment.demandMultiplier`),
       ),
     }),
     event: Object.freeze({
-      kind: asLiteral(event["kind"], eventKinds, `${path}.event.kind`),
+      kind: asLiteral(event.kind, eventKinds, `${path}.event.kind`),
       demandMultiplier: basisPoints(
-        asNonNegativeInteger(event["demandMultiplier"], `${path}.event.demandMultiplier`),
+        asNonNegativeInteger(event.demandMultiplier, `${path}.event.demandMultiplier`),
       ),
     }),
   });
@@ -256,41 +257,39 @@ const parseEnvironment = (value: unknown, path: string): DayEnvironment => {
 const parseLedgerLine = (value: unknown, path: string): LedgerLine => {
   const record = asRecord(value, path);
   return Object.freeze({
-    kind: asLiteral(record["kind"], ledgerLineKinds, `${path}.kind`),
-    label: asString(record["label"], `${path}.label`),
-    amount: moneyCents(asNonNegativeInteger(record["amount"], `${path}.amount`)),
-    direction: asLiteral(record["direction"], directions, `${path}.direction`),
+    kind: asLiteral(record.kind, ledgerLineKinds, `${path}.kind`),
+    label: asString(record.label, `${path}.label`),
+    amount: moneyCents(asNonNegativeInteger(record.amount, `${path}.amount`)),
+    direction: asLiteral(record.direction, directions, `${path}.direction`),
   });
 };
 
 const parseLedgerEntry = (value: unknown, path: string): DailyLedgerEntry => {
   const record = asRecord(value, path);
-  const linesValue = record["lines"];
-  if (!Array.isArray(linesValue)) return invalidSave(`${path}.lines`, "expected an array");
+  const linesValue = record.lines;
+  if (!Array.isArray(linesValue)) {
+    return invalidSave(`${path}.lines`, "expected an array");
+  }
 
   return Object.freeze({
-    day: dayNumber(asSafeInteger(record["day"], `${path}.day`)),
-    tier: asTier(record["tier"], `${path}.tier`),
-    decision: parseDecision(record["decision"], `${path}.decision`),
-    environment: parseEnvironment(record["environment"], `${path}.environment`),
+    day: dayNumber(asSafeInteger(record.day, `${path}.day`)),
+    tier: asTier(record.tier, `${path}.tier`),
+    decision: parseDecision(record.decision, `${path}.decision`),
+    environment: parseEnvironment(record.environment, `${path}.environment`),
     potentialDemand: glassCount(
-      asNonNegativeInteger(record["potentialDemand"], `${path}.potentialDemand`),
+      asNonNegativeInteger(record.potentialDemand, `${path}.potentialDemand`),
     ),
-    sold: glassCount(asNonNegativeInteger(record["sold"], `${path}.sold`)),
-    revenue: moneyCents(asNonNegativeInteger(record["revenue"], `${path}.revenue`)),
-    financeIncome: moneyCents(
-      asNonNegativeInteger(record["financeIncome"], `${path}.financeIncome`),
-    ),
-    expenses: moneyCents(asNonNegativeInteger(record["expenses"], `${path}.expenses`)),
-    net: signedMoneyCents(asSafeInteger(record["net"], `${path}.net`)),
-    cashDelta: signedMoneyCents(asSafeInteger(record["cashDelta"], `${path}.cashDelta`)),
-    borrowed: moneyCents(asNonNegativeInteger(record["borrowed"], `${path}.borrowed`)),
-    repaid: moneyCents(asNonNegativeInteger(record["repaid"], `${path}.repaid`)),
-    endingCash: moneyCents(
-      asNonNegativeInteger(record["endingCash"], `${path}.endingCash`),
-    ),
+    sold: glassCount(asNonNegativeInteger(record.sold, `${path}.sold`)),
+    revenue: moneyCents(asNonNegativeInteger(record.revenue, `${path}.revenue`)),
+    financeIncome: moneyCents(asNonNegativeInteger(record.financeIncome, `${path}.financeIncome`)),
+    expenses: moneyCents(asNonNegativeInteger(record.expenses, `${path}.expenses`)),
+    net: signedMoneyCents(asSafeInteger(record.net, `${path}.net`)),
+    cashDelta: signedMoneyCents(asSafeInteger(record.cashDelta, `${path}.cashDelta`)),
+    borrowed: moneyCents(asNonNegativeInteger(record.borrowed, `${path}.borrowed`)),
+    repaid: moneyCents(asNonNegativeInteger(record.repaid, `${path}.repaid`)),
+    endingCash: moneyCents(asNonNegativeInteger(record.endingCash, `${path}.endingCash`)),
     endingLoanBalance: moneyCents(
-      asNonNegativeInteger(record["endingLoanBalance"], `${path}.endingLoanBalance`),
+      asNonNegativeInteger(record.endingLoanBalance, `${path}.endingLoanBalance`),
     ),
     lines: Object.freeze(
       linesValue.map((line, index) => parseLedgerLine(line, `${path}.lines[${String(index)}]`)),
@@ -300,18 +299,18 @@ const parseLedgerEntry = (value: unknown, path: string): DailyLedgerEntry => {
 
 const parseGameState = (value: unknown, path: string): GameState => {
   const record = asRecord(value, path);
-  const ledgerValue = record["ledger"];
-  if (!Array.isArray(ledgerValue)) return invalidSave(`${path}.ledger`, "expected an array");
+  const ledgerValue = record.ledger;
+  if (!Array.isArray(ledgerValue)) {
+    return invalidSave(`${path}.ledger`, "expected an array");
+  }
 
   const state = Object.freeze({
-    day: dayNumber(asSafeInteger(record["day"], `${path}.day`)),
-    cash: moneyCents(asNonNegativeInteger(record["cash"], `${path}.cash`)),
-    loanBalance: moneyCents(
-      asNonNegativeInteger(record["loanBalance"], `${path}.loanBalance`),
-    ),
-    unitCost: moneyCents(asNonNegativeInteger(record["unitCost"], `${path}.unitCost`)),
-    signCost: moneyCents(asNonNegativeInteger(record["signCost"], `${path}.signCost`)),
-    tier: asTier(record["tier"], `${path}.tier`),
+    day: dayNumber(asSafeInteger(record.day, `${path}.day`)),
+    cash: moneyCents(asNonNegativeInteger(record.cash, `${path}.cash`)),
+    loanBalance: moneyCents(asNonNegativeInteger(record.loanBalance, `${path}.loanBalance`)),
+    unitCost: moneyCents(asNonNegativeInteger(record.unitCost, `${path}.unitCost`)),
+    signCost: moneyCents(asNonNegativeInteger(record.signCost, `${path}.signCost`)),
+    tier: asTier(record.tier, `${path}.tier`),
     ledger: Object.freeze(
       ledgerValue.map((entry, index) =>
         parseLedgerEntry(entry, `${path}.ledger[${String(index)}]`),
@@ -320,10 +319,7 @@ const parseGameState = (value: unknown, path: string): GameState => {
   }) satisfies GameState;
 
   if (state.ledger.length !== Number(state.day) - 1) {
-    return invalidSave(
-      `${path}.ledger`,
-      "ledger length must equal the number of completed days",
-    );
+    return invalidSave(`${path}.ledger`, "ledger length must equal the number of completed days");
   }
 
   state.ledger.forEach((entry, index) => {
@@ -433,7 +429,7 @@ export const createRunSaveDocument = (snapshot: RunSnapshot): RunSaveDocumentV2 
 
 const migrateVersionZero = (value: Record<string, unknown>): RunSaveDocumentV1 => {
   const simulationSchemaVersion = asSafeInteger(
-    value["simulationSchemaVersion"],
+    value.simulationSchemaVersion,
     "simulationSchemaVersion",
   );
 
@@ -441,16 +437,16 @@ const migrateVersionZero = (value: Record<string, unknown>): RunSaveDocumentV1 =
     saveSchemaVersion: 1,
     simulationSchemaVersion,
     run: Object.freeze({
-      seed: asNonNegativeInteger(value["seed"], "seed"),
-      state: value["state"],
-      environment: value["environment"],
+      seed: asNonNegativeInteger(value.seed, "seed"),
+      state: value.state,
+      environment: value.environment,
       draft: Object.freeze({ glasses: 5, signs: 1, price: 150 }),
     }),
   });
 };
 
 const migrateVersionOne = (value: Record<string, unknown>): Record<string, unknown> => {
-  const run = asRecord(value["run"], "save.run");
+  const run = asRecord(value.run, "save.run");
   return {
     ...value,
     saveSchemaVersion: RUN_SAVE_SCHEMA_VERSION,
@@ -463,7 +459,7 @@ const migrateVersionOne = (value: Record<string, unknown>): Record<string, unkno
 
 export const migrateRunSaveDocument = (value: unknown): unknown => {
   const record = asRecord(value, "save");
-  const rawVersion = record["saveSchemaVersion"] ?? record["schemaVersion"];
+  const rawVersion = record.saveSchemaVersion ?? record.schemaVersion;
   const version = asSafeInteger(rawVersion, "saveSchemaVersion");
 
   if (version > RUN_SAVE_SCHEMA_VERSION) {
@@ -476,8 +472,12 @@ export const migrateRunSaveDocument = (value: unknown): unknown => {
   if (version === 0) {
     return migrateVersionOne(asRecord(migrateVersionZero(record), "save"));
   }
-  if (version === 1) return migrateVersionOne(record);
-  if (version === RUN_SAVE_SCHEMA_VERSION) return record;
+  if (version === 1) {
+    return migrateVersionOne(record);
+  }
+  if (version === RUN_SAVE_SCHEMA_VERSION) {
+    return record;
+  }
 
   throw new RunPersistenceError(
     "unsupported-save-version",
@@ -496,15 +496,19 @@ const parsePhase = (
   path: string,
 ): RunPhase => {
   const record = asRecord(value, path);
-  const kind = asLiteral(record["kind"], phaseKinds, `${path}.kind`);
-  if (kind === "deciding") return Object.freeze({ kind: "deciding" });
+  const kind = asLiteral(record.kind, phaseKinds, `${path}.kind`);
+  if (kind === "deciding") {
+    return Object.freeze({ kind: "deciding" });
+  }
 
-  const nextState = parseGameState(record["nextState"], `${path}.nextState`);
+  const nextState = parseGameState(record.nextState, `${path}.nextState`);
   let expected: DayResolution;
   try {
     expected = simulateDay(state, draft, environment);
   } catch (error) {
-    if (!(error instanceof DecisionOutsideOperatingScaleError)) throw error;
+    if (!(error instanceof DecisionOutsideOperatingScaleError)) {
+      throw error;
+    }
     expected = replayLegacyDay(state, draft, environment);
   }
   if (!serializedStatesEqual(nextState, expected.nextState)) {
@@ -512,7 +516,9 @@ const parsePhase = (
   }
 
   const entry = nextState.ledger.at(-1);
-  if (entry === undefined) return invalidSave(path, "report state must contain the resolved day");
+  if (entry === undefined) {
+    return invalidSave(path, "report state must contain the resolved day");
+  }
 
   return Object.freeze({
     kind: "report",
@@ -551,10 +557,7 @@ export const restoreEnvironmentRandom = (
 
 export const decodeRunSaveDocument = (value: unknown): RunSnapshot => {
   const migrated = asRecord(migrateRunSaveDocument(value), "save");
-  const saveSchemaVersion = asSafeInteger(
-    migrated["saveSchemaVersion"],
-    "save.saveSchemaVersion",
-  );
+  const saveSchemaVersion = asSafeInteger(migrated.saveSchemaVersion, "save.saveSchemaVersion");
   if (saveSchemaVersion !== RUN_SAVE_SCHEMA_VERSION) {
     throw new RunPersistenceError(
       "unsupported-save-version",
@@ -563,7 +566,7 @@ export const decodeRunSaveDocument = (value: unknown): RunSnapshot => {
   }
 
   const simulationSchemaVersion = asSafeInteger(
-    migrated["simulationSchemaVersion"],
+    migrated.simulationSchemaVersion,
     "save.simulationSchemaVersion",
   );
   if (simulationSchemaVersion !== SIMULATION_SCHEMA_VERSION) {
@@ -573,16 +576,16 @@ export const decodeRunSaveDocument = (value: unknown): RunSnapshot => {
     );
   }
 
-  const run = asRecord(migrated["run"], "save.run");
-  const state = parseGameState(run["state"], "save.run.state");
-  const environment = parseEnvironment(run["environment"], "save.run.environment");
-  const draft = parseDecision(run["draft"], "save.run.draft");
+  const run = asRecord(migrated.run, "save.run");
+  const state = parseGameState(run.state, "save.run.state");
+  const environment = parseEnvironment(run.environment, "save.run.environment");
+  const draft = parseDecision(run.draft, "save.run.draft");
   const snapshot = Object.freeze({
-    seed: seed(asNonNegativeInteger(run["seed"], "save.run.seed")),
+    seed: seed(asNonNegativeInteger(run.seed, "save.run.seed")),
     state,
     environment,
     draft,
-    phase: parsePhase(run["phase"], state, environment, draft, "save.run.phase"),
+    phase: parsePhase(run.phase, state, environment, draft, "save.run.phase"),
   }) satisfies RunSnapshot;
 
   restoreEnvironmentRandom(snapshot);
@@ -663,7 +666,9 @@ const openDatabase = async (): Promise<IDBDatabase> => {
     });
     return await requestResult(request);
   } catch (error) {
-    if (error instanceof RunPersistenceError) throw error;
+    if (error instanceof RunPersistenceError) {
+      throw error;
+    }
     throw new RunPersistenceError("storage-failed", "Unable to open browser run storage.", {
       cause: error,
     });
@@ -672,25 +677,21 @@ const openDatabase = async (): Promise<IDBDatabase> => {
 
 const isUnsupportedStoredRun = (error: unknown): boolean =>
   error instanceof RunPersistenceError &&
-  (error.code === "unsupported-save-version" ||
-    error.code === "unsupported-simulation-version");
+  (error.code === "unsupported-save-version" || error.code === "unsupported-simulation-version");
 
 const decodeStoredRun = (stored: unknown, path: string): RunSnapshot | null => {
-  if (stored === undefined) return null;
+  if (stored === undefined) {
+    return null;
+  }
   if (typeof stored !== "string") {
     return invalidSave(path, "expected a text run document");
   }
   return importRunSnapshot(stored);
 };
 
-const readStoredSlot = async (
-  database: IDBDatabase,
-  key: string,
-): Promise<unknown> => {
+const readStoredSlot = async (database: IDBDatabase, key: string): Promise<unknown> => {
   const transaction = database.transaction(RUN_STORE_NAME, "readonly");
-  const stored = await requestResult<unknown>(
-    transaction.objectStore(RUN_STORE_NAME).get(key),
-  );
+  const stored = await requestResult<unknown>(transaction.objectStore(RUN_STORE_NAME).get(key));
   await transactionComplete(transaction);
   return stored;
 };
@@ -702,10 +703,7 @@ export const saveCurrentRun = async (snapshot: RunSnapshot): Promise<void> => {
     let priorValidDocument: string | null = null;
 
     if (current !== undefined) {
-      if (typeof current !== "string") {
-        // A malformed current slot must not replace an existing recovery slot.
-        priorValidDocument = null;
-      } else {
+      if (typeof current === "string") {
         try {
           importRunSnapshot(current);
           priorValidDocument = current;
@@ -713,8 +711,13 @@ export const saveCurrentRun = async (snapshot: RunSnapshot): Promise<void> => {
           // Never overwrite a newer/unsupported save merely because this build
           // cannot understand it. Corrupt compatible data may be repaired from
           // an already validated recovery snapshot.
-          if (isUnsupportedStoredRun(error)) throw error;
+          if (isUnsupportedStoredRun(error)) {
+            throw error;
+          }
         }
+      } else {
+        // A malformed current slot must not replace an existing recovery slot.
+        priorValidDocument = null;
       }
     }
 
@@ -726,7 +729,9 @@ export const saveCurrentRun = async (snapshot: RunSnapshot): Promise<void> => {
     store.put(exportRunSnapshot(snapshot), CURRENT_RUN_KEY);
     await transactionComplete(transaction);
   } catch (error) {
-    if (error instanceof RunPersistenceError) throw error;
+    if (error instanceof RunPersistenceError) {
+      throw error;
+    }
     throw new RunPersistenceError("storage-failed", "Unable to save the current run.", {
       cause: error,
     });
@@ -746,7 +751,9 @@ export const loadCurrentRun = async (): Promise<LoadedRun | null> => {
     ]);
     await transactionComplete(transaction);
 
-    if (current === undefined && recovery === undefined) return null;
+    if (current === undefined && recovery === undefined) {
+      return null;
+    }
 
     let currentError: unknown = null;
     try {
@@ -755,7 +762,9 @@ export const loadCurrentRun = async (): Promise<LoadedRun | null> => {
         return Object.freeze({ snapshot, recovered: false });
       }
     } catch (error) {
-      if (isUnsupportedStoredRun(error)) throw error;
+      if (isUnsupportedStoredRun(error)) {
+        throw error;
+      }
       currentError = error;
     }
 
@@ -765,7 +774,9 @@ export const loadCurrentRun = async (): Promise<LoadedRun | null> => {
         return Object.freeze({ snapshot, recovered: true });
       }
     } catch (error) {
-      if (isUnsupportedStoredRun(error)) throw error;
+      if (isUnsupportedStoredRun(error)) {
+        throw error;
+      }
       throw new RunPersistenceError(
         "invalid-save",
         "Both current and recovery run snapshots are invalid.",
@@ -773,7 +784,9 @@ export const loadCurrentRun = async (): Promise<LoadedRun | null> => {
       );
     }
 
-    if (currentError instanceof RunPersistenceError) throw currentError;
+    if (currentError instanceof RunPersistenceError) {
+      throw currentError;
+    }
     if (currentError !== null) {
       throw new RunPersistenceError(
         "invalid-save",
@@ -783,7 +796,9 @@ export const loadCurrentRun = async (): Promise<LoadedRun | null> => {
     }
     return null;
   } catch (error) {
-    if (error instanceof RunPersistenceError) throw error;
+    if (error instanceof RunPersistenceError) {
+      throw error;
+    }
     throw new RunPersistenceError("storage-failed", "Unable to load the current run.", {
       cause: error,
     });
