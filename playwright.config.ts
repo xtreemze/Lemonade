@@ -1,7 +1,7 @@
 import process from "node:process";
 import { defineConfig } from "@playwright/test";
 
-const isCi = Boolean(process.env.CI);
+const isCi = Boolean(process.env["CI"]);
 const basePath = "/Lemonade/";
 const previewOrigin = "http://127.0.0.1:4173";
 
