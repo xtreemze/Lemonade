@@ -329,7 +329,7 @@ export const createLemonsvilleScene = (
 
   let cupInventory: CupInventory | null = null;
   let standDetail: StandDetailController | null = null;
-  canvas.dataset.cupVisualStyle = "original-svg-3d";
+  canvas.dataset["cupVisualStyle"] = "original-svg-3d";
 
   const weatherObjects: Record<SceneWeather, Group> = {
     sunny: new Group(),
@@ -378,8 +378,8 @@ export const createLemonsvilleScene = (
       userCameraZoom = readSceneCameraZoomPreference(zoomStorage, activeCameraZoomPreferenceKey);
     }
     camera.zoom = userCameraZoom;
-    canvas.dataset.sceneZoom = userCameraZoom.toFixed(3);
-    canvas.dataset.sceneZoomViewport = viewportClass;
+    canvas.dataset["sceneZoom"] = userCameraZoom.toFixed(3);
+    canvas.dataset["sceneZoomViewport"] = viewportClass;
   };
 
   const persistSceneCameraZoom = (): void => {
@@ -399,7 +399,7 @@ export const createLemonsvilleScene = (
     camera.lookAt(...composition.lookAt);
     syncSceneCameraZoom();
     camera.updateProjectionMatrix();
-    canvas.dataset.sceneShot = shot;
+    canvas.dataset["sceneShot"] = shot;
   };
 
   const applyRemainingCameraTransition = (progress: number): void => {
@@ -422,7 +422,7 @@ export const createLemonsvilleScene = (
     );
     syncSceneCameraZoom();
     camera.updateProjectionMatrix();
-    canvas.dataset.sceneShot = "remaining";
+    canvas.dataset["sceneShot"] = "remaining";
   };
 
   const updateSignPrice = (priceLabel: string): void => {
@@ -430,7 +430,7 @@ export const createLemonsvilleScene = (
       return;
     }
     signPriceLabel = priceLabel;
-    canvas.dataset.signPriceLabel = priceLabel;
+    canvas.dataset["signPriceLabel"] = priceLabel;
     signLabelModule ??= import("./sign-label.js");
     const generation = ++signTextureGeneration;
     void signLabelModule.then(({ createPriceSignSurface }) => {
@@ -465,7 +465,7 @@ export const createLemonsvilleScene = (
     }
     userCameraZoom = clampedZoom;
     camera.zoom = userCameraZoom;
-    canvas.dataset.sceneZoom = userCameraZoom.toFixed(3);
+    canvas.dataset["sceneZoom"] = userCameraZoom.toFixed(3);
     camera.updateProjectionMatrix();
     render();
   };
@@ -696,7 +696,7 @@ export const createLemonsvilleScene = (
     const forecast = state.phase === "forecast";
     stand.shutter.visible = forecast;
     seller.person.root.visible = !forecast;
-    canvas.dataset.standState = forecast ? "closed" : "open";
+    canvas.dataset["standState"] = forecast ? "closed" : "open";
 
     const signLimit = forecast
       ? 0
