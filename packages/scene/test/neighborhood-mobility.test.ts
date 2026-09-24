@@ -273,7 +273,7 @@ describe("unified neighborhood mobility", () => {
     const later = system.sample({
       weather: "cloudy",
       phase: "simulation",
-      elapsedMs: 12_600,
+      elapsedMs: 14_000,
       durationMs: 14_000,
       dayNumber: 2,
       focus: { x: 0, z: 0 },
@@ -596,7 +596,7 @@ describe("unified neighborhood mobility", () => {
       if (property === undefined || property.drivewayX === null) continue;
 
       const access = residentialAccessLayout(property, MOBILITY_SEED);
-      const obstacleActive = elapsedMs >= 4_500 && elapsedMs <= 5_800;
+      const obstacleActive = elapsedMs >= 1_500 && elapsedMs <= 4_000;
       const sample = system.sample({
         weather: "sunny",
         phase: "simulation",
