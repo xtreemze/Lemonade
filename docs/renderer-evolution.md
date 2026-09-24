@@ -1,24 +1,27 @@
 # Scene renderer evolution
 
-Tracked by #162 and #163.
+Tracked by #162 and #163, with migration slices #196–#200.
 
 ## Decision
 
-Three.js remains the production scene foundation while Lemonsville is optimized and measured. The renderer is an adapter around deterministic simulation, occurrence, storyboard, accessibility and world-layout contracts; those contracts must not depend on Three.js so a later engine change remains possible.
+Babylon.js is the production target for Lemonsville under #163. Three.js remains temporary production/reference infrastructure only while Babylon reaches semantic, visual, interaction, accessibility, mobile, and performance parity.
 
-Babylon.js is the preferred complete-engine migration candidate if Lemonade materially outgrows the current procedural/code-first scene architecture. It is not a dependency yet.
+The renderer is an adapter around deterministic simulation, occurrence, storyboard, accessibility, navigation, feedback, and world-layout contracts. Those contracts must remain engine-neutral. This is an engine migration, not a rewrite of game rules or neighborhood semantics.
 
-luma.gl and deck.gl are not primary scene-engine candidates. Their GPU/data-visualization strengths do not replace the complete animated scene, asset, material, character, weather and tooling responsibilities Lemonade needs.
+luma.gl and deck.gl are not primary scene-engine candidates. Their GPU/data-visualization strengths do not replace the complete animated scene, asset, material, character, weather, interaction, and tooling responsibilities Lemonade needs.
 
-## Near-term sequence
+## Migration sequence
 
-1. Establish renderer diagnostics and explicit performance budgets.
-2. Bound expensive visual actor rigs independently from logical customer/storyboard identity.
-3. Share resources and use Three.js instancing/batching for repeated/static scene geometry.
-4. Replace recurring whole-scene traversal with explicit registries/spatial indexes where profiling shows cost.
-5. Certify the intended busy scene on mobile and desktop.
-6. Prototype Three.js WebGPU/TSL behind an experimental backend once the production scene has a renderer boundary.
-7. Benchmark Babylon.js against the same deterministic fixture only after the optimized Three.js baseline exists.
+1. Keep renderer-neutral contracts authoritative.
+2. Establish shared diagnostics, deterministic stress fixtures, and explicit performance budgets (#162).
+3. Port procedural neighborhood and static world projection to Babylon (#196).
+4. Port stand, inventory, signs, seller, and customer actors (#197).
+5. Port neighborhood mobility, ambient life, weather, lighting, and vegetation (#198).
+6. Replace Three-specific editor/gizmos and diagnostics with Babylon-native tooling while retaining engine-neutral dev-tool operations (#199).
+7. Run complete parity, browser, accessibility, mobile, bundle/startup, and performance certification.
+8. Make Babylon the sole production renderer and remove Three.js runtime/types and Three-only tooling (#200).
+
+Do not add new Three-only architecture unless required to keep the reference renderer stable enough for migration certification.
 
 ## Renderer-neutral boundary
 
@@ -29,7 +32,7 @@ The engine may own:
 - geometry/material/asset realization;
 - animation interpolation;
 - picking and developer visualization;
-- renderer-specific LOD, batching and instancing.
+- renderer-specific LOD, batching, instancing, and resource diagnostics.
 
 The engine must not own:
 
@@ -38,17 +41,19 @@ The engine must not own:
 - customer identity;
 - route intent or right-of-way decisions;
 - persisted simulation state;
-- accessibility/report semantics.
+- accessibility/report semantics;
+- authoritative environment or feedback event timing.
 
-A renderer migration should therefore replace the projection of the same world/storyboard facts, not rewrite game rules.
+A renderer migration therefore replaces the projection of the same world/storyboard facts rather than changing those facts.
 
 ## Certification fixture
 
-Use one deterministic high-load fixture for renderer comparisons:
+Use one deterministic high-load fixture across Three reference and Babylon target implementations:
 
 - full procedural neighborhood;
 - approximately 60 simultaneously active pedestrians;
-- representative cars, bicycles, pets and residential activity;
+- representative cars, bicycles, pets, wildlife, and residential activity;
+- authoritative customer/storyboard activity including the high-sale envelope;
 - wind-responsive vegetation;
 - sunny/cloudy/hot-and-dry/thunderstorm presentation;
 - business-day lighting cycle;
@@ -58,26 +63,24 @@ Use one deterministic high-load fixture for renderer comparisons:
 Capture at minimum:
 
 - startup and scene-initialization cost;
-- p50/p95 CPU frame time;
-- GPU frame time when available;
-- draw calls;
-- triangles/points/lines;
-- live geometries/textures;
+- production bundle contribution and lazy-loading behavior;
+- p50/p95 CPU frame cadence;
+- GPU timing when available;
+- draw calls and primitives;
+- live geometries/textures/resources;
 - active visual rigs versus logical actors;
 - memory/GC evidence;
-- production bundle contribution.
+- semantic parity of authoritative actor/event projections.
 
-## Babylon.js migration gate
+## Cutover gate
 
-Evaluate a real Babylon.js slice when one or more of these conditions becomes material:
+#200 is the authoritative final gate. Babylon may become the sole production renderer only when:
 
-- imported/skeletal character animation and blending at scale;
-- engine-owned navigation or physics is needed;
-- sophisticated particles/VFX become a core scene requirement;
-- asset streaming and editor-oriented authoring outweigh code-first procedural generation;
-- maintaining custom Three.js tooling costs more than adopting an engine;
-- optimized Three.js misses certified mobile frame/memory budgets.
+- static world, stand, actors, mobility, ambient life, weather, camera, picking, and dev tooling have parity;
+- simulation, occurrence, routing, persistence, accessibility, and feedback contracts remain renderer-neutral;
+- required browser/mobile/accessibility/release checks pass with Babylon as default;
+- the deterministic stress fixture meets the accepted performance/resource budgets;
+- the critical application entry remains within its bundle contract through lazy engine loading;
+- Three.js runtime/type dependencies and Three-only code can be removed without semantic or user-facing regression.
 
-Migration requires an equivalent implementation of the certification fixture. Do not compare an optimized Babylon.js scene to the current eager-object Three.js implementation.
-
-The migration decision should consider performance, bundle/startup cost, authoring/tooling complexity, portability of deterministic contracts, accessibility integration and long-term maintenance—not feature count alone.
+Until then, Three.js is reference infrastructure, not the long-term architectural direction.
