@@ -19,8 +19,8 @@ describe("ambient neighborhood mobility projection", () => {
     let visibleSprinkler = false;
     scene.traverse((object) => {
       if (
-        object.userData.sceneRole === "yard-sprinkler" &&
-        object.userData.propertyRole === active?.propertyRole &&
+        object.userData["sceneRole"] === "yard-sprinkler" &&
+        object.userData["propertyRole"] === active?.propertyRole &&
         object.visible
       ) {
         visibleSprinkler = true;
@@ -42,7 +42,7 @@ describe("ambient neighborhood mobility projection", () => {
       }
 
       scene.traverse((object) => {
-        if (object.userData.sceneRole === "house-door" && Math.abs(object.rotation.y) > 0.5) {
+        if (object.userData["sceneRole"] === "house-door" && Math.abs(object.rotation.y) > 0.5) {
           observedOpenDoor = true;
         }
       });
