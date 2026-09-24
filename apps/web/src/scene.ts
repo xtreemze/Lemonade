@@ -169,14 +169,14 @@ export const createLemonsvilleSceneView = (
 
   const initializeController = async (): Promise<void> => {
     try {
-      const { createLemonsvilleScene } = await loadSceneRuntime();
+      const { createLemonsvilleScene: createScene } = await loadSceneRuntime();
       if (disposed || controller !== null || lastInput === null || lastInput.phase === "idle") {
         return;
       }
 
       const description = describeScene(lastInput);
       const state = createState(lastInput, reducedMotion);
-      const nextController = createLemonsvilleScene(elements.canvas, state, options.sceneOptions);
+      const nextController = createScene(elements.canvas, state, options.sceneOptions);
 
       if (nextController === null) {
         showFallback(description);
