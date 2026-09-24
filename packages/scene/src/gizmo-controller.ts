@@ -51,7 +51,7 @@ const getVerticalFovRadians = (camera: Camera): number => {
 };
 
 const readAxis = (obj: Object3D): "x" | "y" | "z" | null => {
-  const axis: unknown = obj.userData.axis;
+  const axis: unknown = obj.userData["axis"];
   return axis === "x" || axis === "y" || axis === "z" ? axis : null;
 };
 
@@ -141,7 +141,7 @@ export const createGizmoController = (options: GizmoOptions): GizmoController =>
     xCone.position.x = axisLength;
     xCone.rotation.z = Math.PI / 2;
     xCone.name = "gizmo-x";
-    xCone.userData.axis = "x";
+    xCone.userData["axis"] = "x";
     gizmo.add(xCone);
 
     const xLineGeom = new BufferGeometry();
@@ -151,7 +151,7 @@ export const createGizmoController = (options: GizmoOptions): GizmoController =>
     );
     const xLine = new Line(xLineGeom, new LineBasicMaterial({ color: 0xff_00_00, linewidth: 3 }));
     xLine.name = "gizmo-x";
-    xLine.userData.axis = "x";
+    xLine.userData["axis"] = "x";
     gizmo.add(xLine);
 
     // Y axis (green)
@@ -161,7 +161,7 @@ export const createGizmoController = (options: GizmoOptions): GizmoController =>
     );
     yCone.position.y = axisLength;
     yCone.name = "gizmo-y";
-    yCone.userData.axis = "y";
+    yCone.userData["axis"] = "y";
     gizmo.add(yCone);
 
     const yLineGeom = new BufferGeometry();
@@ -171,7 +171,7 @@ export const createGizmoController = (options: GizmoOptions): GizmoController =>
     );
     const yLine = new Line(yLineGeom, new LineBasicMaterial({ color: 0x00_ff_00, linewidth: 3 }));
     yLine.name = "gizmo-y";
-    yLine.userData.axis = "y";
+    yLine.userData["axis"] = "y";
     gizmo.add(yLine);
 
     // Z axis (blue)
@@ -182,7 +182,7 @@ export const createGizmoController = (options: GizmoOptions): GizmoController =>
     zCone.position.z = axisLength;
     zCone.rotation.x = Math.PI / 2;
     zCone.name = "gizmo-z";
-    zCone.userData.axis = "z";
+    zCone.userData["axis"] = "z";
     gizmo.add(zCone);
 
     const zLineGeom = new BufferGeometry();
@@ -192,7 +192,7 @@ export const createGizmoController = (options: GizmoOptions): GizmoController =>
     );
     const zLine = new Line(zLineGeom, new LineBasicMaterial({ color: 0x00_00_ff, linewidth: 3 }));
     zLine.name = "gizmo-z";
-    zLine.userData.axis = "z";
+    zLine.userData["axis"] = "z";
     gizmo.add(zLine);
 
     return gizmo;
