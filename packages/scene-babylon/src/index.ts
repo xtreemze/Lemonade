@@ -67,9 +67,8 @@ export const createBabylonLemonsvilleScene = (
     return null;
   }
 
-  engine.setHardwareScalingLevel(
-    1 / clampPixelRatio(globalThis.devicePixelRatio),
-  );
+  const pixelRatio = clampPixelRatio(globalThis.devicePixelRatio);
+  engine.setHardwareScalingLevel(1 / pixelRatio);
 
   const scene = new Scene(engine);
   scene.clearColor = clearColorForWeather(initialState.weather);
@@ -182,8 +181,28 @@ export const createBabylonLemonsvilleScene = (
     scene.render();
   };
 
+  let renderLoopRunning = false;
+
+  const syncRenderLoop = (): void => {
+    const shouldAnimate =
+      !disposed && state.phase === "simulation" && !state.reducedMotion;
+
+    if (shouldAnimate && !renderLoopRunning) {
+      engine.runRenderLoop(renderFrame);
+      renderLoopRunning = true;
+      return;
+    }
+
+    if (!shouldAnimate && renderLoopRunning) {
+      engine.stopRenderLoop(renderFrame);
+      renderLoopRunning = false;
+    }
+
+    if (!shouldAnimate) renderFrame();
+  };
+
   applyState(initialState);
-  engine.runRenderLoop(renderFrame);
+  syncRenderLoop();
 
   return Object.freeze({
     update(nextState: LemonsvilleSceneState): void {
@@ -194,13 +213,16 @@ export const createBabylonLemonsvilleScene = (
         state.storyboard !== nextState.storyboard;
       if (restartAnimation) animationEpoch = performance.now();
       applyState(nextState);
-      renderFrame();
+      syncRenderLoop();
     },
     resize(width: number, height: number): void {
       if (disposed) return;
       viewportWidth = Math.max(1, Math.floor(width));
       viewportHeight = Math.max(1, Math.floor(height));
-      engine.setSize(viewportWidth, viewportHeight);
+      engine.setSize(
+        Math.max(1, Math.round(viewportWidth * pixelRatio)),
+        Math.max(1, Math.round(viewportHeight * pixelRatio)),
+      );
       applyCameraShot(currentShot);
       renderFrame();
     },
@@ -221,7 +243,10 @@ export const createBabylonLemonsvilleScene = (
     dispose(): void {
       if (disposed) return;
       disposed = true;
-      engine.stopRenderLoop(renderFrame);
+      if (renderLoopRunning) {
+        engine.stopRenderLoop(renderFrame);
+        renderLoopRunning = false;
+      }
       scene.dispose();
       engine.dispose();
       delete canvas.dataset["rendererBackend"];
