@@ -9,7 +9,8 @@
     "./storyboard": "./src/storyboard.ts",
     "./street-layout": "./src/street-layout.ts",
     "./residential-layout": "./src/residential-layout.ts",
-    "./world-scale": "./src/world-scale.ts"
+    "./world-scale": "./src/world-scale.ts",
+    "./property-access-layout": "./src/property-access-layout.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
