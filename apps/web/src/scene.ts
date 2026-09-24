@@ -219,14 +219,14 @@ export const createLemonsvilleSceneView = (
     const description = describeScene(input);
     const state = createState(input, reducedMotion);
     elements.canvas.setAttribute("aria-label", description);
-    elements.canvas.dataset.presentationDurationMs = String(Math.max(0, input.durationMs));
-    elements.canvas.dataset.preparedCups = String(Math.max(0, input.prepared));
-    elements.canvas.dataset.plannedSales = String(Math.max(0, input.sold));
-    elements.canvas.dataset.priceCents = String(Math.max(0, input.priceCents));
-    elements.canvas.dataset.characterSeed = String(input.characterSeed >>> 0);
-    elements.canvas.dataset.dayNumber = String(Math.max(1, Math.trunc(input.dayNumber)));
-    elements.canvas.dataset.sellerMood = sellerMoodForConfidence(input.confidence);
-    elements.canvas.dataset.nextSellerMood = sellerMoodForConfidence(input.nextConfidence);
+    elements.canvas.dataset["presentationDurationMs"] = String(Math.max(0, input.durationMs));
+    elements.canvas.dataset["preparedCups"] = String(Math.max(0, input.prepared));
+    elements.canvas.dataset["plannedSales"] = String(Math.max(0, input.sold));
+    elements.canvas.dataset["priceCents"] = String(Math.max(0, input.priceCents));
+    elements.canvas.dataset["characterSeed"] = String(input.characterSeed >>> 0);
+    elements.canvas.dataset["dayNumber"] = String(Math.max(1, Math.trunc(input.dayNumber)));
+    elements.canvas.dataset["sellerMood"] = sellerMoodForConfidence(input.confidence);
+    elements.canvas.dataset["nextSellerMood"] = sellerMoodForConfidence(input.nextConfidence);
     elements.equivalent.textContent = description;
     elements.fallbackDescription.textContent = description;
 
