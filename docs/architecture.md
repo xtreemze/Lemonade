@@ -6,7 +6,7 @@ Lemonade is a **web-first deterministic simulation** with optional platform capa
 
 The browser application owns composition and user experience. A pure TypeScript simulation package owns business rules. Rendering, audio, persistence, charts, and any future Tauri shell are consumers/adapters around that package.
 
-The default implementation rule is **standards first**: use semantic HTML, CSS, native form controls, SVG, Web Audio, and browser lifecycle APIs directly when they solve the problem cleanly. Lit is used selectively for interactive presentation components where declarative rendering materially reduces repetitive DOM synchronization; Three.js remains isolated to the low-poly 3D scene.
+The default implementation rule is **standards first**: use semantic HTML, CSS, native form controls, SVG, Web Audio, and browser lifecycle APIs directly when they solve the problem cleanly. Lit is used selectively for interactive presentation components where declarative rendering materially reduces repetitive DOM synchronization. The 3D scene remains isolated behind renderer-neutral contracts while Lemonsville migrates from the temporary Three.js reference renderer to Babylon.js under #163.
 
 Tauri is deliberately not the foundation. It may package the web app and expose native capabilities when those capabilities have a clear benefit, but the game remains fully playable in a browser.
 
@@ -23,7 +23,7 @@ apps/
 packages/
   simulation/      deterministic business model
   ui/              ledger projections + native DOM/SVG reporting
-  scene/           typed Three.js renderer
+  scene/           renderer-neutral world/scene contracts + renderer backends
   audio/           procedural Web Audio engine
 ```
 
@@ -45,7 +45,7 @@ Forbidden dependency directions:
 
 - `simulation -> DOM/browser APIs`
 - `simulation -> UI framework/runtime`
-- `simulation -> Three.js`
+- `simulation -> renderer engines (Three.js/Babylon.js)`
 - `simulation -> Web Audio`
 - `simulation -> Tauri`
 - `simulation -> IndexedDB/localStorage`
@@ -173,7 +173,7 @@ Do not use the same random stream for presentation variation. 3D ambient motion,
 
 The ordering of random draws is part of a simulation version's deterministic contract. Prefer named substreams or precomputed typed environment events when unrelated features might otherwise perturb future results.
 
-Ruleset v4 should make this stronger by deriving named market substreams for audience selection, customer traits, awareness, and conversion. Presentation seeds for Three.js/audio must be disjoint from simulation streams. Adding an umbrella variant or animation may never change who buys lemonade.
+Ruleset v4 should make this stronger by deriving named market substreams for audience selection, customer traits, awareness, and conversion. Presentation seeds for renderer/audio adapters must be disjoint from simulation streams. Adding an umbrella variant or animation may never change who buys lemonade.
 
 ## Simulation versioning and persistence
 
@@ -221,7 +221,7 @@ Avoid adding a general chart dependency until required interaction or scale exce
 
 The 3D scene consumes a compact typed render model. It may interpolate values for animation, but it cannot decide how many glasses were sold.
 
-Three.js is intentionally retained here. Scene graphs, cameras, materials, geometry, device-pixel-ratio handling, and WebGL resource disposal are meaningful specialized complexity; replacing them with hand-written WebGL would not make the application more native in any useful architectural sense.
+The scene package keeps simulation-facing world, occurrence, storyboard, navigation, and accessibility contracts renderer-neutral. Three.js is retained only as the temporary production/reference backend during the active Babylon.js migration (#163). Babylon.js is the production target; #200 owns certified cutover and removal of the Three.js runtime/types after parity is proven.
 
 Performance strategy:
 
@@ -262,8 +262,8 @@ The workspace baseline as of September 2026 is:
 - Vite 8 as a thin web build/development layer;
 - Vitest 5;
 - Playwright;
-- ESLint flat configuration with typed rules;
-- Three.js for the 3D renderer;
+- Biome 2.5 for linting/formatting plus repository-specific policy gates;
+- Three.js as the temporary reference renderer while Babylon.js is the production target under #163/#200;
 - Tauri/Rust only when native capability work begins.
 
 CI uses `pnpm/setup@v1`, which provisions the standalone pnpm executable and Node runtime in one action. Dependency installation is frozen against the generated lockfile.
