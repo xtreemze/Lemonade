@@ -24,7 +24,8 @@ A revision is release-certified only when all of the following pass for the same
 
 1. `pnpm check`
    - strict TypeScript;
-   - type-aware ESLint;
+   - Biome `check` with all stable lint rules, all enabled project/type/test/Playwright domains, formatting, and import organization enforced as errors;
+   - repository-specific anti-pattern and mobile-contract policy gates;
    - unit/invariant tests;
    - production workspace build.
 2. `pnpm certify`
