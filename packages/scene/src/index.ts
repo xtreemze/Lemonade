@@ -24,6 +24,15 @@ import {
   resetThreeCharacterPose,
   type ThreeCharacterRig,
 } from "./character-rig.js";
+import {
+  clampSceneCameraZoom,
+  DEFAULT_SCENE_CAMERA_ZOOM,
+  readSceneCameraZoomPreference,
+  sceneCameraZoomFromPinch,
+  sceneCameraZoomFromWheel,
+  sceneCameraZoomPreferenceKey,
+  writeSceneCameraZoomPreference,
+} from "./camera-zoom.js";
 import { createGizmoController, type GizmoController } from "./gizmo-controller.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import {
@@ -67,6 +76,7 @@ import {
   remainingCupsAt,
   sceneCameraComposition,
   sceneShotAt,
+  sceneViewportClass,
   type BuyerPhase,
   type SceneShotKind,
   type StreetStoryboard,
@@ -361,6 +371,38 @@ export const createLemonsvilleScene = (
   let viewportHeight = 1;
   let currentShot: SceneShotKind = state.phase === "forecast" ? "forecast" : "stand";
   let currentCameraProgress = 0;
+  let zoomStorage: Storage | null = null;
+  try {
+    zoomStorage = window.localStorage;
+  } catch {
+    zoomStorage = null;
+  }
+  let activeCameraZoomPreferenceKey = "";
+  let userCameraZoom = DEFAULT_SCENE_CAMERA_ZOOM;
+
+  const syncSceneCameraZoom = (): void => {
+    const viewportClass = sceneViewportClass(viewportWidth, viewportHeight);
+    const nextPreferenceKey = sceneCameraZoomPreferenceKey(state.phase, viewportClass);
+    if (nextPreferenceKey !== activeCameraZoomPreferenceKey) {
+      activeCameraZoomPreferenceKey = nextPreferenceKey;
+      userCameraZoom = readSceneCameraZoomPreference(
+        zoomStorage,
+        activeCameraZoomPreferenceKey,
+      );
+    }
+    camera.zoom = userCameraZoom;
+    canvas.dataset["sceneZoom"] = userCameraZoom.toFixed(3);
+    canvas.dataset["sceneZoomViewport"] = viewportClass;
+  };
+
+  const persistSceneCameraZoom = (): void => {
+    if (activeCameraZoomPreferenceKey === "") return;
+    writeSceneCameraZoomPreference(
+      zoomStorage,
+      activeCameraZoomPreferenceKey,
+      userCameraZoom,
+    );
+  };
 
   const applyCameraShot = (shot: SceneShotKind): void => {
     currentShot = shot;
@@ -370,6 +412,7 @@ export const createLemonsvilleScene = (
     camera.fov = composition.fov;
     camera.position.set(...composition.position);
     camera.lookAt(...composition.lookAt);
+    syncSceneCameraZoom();
     camera.updateProjectionMatrix();
     canvas.dataset["sceneShot"] = shot;
   };
@@ -392,6 +435,7 @@ export const createLemonsvilleScene = (
       lerp(from.lookAt[1], to.lookAt[1], eased),
       lerp(from.lookAt[2], to.lookAt[2], eased),
     );
+    syncSceneCameraZoom();
     camera.updateProjectionMatrix();
     canvas.dataset["sceneShot"] = "remaining";
   };
@@ -420,6 +464,94 @@ export const createLemonsvilleScene = (
   const render = (): void => {
     renderer.render(scene, camera);
   };
+
+  const previousTouchAction = canvas.style.touchAction;
+  canvas.style.touchAction = "none";
+
+  const setSceneCameraZoom = (nextZoom: number): void => {
+    syncSceneCameraZoom();
+    const clampedZoom = clampSceneCameraZoom(nextZoom);
+    if (Math.abs(clampedZoom - userCameraZoom) < 0.0001) return;
+    userCameraZoom = clampedZoom;
+    camera.zoom = userCameraZoom;
+    canvas.dataset["sceneZoom"] = userCameraZoom.toFixed(3);
+    camera.updateProjectionMatrix();
+    render();
+  };
+
+  const onSceneWheel = (event: WheelEvent): void => {
+    event.preventDefault();
+    setSceneCameraZoom(
+      sceneCameraZoomFromWheel(
+        userCameraZoom,
+        event.deltaY,
+        event.deltaMode,
+        viewportHeight,
+      ),
+    );
+    persistSceneCameraZoom();
+  };
+
+  type TouchPointer = Readonly<{ x: number; y: number }>;
+  const touchPointers = new Map<number, TouchPointer>();
+  let pinchStartDistance = 0;
+  let pinchStartZoom = DEFAULT_SCENE_CAMERA_ZOOM;
+
+  const currentPinchDistance = (): number => {
+    const [first, second] = [...touchPointers.values()];
+    if (first === undefined || second === undefined) return 0;
+    return Math.hypot(second.x - first.x, second.y - first.y);
+  };
+
+  const beginPinch = (): void => {
+    if (touchPointers.size < 2) return;
+    syncSceneCameraZoom();
+    pinchStartDistance = currentPinchDistance();
+    pinchStartZoom = userCameraZoom;
+  };
+
+  const onScenePointerDown = (event: PointerEvent): void => {
+    if (event.pointerType !== "touch") return;
+    touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (touchPointers.size === 2) {
+      event.preventDefault();
+      beginPinch();
+    }
+  };
+
+  const onScenePointerMove = (event: PointerEvent): void => {
+    if (
+      event.pointerType !== "touch" ||
+      !touchPointers.has(event.pointerId)
+    ) {
+      return;
+    }
+    touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (touchPointers.size < 2 || pinchStartDistance <= 0) return;
+    event.preventDefault();
+    setSceneCameraZoom(
+      sceneCameraZoomFromPinch(
+        pinchStartZoom,
+        pinchStartDistance,
+        currentPinchDistance(),
+      ),
+    );
+  };
+
+  const onScenePointerEnd = (event: PointerEvent): void => {
+    if (event.pointerType !== "touch") return;
+    const wasPinching = touchPointers.size >= 2;
+    touchPointers.delete(event.pointerId);
+    if (wasPinching) persistSceneCameraZoom();
+    if (touchPointers.size >= 2) beginPinch();
+    else pinchStartDistance = 0;
+  };
+
+  canvas.addEventListener("wheel", onSceneWheel, { passive: false });
+  canvas.addEventListener("pointerdown", onScenePointerDown);
+  canvas.addEventListener("pointermove", onScenePointerMove);
+  canvas.addEventListener("pointerup", onScenePointerEnd);
+  canvas.addEventListener("pointercancel", onScenePointerEnd);
 
   void import("./neighborhood.js")
     .then(({ populateNeighborhood }) => {
@@ -898,6 +1030,14 @@ export const createLemonsvilleScene = (
     signTextureGeneration += 1;
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
     animationFrame = null;
+    persistSceneCameraZoom();
+    canvas.removeEventListener("wheel", onSceneWheel);
+    canvas.removeEventListener("pointerdown", onScenePointerDown);
+    canvas.removeEventListener("pointermove", onScenePointerMove);
+    canvas.removeEventListener("pointerup", onScenePointerEnd);
+    canvas.removeEventListener("pointercancel", onScenePointerEnd);
+    canvas.style.touchAction = previousTouchAction;
+    touchPointers.clear();
     signTexture?.dispose();
     gizmoController?.dispose();
     disposeSceneResources(scene);
