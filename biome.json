@@ -50,10 +50,20 @@
   "linter": {
     "enabled": true,
     "domains": {
+      "drizzle": "none",
+      "next": "none",
+      "playwright": "all",
       "project": "all",
-      "types": "all",
+      "qwik": "none",
+      "react": "none",
+      "reactNative": "none",
+      "solid": "none",
+      "svelte": "none",
+      "tailwind": "none",
       "test": "all",
-      "playwright": "all"
+      "turborepo": "none",
+      "types": "all",
+      "vue": "none"
     },
     "rules": {
       "preset": "all",
