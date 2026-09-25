@@ -1,14 +1,11 @@
 import {
   DEFAULT_RESIDENTIAL_SEED,
   generateResidentialLayout,
-  residentialAccessLayout,
   type ResidentialPoint,
   type ResidentialPropertySpec,
+  residentialAccessLayout,
 } from "./residential-layout.js";
-import {
-  generateStreetNetwork,
-  type StreetStripSpec,
-} from "./street-layout.js";
+import { generateStreetNetwork, type StreetStripSpec } from "./street-layout.js";
 import { WORLD_SCALE } from "./world-scale.js";
 
 export type NeighborhoodTopologySide = -1 | 1;
@@ -39,11 +36,7 @@ export type NeighborhoodSidewalkSegment = Readonly<{
   rotationY: number;
 }>;
 
-export type NeighborhoodPropertyGroup =
-  | "front"
-  | "middle"
-  | "back"
-  | "outer";
+export type NeighborhoodPropertyGroup = "front" | "middle" | "back" | "outer";
 
 export type NeighborhoodPropertyTopology = Readonly<{
   id: string;
@@ -90,13 +83,9 @@ type StripMatch = Readonly<{
   gap: number;
 }>;
 
-const point = (x: number, z: number): ResidentialPoint =>
-  Object.freeze({ x, z });
+const point = (x: number, z: number): ResidentialPoint => Object.freeze({ x, z });
 
-const stripEndpoint = (
-  strip: StreetStripSpec,
-  direction: -1 | 1,
-): ResidentialPoint => {
+const stripEndpoint = (strip: StreetStripSpec, direction: -1 | 1): ResidentialPoint => {
   const halfLength = strip.length / 2;
   return point(
     strip.x + Math.cos(strip.rotationY) * halfLength * direction,
@@ -104,13 +93,11 @@ const stripEndpoint = (
   );
 };
 
-const roadSegmentId = (
-  strip: Pick<StreetStripSpec, "streetId" | "segmentIndex">,
-): string => `road:${strip.streetId}:${String(strip.segmentIndex)}`;
+const roadSegmentId = (strip: Pick<StreetStripSpec, "streetId" | "segmentIndex">): string =>
+  `road:${strip.streetId}:${String(strip.segmentIndex)}`;
 
-const sidewalkSegmentId = (
-  strip: Pick<StreetStripSpec, "streetId" | "segmentIndex">,
-): string => `sidewalk:${strip.streetId}:${String(strip.segmentIndex)}`;
+const sidewalkSegmentId = (strip: Pick<StreetStripSpec, "streetId" | "segmentIndex">): string =>
+  `sidewalk:${strip.streetId}:${String(strip.segmentIndex)}`;
 
 const projectRoad = (strip: StreetStripSpec): NeighborhoodRoadSegment =>
   Object.freeze({
@@ -125,12 +112,9 @@ const projectRoad = (strip: StreetStripSpec): NeighborhoodRoadSegment =>
     rotationY: strip.rotationY,
   });
 
-const projectSidewalk = (
-  strip: StreetStripSpec,
-): NeighborhoodSidewalkSegment => {
+const projectSidewalk = (strip: StreetStripSpec): NeighborhoodSidewalkSegment => {
   const roadSegmentIndex = Math.floor(strip.segmentIndex / 2);
-  const side: NeighborhoodTopologySide =
-    strip.segmentIndex % 2 === 0 ? -1 : 1;
+  const side: NeighborhoodTopologySide = strip.segmentIndex % 2 === 0 ? -1 : 1;
 
   return Object.freeze({
     id: sidewalkSegmentId(strip),
@@ -159,10 +143,7 @@ const distanceSquaredToStripCenterline = (
   const deltaX = target.x - strip.x;
   const deltaZ = target.z - strip.z;
   const projection = deltaX * tangentX + deltaZ * tangentZ;
-  const bounded = Math.max(
-    -strip.length / 2,
-    Math.min(strip.length / 2, projection),
-  );
+  const bounded = Math.max(-strip.length / 2, Math.min(strip.length / 2, projection));
   const projectedX = strip.x + tangentX * bounded;
   const projectedZ = strip.z + tangentZ * bounded;
   const dx = target.x - projectedX;
@@ -179,12 +160,14 @@ const nearestStrip = (
     throw new Error("neighborhood topology requires generated street strips");
   }
 
-  const strip = strips.reduce((best, candidate) =>
-    distanceSquaredToStripCenterline(candidate, target) <
-    distanceSquaredToStripCenterline(best, target)
-      ? candidate
-      : best,
-  first);
+  const strip = strips.reduce(
+    (best, candidate) =>
+      distanceSquaredToStripCenterline(candidate, target) <
+      distanceSquaredToStripCenterline(best, target)
+        ? candidate
+        : best,
+    first,
+  );
 
   return Object.freeze({
     strip,
@@ -268,9 +251,7 @@ const projectProperties = (
 
   return Object.freeze(
     groups.flatMap(([group, properties]) =>
-      properties.map((property) =>
-        projectProperty(property, group, seed, roads, sidewalks),
-      ),
+      properties.map((property) => projectProperty(property, group, seed, roads, sidewalks)),
     ),
   );
 };
@@ -284,10 +265,6 @@ export const generateNeighborhoodTopology = (
     seed: streetNetwork.seed,
     roads: Object.freeze(streetNetwork.roads.map(projectRoad)),
     sidewalks: Object.freeze(streetNetwork.sidewalks.map(projectSidewalk)),
-    properties: projectProperties(
-      streetNetwork.seed,
-      streetNetwork.roads,
-      streetNetwork.sidewalks,
-    ),
+    properties: projectProperties(streetNetwork.seed, streetNetwork.roads, streetNetwork.sidewalks),
   });
 };
