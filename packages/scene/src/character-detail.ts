@@ -523,10 +523,7 @@ export type DecoratableCharacter = Readonly<{
   profile: CharacterProfile;
 }>;
 
-const characterProfileIndexFor = (
-  person: DecoratableCharacter,
-  fallbackIndex: number,
-): number => {
+const characterProfileIndexFor = (person: DecoratableCharacter, fallbackIndex: number): number => {
   const profileIndex: unknown = person.root.userData["characterProfileIndex"];
   return typeof profileIndex === "number" && Number.isFinite(profileIndex)
     ? Math.abs(Math.trunc(profileIndex))
