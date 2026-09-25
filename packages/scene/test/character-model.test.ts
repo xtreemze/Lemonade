@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   blinkAmountAt,
   buyerInteractionPose,
+  characterExpressionAt,
   CHARACTER_ANATOMY,
   characterPoseAtDistance,
   neutralCharacterPose,
@@ -96,5 +97,22 @@ describe("renderer-neutral character model", () => {
     expect(repeated).toEqual(first);
     expect(first.every((value) => value >= 0 && value <= 1)).toBe(true);
     expect(first.some((value) => value > 0.5)).toBe(true);
+  });
+
+  it("composes deterministic blink and gaze without mutating semantic expression inputs", () => {
+    const base = buyerInteractionPose("drinking", 4).expression;
+    const first = characterExpressionAt(base, 0x51_a7, 2_500);
+    const repeated = characterExpressionAt(base, 0x51_a7, 2_500);
+    const later = characterExpressionAt(base, 0x51_a7, 5_500);
+
+    expect(repeated).toEqual(first);
+    expect(base.blink).toBe(0);
+    expect(first.gazeX).toBeGreaterThanOrEqual(-1);
+    expect(first.gazeX).toBeLessThanOrEqual(1);
+    expect(first.gazeY).toBeGreaterThanOrEqual(-1);
+    expect(first.gazeY).toBeLessThanOrEqual(1);
+    expect(first.blink).toBeGreaterThanOrEqual(0);
+    expect(first.blink).toBeLessThanOrEqual(1);
+    expect([later.gazeX, later.gazeY]).not.toEqual([first.gazeX, first.gazeY]);
   });
 });
