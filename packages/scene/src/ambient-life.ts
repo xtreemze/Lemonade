@@ -9,11 +9,14 @@ import {
   SphereGeometry,
   Vector3,
 } from "three";
-import { decorateCharacter } from "./character-detail.js";
+import { applyCharacterExpressionPose, decorateCharacter } from "./character-detail.js";
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
 import {
   CHARACTER_ANATOMY,
+  type CharacterPose,
+  characterExpressionAt,
   characterPoseAtDistance,
+  neutralCharacterPose,
   seatedCharacterPose,
 } from "./character-model.js";
 import {
@@ -66,6 +69,8 @@ export type AmbientLifeController = Readonly<{
 
 const material = (color: number): MeshStandardMaterial =>
   new MeshStandardMaterial({ color, roughness: 0.88 });
+
+const ambientNeutralExpression = neutralCharacterPose().expression;
 
 const ambientUnit = (seed: number, salt: number): number => {
   let value = Math.imul((seed ^ salt) >>> 0, 0x9e_37_79_b1);
@@ -510,13 +515,12 @@ const applyTransportWalk = (
   rig: TransportCharacterRig,
   travelDistance: number,
   preserveLocomotionPose: boolean,
-): void => {
-  applyThreeCharacterPose(
-    rig,
-    characterPoseAtDistance(rig.profile, travelDistance, {
-      moving: preserveLocomotionPose,
-    }),
-  );
+): CharacterPose => {
+  const pose = characterPoseAtDistance(rig.profile, travelDistance, {
+    moving: preserveLocomotionPose,
+  });
+  applyThreeCharacterPose(rig, pose);
+  return pose;
 };
 
 const REDUCED_DETAIL_ROLES = new Set([
@@ -585,7 +589,7 @@ const placeRig = (
     (pose.travelDistance !== null || pose.speed > 0) &&
     pose.interaction !== "gardening" &&
     pose.interaction !== "mailbox";
-  applyTransportWalk(rig, travelDistance, preserveLocomotionPose);
+  const characterPose = applyTransportWalk(rig, travelDistance, preserveLocomotionPose);
   if (pose.interaction === "gardening") {
     rig.arms[0].root.rotation.x = -1.05;
     rig.arms[1].root.rotation.x = -0.72;
@@ -593,6 +597,10 @@ const placeRig = (
   } else if (pose.interaction === "mailbox") {
     rig.arms[1].root.rotation.x = -1.15;
   }
+  applyCharacterExpressionPose(
+    rig.head,
+    characterExpressionAt(characterPose.expression, actorIdentitySalt(pose.id), elapsedMs),
+  );
 };
 
 export const createAmbientLife = (
@@ -798,6 +806,10 @@ export const createAmbientLife = (
         applyMobilityRenderDetail(bicycle, pose.detail);
         bicycle.position.set(pose.x, 0.02, pose.z);
         bicycle.rotation.y = -pose.yaw;
+        applyCharacterExpressionPose(
+          bicycle,
+          characterExpressionAt(ambientNeutralExpression, actorIdentitySalt(pose.id), elapsedMs),
+        );
       }
 
       const allVehiclePoses = sample.actors.filter(
@@ -822,6 +834,10 @@ export const createAmbientLife = (
         applyMobilityRenderDetail(vehicle, pose.detail);
         vehicle.position.set(pose.x, 0.02, pose.z);
         vehicle.rotation.y = -pose.yaw;
+        applyCharacterExpressionPose(
+          vehicle,
+          characterExpressionAt(ambientNeutralExpression, actorIdentitySalt(pose.id), elapsedMs),
+        );
       }
       return sample;
     },
