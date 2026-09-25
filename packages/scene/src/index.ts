@@ -24,11 +24,7 @@ import {
   writeSceneCameraZoomPreference,
 } from "./camera-zoom.js";
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
-import {
-  CHARACTER_ANATOMY,
-  characterPoseAtDistance,
-  sellerConfidencePose,
-} from "./character-model.js";
+import { characterPoseAtDistance, sellerConfidencePose } from "./character-model.js";
 import {
   applyThreeCharacterPose,
   createThreeCharacterRig,
@@ -175,12 +171,9 @@ const createSeller = (geometries: CharacterGeometrySet, characterSeed: number): 
 const applySellerExpression = (seller: SellerRig, confidence: number): void => {
   const pose = sellerConfidencePose(confidence);
   const progress = (pose.expression.valence + 1) / 2;
-  resetPersonPose(seller.person);
-  seller.person.torso.position.y = CHARACTER_ANATOMY.torso.centerY;
-  seller.person.head.position.y = 1.73;
+  applyThreeCharacterPose(seller.person, pose);
+  seller.person.headPivot.position.y -= 0.05;
 
-  seller.person.head.rotation.x = pose.head.rotation.x;
-  seller.person.torso.rotation.x = pose.chest.rotation.x;
   seller.eyebrows[0].rotation.z = pose.expression.browTilt;
   seller.eyebrows[1].rotation.z = -pose.expression.browTilt;
   seller.eyebrows[0].position.y = 0.125 + progress * 0.018;
@@ -189,8 +182,6 @@ const applySellerExpression = (seller: SellerRig, confidence: number): void => {
   seller.mouth[1].rotation.z = pose.expression.mouthCurve;
   seller.mouth[0].position.y = -0.09 + pose.expression.valence * 0.012;
   seller.mouth[1].position.y = -0.09 + pose.expression.valence * 0.012;
-  seller.person.arms[0].root.rotation.x = pose.arms[0].shoulder.rotation.x;
-  seller.person.arms[1].root.rotation.x = pose.arms[1].shoulder.rotation.x;
 };
 
 const resetPersonPose = (person: PersonRig): void => {
@@ -223,15 +214,15 @@ const applyBuyerPose = (
     person.arms[1].root.rotation.x = -0.88;
     person.arms[1].lower.rotation.x = -1.0;
     person.arms[0].root.rotation.x = -0.12;
-    person.torso.rotation.x = 0.07;
-    person.head.rotation.x = -0.04;
+    person.chest.rotation.x = 0.07;
+    person.headPivot.rotation.x = -0.04;
   } else if (phase === "drinking") {
     person.cup.visible = true;
     person.arms[1].root.rotation.x = -1.05;
     person.arms[1].lower.rotation.x = -1.42;
-    person.head.rotation.x = 0.14;
-    person.head.rotation.z = index % 2 === 0 ? -0.055 : 0.055;
-    person.torso.rotation.x = -0.025;
+    person.headPivot.rotation.x = 0.14;
+    person.headPivot.rotation.z = index % 2 === 0 ? -0.055 : 0.055;
+    person.chest.rotation.x = -0.025;
   } else if (phase === "departing") {
     applyWalkingPose(person, travelDistance, true);
   }
@@ -871,15 +862,15 @@ export const createLemonsvilleScene = (
       return;
     }
     const breathing = Math.sin(seconds * 2.1) * 0.025;
-    seller.person.torso.position.y = 1.05 + breathing;
-    seller.person.head.position.y = 1.73 + breathing * 0.7;
+    seller.person.chest.position.y += breathing;
+    seller.person.headPivot.position.y -= breathing * 0.3;
     seller.person.arms[0].root.rotation.x += Math.sin(seconds * 1.7) * 0.035;
     seller.person.arms[1].root.rotation.x += Math.sin(seconds * 1.7 + 0.8) * 0.035;
 
     const serving = storyboard.sales.some((sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing");
     if (serving) {
       seller.person.arms[1].root.rotation.x = -1.2;
-      seller.person.torso.rotation.x -= 0.06;
+      seller.person.chest.rotation.x -= 0.06;
     }
   };
 
