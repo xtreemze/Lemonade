@@ -9,6 +9,7 @@ import {
   neutralCharacterPose,
   seatedCharacterPose,
   sellerConfidencePose,
+  sellerPresentationPose,
   serviceInteractionPose,
 } from "../src/character-model.js";
 import { characterProfileFor } from "../src/characters.js";
@@ -103,6 +104,28 @@ describe("renderer-neutral character model", () => {
     expect(Math.abs(high.arms[0].shoulder.rotation.z)).toBeGreaterThan(
       Math.abs(low.arms[0].shoulder.rotation.z),
     );
+  });
+
+  it("composes seller breathing and serving through renderer-neutral pose channels", () => {
+    const confidence = sellerConfidencePose(3);
+    const staticPose = sellerPresentationPose(3, 2_500, {
+      animated: false,
+      serving: true,
+    });
+    const breathing = sellerPresentationPose(3, 2_500, {
+      animated: true,
+    });
+    const serving = sellerPresentationPose(3, 2_500, {
+      animated: true,
+      serving: true,
+    });
+
+    expect(staticPose).toEqual(confidence);
+    expect(confidence.head.lift).toBeCloseTo(-0.05);
+    expect(breathing.chest.lift).not.toBeCloseTo(confidence.chest.lift);
+    expect(breathing.head.lift).not.toBeCloseTo(confidence.head.lift);
+    expect(serving.arms[1].shoulder.rotation.x).toBeCloseTo(-1.2);
+    expect(serving.chest.rotation.x).toBeCloseTo(confidence.chest.rotation.x - 0.06);
   });
 
   it("uses deterministic bounded blink timing", () => {
