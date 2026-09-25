@@ -843,6 +843,8 @@ export class LemonadeApp {
       ACTIVE_SIMULATION_PRESENTATION_MS,
     );
     for (const beat of schedule) {
+      this.#scheduleAudio(beat.iceClinkAtMs, "purchase:ice-clink");
+      this.#scheduleAudio(beat.pourAtMs, "purchase:pour");
       this.#scheduleFeedback(beat.serveAtMs, "purchase:serve", "purchase:serve");
       this.#scheduleFeedback(beat.paymentAtMs, "purchase:payment", "purchase:payment");
       this.#scheduleFeedback(beat.drinkAtMs, "purchase:drink", "purchase:drink");
