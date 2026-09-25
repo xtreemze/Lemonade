@@ -40,12 +40,12 @@ import {
   RunImportFileEvent,
 } from "./components.js";
 import { isGizmoEnabled } from "./dev-gizmo-flag.js";
+import type { ScenePreset } from "./dev-scene-launcher.js";
+import { isSceneLauncherEnabled } from "./dev-scene-launcher-flag.js";
 import {
   createEnvironmentAudioController,
   type EnvironmentAudioController,
 } from "./environment-audio.js";
-import type { ScenePreset } from "./dev-scene-launcher.js";
-import { isSceneLauncherEnabled } from "./dev-scene-launcher-flag.js";
 import type { HapticCue, HapticEngine } from "./haptics.js";
 import {
   clearCurrentRun,
@@ -809,10 +809,7 @@ export class LemonadeApp {
     });
   }
 
-  #scheduleEnvironmentOccurrences(
-    phase: EnvironmentPresentationPhase,
-    durationMs: number,
-  ): void {
+  #scheduleEnvironmentOccurrences(phase: EnvironmentPresentationPhase, durationMs: number): void {
     for (const occurrence of environmentOccurrenceSchedule(
       this.#environment.weather.kind,
       phase,
