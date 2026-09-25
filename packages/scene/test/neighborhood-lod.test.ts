@@ -1,15 +1,10 @@
 import { LOD, PerspectiveCamera, Scene } from "three";
 import { describe, expect, it } from "vitest";
-
-import {
-  DEFAULT_RESIDENTIAL_SEED,
-} from "../src/residential-layout.js";
 import { populateNeighborhood } from "../src/neighborhood.js";
+import { DEFAULT_RESIDENTIAL_SEED } from "../src/residential-layout.js";
 
 const distanceLodChild = (sceneRole: string, scene: Scene): LOD => {
-  const root = scene.children.find(
-    (object) => object.userData["sceneRole"] === sceneRole,
-  );
+  const root = scene.children.find((object) => object.userData["sceneRole"] === sceneRole);
   expect(root).toBeDefined();
   const lod = root?.children.find((child) => child instanceof LOD);
   expect(lod).toBeInstanceOf(LOD);
@@ -32,9 +27,7 @@ describe("neighborhood distance LOD", () => {
   it("switches the featured house between detailed and distant levels by camera distance", () => {
     const scene = new Scene();
     populateNeighborhood(scene, DEFAULT_RESIDENTIAL_SEED);
-    const root = scene.children.find(
-      (object) => object.userData["sceneRole"] === "stand-home",
-    );
+    const root = scene.children.find((object) => object.userData["sceneRole"] === "stand-home");
     expect(root).toBeDefined();
     if (root === undefined) {
       return;
