@@ -395,3 +395,18 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
 };
 
 export const weatherCue = (weather: WeatherKind): WeatherAudioCue => `forecast:${weather}`;
+
+export {
+  AVAILABLE_SOUND_LIBRARY,
+  MISSING_SOUND_LIBRARY,
+  availableSounds,
+  missingSounds,
+  soundLibrary,
+  soundLibraryEntry,
+  type MissingSoundId,
+  type SoundImplementation,
+  type SoundLibraryCategory,
+  type SoundLibraryEntry,
+  type SoundLibraryId,
+  type SoundLibraryStatus,
+} from "./library.js";
