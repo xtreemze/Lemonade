@@ -2,6 +2,7 @@ import {
   BoxGeometry,
   CylinderGeometry,
   Group,
+  LOD,
   Mesh,
   MeshStandardMaterial,
   type Object3D,
@@ -151,19 +152,15 @@ const distanceLod = (
   rotationY = 0,
 ): Group => {
   const root = new Group();
-  root.add(near, far);
-  far.visible = false;
+  const levels = new LOD();
+  levels.addLevel(near, 0);
+  levels.addLevel(far, threshold);
+  levels.userData["sceneRole"] = "distance-lod";
+  root.add(levels);
   root.position.set(x, 0, z);
   root.rotation.y = rotationY;
   root.scale.setScalar(scale);
   root.userData["lodMode"] = "distance-two-level";
-  root.onBeforeRender = (_renderer, _scene, camera) => {
-    const dx = camera.position.x - root.position.x;
-    const dz = camera.position.z - root.position.z;
-    const nearVisible = dx * dx + dz * dz < threshold * threshold;
-    near.visible = nearVisible;
-    far.visible = !nearVisible;
-  };
   return root;
 };
 
