@@ -48,6 +48,19 @@ const mark = <T extends Object3D>(object: T, role: string): T => {
   return object;
 };
 
+const characterBodyDecorationRoot = (root: Group): Group => {
+  let anchor: Group | undefined;
+  root.traverse((object) => {
+    if (
+      anchor === undefined &&
+      object.userData["characterBodyDecorationAnchor"] === true
+    ) {
+      anchor = object as Group;
+    }
+  });
+  return anchor ?? root;
+};
+
 const addFaceBar = (
   head: Mesh,
   width: number,
@@ -228,18 +241,19 @@ export const decorateCharacterBody = (
 ): void => {
   root.userData["characterGender"] = identity.gender;
   root.userData["characterAgeGroup"] = identity.ageGroup;
+  const bodyRoot = characterBodyDecorationRoot(root);
 
   const cloth = material(profile.clothingColor);
   const trim = material(profile.trouserColor);
   const collar = addGarment(
-    root,
+    bodyRoot,
     new Mesh(new CylinderGeometry(0.255, 0.275, 0.075, 10), cloth.clone()),
     [0, 1.45, 0],
   );
   collar.scale.x = identity.gender === "female" ? 0.92 : 1;
 
   const hem = addGarment(
-    root,
+    bodyRoot,
     new Mesh(
       new CylinderGeometry(
         identity.gender === "female" ? 0.31 : 0.34,
@@ -261,7 +275,7 @@ export const decorateCharacterBody = (
     stripe.rotation.z = 0.015;
   } else if (identity.garmentStyle === 1) {
     for (const direction of [-1, 1] as const) {
-      const panel = addGarment(root, new Mesh(new BoxGeometry(0.2, 0.68, 0.045), cloth.clone()), [
+      const panel = addGarment(bodyRoot, new Mesh(new BoxGeometry(0.2, 0.68, 0.045), cloth.clone()), [
         direction * 0.115,
         1.03,
         0.305,
@@ -335,7 +349,7 @@ export const decorateCharacterBody = (
       "character-bag",
     );
     bag.position.set(0, 1.02, -0.31);
-    root.add(bag);
+    bodyRoot.add(bag);
     for (const direction of [-1, 1] as const) {
       const strap = mark(
         new Mesh(new BoxGeometry(0.045, 0.72, 0.035), bagMaterial.clone()),
@@ -343,7 +357,7 @@ export const decorateCharacterBody = (
       );
       strap.position.set(direction * 0.2, 1.14, -0.16);
       strap.rotation.z = direction * 0.08;
-      root.add(strap);
+      bodyRoot.add(strap);
     }
   } else if (identity.bagStyle === 2) {
     const strap = mark(
@@ -352,27 +366,27 @@ export const decorateCharacterBody = (
     );
     strap.position.set(0, 1.12, 0.31);
     strap.rotation.z = -0.42;
-    root.add(strap);
+    bodyRoot.add(strap);
     const satchel = mark(
       new Mesh(new BoxGeometry(0.32, 0.28, 0.12), bagMaterial.clone()),
       "character-bag",
     );
     satchel.position.set(0.28, 0.78, 0.31);
-    root.add(satchel);
+    bodyRoot.add(satchel);
   } else if (identity.bagStyle === 3) {
     const tote = mark(
       new Mesh(new BoxGeometry(0.34, 0.38, 0.1), bagMaterial.clone()),
       "character-bag",
     );
     tote.position.set(0.43, 0.72, 0.02);
-    root.add(tote);
+    bodyRoot.add(tote);
     const handle = mark(
       new Mesh(new CylinderGeometry(0.035, 0.035, 0.34, 7), bagMaterial.clone()),
       "character-bag",
     );
     handle.position.set(0.43, 1.01, 0.02);
     handle.rotation.z = Math.PI / 2;
-    root.add(handle);
+    bodyRoot.add(handle);
   }
 
   // Garment geometry stays attached to the character root so child scaling and
@@ -390,39 +404,6 @@ export const decorateCharacter = (
   const identity = characterIdentityFor(index, profile);
   decorateCharacterBody(root, profile, identity);
   decorateCharacterHead(head, profile, identity, includeMouth);
-};
-
-export type SellerGestureApplier = (
-  torso: Mesh,
-  head: Mesh,
-  leftArm: Group,
-  rightArm: Group,
-  progress: number,
-  confidence: number,
-) => void;
-
-export const applySellerConfidenceGesture: SellerGestureApplier = (
-  torso,
-  head,
-  leftArm,
-  rightArm,
-  progress,
-  confidence,
-): void => {
-  const closeup = Math.min(1, Math.max(0, progress));
-  const gestureProgress = Math.min(1, Math.max(0, (closeup - 0.32) / 0.68));
-  const strength = gestureProgress * gestureProgress * (3 - 2 * gestureProgress);
-  const normalizedConfidence = Math.min(1, Math.max(0, confidence / 5));
-  const mix = (low: number, high: number): number => low + (high - low) * normalizedConfidence;
-
-  torso.position.y += mix(-0.035, 0.055) * strength;
-  head.rotation.x += mix(0.075, -0.05) * strength;
-  const armLift = mix(0.08, -0.62) * strength;
-  const armSpread = mix(0.06, 0.5) * strength;
-  leftArm.rotation.x += armLift;
-  rightArm.rotation.x += armLift;
-  leftArm.rotation.z = -armSpread;
-  rightArm.rotation.z = armSpread;
 };
 
 export const decorateSellerExpression = (
