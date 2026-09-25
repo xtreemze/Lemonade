@@ -34,7 +34,6 @@ const weatherMelodies: Readonly<Record<WeatherAudioCue, readonly number[]>> = {
 };
 
 describe("procedural cue compiler", () => {
-
   it("keeps continuous rain subordinate to foreground cues", () => {
     const dry = environmentBedGainTargets({ windIntensity: 0, precipitation: 0 });
     const moderate = environmentBedGainTargets({ windIntensity: 0, precipitation: 0.5 });
@@ -47,9 +46,10 @@ describe("procedural cue compiler", () => {
   });
 
   it("drops environment beds to their near-silent floor when muted", () => {
-    expect(
-      environmentBedGainTargets({ windIntensity: 1, precipitation: 1 }, true),
-    ).toEqual({ wind: 0.0001, rain: 0.0001 });
+    expect(environmentBedGainTargets({ windIntensity: 1, precipitation: 1 }, true)).toEqual({
+      wind: 0.0001,
+      rain: 0.0001,
+    });
   });
 
   it("is deterministic without an audio device", () => {
