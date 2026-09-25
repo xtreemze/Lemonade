@@ -836,6 +836,7 @@ export const createNeighborhoodMobilitySystem = (seed: number): NeighborhoodMobi
   const petClocks = new Map<string, TrafficClockRecord>();
   const drivewayClocks = new Map<string, TrafficClockRecord>();
   const driverClocks = new Map<string, TrafficClockRecord>();
+  const serviceClocks = new Map<string, TrafficClockRecord>();
   let trafficContextKey: string | null = null;
   let lastTrafficElapsedMs = 0;
 
@@ -852,6 +853,7 @@ export const createNeighborhoodMobilitySystem = (seed: number): NeighborhoodMobi
         petClocks.clear();
         drivewayClocks.clear();
         driverClocks.clear();
+        serviceClocks.clear();
       }
       trafficContextKey = contextKey;
       lastTrafficElapsedMs = input.elapsedMs;
@@ -1189,43 +1191,87 @@ export const createNeighborhoodMobilitySystem = (seed: number): NeighborhoodMobi
 
       if (phase === "forecast") {
         const morning = clamp01(input.elapsedMs / durationMs);
-        const routeStart = -96;
-        const routeEnd = 96;
-        const x = routeStart + (routeEnd - routeStart) * morning;
-        const nearestMailbox = mailboxes.reduce<(typeof mailboxes)[number] | null>(
+        const mailTarget = mailboxes.reduce<(typeof mailboxes)[number] | null>(
           (best, candidate) => {
             if (best === null) {
               return candidate;
             }
-            return Math.abs(candidate.point.x - x) < Math.abs(best.point.x - x) ? candidate : best;
+            return Math.abs(candidate.point.x) < Math.abs(best.point.x) ? candidate : best;
           },
           null,
         );
-        const mailInteraction =
-          nearestMailbox !== null && Math.abs(nearestMailbox.point.x - x) < 1.7;
-        const mailPoint = Object.freeze({
-          x: mailInteraction ? nearestMailbox.point.x : x,
-          z: STREET_LAYOUT.nearSidewalk.centerZ,
-        });
-        const walkingYaw = -Math.PI / 2;
-        const mailboxYaw = nearestMailbox
-          ? Math.atan2(nearestMailbox.point.z - mailPoint.z, nearestMailbox.point.x - mailPoint.x)
-          : walkingYaw;
-        const mailCarrier = makePose(
-          "mail-carrier",
-          "mail-carrier",
-          mailPoint,
-          mailInteraction ? mailboxYaw : walkingYaw,
-          mailInteraction ? 0 : NORMAL_PEDESTRIAN_SPEED,
-          focus,
-          mailInteraction ? "mailbox" : "none",
-          nearestMailbox?.propertyRole ?? null,
-        );
-        actors.push(mailCarrier);
-        addStatistical(counts, mailCarrier);
-        for (const mailbox of mailboxes) {
-          if (mailbox.point.x <= x + 1.5) {
-            patchProperty(properties, mailbox.propertyRole, {
+        if (mailTarget !== null) {
+          const visibleWalkBudget = Math.max(
+            3,
+            NORMAL_PEDESTRIAN_SPEED * Math.max(1, durationMs / 1000) * 0.72,
+          );
+          const halfRoute = visibleWalkBudget / 2;
+          const start = Object.freeze({
+            x: mailTarget.point.x - halfRoute,
+            z: STREET_LAYOUT.nearSidewalk.centerZ,
+          });
+          const end = Object.freeze({
+            x: mailTarget.point.x + halfRoute,
+            z: STREET_LAYOUT.nearSidewalk.centerZ,
+          });
+          const approachRoute = makeRoute("mail-carrier:approach", [start, mailTarget.point]);
+          const departureRoute = makeRoute("mail-carrier:depart", [mailTarget.point, end]);
+          const approach = pedestrianRoutePose(
+            "mail-carrier:approach",
+            approachRoute,
+            input.elapsedMs,
+            0,
+            NORMAL_PEDESTRIAN_SPEED,
+            3.2,
+            serviceClocks,
+          );
+          const mailboxDwellMs = 650;
+          const departureStartAtMs =
+            approach.completedAtMs === null
+              ? Number.POSITIVE_INFINITY
+              : approach.completedAtMs + mailboxDwellMs;
+          const departure = pedestrianRoutePose(
+            "mail-carrier:depart",
+            departureRoute,
+            input.elapsedMs,
+            departureStartAtMs,
+            NORMAL_PEDESTRIAN_SPEED,
+            3.2,
+            serviceClocks,
+          );
+          const dwelling =
+            approach.completedAtMs !== null &&
+            input.elapsedMs >= approach.completedAtMs &&
+            input.elapsedMs < departureStartAtMs;
+          const departed = departure.visible || departure.completedAtMs !== null;
+          const active = departure.visible ? departure : approach.visible ? approach : null;
+          const mailPoint = dwelling
+            ? mailTarget.point
+            : active?.point ?? (departed ? departure.point : approach.point);
+          const mailYaw = dwelling
+            ? Math.atan2(
+                mailTarget.point.z - STREET_LAYOUT.nearSidewalk.centerZ,
+                mailTarget.point.x - mailPoint.x,
+              )
+            : active?.yaw ?? departure.yaw;
+          const mailTravelDistance = approach.travelDistance + departure.travelDistance;
+          const mailCarrier = makePose(
+            "mail-carrier",
+            "mail-carrier",
+            mailPoint,
+            mailYaw,
+            dwelling ? 0 : active?.speed ?? 0,
+            focus,
+            dwelling ? "mailbox" : "none",
+            mailTarget.propertyRole,
+            false,
+            approach.visible || dwelling || departure.visible,
+            mailTravelDistance,
+          );
+          actors.push(mailCarrier);
+          addStatistical(counts, mailCarrier);
+          if (approach.completedAtMs !== null) {
+            patchProperty(properties, mailTarget.propertyRole, {
               mailServiced: true,
             });
           }
@@ -1239,23 +1285,54 @@ export const createNeighborhoodMobilitySystem = (seed: number): NeighborhoodMobi
             x: gardenerProperty.houseX + 1.8,
             z: access.pathCenterZ,
           });
-          const gardenerRoute = makeRoute("gardener", [sidewalk, garden]);
-          const gardenerProgress =
-            morning < 0.28 ? morning / 0.28 : morning < 0.82 ? 1 : 1 - (morning - 0.82) / 0.18;
-          const gardenerSample = sampleRouteProgress(gardenerRoute, clamp01(gardenerProgress));
-          const gardening = morning >= 0.28 && morning < 0.82;
+          const approachRoute = makeRoute("gardener:approach", [sidewalk, garden]);
+          const departureRoute = reverseRoute(approachRoute, ":depart");
+          const approach = pedestrianRoutePose(
+            "gardener:approach",
+            approachRoute,
+            input.elapsedMs,
+            0,
+            NORMAL_PEDESTRIAN_SPEED,
+            3.2,
+            serviceClocks,
+          );
+          const gardeningDwellMs = 1200;
+          const departureStartAtMs =
+            approach.completedAtMs === null
+              ? Number.POSITIVE_INFINITY
+              : approach.completedAtMs + gardeningDwellMs;
+          const departure = pedestrianRoutePose(
+            "gardener:depart",
+            departureRoute,
+            input.elapsedMs,
+            departureStartAtMs,
+            NORMAL_PEDESTRIAN_SPEED,
+            3.2,
+            serviceClocks,
+          );
+          const gardening =
+            approach.completedAtMs !== null &&
+            input.elapsedMs >= approach.completedAtMs &&
+            input.elapsedMs < departureStartAtMs;
+          const active = departure.visible ? departure : approach.visible ? approach : null;
+          const gardenerPoint = gardening ? garden : active?.point ?? departure.point;
+          const gardenerYaw = gardening ? approach.yaw : active?.yaw ?? departure.yaw;
+          const gardenerTravelDistance = approach.travelDistance + departure.travelDistance;
           patchProperty(properties, gardenerProperty.role, {
             gardenerPresent: gardening,
           });
           const gardener = makePose(
             "gardener",
             "gardener",
-            gardenerSample.point,
-            gardenerSample.yaw,
-            gardening ? 0 : NORMAL_PEDESTRIAN_SPEED,
+            gardenerPoint,
+            gardenerYaw,
+            gardening ? 0 : active?.speed ?? 0,
             focus,
             gardening ? "gardening" : "none",
             gardenerProperty.role,
+            false,
+            approach.visible || gardening || departure.visible,
+            gardenerTravelDistance,
           );
           actors.push(gardener);
           addStatistical(counts, gardener);
