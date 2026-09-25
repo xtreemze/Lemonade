@@ -64,6 +64,7 @@ export type NeighborhoodPropertyTopology = Readonly<{
     rotationY: number;
     sidewalkEdge: ResidentialPoint;
     sidewalkSegmentId: string;
+    sidewalkSegmentGap: number;
   }>;
   driveway: Readonly<{
     center: ResidentialPoint;
@@ -73,6 +74,7 @@ export type NeighborhoodPropertyTopology = Readonly<{
     parking: ResidentialPoint;
     roadEdge: ResidentialPoint;
     roadSegmentId: string;
+    roadSegmentGap: number;
   }> | null;
 }>;
 
@@ -81,6 +83,11 @@ export type NeighborhoodTopology = Readonly<{
   roads: readonly NeighborhoodRoadSegment[];
   sidewalks: readonly NeighborhoodSidewalkSegment[];
   properties: readonly NeighborhoodPropertyTopology[];
+}>;
+
+type StripMatch = Readonly<{
+  strip: StreetStripSpec;
+  gap: number;
 }>;
 
 const point = (x: number, z: number): ResidentialPoint =>
@@ -97,13 +104,13 @@ const stripEndpoint = (
   );
 };
 
-const roadSegmentId = (strip: Pick<StreetStripSpec, "streetId" | "segmentIndex">): string =>
-  `road:${strip.streetId}:${String(strip.segmentIndex)}`;
+const roadSegmentId = (
+  strip: Pick<StreetStripSpec, "streetId" | "segmentIndex">,
+): string => `road:${strip.streetId}:${String(strip.segmentIndex)}`;
 
 const sidewalkSegmentId = (
   strip: Pick<StreetStripSpec, "streetId" | "segmentIndex">,
-): string =>
-  `sidewalk:${strip.streetId}:${String(strip.segmentIndex)}`;
+): string => `sidewalk:${strip.streetId}:${String(strip.segmentIndex)}`;
 
 const projectRoad = (strip: StreetStripSpec): NeighborhoodRoadSegment =>
   Object.freeze({
@@ -122,7 +129,9 @@ const projectSidewalk = (
   strip: StreetStripSpec,
 ): NeighborhoodSidewalkSegment => {
   const roadSegmentIndex = Math.floor(strip.segmentIndex / 2);
-  const side: NeighborhoodTopologySide = strip.segmentIndex % 2 === 0 ? -1 : 1;
+  const side: NeighborhoodTopologySide =
+    strip.segmentIndex % 2 === 0 ? -1 : 1;
+
   return Object.freeze({
     id: sidewalkSegmentId(strip),
     streetId: strip.streetId,
@@ -164,18 +173,48 @@ const distanceSquaredToStripCenterline = (
 const nearestStrip = (
   strips: readonly StreetStripSpec[],
   target: ResidentialPoint,
-): StreetStripSpec => {
+): StripMatch => {
   const first = strips[0];
   if (first === undefined) {
     throw new Error("neighborhood topology requires generated street strips");
   }
 
-  return strips.reduce((best, candidate) =>
+  const strip = strips.reduce((best, candidate) =>
     distanceSquaredToStripCenterline(candidate, target) <
     distanceSquaredToStripCenterline(best, target)
       ? candidate
       : best,
   first);
+
+  return Object.freeze({
+    strip,
+    gap: Math.sqrt(distanceSquaredToStripCenterline(strip, target)),
+  });
+};
+
+const projectDriveway = (
+  property: ResidentialPropertySpec,
+  seed: number,
+  roads: readonly StreetStripSpec[],
+): NeighborhoodPropertyTopology["driveway"] => {
+  if (property.drivewayX === null) {
+    return null;
+  }
+
+  const access = residentialAccessLayout(property, seed);
+  const roadEdge = point(access.roadEdgeX, access.roadEdgeZ);
+  const road = nearestStrip(roads, roadEdge);
+
+  return Object.freeze({
+    center: point(access.drivewayCenterX, access.drivewayCenterZ),
+    length: access.drivewayLength,
+    width: WORLD_SCALE.street.drivewayWidth,
+    rotationY: access.drivewayRotationY,
+    parking: point(property.drivewayX, access.parkingZ),
+    roadEdge,
+    roadSegmentId: roadSegmentId(road.strip),
+    roadSegmentGap: road.gap,
+  });
 };
 
 const projectProperty = (
@@ -188,23 +227,6 @@ const projectProperty = (
   const access = residentialAccessLayout(property, seed);
   const sidewalkTarget = point(access.sidewalkX, access.sidewalkCenterZ);
   const sidewalk = nearestStrip(sidewalks, sidewalkTarget);
-
-  const driveway =
-    property.drivewayX === null
-      ? null
-      : (() => {
-          const roadEdge = point(access.roadEdgeX, access.roadEdgeZ);
-          const road = nearestStrip(roads, roadEdge);
-          return Object.freeze({
-            center: point(access.drivewayCenterX, access.drivewayCenterZ),
-            length: access.drivewayLength,
-            width: WORLD_SCALE.street.drivewayWidth,
-            rotationY: access.drivewayRotationY,
-            parking: point(property.drivewayX, access.parkingZ),
-            roadEdge,
-            roadSegmentId: roadSegmentId(road),
-          });
-        })();
 
   return Object.freeze({
     id: `property:${property.role}`,
@@ -224,9 +246,10 @@ const projectProperty = (
       width: access.pathWidth,
       rotationY: access.pathRotationY,
       sidewalkEdge: point(access.sidewalkEdgeX, access.sidewalkEdgeZ),
-      sidewalkSegmentId: sidewalkSegmentId(sidewalk),
+      sidewalkSegmentId: sidewalkSegmentId(sidewalk.strip),
+      sidewalkSegmentGap: sidewalk.gap,
     }),
-    driveway,
+    driveway: projectDriveway(property, seed, roads),
   });
 };
 
@@ -256,6 +279,7 @@ export const generateNeighborhoodTopology = (
   seed = DEFAULT_RESIDENTIAL_SEED,
 ): NeighborhoodTopology => {
   const streetNetwork = generateStreetNetwork(seed);
+
   return Object.freeze({
     seed: streetNetwork.seed,
     roads: Object.freeze(streetNetwork.roads.map(projectRoad)),
