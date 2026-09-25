@@ -1,8 +1,8 @@
 import type { ProceduralAudioEngine } from "@lemonade/audio";
 import {
-  environmentPresentationFrameAt,
   type EnvironmentPresentationPhase,
   type EnvironmentWeatherKind,
+  environmentPresentationFrameAt,
 } from "@lemonade/scene/environment-presentation";
 
 export type EnvironmentAudioController = Readonly<{
@@ -31,8 +31,10 @@ export const createEnvironmentAudioController = (
 ): EnvironmentAudioController => {
   const now = options.now ?? (() => performance.now());
   const requestFrame =
-    options.requestFrame ?? ((callback: FrameRequestCallback) => window.requestAnimationFrame(callback));
-  const cancelFrame = options.cancelFrame ?? ((handle: number) => window.cancelAnimationFrame(handle));
+    options.requestFrame ??
+    ((callback: FrameRequestCallback) => window.requestAnimationFrame(callback));
+  const cancelFrame =
+    options.cancelFrame ?? ((handle: number) => window.cancelAnimationFrame(handle));
 
   let disposed = false;
   let active = false;
@@ -102,10 +104,7 @@ export const createEnvironmentAudioController = (
     if (disposed || !active || paused) {
       return;
     }
-    elapsedBeforePause = Math.min(
-      durationMs,
-      elapsedBeforePause + Math.max(0, now() - startedAt),
-    );
+    elapsedBeforePause = Math.min(durationMs, elapsedBeforePause + Math.max(0, now() - startedAt));
     paused = true;
     cancelScheduledFrame();
   };
