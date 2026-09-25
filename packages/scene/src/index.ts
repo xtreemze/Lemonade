@@ -36,7 +36,11 @@ import {
   type ThreeCharacterRig,
 } from "./character-rig.js";
 import type { StreetMotion } from "./crowd-motion.js";
-import { attachLemonadeCupToHand, type CupInventory } from "./cup-inventory.js";
+import {
+  attachLemonadeCupToHand,
+  type CupInventory,
+  keepLemonadeCupUpright,
+} from "./cup-inventory.js";
 import { createGizmoController, type GizmoController } from "./gizmo-controller.js";
 import {
   animationElapsedAt,
@@ -230,6 +234,10 @@ const applyBuyerPose = (
     person.torso.rotation.x = -0.025;
   } else if (phase === "departing") {
     applyWalkingPose(person, travelDistance, true);
+  }
+
+  if (person.cup.visible) {
+    keepLemonadeCupUpright(person.cup);
   }
 };
 
@@ -563,7 +571,12 @@ export const createLemonsvilleScene = (
         return;
       }
       standDetail = populateStand(stand.root, stand.shutter);
-      const remaining = state.phase === "forecast" ? 0 : storyboard.prepared;
+      const remaining =
+        state.phase === "forecast"
+          ? 0
+          : state.phase === "idle"
+            ? remainingCupsAt(storyboard, storyboard.durationMs)
+            : remainingCupsAt(storyboard, lastElapsedMs);
       standDetail.setStock(remaining, storyboard.prepared);
       render();
     })
@@ -627,7 +640,11 @@ export const createLemonsvilleScene = (
         scene.add(mesh);
       }
       nextInventory.setStock(
-        state.phase === "forecast" ? 0 : storyboard.prepared,
+        state.phase === "forecast"
+          ? 0
+          : state.phase === "idle"
+            ? remainingCupsAt(storyboard, storyboard.durationMs)
+            : remainingCupsAt(storyboard, lastElapsedMs),
         storyboard.prepared,
       );
       render();
@@ -706,7 +723,11 @@ export const createLemonsvilleScene = (
     });
     signField.sync();
 
-    const remaining = forecast ? 0 : storyboard.prepared;
+    const remaining = forecast
+      ? 0
+      : state.phase === "idle"
+        ? remainingCupsAt(storyboard, storyboard.durationMs)
+        : remainingCupsAt(storyboard, lastElapsedMs);
     cupInventory?.setStock(remaining, storyboard.prepared);
     standDetail?.setStock(remaining, storyboard.prepared);
   };
