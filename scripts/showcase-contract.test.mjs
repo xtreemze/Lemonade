@@ -88,7 +88,7 @@ test("verifier enforces source resolution and high-frame-rate output", async () 
   assert.ok(verifier.includes('"ffprobe"'));
   assert.ok(verifier.includes("assertHighFrameRate"));
   assert.ok(verifier.includes("assertCapturedFrameCadence"));
-  assert.ok(verifier.includes("nb_read_frames"));
+  assert.ok(verifier.includes("best_effort_timestamp_time"));
   assert.ok(verifier.includes("width: 1440, height: 900"));
   assert.ok(verifier.includes("width: 390, height: 844"));
   assert.ok(verifier.includes("animated WebP"));
