@@ -389,8 +389,9 @@ export const decorateCharacterBody = (
     bodyRoot.add(handle);
   }
 
-  // Garment geometry stays attached to the character root so child scaling and
-  // the seeded body proportions apply to clothing and anatomy together.
+  // The articulated rig supplies a compensated chest-space anchor so these
+  // authored body coordinates retain their neutral placement while following
+  // pelvis/chest posture. Bare test/detail roots fall back to direct attachment.
   hem.rotation.y = identity.garmentStyle * 0.015;
 };
 
