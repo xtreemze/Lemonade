@@ -187,6 +187,7 @@ const applySellerExpression = (seller: SellerRig, confidence: number): void => {
   seller.mouth[0].position.y = -0.09 + pose.expression.valence * 0.012;
   seller.mouth[1].position.y = -0.09 + pose.expression.valence * 0.012;
 };
+
 const resetPersonPose = (person: PersonRig): void => {
   resetThreeCharacterPose(person);
   person.cup.visible = false;
@@ -225,6 +226,7 @@ const applyBuyerPose = (
     keepLemonadeCupUpright(person.cup);
   }
 };
+
 export const createLemonsvilleScene = (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
