@@ -3,7 +3,7 @@
   "stableBaseUrl": "https://xtreemze.github.io/Lemonade/showcase",
   "capture": {
     "videoFps": 60,
-    "animatedGraphicFps": 30
+    "animatedGraphicFps": 60
   },
   "features": [
     {
