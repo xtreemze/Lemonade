@@ -1,4 +1,4 @@
-import type { AudioCue } from "./index.js";
+import type { AudioCue } from "./contracts.js";
 
 export type SoundLibraryCategory =
   | "forecast"
