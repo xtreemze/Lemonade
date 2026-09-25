@@ -245,6 +245,99 @@ describe("unified neighborhood mobility", () => {
     ).toBe(true);
   });
 
+  it("drives forecast service actors from actor-owned physical distance clocks", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const samples = Array.from({ length: 121 }, (_, index) =>
+      system.sample({
+        weather: "sunny",
+        phase: "forecast",
+        elapsedMs: index * 50,
+        durationMs: 6000,
+        dayNumber: 1,
+        focus: { x: 0, z: 0 },
+      }),
+    );
+
+    const mail = samples
+      .flatMap((sample) => sample.actors)
+      .filter((actor) => actor.kind === "mail-carrier");
+    expect(mail.length).toBeGreaterThan(0);
+    expect(mail.every((actor) => actor.travelDistance !== null)).toBe(true);
+
+    const visibleMail = mail.filter((actor) => actor.visible);
+    for (let index = 1; index < visibleMail.length; index += 1) {
+      const previous = visibleMail[index - 1];
+      const current = visibleMail[index];
+      if (previous === undefined || current === undefined) {
+        continue;
+      }
+      const displacement = Math.hypot(current.x - previous.x, current.z - previous.z);
+      expect(displacement).toBeLessThanOrEqual(0.075);
+      if (current.interaction === "mailbox") {
+        expect(current.speed).toBe(0);
+      }
+    }
+
+    const serviced = samples.some((sample) =>
+      sample.properties.some((property) => property.mailServiced),
+    );
+    expect(serviced).toBe(true);
+  });
+
+  it("keeps gardener dwell and gait distance continuous through approach and departure", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const dayNumber = Array.from({ length: 7 }, (_, index) => index + 1).find((day) =>
+      system
+        .sample({
+          weather: "sunny",
+          phase: "forecast",
+          elapsedMs: 3000,
+          durationMs: 6000,
+          dayNumber: day,
+          focus: { x: 0, z: 0 },
+        })
+        .actors.some((actor) => actor.kind === "gardener"),
+    );
+    expect(dayNumber).toBeDefined();
+    if (dayNumber === undefined) {
+      return;
+    }
+
+    const replay = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const samples = Array.from({ length: 121 }, (_, index) =>
+      replay.sample({
+        weather: "sunny",
+        phase: "forecast",
+        elapsedMs: index * 50,
+        durationMs: 6000,
+        dayNumber,
+        focus: { x: 0, z: 0 },
+      }),
+    );
+    const gardener = samples
+      .flatMap((sample) => sample.actors)
+      .filter((actor) => actor.kind === "gardener");
+
+    expect(gardener.length).toBeGreaterThan(0);
+    expect(gardener.every((actor) => actor.travelDistance !== null)).toBe(true);
+    const dwell = gardener.filter((actor) => actor.interaction === "gardening");
+    expect(dwell.length).toBeGreaterThan(0);
+    expect(dwell.every((actor) => actor.speed === 0)).toBe(true);
+
+    for (let index = 1; index < gardener.length; index += 1) {
+      const previous = gardener[index - 1];
+      const current = gardener[index];
+      if (previous === undefined || current === undefined || !previous.visible || !current.visible) {
+        continue;
+      }
+      const displacement = Math.hypot(current.x - previous.x, current.z - previous.z);
+      expect(displacement).toBeLessThanOrEqual(0.075);
+      expect((current.travelDistance ?? 0) + 0.000001).toBeGreaterThanOrEqual(
+        previous.travelDistance ?? 0,
+      );
+    }
+  });
+
   it("drives a resident vehicle into a driveway, parks, transfers its driver, and later departs", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const layout = generateResidentialLayout(MOBILITY_SEED);
