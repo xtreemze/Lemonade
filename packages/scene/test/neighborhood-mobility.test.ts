@@ -119,7 +119,9 @@ describe("unified neighborhood mobility", () => {
     );
     const crossing = samples
       .map((sample) => sample.actors.find((actor) => actor.id === "resident-crossing"))
-      .filter((actor): actor is NonNullable<typeof actor> => actor !== undefined);
+      .filter(
+        (actor): actor is NeighborhoodMobilitySample["actors"][number] => actor !== undefined,
+      );
 
     expect(crossing.length).toBeGreaterThan(0);
     expect(crossing.every((actor) => actor.travelDistance !== null)).toBe(true);
