@@ -39,9 +39,7 @@ describe("character geometry detail", () => {
     const faceObjects = head.children.filter(
       (child) => typeof child.userData["characterFacePart"] === "string",
     );
-    const pupil = faceObjects.find(
-      (child) => child.userData["characterFacePart"] === "eye-pupil",
-    );
+    const pupil = faceObjects.find((child) => child.userData["characterFacePart"] === "eye-pupil");
     const eyeWhite = faceObjects.find(
       (child) => child.userData["characterFacePart"] === "eye-white",
     );
@@ -51,7 +49,12 @@ describe("character geometry detail", () => {
     expect(eyeWhite).toBeDefined();
     expect(brow).toBeDefined();
     expect(mouth).toBeDefined();
-    if (pupil === undefined || eyeWhite === undefined || brow === undefined || mouth === undefined) {
+    if (
+      pupil === undefined ||
+      eyeWhite === undefined ||
+      brow === undefined ||
+      mouth === undefined
+    ) {
       return;
     }
 
@@ -83,12 +86,7 @@ describe("character geometry detail", () => {
   it("keeps seller expression geometry on the shared live facial channels without duplicate seeded bars", () => {
     const profile = characterProfileFor(0x1e_ad_20_26, 10_001);
     const head = new Mesh(new SphereGeometry(0.27, 12, 8));
-    decorateCharacterHead(
-      head,
-      profile,
-      characterIdentityFor(10_001, profile),
-      false,
-    );
+    decorateCharacterHead(head, profile, characterIdentityFor(10_001, profile), false);
 
     expect(head.children.filter((child) => sceneRole(child) === "face-expression")).toHaveLength(0);
 
