@@ -199,7 +199,9 @@ export const renderCueCalibrationPcm = (
       const attack = Math.min(1, elapsed / Math.min(0.012, duration / 4));
       const release = Math.min(1, Math.max(0, (duration - elapsed) / Math.min(0.012, duration / 4)));
       const envelope = Math.max(0, Math.min(attack, release));
-      samples[index] += oscillatorSample(tone.waveform, phase) * tone.gain * mixGain * envelope;
+      samples[index] =
+        (samples[index] ?? 0) +
+        oscillatorSample(tone.waveform, phase) * tone.gain * mixGain * envelope;
     }
   }
 
