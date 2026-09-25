@@ -9,6 +9,7 @@ import {
   generateStreetNetwork,
   type StreetStripSpec,
 } from "./street-layout.js";
+import { WORLD_SCALE } from "./world-scale.js";
 
 export type NeighborhoodTopologySide = -1 | 1;
 
@@ -197,7 +198,7 @@ const projectProperty = (
           return Object.freeze({
             center: point(access.drivewayCenterX, access.drivewayCenterZ),
             length: access.drivewayLength,
-            width: access.drivewayDepth > 0 ? access.drivewayDepth * 0 + 2.7 : 2.7,
+            width: WORLD_SCALE.street.drivewayWidth,
             rotationY: access.drivewayRotationY,
             parking: point(property.drivewayX, access.parkingZ),
             roadEdge,
