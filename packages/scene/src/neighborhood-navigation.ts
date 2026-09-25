@@ -5,11 +5,7 @@ import {
   type NeighborhoodTopology,
 } from "./neighborhood-topology.js";
 import type { ResidentialLayout, ResidentialPoint } from "./residential-layout.js";
-import {
-  type SidewalkSide,
-  STREET_LAYOUT,
-  sidewalkSideForZ,
-} from "./street-layout.js";
+import { type SidewalkSide, STREET_LAYOUT, sidewalkSideForZ } from "./street-layout.js";
 
 export type NavigationNodeRole = "sidewalk" | "stand-entry" | "stand-service";
 
@@ -46,15 +42,11 @@ const pointDistance = (
   right: Pick<NavigationNode, "x" | "z">,
 ): number => Math.hypot(right.x - left.x, right.z - left.z);
 
-const pointDistanceTo = (
-  left: Pick<NavigationNode, "x" | "z">,
-  right: ResidentialPoint,
-): number => Math.hypot(right.x - left.x, right.z - left.z);
+const pointDistanceTo = (left: Pick<NavigationNode, "x" | "z">, right: ResidentialPoint): number =>
+  Math.hypot(right.x - left.x, right.z - left.z);
 
-const sidewalkNodeId = (
-  segment: NeighborhoodSidewalkSegment,
-  endpoint: SegmentEndpoint,
-): string => `navigation:${segment.id}:${endpoint}`;
+const sidewalkNodeId = (segment: NeighborhoodSidewalkSegment, endpoint: SegmentEndpoint): string =>
+  `navigation:${segment.id}:${endpoint}`;
 
 const sidewalkSide = (segment: NeighborhoodSidewalkSegment): SidewalkSide | null =>
   segment.streetId === "main" ? sidewalkSideForZ(segment.center.z) : null;
@@ -153,9 +145,7 @@ const connectStreetContinuity = (
         const previousEnd = findNode(nodes, sidewalkNodeId(previous, "end"));
         const currentStart = findNode(nodes, sidewalkNodeId(current, "start"));
         const kind =
-          roadSegmentIndex(current) - roadSegmentIndex(previous) === 1
-            ? "sidewalk"
-            : "crossing";
+          roadSegmentIndex(current) - roadSegmentIndex(previous) === 1 ? "sidewalk" : "crossing";
         addBidirectionalEdge(edges, previousEnd, currentStart, kind);
       }
     }
@@ -179,12 +169,7 @@ const segmentIntersection = (
   const deltaZ = second.start.z - first.start.z;
   const firstProgress = (deltaX * secondZ - deltaZ * secondX) / denominator;
   const secondProgress = (deltaX * firstZ - deltaZ * firstX) / denominator;
-  if (
-    firstProgress < 0 ||
-    firstProgress > 1 ||
-    secondProgress < 0 ||
-    secondProgress > 1
-  ) {
+  if (firstProgress < 0 || firstProgress > 1 || secondProgress < 0 || secondProgress > 1) {
     return null;
   }
 
@@ -218,10 +203,7 @@ const mainStreetIntersections = (topology: NeighborhoodTopology): readonly Resid
   return Object.freeze(intersections);
 };
 
-const nearestNode = (
-  nodes: readonly NavigationNode[],
-  point: ResidentialPoint,
-): NavigationNode => {
+const nearestNode = (nodes: readonly NavigationNode[], point: ResidentialPoint): NavigationNode => {
   const first = nodes[0];
   if (first === undefined) {
     throw new Error("navigation graph has no candidate sidewalk nodes");
