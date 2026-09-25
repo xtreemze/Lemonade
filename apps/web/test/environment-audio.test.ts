@@ -8,7 +8,7 @@ const fakeAudio = (frames: AudioEnvironmentFrame[]): ProceduralAudioEngine =>
   Object.freeze({
     enable: async () => true,
     play: () => undefined,
-    setEnvironmentFrame: (frame) => frames.push(frame),
+    setEnvironmentFrame: (frame: AudioEnvironmentFrame) => frames.push(frame),
     setMuted: () => undefined,
     suspend: async () => undefined,
     resume: async () => undefined,
@@ -19,16 +19,14 @@ describe("environment audio controller", () => {
   it("publishes renderer-neutral wind and precipitation frames", () => {
     const frames: AudioEnvironmentFrame[] = [];
     let now = 0;
-    let callback: FrameRequestCallback | null = null;
+    const callbacks: FrameRequestCallback[] = [];
     const controller = createEnvironmentAudioController(fakeAudio(frames), {
       now: () => now,
       requestFrame: (next) => {
-        callback = next;
-        return 1;
+        callbacks.push(next);
+        return callbacks.length;
       },
-      cancelFrame: () => {
-        callback = null;
-      },
+      cancelFrame: () => undefined,
     });
 
     controller.start("thunderstorm", "simulation", 1000);
@@ -44,7 +42,7 @@ describe("environment audio controller", () => {
     });
 
     now = 500;
-    callback?.(now);
+    callbacks.shift()?.(now);
     const expected = environmentPresentationFrameAt(
       "thunderstorm",
       "simulation",
@@ -64,21 +62,19 @@ describe("environment audio controller", () => {
   it("does not advance presentation time while paused", () => {
     const frames: AudioEnvironmentFrame[] = [];
     let now = 0;
-    let callback: FrameRequestCallback | null = null;
+    const callbacks: FrameRequestCallback[] = [];
     const controller = createEnvironmentAudioController(fakeAudio(frames), {
       now: () => now,
       requestFrame: (next) => {
-        callback = next;
-        return 1;
+        callbacks.push(next);
+        return callbacks.length;
       },
-      cancelFrame: () => {
-        callback = null;
-      },
+      cancelFrame: () => undefined,
     });
 
     controller.start("cloudy", "simulation", 1000);
     now = 200;
-    callback?.(now);
+    callbacks.shift()?.(now);
     controller.pause();
 
     now = 800;
