@@ -6,6 +6,7 @@ import {
   characterIdentityFor,
   decorateCharacterBody,
   decorateCharacterHead,
+  decorateSellerExpression,
 } from "../src/character-detail.js";
 import { characterProfileFor } from "../src/characters.js";
 
@@ -77,6 +78,38 @@ describe("character geometry detail", () => {
     expect(brow.rotation.z).not.toBeCloseTo(browRotation);
     expect(mouth.rotation.z).not.toBeCloseTo(mouthRotation);
     expect(mouth.scale.y).toBeGreaterThan(mouthScaleY);
+  });
+
+  it("keeps seller expression geometry on the shared live facial channels without duplicate seeded bars", () => {
+    const profile = characterProfileFor(0x1e_ad_20_26, 10_001);
+    const head = new Mesh(new SphereGeometry(0.27, 12, 8));
+    decorateCharacterHead(
+      head,
+      profile,
+      characterIdentityFor(10_001, profile),
+      false,
+    );
+
+    expect(head.children.filter((child) => sceneRole(child) === "face-expression")).toHaveLength(0);
+
+    const eyebrows = [new Group(), new Group()] as const;
+    const mouth = [new Group(), new Group()] as const;
+    eyebrows[0].position.set(-0.085, 0.125, 0.235);
+    eyebrows[1].position.set(0.085, 0.125, 0.235);
+    mouth[0].position.set(-0.055, -0.09, 0.238);
+    mouth[1].position.set(0.055, -0.09, 0.238);
+    head.add(...eyebrows, ...mouth);
+    decorateSellerExpression(eyebrows, mouth);
+
+    expect(eyebrows[0].userData["characterFacePart"]).toBe("brow");
+    expect(eyebrows[1].userData["characterFacePart"]).toBe("brow");
+    expect(mouth[0].userData["characterFacePart"]).toBe("mouth");
+    expect(mouth[1].userData["characterFacePart"]).toBe("mouth");
+    expect(
+      [...eyebrows, ...mouth].every((group) =>
+        group.children.some((child) => sceneRole(child) === "face-expression"),
+      ),
+    ).toBe(true);
   });
 
   it("adds garment geometry beyond the base body for adults and children", () => {
