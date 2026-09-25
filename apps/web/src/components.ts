@@ -95,7 +95,7 @@ export class LemonadeRunTools extends LitElement {
       return;
     }
     const dialog = this.querySelector("#reset-dialog");
-    if (!(dialog instanceof HTMLDialogElement) || !dialog.open) {
+    if (!(dialog instanceof HTMLDialogElement && dialog.open)) {
       return;
     }
     const buttons = [...dialog.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];

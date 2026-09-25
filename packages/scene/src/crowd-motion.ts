@@ -529,7 +529,7 @@ export const createCrowdSimulation = (
           throw new Error("crowd beat invariant failed");
         }
         if (elapsedMs < beat.startAtMs) {
-          return undefined;
+          return;
         }
         return basePose(beat, index, elapsedMs, safeDuration, routes);
       });

@@ -47,9 +47,7 @@ test("showcase specs capture dynamic 3D scenes directly and static states as scr
   const spec = await read("e2e/showcase/showcase.spec.ts");
   assert.ok(spec.includes("canvas.captureStream(requestedFps)"));
   assert.ok(spec.includes("new MediaRecorder"));
-  assert.ok(
-    spec.includes('["video/webm;codecs=vp8", "video/webm;codecs=vp9", "video/webm"]'),
-  );
+  assert.ok(spec.includes('["video/webm;codecs=vp8", "video/webm;codecs=vp9", "video/webm"]'));
   assert.ok(spec.includes("videoBitsPerSecond"));
   assert.ok(spec.includes("audioBitsPerSecond"));
   assert.ok(spec.includes("getAudioTracks"));
