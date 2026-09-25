@@ -294,10 +294,7 @@ const clampSigned = (value: number): number => Math.min(1, Math.max(-1, value));
 
 const seededSignedUnit = (identitySeed: number, step: number, salt: number): number => {
   let value =
-    ((identitySeed >>> 0) ^
-      Math.imul((step + 1) >>> 0, 0x9e_37_79_b1) ^
-      (salt >>> 0)) >>>
-    0;
+    ((identitySeed >>> 0) ^ Math.imul((step + 1) >>> 0, 0x9e_37_79_b1) ^ (salt >>> 0)) >>> 0;
   value = Math.imul(value ^ (value >>> 16), 0x21_f0_aa_ad);
   value = Math.imul(value ^ (value >>> 15), 0x73_5a_2d_97);
   return (((value ^ (value >>> 15)) >>> 0) / 0xff_ff_ff_ff) * 2 - 1;
