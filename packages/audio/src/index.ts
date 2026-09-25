@@ -135,6 +135,16 @@ const MOTIFS: Record<Exclude<AudioCue, WeatherAudioCue>, readonly MotifNote[]> =
     { note: 69, endNote: 81, beats: 0.5, waveform: "triangle", gain: 0.026 },
     { note: 74, beats: 0.18, waveform: "sine", gain: 0.022 },
   ],
+  "purchase:pour": [
+    { note: 67, endNote: 55, beats: 1.6, waveform: "sine", gain: 0.018 },
+    { note: 74, endNote: 62, beats: 1.25, waveform: "triangle", gain: 0.014 },
+    { note: 81, endNote: 69, beats: 0.9, waveform: "sine", gain: 0.01 },
+  ],
+  "purchase:ice-clink": [
+    { note: 96, beats: 0.12, waveform: "triangle", gain: 0.032 },
+    { note: 103, beats: 0.1, waveform: "sine", gain: 0.026 },
+    { note: 91, beats: 0.14, waveform: "triangle", gain: 0.022 },
+  ],
   "storm:thunder": [
     { note: 33, endNote: 25, beats: 5.5, waveform: "sawtooth", gain: 0.048 },
     { note: 28, endNote: 20, beats: 4.5, waveform: "sawtooth", gain: 0.04 },
