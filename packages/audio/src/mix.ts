@@ -28,6 +28,7 @@ export type CueMixMetrics = Readonly<{
   peakGain: number;
   peakDbfs: number;
   approximatePerceptualDb: number;
+  smallSpeakerPresenceDb: number;
 }>;
 
 export const CUE_MIX_PROFILES: Readonly<Record<AudioCue, CueMixProfile>> = Object.freeze({
@@ -42,7 +43,7 @@ export const CUE_MIX_PROFILES: Readonly<Record<AudioCue, CueMixProfile>> = Objec
   "purchase:serve": Object.freeze({ role: "purchase", trimDb: -1 }),
   "purchase:payment": Object.freeze({ role: "purchase", trimDb: -4 }),
   "purchase:drink": Object.freeze({ role: "purchase", trimDb: 3 }),
-  "purchase:pour": Object.freeze({ role: "purchase", trimDb: 6 }),
+  "purchase:pour": Object.freeze({ role: "purchase", trimDb: 9.5 }),
   "purchase:ice-clink": Object.freeze({ role: "purchase", trimDb: 1 }),
   "storm:thunder": Object.freeze({ role: "weather-accent", trimDb: -1 }),
   "storm:gust": Object.freeze({ role: "weather-accent", trimDb: 1 }),
@@ -117,12 +118,17 @@ export const analyzeCueMix = (
   );
 
   let weightedEnergy = 0;
+  let smallSpeakerPresenceGain = 0;
   for (const tone of tones) {
     const duration = Math.max(0, tone.durationSeconds);
     const frequency = toneRepresentativeFrequency(tone);
     const weight = dbToGain(aWeightDb(frequency));
     const rms = tone.gain * trimGain * waveformRms(tone.waveform) * 0.58;
     weightedEnergy += rms * rms * weight * weight * duration;
+    smallSpeakerPresenceGain = Math.max(
+      smallSpeakerPresenceGain,
+      tone.gain * trimGain * weight,
+    );
   }
 
   const approximateRms = Math.sqrt(weightedEnergy / durationSeconds);
@@ -133,5 +139,88 @@ export const analyzeCueMix = (
     peakGain,
     peakDbfs: gainToDb(peakGain),
     approximatePerceptualDb: gainToDb(approximateRms),
+    smallSpeakerPresenceDb: gainToDb(smallSpeakerPresenceGain),
+  });
+};
+
+const oscillatorSample = (waveform: OscillatorType, phase: number): number => {
+  const unit = phase / (Math.PI * 2);
+  switch (waveform) {
+    case "square":
+      return Math.sin(phase) >= 0 ? 1 : -1;
+    case "triangle":
+      return (2 / Math.PI) * Math.asin(Math.sin(phase));
+    case "sawtooth":
+      return 2 * (unit - Math.floor(unit + 0.5));
+    case "sine":
+    default:
+      return Math.sin(phase);
+  }
+};
+
+/**
+ * Deterministic offline calibration renderer used by tests and tooling. It
+ * mirrors cue timing, sweeps, gain trims and a simple attack/release envelope
+ * without requiring an AudioContext or audio device.
+ */
+export const renderCueCalibrationPcm = (
+  cue: AudioCue,
+  tones: readonly (CueMixTone & Readonly<{ startSeconds?: number }>)[],
+  sampleRate = 8_000,
+): Float32Array => {
+  const safeRate = Math.max(2_000, Math.min(48_000, Math.round(sampleRate)));
+  const mixGain = cueMixGain(cue);
+  const endSeconds = tones.reduce(
+    (latest, tone) =>
+      Math.max(latest, (tone.startSeconds ?? 0) + Math.max(0, tone.durationSeconds)),
+    0,
+  );
+  const samples = new Float32Array(Math.max(1, Math.ceil((endSeconds + 0.01) * safeRate)));
+
+  for (const tone of tones) {
+    const startSeconds = Math.max(0, tone.startSeconds ?? 0);
+    const duration = Math.max(0.001, tone.durationSeconds);
+    const startSample = Math.floor(startSeconds * safeRate);
+    const endSample = Math.min(samples.length, Math.ceil((startSeconds + duration) * safeRate));
+    const startFrequency = midiToFrequency(tone.midiNote);
+    const endFrequency =
+      tone.endMidiNote === undefined ? startFrequency : midiToFrequency(tone.endMidiNote);
+    let phase = 0;
+
+    for (let index = startSample; index < endSample; index += 1) {
+      const elapsed = (index - startSample) / safeRate;
+      const progress = Math.min(1, elapsed / duration);
+      const frequency =
+        startFrequency === endFrequency
+          ? startFrequency
+          : startFrequency * (endFrequency / startFrequency) ** progress;
+      phase += (Math.PI * 2 * frequency) / safeRate;
+
+      const attack = Math.min(1, elapsed / Math.min(0.012, duration / 4));
+      const release = Math.min(1, Math.max(0, (duration - elapsed) / Math.min(0.012, duration / 4)));
+      const envelope = Math.max(0, Math.min(attack, release));
+      samples[index] += oscillatorSample(tone.waveform, phase) * tone.gain * mixGain * envelope;
+    }
+  }
+
+  return samples;
+};
+
+export const measureCalibrationPcm = (
+  samples: Float32Array,
+): Readonly<{ peak: number; rms: number; peakDbfs: number; rmsDbfs: number }> => {
+  let peak = 0;
+  let energy = 0;
+  for (const sample of samples) {
+    const magnitude = Math.abs(sample);
+    peak = Math.max(peak, magnitude);
+    energy += sample * sample;
+  }
+  const rms = samples.length > 0 ? Math.sqrt(energy / samples.length) : 0;
+  return Object.freeze({
+    peak,
+    rms,
+    peakDbfs: gainToDb(peak),
+    rmsDbfs: gainToDb(rms),
   });
 };
