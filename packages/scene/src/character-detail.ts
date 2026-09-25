@@ -51,10 +51,7 @@ const mark = <T extends Object3D>(object: T, role: string): T => {
 const characterBodyDecorationRoot = (root: Group): Group => {
   let anchor: Group | undefined;
   root.traverse((object) => {
-    if (
-      anchor === undefined &&
-      object.userData["characterBodyDecorationAnchor"] === true
-    ) {
+    if (anchor === undefined && object.userData["characterBodyDecorationAnchor"] === true) {
       anchor = object as Group;
     }
   });
@@ -275,11 +272,11 @@ export const decorateCharacterBody = (
     stripe.rotation.z = 0.015;
   } else if (identity.garmentStyle === 1) {
     for (const direction of [-1, 1] as const) {
-      const panel = addGarment(bodyRoot, new Mesh(new BoxGeometry(0.2, 0.68, 0.045), cloth.clone()), [
-        direction * 0.115,
-        1.03,
-        0.305,
-      ]);
+      const panel = addGarment(
+        bodyRoot,
+        new Mesh(new BoxGeometry(0.2, 0.68, 0.045), cloth.clone()),
+        [direction * 0.115, 1.03, 0.305],
+      );
       panel.rotation.z = direction * 0.035;
     }
   } else if (identity.garmentStyle === 2) {
