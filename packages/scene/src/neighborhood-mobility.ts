@@ -933,31 +933,41 @@ export const createNeighborhoodMobilitySystem = (seed: number): NeighborhoodMobi
         const mainConflicts = conflicts.filter((conflict) => conflict.routeId === "main");
         const crossing = mainConflicts[0];
         if (crossing !== undefined) {
-          const t = clamp01(input.elapsedMs / durationMs);
-          const active = t >= 0.28 && t <= 0.52;
-          const crossingProgress = clamp01((t - 0.28) / 0.24);
-          const crossingPoint = Object.freeze({
-            x: crossing.point.x,
-            z:
-              STREET_LAYOUT.nearSidewalk.centerZ +
-              (STREET_LAYOUT.farSidewalk.centerZ - STREET_LAYOUT.nearSidewalk.centerZ) *
-                crossingProgress,
-          });
+          const crossingRoute = makeRoute("resident-crossing", [
+            Object.freeze({
+              x: crossing.point.x,
+              z: STREET_LAYOUT.nearSidewalk.centerZ,
+            }),
+            Object.freeze({
+              x: crossing.point.x,
+              z: STREET_LAYOUT.farSidewalk.centerZ,
+            }),
+          ]);
+          const crossingState = pedestrianRoutePose(
+            "resident-crossing",
+            crossingRoute,
+            input.elapsedMs,
+            durationMs * 0.16,
+            1.32,
+            3.2,
+            residentClocks,
+          );
           const crossingActor = makePose(
             "resident-crossing",
             "resident",
-            crossingPoint,
-            Math.PI / 2,
-            1.32,
+            crossingState.point,
+            crossingState.yaw,
+            crossingState.speed,
             focus,
             "crossing",
             null,
             false,
-            active,
+            crossingState.visible,
+            crossingState.travelDistance,
           );
           actors.push(crossingActor);
-          if (active) {
-            pedestrianPoints.push(crossingPoint);
+          if (crossingState.visible) {
+            pedestrianPoints.push(crossingState.point);
           }
           addStatistical(counts, crossingActor);
         }
