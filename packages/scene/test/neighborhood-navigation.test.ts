@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   createNeighborhoodNavigationGraph,
+  createNeighborhoodNavigationGraphFromTopology,
   navigationNode,
   shortestNavigationPath,
 } from "../src/neighborhood-navigation.js";
+import { generateNeighborhoodTopology } from "../src/neighborhood-topology.js";
 import { generateResidentialLayout } from "../src/residential-layout.js";
 import { STREET_LAYOUT } from "../src/street-layout.js";
 
@@ -19,7 +21,25 @@ describe("semantic neighborhood navigation", () => {
     expect(first.edges.length).toBeGreaterThan(first.nodes.length);
   });
 
-  it("keeps sidewalk nodes inside their semantic sidewalk bands", () => {
+  it("projects every generated sidewalk segment into the navigation graph", () => {
+    const topology = generateNeighborhoodTopology(77);
+    const graph = createNeighborhoodNavigationGraphFromTopology(topology);
+    const projectedSegments = new Set(
+      graph.nodes
+        .map((node) => node.sidewalkSegmentId)
+        .filter((segmentId): segmentId is string => segmentId !== undefined),
+    );
+
+    expect(projectedSegments.size).toBe(topology.sidewalks.length);
+    expect(
+      [...projectedSegments].some((segmentId) => segmentId.includes("middle-curve")),
+    ).toBe(true);
+    expect(
+      [...projectedSegments].some((segmentId) => segmentId.includes("deep-grid")),
+    ).toBe(true);
+  });
+
+  it("preserves legacy near/far identity for the main street sidewalks", () => {
     const graph = createNeighborhoodNavigationGraph(generateResidentialLayout(77));
 
     for (const node of graph.nodes) {
@@ -30,10 +50,11 @@ describe("semantic neighborhood navigation", () => {
         node.side === "near" ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
       expect(node.z).toBeGreaterThanOrEqual(sidewalk.minZ);
       expect(node.z).toBeLessThanOrEqual(sidewalk.maxZ);
+      expect(node.sidewalkSegmentId?.includes("sidewalk:main:")).toBe(true);
     }
   });
 
-  it("routes far-side pedestrians through a real crossing before stand access", () => {
+  it("routes far-side pedestrians through a crossing before stand access", () => {
     const graph = createNeighborhoodNavigationGraph(generateResidentialLayout(91));
     const farNodes = graph.nodes
       .filter((node) => node.role === "sidewalk" && node.side === "far")
