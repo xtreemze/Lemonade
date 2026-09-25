@@ -42,17 +42,11 @@ const createLimb = (
 ): LimbRig => {
   const root = new Group();
 
-  const upper = new Mesh(
-    foot ? geometries.legUpper : geometries.armUpper,
-    material(upperColor),
-  );
+  const upper = new Mesh(foot ? geometries.legUpper : geometries.armUpper, material(upperColor));
   upper.position.y = -upperLength / 2;
   root.add(upper);
 
-  const joint = new Mesh(
-    foot ? geometries.legJoint : geometries.armJoint,
-    material(lowerColor),
-  );
+  const joint = new Mesh(foot ? geometries.legJoint : geometries.armJoint, material(lowerColor));
   joint.position.y = -upperLength;
   root.add(joint);
 
@@ -65,15 +59,8 @@ const createLimb = (
   lowerMesh.position.y = -lowerLength / 2;
   lower.add(lowerMesh);
 
-  const extremity = new Mesh(
-    foot ? geometries.foot : geometries.hand,
-    material(extremityColor),
-  );
-  extremity.position.set(
-    0,
-    -lowerLength,
-    foot ? CHARACTER_ANATOMY.foot.height * 0.5 : 0,
-  );
+  const extremity = new Mesh(foot ? geometries.foot : geometries.hand, material(extremityColor));
+  extremity.position.set(0, -lowerLength, foot ? CHARACTER_ANATOMY.foot.height * 0.5 : 0);
   lower.add(extremity);
   root.add(lower);
 
@@ -103,19 +90,16 @@ export const createThreeCharacterRig = (
   root.add(poseRoot);
 
   pelvis.position.y = CHARACTER_ANATOMY.leg.hipY;
-  neck.position.y =
-    CHARACTER_ANATOMY.torso.neckY - CHARACTER_ANATOMY.leg.hipY;
+  neck.position.y = CHARACTER_ANATOMY.torso.neckY - CHARACTER_ANATOMY.leg.hipY;
   bodyDecorationRoot.position.y = -CHARACTER_ANATOMY.leg.hipY;
 
   const torso = new Mesh(geometries.torso, material(profile.clothingColor));
-  torso.position.y =
-    CHARACTER_ANATOMY.torso.centerY - CHARACTER_ANATOMY.leg.hipY;
+  torso.position.y = CHARACTER_ANATOMY.torso.centerY - CHARACTER_ANATOMY.leg.hipY;
   chest.add(torso);
 
   const head = new Mesh(geometries.head, material(profile.skinColor));
   head.scale.set(0.94, 1.04, 0.9);
-  head.position.y =
-    CHARACTER_ANATOMY.head.centerY - CHARACTER_ANATOMY.torso.neckY;
+  head.position.y = CHARACTER_ANATOMY.head.centerY - CHARACTER_ANATOMY.torso.neckY;
   neck.add(head);
 
   const leftArm = createLimb(
@@ -198,24 +182,12 @@ export const resetThreeCharacterPose = (rig: ThreeCharacterRig): void => {
   rig.pelvis.rotation.set(0, 0, 0);
   rig.chest.position.set(0, 0, 0);
   rig.chest.rotation.set(0, 0, 0);
-  rig.neck.position.set(
-    0,
-    CHARACTER_ANATOMY.torso.neckY - CHARACTER_ANATOMY.leg.hipY,
-    0,
-  );
+  rig.neck.position.set(0, CHARACTER_ANATOMY.torso.neckY - CHARACTER_ANATOMY.leg.hipY, 0);
   rig.neck.rotation.set(0, 0, 0);
 
-  rig.torso.position.set(
-    0,
-    CHARACTER_ANATOMY.torso.centerY - CHARACTER_ANATOMY.leg.hipY,
-    0,
-  );
+  rig.torso.position.set(0, CHARACTER_ANATOMY.torso.centerY - CHARACTER_ANATOMY.leg.hipY, 0);
   rig.torso.rotation.set(0, 0, 0);
-  rig.head.position.set(
-    0,
-    CHARACTER_ANATOMY.head.centerY - CHARACTER_ANATOMY.torso.neckY,
-    0,
-  );
+  rig.head.position.set(0, CHARACTER_ANATOMY.head.centerY - CHARACTER_ANATOMY.torso.neckY, 0);
   rig.head.rotation.set(0, 0, 0);
 
   for (const limb of [...rig.arms, ...rig.legs]) {
@@ -225,49 +197,24 @@ export const resetThreeCharacterPose = (rig: ThreeCharacterRig): void => {
   }
 };
 
-export const applyThreeCharacterPose = (
-  rig: ThreeCharacterRig,
-  pose: CharacterPose,
-): void => {
+export const applyThreeCharacterPose = (rig: ThreeCharacterRig, pose: CharacterPose): void => {
   resetThreeCharacterPose(rig);
 
   rig.poseRoot.position.y = pose.root.lift;
   rig.poseRoot.scale.setScalar(pose.root.scale);
 
-  rig.pelvis.position.y =
-    CHARACTER_ANATOMY.leg.hipY + pose.pelvis.lift;
-  rig.pelvis.rotation.set(
-    pose.pelvis.rotation.x,
-    pose.pelvis.rotation.y,
-    pose.pelvis.rotation.z,
-  );
+  rig.pelvis.position.y = CHARACTER_ANATOMY.leg.hipY + pose.pelvis.lift;
+  rig.pelvis.rotation.set(pose.pelvis.rotation.x, pose.pelvis.rotation.y, pose.pelvis.rotation.z);
 
   rig.chest.position.y = pose.chest.lift;
-  rig.chest.rotation.set(
-    pose.chest.rotation.x,
-    pose.chest.rotation.y,
-    pose.chest.rotation.z,
-  );
+  rig.chest.rotation.set(pose.chest.rotation.x, pose.chest.rotation.y, pose.chest.rotation.z);
 
-  rig.neck.position.y =
-    CHARACTER_ANATOMY.torso.neckY -
-    CHARACTER_ANATOMY.leg.hipY +
-    pose.neck.lift;
-  rig.neck.rotation.set(
-    pose.neck.rotation.x,
-    pose.neck.rotation.y,
-    pose.neck.rotation.z,
-  );
+  rig.neck.position.y = CHARACTER_ANATOMY.torso.neckY - CHARACTER_ANATOMY.leg.hipY + pose.neck.lift;
+  rig.neck.rotation.set(pose.neck.rotation.x, pose.neck.rotation.y, pose.neck.rotation.z);
 
   rig.head.position.y =
-    CHARACTER_ANATOMY.head.centerY -
-    CHARACTER_ANATOMY.torso.neckY +
-    pose.head.lift;
-  rig.head.rotation.set(
-    pose.head.rotation.x,
-    pose.head.rotation.y,
-    pose.head.rotation.z,
-  );
+    CHARACTER_ANATOMY.head.centerY - CHARACTER_ANATOMY.torso.neckY + pose.head.lift;
+  rig.head.rotation.set(pose.head.rotation.x, pose.head.rotation.y, pose.head.rotation.z);
 
   for (const index of [0, 1] as const) {
     const armPose = pose.arms[index];
