@@ -45,7 +45,9 @@ test("showcase config structurally separates desktop and mobile Chromium capture
 
 test("showcase specs capture dynamic 3D scenes directly and static states as screenshots", async () => {
   const spec = await read("e2e/showcase/showcase.spec.ts");
-  assert.ok(spec.includes("canvas.captureStream(requestedFps)"));
+  assert.ok(spec.includes("canvas.captureStream(0)"));
+  assert.ok(spec.includes("requestFrame()"));
+  assert.ok(spec.includes("window.setInterval"));
   assert.ok(spec.includes("new MediaRecorder"));
   assert.ok(spec.includes('["video/webm;codecs=vp8", "video/webm;codecs=vp9", "video/webm"]'));
   assert.ok(spec.includes("videoBitsPerSecond"));
@@ -145,7 +147,8 @@ test("README and docs use animated graphics only for dynamic scenes", async () =
   }
   assert.ok(readme.includes("lemonade-desktop-highlight.webp"));
   assert.ok(readme.includes("lemonade-mobile-highlight.webp"));
-  assert.ok(docs.includes("captureStream(60)"));
+  assert.ok(docs.includes("captureStream(0)"));
+  assert.ok(docs.includes("requestFrame()"));
   assert.ok(docs.includes("source-resolution H.264/AAC MP4"));
   assert.ok(docs.includes("animated WebP"));
 });
