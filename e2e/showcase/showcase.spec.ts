@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, type Page, type TestInfo, test } from "@playwright/test";
 import manifest from "./manifest.json" with { type: "json" };
@@ -7,32 +8,49 @@ type Feature = (typeof manifest.features)[number];
 type FormFactor = "desktop" | "mobile";
 type MediaKind = "video" | "screenshot";
 
-interface CanvasCaptureState {
-  readonly videoRecorder: MediaRecorder;
-  readonly videoChunks: Blob[];
-  readonly videoStream: MediaStream;
-  readonly audioRecorder: MediaRecorder;
-  readonly audioChunks: Blob[];
-  readonly audioStream: MediaStream;
-  readonly width: number;
-  readonly height: number;
-  readonly videoMimeType: string;
-  readonly audioMimeType: string;
+interface AudioCaptureState {
+  readonly recorder: MediaRecorder;
+  readonly chunks: Blob[];
+  readonly stream: MediaStream;
+  readonly mimeType: string;
 }
 
-interface CanvasCaptureResult {
-  readonly videoBase64: string;
+interface AudioCaptureResult {
   readonly audioBase64: string;
-  readonly width: number;
-  readonly height: number;
-  readonly videoMimeType: string;
   readonly audioMimeType: string;
   readonly audioTracks: number;
+}
+
+interface EncodedFrameChunk {
+  readonly timestamp: number;
+  readonly data: Uint8Array;
+}
+
+interface FrameCaptureState {
+  readonly encoder: VideoEncoder;
+  readonly chunks: EncodedFrameChunk[];
+  readonly width: number;
+  readonly height: number;
+  readonly fps: number;
+  readonly targetFrames: number;
+  frameIndex: number;
+  animationFrame: number | null;
+  readonly captureFrame: () => void;
+  readonly encoderError: () => string | null;
+}
+
+interface CanvasFrameCaptureResult {
+  readonly videoBase64: string;
+  readonly width: number;
+  readonly height: number;
+  readonly videoCodec: "vp8";
+  readonly capturedFrames: number;
 }
 
 const artifactRoot = path.resolve("artifacts/e2e-media");
 
 test.beforeEach(async ({ page }) => {
+  await page.clock.install();
   await page.addInitScript(() => {
     const NativeAudioContext = window.AudioContext;
     const captureByContext = new WeakMap<BaseAudioContext, MediaStreamAudioDestinationNode>();
@@ -157,20 +175,13 @@ const addBranding = async (page: Page, feature: Feature, formFactor: FormFactor)
   );
 };
 
-const startCanvasCapture = async (
+const startAudioCapture = async (
   page: Page,
-  formFactor: FormFactor,
 ): Promise<{
-  width: number;
-  height: number;
-  videoMimeType: string;
-  audioMimeType: string;
-  videoBitsPerSecond: number;
   audioBitsPerSecond: number;
+  audioMimeType: string;
   audioTracks: number;
 }> => {
-  const fps = manifest.capture.videoFps;
-  const videoBitsPerSecond = formFactor === "desktop" ? 20_000_000 : 8_000_000;
   const audioBitsPerSecond = 192_000;
   await page.waitForFunction(
     () =>
@@ -182,21 +193,17 @@ const startCanvasCapture = async (
     undefined,
     { timeout: 5000 },
   );
-  const result = await page.evaluate(
-    async ({ requestedFps, videoBitrate, audioBitrate }) => {
-      const canvas = document.querySelector<HTMLCanvasElement>("#scene-canvas");
-      if (canvas === null || canvas.width <= 0 || canvas.height <= 0) {
-        throw new Error("Showcase 3D canvas is unavailable or has no render surface.");
-      }
 
-      const audioBridge = (
-        window as typeof window & {
-          __lemonadeShowcaseAudio?: Readonly<{
-            stream: MediaStream;
-            enable: () => Promise<void>;
-          }>;
-        }
-      ).__lemonadeShowcaseAudio;
+  const result = await page.evaluate(
+    async ({ audioBitrate }) => {
+      const scope = window as typeof window & {
+        __lemonadeShowcaseAudio?: Readonly<{
+          stream: MediaStream;
+          enable: () => Promise<void>;
+        }>;
+        __lemonadeShowcaseAudioCapture?: AudioCaptureState;
+      };
+      const audioBridge = scope.__lemonadeShowcaseAudio;
       if (audioBridge === undefined) {
         throw new Error("Showcase audio capture stream is unavailable.");
       }
@@ -207,170 +214,387 @@ const startCanvasCapture = async (
         throw new Error("Showcase audio capture stream is unavailable.");
       }
 
-      const videoStream = canvas.captureStream(requestedFps);
       const audioStream = new MediaStream(audioTracks);
-      const videoMimeType =
-        ["video/webm;codecs=vp8", "video/webm;codecs=vp9", "video/webm"].find((candidate) =>
-          MediaRecorder.isTypeSupported(candidate),
-        ) ?? "";
       const audioMimeType =
         ["audio/webm;codecs=opus", "audio/webm"].find((candidate) =>
           MediaRecorder.isTypeSupported(candidate),
         ) ?? "";
-
-      const videoRecorderOptions: MediaRecorderOptions = {
-        videoBitsPerSecond: videoBitrate,
-      };
-      const audioRecorderOptions: MediaRecorderOptions = {
+      const options: MediaRecorderOptions = {
         audioBitsPerSecond: audioBitrate,
+        ...(audioMimeType === "" ? {} : { mimeType: audioMimeType }),
       };
-      const videoRecorder =
-        videoMimeType === ""
-          ? new MediaRecorder(videoStream, videoRecorderOptions)
-          : new MediaRecorder(videoStream, { ...videoRecorderOptions, mimeType: videoMimeType });
-      const audioRecorder =
-        audioMimeType === ""
-          ? new MediaRecorder(audioStream, audioRecorderOptions)
-          : new MediaRecorder(audioStream, { ...audioRecorderOptions, mimeType: audioMimeType });
-
-      const videoChunks: Blob[] = [];
-      const audioChunks: Blob[] = [];
-      videoRecorder.addEventListener("dataavailable", (event) => {
+      const recorder = new MediaRecorder(audioStream, options);
+      const chunks: Blob[] = [];
+      recorder.addEventListener("dataavailable", (event) => {
         if (event.data.size > 0) {
-          videoChunks.push(event.data);
-        }
-      });
-      audioRecorder.addEventListener("dataavailable", (event) => {
-        if (event.data.size > 0) {
-          audioChunks.push(event.data);
+          chunks.push(event.data);
         }
       });
 
-      const state: CanvasCaptureState = {
-        videoRecorder,
-        videoChunks,
-        videoStream,
-        audioRecorder,
-        audioChunks,
-        audioStream,
+      scope.__lemonadeShowcaseAudioCapture = {
+        recorder,
+        chunks,
+        stream: audioStream,
+        mimeType: recorder.mimeType || audioMimeType || "audio/webm",
+      };
+      recorder.start();
+      if (recorder.state !== "recording") {
+        throw new Error("Showcase audio recorder failed to enter the recording state.");
+      }
+
+      return {
+        audioMimeType: recorder.mimeType || audioMimeType || "audio/webm",
+        audioTracks: audioStream.getAudioTracks().length,
+      };
+    },
+    { audioBitrate: audioBitsPerSecond },
+  );
+
+  return { ...result, audioBitsPerSecond };
+};
+
+const stopAudioCapture = async (page: Page): Promise<AudioCaptureResult> =>
+  page.evaluate(async () => {
+    const scope = window as typeof window & {
+      __lemonadeShowcaseAudioCapture?: AudioCaptureState;
+    };
+    const state = scope.__lemonadeShowcaseAudioCapture;
+    if (state === undefined) {
+      throw new Error("No active showcase audio capture exists.");
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      if (state.recorder.state === "inactive") {
+        resolve();
+        return;
+      }
+      state.recorder.addEventListener("stop", () => resolve(), { once: true });
+      state.recorder.addEventListener(
+        "error",
+        () => reject(new Error("MediaRecorder failed while finalizing showcase audio.")),
+        { once: true },
+      );
+      state.recorder.stop();
+    });
+
+    if (state.chunks.length === 0) {
+      throw new Error("Showcase audio capture produced an empty stream.");
+    }
+
+    const blob = new Blob(state.chunks, { type: state.mimeType });
+    const audioBase64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.addEventListener(
+        "load",
+        () => {
+          const value = reader.result;
+          if (typeof value !== "string") {
+            reject(new Error("Unable to serialize showcase audio capture."));
+            return;
+          }
+          const comma = value.indexOf(",");
+          resolve(comma === -1 ? value : value.slice(comma + 1));
+        },
+        { once: true },
+      );
+      reader.addEventListener(
+        "error",
+        () => reject(reader.error ?? new Error("FileReader failed.")),
+        { once: true },
+      );
+      reader.readAsDataURL(blob);
+    });
+
+    const audioTracks = state.stream.getAudioTracks().length;
+    for (const track of state.stream.getTracks()) {
+      track.stop();
+    }
+    scope.__lemonadeShowcaseAudioCapture = undefined;
+
+    return {
+      audioBase64,
+      audioMimeType: state.mimeType,
+      audioTracks,
+    };
+  });
+
+const startCanvasFrameCapture = async (
+  page: Page,
+  formFactor: FormFactor,
+  durationSeconds: number,
+): Promise<{
+  videoBitsPerSecond: number;
+  width: number;
+  height: number;
+  targetFrames: number;
+}> => {
+  const fps = manifest.capture.videoFps;
+  const videoBitsPerSecond = formFactor === "desktop" ? 20_000_000 : 8_000_000;
+  const targetFrames = Math.round(durationSeconds * fps);
+
+  const result = await page.evaluate(
+    async ({ requestedFps, videoBitrate, requestedFrames }) => {
+      const canvas = document.querySelector<HTMLCanvasElement>("#scene-canvas");
+      if (canvas === null || canvas.width <= 1 || canvas.height <= 1) {
+        throw new Error(
+          "Showcase 3D canvas is unavailable or not source-sized: " +
+            String(canvas?.width ?? 0) +
+            "×" +
+            String(canvas?.height ?? 0) +
+            ".",
+        );
+      }
+      if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined") {
+        throw new Error("Showcase capture requires Chromium WebCodecs VideoEncoder support.");
+      }
+
+      const config: VideoEncoderConfig = {
+        codec: "vp8",
         width: canvas.width,
         height: canvas.height,
-        videoMimeType: videoRecorder.mimeType || videoMimeType || "video/webm",
-        audioMimeType: audioRecorder.mimeType || audioMimeType || "audio/webm",
+        bitrate: videoBitrate,
+        framerate: requestedFps,
+        latencyMode: "quality",
       };
-      (
-        window as typeof window & {
-          __lemonadeShowcaseCapture: CanvasCaptureState | undefined;
-        }
-      ).__lemonadeShowcaseCapture = state;
-
-      audioRecorder.start();
-      videoRecorder.start();
-      if (audioRecorder.state !== "recording" || videoRecorder.state !== "recording") {
-        throw new Error("Showcase media recorders failed to enter the recording state.");
+      const support = await VideoEncoder.isConfigSupported(config);
+      if (!support.supported) {
+        throw new Error("Chromium does not support the VP8 WebCodecs showcase configuration.");
       }
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      const chunks: EncodedFrameChunk[] = [];
+      let encoderFailure: string | null = null;
+      const encoder = new VideoEncoder({
+        output: (chunk) => {
+          const data = new Uint8Array(chunk.byteLength);
+          chunk.copyTo(data);
+          chunks.push({ timestamp: chunk.timestamp, data });
+        },
+        error: (error) => {
+          encoderFailure = error.message;
+        },
+      });
+      encoder.configure(support.config ?? config);
+
+      const scope = window as typeof window & {
+        __lemonadeShowcaseFrameCapture?: FrameCaptureState;
+      };
+      let state: FrameCaptureState;
+      const frameDurationUs = 1_000_000 / requestedFps;
+      const captureFrame = (): void => {
+        if (encoderFailure !== null) {
+          throw new Error("Showcase VideoEncoder failed: " + encoderFailure);
+        }
+        if (state.frameIndex >= state.targetFrames) {
+          state.animationFrame = null;
+          return;
+        }
+
+        const frame = new VideoFrame(canvas, {
+          timestamp: Math.round(state.frameIndex * frameDurationUs),
+          duration: Math.round(frameDurationUs),
+        });
+        encoder.encode(frame, {
+          keyFrame: state.frameIndex % requestedFps === 0,
+        });
+        frame.close();
+        state.frameIndex += 1;
+
+        if (state.frameIndex < state.targetFrames) {
+          state.animationFrame = requestAnimationFrame(captureFrame);
+        } else {
+          state.animationFrame = null;
+        }
+      };
+
+      state = {
+        encoder,
+        chunks,
+        width: canvas.width,
+        height: canvas.height,
+        fps: requestedFps,
+        targetFrames: requestedFrames,
+        frameIndex: 0,
+        animationFrame: null,
+        captureFrame,
+        encoderError: () => encoderFailure,
+      };
+      scope.__lemonadeShowcaseFrameCapture = state;
+
+      captureFrame();
 
       return {
         width: state.width,
         height: state.height,
-        videoMimeType: state.videoMimeType,
-        audioMimeType: state.audioMimeType,
-        audioTracks: audioStream.getAudioTracks().length,
       };
     },
     {
       requestedFps: fps,
       videoBitrate: videoBitsPerSecond,
-      audioBitrate: audioBitsPerSecond,
+      requestedFrames: targetFrames,
     },
   );
 
-  return { ...result, videoBitsPerSecond, audioBitsPerSecond };
+  return { ...result, videoBitsPerSecond, targetFrames };
 };
 
-const stopCanvasCapture = async (page: Page): Promise<CanvasCaptureResult> =>
+const flushCanvasFrameCapture = async (page: Page): Promise<number> =>
+  page.evaluate(async () => {
+    const state = (
+      window as typeof window & {
+        __lemonadeShowcaseFrameCapture?: FrameCaptureState;
+      }
+    ).__lemonadeShowcaseFrameCapture;
+    if (state === undefined) {
+      throw new Error("No active showcase frame capture exists.");
+    }
+    await state.encoder.flush();
+    const error = state.encoderError();
+    if (error !== null) {
+      throw new Error("Showcase VideoEncoder failed: " + error);
+    }
+    return state.frameIndex;
+  });
+
+const advanceCanvasFrameCapture = async (
+  page: Page,
+  targetFrames: number,
+  fps: number,
+): Promise<void> => {
+  for (let frameIndex = 1; frameIndex < targetFrames; frameIndex += 1) {
+    const previousMs = Math.round(((frameIndex - 1) * 1000) / fps);
+    const nextMs = Math.round((frameIndex * 1000) / fps);
+    await page.clock.runFor(nextMs - previousMs);
+    if (frameIndex % 30 === 0) {
+      await flushCanvasFrameCapture(page);
+    }
+  }
+
+  const capturedFrames = await flushCanvasFrameCapture(page);
+  if (capturedFrames !== targetFrames) {
+    throw new Error(
+      "Showcase produced " +
+        String(capturedFrames) +
+        " browser-rendered frames; expected exactly " +
+        String(targetFrames) +
+        ".",
+    );
+  }
+};
+
+const stopCanvasFrameCapture = async (page: Page): Promise<CanvasFrameCaptureResult> =>
   page.evaluate(async () => {
     const scope = window as typeof window & {
-      __lemonadeShowcaseCapture: CanvasCaptureState | undefined;
+      __lemonadeShowcaseFrameCapture?: FrameCaptureState;
     };
-    const state = scope.__lemonadeShowcaseCapture;
+    const state = scope.__lemonadeShowcaseFrameCapture;
     if (state === undefined) {
-      throw new Error("No active showcase capture exists.");
+      throw new Error("No active showcase frame capture exists.");
     }
 
-    const stopRecorder = (recorder: MediaRecorder): Promise<void> =>
-      new Promise((resolve, reject) => {
-        if (recorder.state === "inactive") {
-          resolve();
-          return;
-        }
-        recorder.addEventListener("stop", () => resolve(), { once: true });
-        recorder.addEventListener(
-          "error",
-          () => reject(new Error("MediaRecorder failed while finalizing showcase capture.")),
-          { once: true },
-        );
-        recorder.stop();
-      });
+    if (state.animationFrame !== null) {
+      cancelAnimationFrame(state.animationFrame);
+      state.animationFrame = null;
+    }
+    await state.encoder.flush();
+    const encoderFailure = state.encoderError();
+    if (encoderFailure !== null) {
+      throw new Error("Showcase VideoEncoder failed: " + encoderFailure);
+    }
+    state.encoder.close();
 
-    await Promise.all([stopRecorder(state.videoRecorder), stopRecorder(state.audioRecorder)]);
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
-
-    if (state.videoChunks.length === 0 || state.audioChunks.length === 0) {
-      throw new Error("Showcase capture produced an empty media stream.");
+    const chunks = [...state.chunks].sort((left, right) => left.timestamp - right.timestamp);
+    if (chunks.length !== state.targetFrames) {
+      throw new Error(
+        "Showcase encoded " +
+          String(chunks.length) +
+          " VP8 frames; expected exactly " +
+          String(state.targetFrames) +
+          ".",
+      );
     }
 
-    const blobToBase64 = (blob: Blob): Promise<string> =>
-      new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.addEventListener(
-          "load",
-          () => {
-            const value = reader.result;
-            if (typeof value !== "string") {
-              reject(new Error("Unable to serialize showcase capture."));
-              return;
-            }
-            const comma = value.indexOf(",");
-            resolve(comma === -1 ? value : value.slice(comma + 1));
-          },
-          { once: true },
-        );
-        reader.addEventListener(
-          "error",
-          () => reject(reader.error ?? new Error("FileReader failed.")),
-          { once: true },
-        );
-        reader.readAsDataURL(blob);
-      });
+    const byteLength =
+      32 + chunks.reduce((total, chunk) => total + 12 + chunk.data.byteLength, 0);
+    const ivf = new Uint8Array(byteLength);
+    const view = new DataView(ivf.buffer);
+    ivf.set([0x44, 0x4b, 0x49, 0x46], 0);
+    view.setUint16(4, 0, true);
+    view.setUint16(6, 32, true);
+    ivf.set([0x56, 0x50, 0x38, 0x30], 8);
+    view.setUint16(12, state.width, true);
+    view.setUint16(14, state.height, true);
+    view.setUint32(16, state.fps, true);
+    view.setUint32(20, 1, true);
+    view.setUint32(24, chunks.length, true);
+    view.setUint32(28, 0, true);
 
-    const videoBlob = new Blob(state.videoChunks, { type: state.videoMimeType });
-    const audioBlob = new Blob(state.audioChunks, { type: state.audioMimeType });
-    const [videoBase64, audioBase64] = await Promise.all([
-      blobToBase64(videoBlob),
-      blobToBase64(audioBlob),
-    ]);
+    let offset = 32;
+    chunks.forEach((chunk, index) => {
+      view.setUint32(offset, chunk.data.byteLength, true);
+      const timestamp = BigInt(index);
+      view.setUint32(offset + 4, Number(timestamp & 0xffff_ffffn), true);
+      view.setUint32(offset + 8, Number(timestamp >> 32n), true);
+      offset += 12;
+      ivf.set(chunk.data, offset);
+      offset += chunk.data.byteLength;
+    });
 
-    const audioTracks = state.audioStream.getAudioTracks().length;
-    for (const track of state.videoStream.getTracks()) {
-      track.stop();
-    }
-    for (const track of state.audioStream.getTracks()) {
-      track.stop();
-    }
+    const videoBase64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.addEventListener(
+        "load",
+        () => {
+          const value = reader.result;
+          if (typeof value !== "string") {
+            reject(new Error("Unable to serialize showcase video capture."));
+            return;
+          }
+          const comma = value.indexOf(",");
+          resolve(comma === -1 ? value : value.slice(comma + 1));
+        },
+        { once: true },
+      );
+      reader.addEventListener(
+        "error",
+        () => reject(reader.error ?? new Error("FileReader failed.")),
+        { once: true },
+      );
+      reader.readAsDataURL(new Blob([ivf], { type: "video/x-ivf" }));
+    });
 
-    scope.__lemonadeShowcaseCapture = undefined;
+    scope.__lemonadeShowcaseFrameCapture = undefined;
     return {
       videoBase64,
-      audioBase64,
       width: state.width,
       height: state.height,
-      videoMimeType: state.videoMimeType,
-      audioMimeType: state.audioMimeType,
-      audioTracks,
+      videoCodec: "vp8" as const,
+      capturedFrames: chunks.length,
     };
   });
+
+const remuxIvfToWebm = async (ivfPath: string, webmPath: string): Promise<void> => {
+  const result = spawnSync(
+    "ffmpeg",
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-i",
+      ivfPath,
+      "-map",
+      "0:v:0",
+      "-c:v",
+      "copy",
+      webmPath,
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error("FFmpeg failed to remux native VP8 showcase frames: " + result.stderr);
+  }
+  await rm(ivfPath, { force: true });
+};
 
 const recordFeature = async (
   page: Page,
@@ -420,22 +644,30 @@ const recordFeature = async (
   }
 
   const targetMs = Math.round(feature.durationSeconds * 1000);
-  const captureInfo = await startCanvasCapture(page, formFactor);
-  const startedAt = Date.now();
+  const audioInfo = await startAudioCapture(page);
+  const audioStartedAt = Date.now();
+  const pageNow = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(pageNow);
   await demonstrate();
-  const elapsedMs = Date.now() - startedAt;
-  if (elapsedMs < targetMs) {
-    await page.waitForTimeout(targetMs - elapsedMs);
-  }
-  const capture = await stopCanvasCapture(page);
+  await page.clock.runFor(16);
 
+  const captureInfo = await startCanvasFrameCapture(page, formFactor, feature.durationSeconds);
+  await advanceCanvasFrameCapture(page, captureInfo.targetFrames, manifest.capture.videoFps);
+  const capture = await stopCanvasFrameCapture(page);
+
+  const audioElapsedMs = Date.now() - audioStartedAt;
+  if (audioElapsedMs < targetMs) {
+    await page.waitForTimeout(targetMs - audioElapsedMs);
+  }
+  const audioCapture = await stopAudioCapture(page);
+
+  const ivfPath = path.join(rawDir, feature.id + ".ivf");
+  const webmPath = path.join(rawDir, feature.id + ".webm");
+  await writeFile(ivfPath, Buffer.from(capture.videoBase64, "base64"));
+  await remuxIvfToWebm(ivfPath, webmPath);
   await writeFile(
-    path.join(rawDir, `${feature.id}.webm`),
-    Buffer.from(capture.videoBase64, "base64"),
-  );
-  await writeFile(
-    path.join(rawDir, `${feature.id}.audio.webm`),
-    Buffer.from(capture.audioBase64, "base64"),
+    path.join(rawDir, feature.id + ".audio.webm"),
+    Buffer.from(audioCapture.audioBase64, "base64"),
   );
   await writeFile(
     path.join(rawDir, `${feature.id}.json`),
@@ -450,13 +682,16 @@ const recordFeature = async (
         durationSeconds: feature.durationSeconds,
         requestedFps: manifest.capture.videoFps,
         videoBitsPerSecond: captureInfo.videoBitsPerSecond,
-        audioBitsPerSecond: captureInfo.audioBitsPerSecond,
+        audioBitsPerSecond: audioInfo.audioBitsPerSecond,
+        frameProduction: "deterministic-webcodecs-vp8",
+        capturedFrames: capture.capturedFrames,
         source: {
           width: capture.width,
           height: capture.height,
-          videoMimeType: capture.videoMimeType,
-          audioMimeType: capture.audioMimeType,
-          audioTracks: capture.audioTracks,
+          videoCodec: capture.videoCodec,
+          videoMimeType: "video/webm;codecs=vp8",
+          audioMimeType: audioCapture.audioMimeType,
+          audioTracks: audioCapture.audioTracks,
         },
       },
       null,
