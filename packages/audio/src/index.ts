@@ -330,9 +330,7 @@ export const environmentBedGainTargets = (
 
   return Object.freeze({
     wind: ENVIRONMENT_GAIN_FLOOR + clamp01(frame.windIntensity) * MAX_WIND_GAIN,
-    rain:
-      ENVIRONMENT_GAIN_FLOOR +
-      Math.pow(clamp01(frame.precipitation), 1.35) * MAX_RAIN_GAIN,
+    rain: ENVIRONMENT_GAIN_FLOOR + Math.pow(clamp01(frame.precipitation), 1.35) * MAX_RAIN_GAIN,
   });
 };
 
@@ -544,20 +542,6 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
 };
 
 export {
-  analyzeCueMix,
-  CUE_MIX_PROFILES,
-  cueMixGain,
-  cueMixProfile,
-  dbToGain,
-  gainToDb,
-  measureCalibrationPcm,
-  renderCueCalibrationPcm,
-  type CueMixMetrics,
-  type CueMixProfile,
-  type CueMixRole,
-} from "./mix.js";
-
-export {
   AVAILABLE_CONTINUOUS_SOUND_LIBRARY,
   AVAILABLE_SOUND_LIBRARY,
   availableSounds,
@@ -573,3 +557,17 @@ export {
   soundLibrary,
   soundLibraryEntry,
 } from "./library.js";
+
+export {
+  analyzeCueMix,
+  CUE_MIX_PROFILES,
+  type CueMixMetrics,
+  type CueMixProfile,
+  type CueMixRole,
+  cueMixGain,
+  cueMixProfile,
+  dbToGain,
+  gainToDb,
+  measureCalibrationPcm,
+  renderCueCalibrationPcm,
+} from "./mix.js";
