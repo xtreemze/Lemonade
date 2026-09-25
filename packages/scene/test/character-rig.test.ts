@@ -3,10 +3,7 @@ import { describe, expect, it } from "vitest";
 import { decorateCharacter } from "../src/character-detail.js";
 import { createCharacterGeometrySet } from "../src/character-geometry.js";
 import { seatedCharacterPose } from "../src/character-model.js";
-import {
-  applyThreeCharacterPose,
-  createThreeCharacterRig,
-} from "../src/character-rig.js";
+import { applyThreeCharacterPose, createThreeCharacterRig } from "../src/character-rig.js";
 import { WORLD_SCALE } from "../src/world-scale.js";
 
 describe("shared Three procedural character rig", () => {
@@ -50,9 +47,7 @@ describe("shared Three procedural character rig", () => {
       ),
     ).toBe(true);
     expect(
-      rig.root.children.some(
-        (child) => child.userData["sceneRole"] === "garment-detail",
-      ),
+      rig.root.children.some((child) => child.userData["sceneRole"] === "garment-detail"),
     ).toBe(false);
   });
 
@@ -68,20 +63,10 @@ describe("shared Three procedural character rig", () => {
     expect(rig.pelvis.rotation.x).toBeCloseTo(pose.pelvis.rotation.x);
     expect(rig.chest.rotation.x).toBeCloseTo(pose.chest.rotation.x);
     expect(rig.neck.rotation.x).toBeCloseTo(pose.neck.rotation.x);
-    expect(rig.arms[0].root.rotation.x).toBeCloseTo(
-      pose.arms[0].shoulder.rotation.x,
-    );
-    expect(rig.arms[0].lower.rotation.x).toBeCloseTo(
-      pose.arms[0].elbow.rotation.x,
-    );
-    expect(rig.arms[0].extremity.rotation.x).toBeCloseTo(
-      pose.arms[0].wrist.rotation.x,
-    );
-    expect(rig.legs[0].lower.rotation.x).toBeCloseTo(
-      pose.legs[0].knee.rotation.x,
-    );
-    expect(rig.legs[0].extremity.rotation.x).toBeCloseTo(
-      pose.legs[0].ankle.rotation.x,
-    );
+    expect(rig.arms[0].root.rotation.x).toBeCloseTo(pose.arms[0].shoulder.rotation.x);
+    expect(rig.arms[0].lower.rotation.x).toBeCloseTo(pose.arms[0].elbow.rotation.x);
+    expect(rig.arms[0].extremity.rotation.x).toBeCloseTo(pose.arms[0].wrist.rotation.x);
+    expect(rig.legs[0].lower.rotation.x).toBeCloseTo(pose.legs[0].knee.rotation.x);
+    expect(rig.legs[0].extremity.rotation.x).toBeCloseTo(pose.legs[0].ankle.rotation.x);
   });
 });
