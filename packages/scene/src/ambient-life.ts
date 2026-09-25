@@ -605,7 +605,7 @@ const placeRig = (
     rig.arms[1].root.rotation.x = -1.15;
   }
   applyCharacterExpressionPose(
-    rig.root,
+    rig.head,
     characterExpressionAt(
       characterPose.expression,
       actorIdentitySalt(pose.id),
