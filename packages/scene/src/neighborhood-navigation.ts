@@ -146,17 +146,17 @@ const connectStreetContinuity = (
       for (let index = 1; index < segments.length; index += 1) {
         const previous = segments[index - 1];
         const current = segments[index];
-        if (
-          previous === undefined ||
-          current === undefined ||
-          roadSegmentIndex(current) - roadSegmentIndex(previous) !== 1
-        ) {
+        if (previous === undefined || current === undefined) {
           continue;
         }
 
         const previousEnd = findNode(nodes, sidewalkNodeId(previous, "end"));
         const currentStart = findNode(nodes, sidewalkNodeId(current, "start"));
-        addBidirectionalEdge(edges, previousEnd, currentStart, "sidewalk");
+        const kind =
+          roadSegmentIndex(current) - roadSegmentIndex(previous) === 1
+            ? "sidewalk"
+            : "crossing";
+        addBidirectionalEdge(edges, previousEnd, currentStart, kind);
       }
     }
   }
