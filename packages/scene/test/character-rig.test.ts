@@ -1,6 +1,7 @@
 import { Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
+import { decorateCharacter } from "../src/character-detail.js";
 import { createCharacterGeometrySet } from "../src/character-geometry.js";
 import { neutralCharacterPose, seatedCharacterPose } from "../src/character-model.js";
 import {
@@ -40,6 +41,23 @@ describe("shared Three procedural character rig", () => {
     expect(rig.arms[1].root.parent).toBe(rig.chest);
     expect(rig.legs[0].root.parent).toBe(rig.pelvis);
     expect(rig.legs[1].root.parent).toBe(rig.pelvis);
+  });
+
+  it("keeps procedural body detail attached to the articulated chest", () => {
+    const geometries = createCharacterGeometrySet();
+    const rig = createThreeCharacterRig(geometries, 0x1e_ad_20_26, 7);
+
+    decorateCharacter(rig.root, rig.head, rig.profile, 7);
+
+    expect(rig.bodyDecorationRoot.parent).toBe(rig.chest);
+    expect(
+      rig.bodyDecorationRoot.children.some(
+        (child) => child.userData["sceneRole"] === "garment-detail",
+      ),
+    ).toBe(true);
+    expect(
+      rig.root.children.some((child) => child.userData["sceneRole"] === "garment-detail"),
+    ).toBe(false);
   });
 
   it("applies seated articulation without changing body scale", () => {
