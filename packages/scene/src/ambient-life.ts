@@ -495,6 +495,22 @@ export const birdRouteProgressAt = (
   return wrapped / activeSpan;
 };
 
+export type TransportGait = Readonly<{
+  stride: number;
+  lift: number;
+}>;
+
+export const transportGaitAt = (elapsedMs: number, speed: number): TransportGait => {
+  if (speed <= 0) {
+    return Object.freeze({ stride: 0, lift: 0 });
+  }
+  const cycle = elapsedMs * 0.009 * speed;
+  return Object.freeze({
+    stride: Math.sin(cycle) * 0.52,
+    lift: Math.abs(Math.sin(cycle)) * 0.018,
+  });
+};
+
 const applyTransportWalk = (
   rig: TransportCharacterRig,
   travelDistance: number,
