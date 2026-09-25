@@ -1,3 +1,4 @@
+import { Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
 import { createCharacterGeometrySet } from "../src/character-geometry.js";
@@ -79,8 +80,14 @@ describe("shared Three procedural character rig", () => {
   });
 
   it("converts +X-based route yaw into the character model's +Z forward convention", () => {
-    expect(characterRotationYForRouteYaw(0)).toBeCloseTo(Math.PI / 2);
-    expect(characterRotationYForRouteYaw(Math.PI / 2)).toBeCloseTo(0);
-    expect(characterRotationYForRouteYaw(Math.PI)).toBeCloseTo(-Math.PI / 2);
+    const up = new Vector3(0, 1, 0);
+    for (const routeYaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      const forward = new Vector3(0, 0, 1).applyAxisAngle(
+        up,
+        characterRotationYForRouteYaw(routeYaw),
+      );
+      expect(forward.x).toBeCloseTo(Math.cos(routeYaw));
+      expect(forward.z).toBeCloseTo(Math.sin(routeYaw));
+    }
   });
 });
