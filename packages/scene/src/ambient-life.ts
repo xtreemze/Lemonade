@@ -13,11 +13,11 @@ import { applyCharacterExpressionPose, decorateCharacter } from "./character-det
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
 import {
   CHARACTER_ANATOMY,
-  type CharacterPose,
   characterExpressionAt,
   characterPoseAtDistance,
   neutralCharacterPose,
   seatedCharacterPose,
+  serviceInteractionPose,
 } from "./character-model.js";
 import {
   applyThreeCharacterPose,
@@ -511,18 +511,6 @@ export const transportGaitAt = (elapsedMs: number, speed: number): TransportGait
   });
 };
 
-const applyTransportWalk = (
-  rig: TransportCharacterRig,
-  travelDistance: number,
-  preserveLocomotionPose: boolean,
-): CharacterPose => {
-  const pose = characterPoseAtDistance(rig.profile, travelDistance, {
-    moving: preserveLocomotionPose,
-  });
-  applyThreeCharacterPose(rig, pose);
-  return pose;
-};
-
 const REDUCED_DETAIL_ROLES = new Set([
   "face-expression",
   "eye-white",
@@ -585,18 +573,18 @@ const placeRig = (
   // migrates their motion to the same actor-owned clock.
   const travelDistance =
     pose.travelDistance ?? (Math.max(0, elapsedMs) / 1000) * Math.max(0, pose.speed);
+  const serviceInteraction =
+    pose.interaction === "gardening" || pose.interaction === "mailbox"
+      ? serviceInteractionPose(pose.interaction, elapsedMs)
+      : null;
   const preserveLocomotionPose =
-    (pose.travelDistance !== null || pose.speed > 0) &&
-    pose.interaction !== "gardening" &&
-    pose.interaction !== "mailbox";
-  const characterPose = applyTransportWalk(rig, travelDistance, preserveLocomotionPose);
-  if (pose.interaction === "gardening") {
-    rig.arms[0].root.rotation.x = -1.05;
-    rig.arms[1].root.rotation.x = -0.72;
-    rig.root.rotation.z = Math.sin(elapsedMs * 0.004) * 0.08;
-  } else if (pose.interaction === "mailbox") {
-    rig.arms[1].root.rotation.x = -1.15;
-  }
+    serviceInteraction === null && (pose.travelDistance !== null || pose.speed > 0);
+  const characterPose =
+    serviceInteraction ??
+    characterPoseAtDistance(rig.profile, travelDistance, {
+      moving: preserveLocomotionPose,
+    });
+  applyThreeCharacterPose(rig, characterPose);
   applyCharacterExpressionPose(
     rig.head,
     characterExpressionAt(characterPose.expression, actorIdentitySalt(pose.id), elapsedMs),

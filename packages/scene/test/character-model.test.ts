@@ -9,6 +9,8 @@ import {
   neutralCharacterPose,
   seatedCharacterPose,
   sellerConfidencePose,
+  sellerPresentationPose,
+  serviceInteractionPose,
 } from "../src/character-model.js";
 import { characterProfileFor } from "../src/characters.js";
 import { WORLD_SCALE } from "../src/world-scale.js";
@@ -64,6 +66,20 @@ describe("renderer-neutral character model", () => {
     expect(Math.abs(rider.arms[0].wrist.rotation.x)).toBeGreaterThan(0);
   });
 
+  it("models renderer-neutral service interactions without renderer-owned joint mutations", () => {
+    const gardening = serviceInteractionPose("gardening", 1_250);
+    const gardeningLater = serviceInteractionPose("gardening", 1_500);
+    const mailbox = serviceInteractionPose("mailbox", 1_250);
+
+    expect(gardening.arms[0].shoulder.rotation.x).toBeLessThan(-1);
+    expect(gardening.arms[1].elbow.rotation.x).toBeLessThan(-0.5);
+    expect(gardening.chest.rotation.z).not.toBe(gardeningLater.chest.rotation.z);
+    expect(mailbox.arms[1].shoulder.rotation.x).toBeLessThan(-1);
+    expect(mailbox.arms[0].shoulder.rotation.x).toBe(0);
+    expect(gardening.expression.gazeY).toBeLessThan(0);
+    expect(mailbox.expression.gazeY).toBeLessThan(0);
+  });
+
   it("models purchase and drinking poses through shared articulation", () => {
     const purchasing = buyerInteractionPose("purchasing", 3);
     const drinking = buyerInteractionPose("drinking", 4);
@@ -88,6 +104,28 @@ describe("renderer-neutral character model", () => {
     expect(Math.abs(high.arms[0].shoulder.rotation.z)).toBeGreaterThan(
       Math.abs(low.arms[0].shoulder.rotation.z),
     );
+  });
+
+  it("composes seller breathing and serving through renderer-neutral pose channels", () => {
+    const confidence = sellerConfidencePose(3);
+    const staticPose = sellerPresentationPose(3, 2_500, {
+      animated: false,
+      serving: true,
+    });
+    const breathing = sellerPresentationPose(3, 2_500, {
+      animated: true,
+    });
+    const serving = sellerPresentationPose(3, 2_500, {
+      animated: true,
+      serving: true,
+    });
+
+    expect(staticPose).toEqual(confidence);
+    expect(confidence.head.lift).toBeCloseTo(-0.05);
+    expect(breathing.chest.lift).not.toBeCloseTo(confidence.chest.lift);
+    expect(breathing.head.lift).not.toBeCloseTo(confidence.head.lift);
+    expect(serving.arms[1].shoulder.rotation.x).toBeCloseTo(-1.2);
+    expect(serving.chest.rotation.x).toBeCloseTo(confidence.chest.rotation.x - 0.06);
   });
 
   it("uses deterministic bounded blink timing", () => {
