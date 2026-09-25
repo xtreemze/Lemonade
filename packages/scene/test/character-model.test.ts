@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   blinkAmountAt,
+  buyerInteractionPose,
   CHARACTER_ANATOMY,
   characterPoseAtDistance,
   neutralCharacterPose,
@@ -60,6 +61,19 @@ describe("renderer-neutral character model", () => {
     expect(Math.abs(driver.legs[0].ankle.rotation.x)).toBeGreaterThan(0);
     expect(Math.abs(rider.arms[0].elbow.rotation.x)).toBeGreaterThan(0);
     expect(Math.abs(rider.arms[0].wrist.rotation.x)).toBeGreaterThan(0);
+  });
+
+  it("models purchase and drinking poses through shared articulation", () => {
+    const purchasing = buyerInteractionPose("purchasing", 3);
+    const drinking = buyerInteractionPose("drinking", 4);
+
+    expect(purchasing.rightHandOccupancy).toBe("none");
+    expect(purchasing.chest.rotation.x).toBeGreaterThan(0);
+    expect(purchasing.arms[1].elbow.rotation.x).toBeLessThan(-0.9);
+    expect(drinking.rightHandOccupancy).toBe("cup");
+    expect(drinking.head.rotation.x).toBeGreaterThan(0);
+    expect(Math.abs(drinking.head.rotation.z)).toBeGreaterThan(0);
+    expect(drinking.expression.valence).toBeGreaterThan(0);
   });
 
   it("maps seller confidence through the same body and expression channels", () => {
