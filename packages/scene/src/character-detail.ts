@@ -98,11 +98,7 @@ export const applyCharacterExpressionPose = (
     const side = faceNumber(object, "characterFaceSide", 0);
     const baseX = faceNumber(object, "characterFaceBaseX", object.position.x);
     const baseY = faceNumber(object, "characterFaceBaseY", object.position.y);
-    const baseRotationZ = faceNumber(
-      object,
-      "characterFaceBaseRotationZ",
-      object.rotation.z,
-    );
+    const baseRotationZ = faceNumber(object, "characterFaceBaseRotationZ", object.rotation.z);
     const baseScaleY = faceNumber(object, "characterFaceBaseScaleY", object.scale.y);
 
     if (part === "eye-white") {
@@ -225,24 +221,8 @@ export const decorateCharacterHead = (
             ? 0.08
             : 0;
     const mouthY = identity.expression === "focused" ? -0.098 : -0.105;
-    addFaceBar(
-      head,
-      0.07,
-      [-0.035, mouthY, 0.266],
-      -mouthTilt,
-      0x8b_4c_48,
-      "mouth",
-      -1,
-    );
-    addFaceBar(
-      head,
-      0.07,
-      [0.035, mouthY, 0.266],
-      mouthTilt,
-      0x8b_4c_48,
-      "mouth",
-      1,
-    );
+    addFaceBar(head, 0.07, [-0.035, mouthY, 0.266], -mouthTilt, 0x8b_4c_48, "mouth", -1);
+    addFaceBar(head, 0.07, [0.035, mouthY, 0.266], mouthTilt, 0x8b_4c_48, "mouth", 1);
   }
 
   // Every hairstyle starts with a full crown shell. Style-specific geometry sits
