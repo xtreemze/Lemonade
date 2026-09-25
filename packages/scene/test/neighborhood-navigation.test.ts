@@ -2,45 +2,71 @@ import { describe, expect, it } from "vitest";
 
 import {
   createNeighborhoodNavigationGraph,
+  createNeighborhoodNavigationGraphFromTopology,
   navigationNode,
   shortestNavigationPath,
 } from "../src/neighborhood-navigation.js";
+import { generateNeighborhoodTopology } from "../src/neighborhood-topology.js";
 import { generateResidentialLayout } from "../src/residential-layout.js";
-import { STREET_LAYOUT } from "../src/street-layout.js";
 
 describe("semantic neighborhood navigation", () => {
-  it("is deterministic and follows the seeded residential plan", () => {
-    const layout = generateResidentialLayout(0x12_34_ab_cd);
+  it("is deterministic and projects the generated topology rather than static foreground rows", () => {
+    const seed = 0x12_34_ab_cd;
+    const layout = generateResidentialLayout(seed);
+    const topology = generateNeighborhoodTopology(seed);
     const first = createNeighborhoodNavigationGraph(layout);
     const repeated = createNeighborhoodNavigationGraph(layout);
 
     expect(repeated).toEqual(first);
-    expect(first.nodes.length).toBeGreaterThan(10);
+    expect(first.nodes.filter((node) => node.role === "sidewalk")).toHaveLength(
+      topology.sidewalks.length,
+    );
     expect(first.edges.length).toBeGreaterThan(first.nodes.length);
+    expect(new Set(first.nodes.map((node) => node.streetId).filter(Boolean))).toEqual(
+      new Set(topology.sidewalks.map((sidewalk) => sidewalk.streetId)),
+    );
   });
 
-  it("keeps sidewalk nodes inside their semantic sidewalk bands", () => {
-    const graph = createNeighborhoodNavigationGraph(generateResidentialLayout(77));
+  it("preserves every generated sidewalk segment as a semantic navigation node", () => {
+    const topology = generateNeighborhoodTopology(77);
+    const graph = createNeighborhoodNavigationGraphFromTopology(topology);
+    const sidewalkIds = new Set(
+      graph.nodes
+        .filter((node) => node.role === "sidewalk")
+        .map((node) => node.sidewalkSegmentId),
+    );
 
-    for (const node of graph.nodes) {
-      if (node.role !== "sidewalk" || node.side === null) {
-        continue;
-      }
-      const sidewalk =
-        node.side === "near" ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
-      expect(node.z).toBeGreaterThanOrEqual(sidewalk.minZ);
-      expect(node.z).toBeLessThanOrEqual(sidewalk.maxZ);
+    for (const sidewalk of topology.sidewalks) {
+      expect(sidewalkIds.has(sidewalk.id)).toBe(true);
     }
   });
 
-  it("routes far-side pedestrians through a real crossing before stand access", () => {
-    const graph = createNeighborhoodNavigationGraph(generateResidentialLayout(91));
-    const farNodes = graph.nodes
-      .filter((node) => node.role === "sidewalk" && node.side === "far")
-      .sort((left, right) => left.x - right.x);
-    const start = farNodes[0];
+  it("connects generated street systems through topology junction crossings", () => {
+    const topology = generateNeighborhoodTopology(91);
+    const graph = createNeighborhoodNavigationGraphFromTopology(topology);
+    const crossingEdges = graph.edges.filter((edge) => edge.kind === "crossing");
+
+    expect(topology.junctions.length).toBeGreaterThan(0);
+    expect(crossingEdges.length).toBeGreaterThan(0);
+    expect(
+      crossingEdges.some((edge) => {
+        const from = navigationNode(graph, edge.from);
+        const to = navigationNode(graph, edge.to);
+        return from.streetId !== undefined && to.streetId !== undefined && from.streetId !== to.streetId;
+      }),
+    ).toBe(true);
+  });
+
+  it("routes a far-side main-street pedestrian through a junction before stand access", () => {
+    const topology = generateNeighborhoodTopology(91);
+    const graph = createNeighborhoodNavigationGraphFromTopology(topology);
+    const start = graph.nodes
+      .filter(
+        (node) => node.role === "sidewalk" && node.streetId === "main" && node.side === "far",
+      )
+      .sort((left, right) => left.x - right.x)[0];
     if (start === undefined) {
-      throw new Error("expected far sidewalk node");
+      throw new Error("expected far main-street sidewalk node");
     }
 
     const path = shortestNavigationPath(graph, start.id, graph.standServiceNodeId);
@@ -55,14 +81,27 @@ describe("semantic neighborhood navigation", () => {
     expect(pathEdges.at(-1)?.kind).toBe("stand-access");
   });
 
-  it("exposes stand entry and service as distinct interaction slots", () => {
-    const graph = createNeighborhoodNavigationGraph(generateResidentialLayout(123));
+  it("derives stand entry and service positions from the generated main sidewalk", () => {
+    const topology = generateNeighborhoodTopology(123);
+    const graph = createNeighborhoodNavigationGraphFromTopology(topology);
     const entry = navigationNode(graph, graph.standEntryNodeId);
     const service = navigationNode(graph, graph.standServiceNodeId);
+    const linkedSidewalkEdge = graph.edges.find(
+      (edge) => edge.to === entry.id && edge.kind === "stand-access",
+    );
+    expect(linkedSidewalkEdge).toBeDefined();
+    if (linkedSidewalkEdge === undefined) {
+      return;
+    }
+    const sidewalk = navigationNode(graph, linkedSidewalkEdge.from);
 
     expect(entry.role).toBe("stand-entry");
     expect(service.role).toBe("stand-service");
-    expect(entry.z).toBeLessThan(STREET_LAYOUT.nearSidewalk.minZ);
-    expect(service.z).toBeLessThan(entry.z);
+    expect(sidewalk.streetId).toBe("main");
+    expect(sidewalk.side).toBe("near");
+    expect(Math.hypot(entry.x - sidewalk.x, entry.z - sidewalk.z)).toBeGreaterThan(0);
+    expect(Math.hypot(service.x - sidewalk.x, service.z - sidewalk.z)).toBeGreaterThan(
+      Math.hypot(entry.x - sidewalk.x, entry.z - sidewalk.z),
+    );
   });
 });
