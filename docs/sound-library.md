@@ -37,6 +37,21 @@ The four forecast cues reproduce the historical Apple II weather excerpts docume
 renderer-neutral environment frame. Thunder, gusts and birdsong remain discrete semantic occurrences.
 Purchase preparation now follows the same deterministic sale schedule as serve, payment and drink.
 
+## Mix calibration
+
+`packages/audio/src/mix.ts` owns the semantic mix profile for every playable cue. Playback applies an
+explicit dB trim per cue instead of relying on implicit oscillator defaults, while `compileCue` preserves
+the source motif data for inspection and historical forecast verification.
+
+The calibration harness exposes deterministic offline PCM rendering plus peak/RMS and approximate
+A-weighted measurements. These are regression signals rather than claims of LUFS. Purchase feedback is
+kept within a roughly 4 dB perceptual band, profit/loss are balanced by perception, and thunder/gust add
+brief mid-frequency presence so they survive small speakers without simply increasing sub-bass gain.
+
+The runtime routes discrete cues and continuous environment beds through a transparent master limiter
+configured only to catch pathological overlaps. Normal presentation levels should remain below its
+threshold.
+
 ## Missing sounds
 
 | Proposed cue | Sound | Trigger source | Recommended synthesis |

@@ -4,6 +4,7 @@ import type {
   ProceduralAudioEngine,
   WeatherAudioCue,
 } from "./contracts.js";
+import { analyzeCueMix, cueMixGain } from "./mix.js";
 
 export {
   type AudioCue,
@@ -44,7 +45,7 @@ type MotifNote = Readonly<{
   note: number;
   beats: number;
   waveform: OscillatorType;
-  gain?: number;
+  gain: number;
   endNote?: number;
 }>;
 
@@ -103,15 +104,15 @@ const MOTIFS: Record<Exclude<AudioCue, WeatherAudioCue>, readonly MotifNote[]> =
     { note: 72, beats: 1.5, waveform: "triangle", gain: 0.055 },
   ],
   "day:profit": [
-    { note: 64, beats: 0.75, waveform: "triangle" },
-    { note: 67, beats: 0.75, waveform: "triangle" },
-    { note: 72, beats: 0.75, waveform: "triangle" },
-    { note: 76, beats: 1.5, waveform: "triangle" },
+    { note: 64, beats: 0.75, waveform: "triangle", gain: 0.07 },
+    { note: 67, beats: 0.75, waveform: "triangle", gain: 0.07 },
+    { note: 72, beats: 0.75, waveform: "triangle", gain: 0.07 },
+    { note: 76, beats: 1.5, waveform: "triangle", gain: 0.07 },
   ],
   "day:loss": [
-    { note: 60, beats: 0.75, waveform: "sine" },
-    { note: 57, beats: 0.75, waveform: "sine" },
-    { note: 53, beats: 1.5, waveform: "sine" },
+    { note: 60, beats: 0.75, waveform: "sine", gain: 0.07 },
+    { note: 57, beats: 0.75, waveform: "sine", gain: 0.07 },
+    { note: 53, beats: 1.5, waveform: "sine", gain: 0.07 },
   ],
   "progression:unlock": [
     { note: 60, beats: 0.5, waveform: "square", gain: 0.045 },
@@ -146,11 +147,14 @@ const MOTIFS: Record<Exclude<AudioCue, WeatherAudioCue>, readonly MotifNote[]> =
     { note: 91, beats: 0.14, waveform: "triangle", gain: 0.022 },
   ],
   "storm:thunder": [
+    { note: 76, endNote: 55, beats: 0.12, waveform: "sawtooth", gain: 0.026 },
+    { note: 64, endNote: 48, beats: 0.18, waveform: "square", gain: 0.018 },
     { note: 33, endNote: 25, beats: 5.5, waveform: "sawtooth", gain: 0.048 },
     { note: 28, endNote: 20, beats: 4.5, waveform: "sawtooth", gain: 0.04 },
     { note: 24, endNote: 16, beats: 5.5, waveform: "triangle", gain: 0.034 },
   ],
   "storm:gust": [
+    { note: 69, endNote: 55, beats: 0.16, waveform: "sawtooth", gain: 0.015 },
     { note: 45, endNote: 36, beats: 2.8, waveform: "sawtooth", gain: 0.022 },
     { note: 52, endNote: 43, beats: 1.9, waveform: "triangle", gain: 0.018 },
     { note: 40, endNote: 33, beats: 2.2, waveform: "sine", gain: 0.016 },
@@ -289,7 +293,7 @@ const compileModernCue = (cue: Exclude<AudioCue, WeatherAudioCue>): readonly Sch
         ...(motifNote.endNote === undefined ? {} : { endMidiNote: motifNote.endNote }),
         startSeconds: cursor,
         durationSeconds,
-        gain: motifNote.gain ?? 0.07,
+        gain: motifNote.gain,
         waveform: motifNote.waveform,
       }),
     );
@@ -301,6 +305,8 @@ const compileModernCue = (cue: Exclude<AudioCue, WeatherAudioCue>): readonly Sch
 
 export const compileCue = (cue: AudioCue): readonly ScheduledTone[] =>
   isWeatherCue(cue) ? compileWeatherCue(cue) : compileModernCue(cue);
+
+export const cueMixMetrics = (cue: AudioCue) => analyzeCueMix(cue, compileCue(cue));
 
 export const weatherMelodyMetadata = (cue: WeatherAudioCue): WeatherMelodyMetadata =>
   WEATHER_MELODY_METADATA[cue];
@@ -340,6 +346,22 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
   let rainSource: AudioBufferSourceNode | null = null;
   let windGain: GainNode | null = null;
   let rainGain: GainNode | null = null;
+  let masterLimiter: DynamicsCompressorNode | null = null;
+
+  const ensureMasterLimiter = (activeContext: AudioContext): DynamicsCompressorNode => {
+    if (masterLimiter !== null) {
+      return masterLimiter;
+    }
+    const limiter = activeContext.createDynamicsCompressor();
+    limiter.threshold.value = -4;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.002;
+    limiter.release.value = 0.08;
+    limiter.connect(activeContext.destination);
+    masterLimiter = limiter;
+    return limiter;
+  };
 
   const createNoiseBuffer = (activeContext: AudioContext, seedValue: number): AudioBuffer => {
     const length = Math.max(1, Math.round(activeContext.sampleRate * 2));
@@ -380,7 +402,7 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     nextWindGain.gain.value = 0.0001;
     nextWindSource.connect(windFilter);
     windFilter.connect(nextWindGain);
-    nextWindGain.connect(activeContext.destination);
+    nextWindGain.connect(ensureMasterLimiter(activeContext));
 
     const nextRainSource = activeContext.createBufferSource();
     nextRainSource.buffer = createNoiseBuffer(activeContext, 0x52_41_49_4e);
@@ -393,7 +415,7 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     nextRainGain.gain.value = 0.0001;
     nextRainSource.connect(rainFilter);
     rainFilter.connect(nextRainGain);
-    nextRainGain.connect(activeContext.destination);
+    nextRainGain.connect(ensureMasterLimiter(activeContext));
 
     windSource = nextWindSource;
     rainSource = nextRainSource;
@@ -433,6 +455,7 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     }
 
     const baseTime = activeContext.currentTime + 0.012;
+    const mixGain = cueMixGain(cue);
     for (const tone of compileCue(cue)) {
       const oscillator = activeContext.createOscillator();
       const envelope = activeContext.createGain();
@@ -446,13 +469,13 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
       }
       envelope.gain.setValueAtTime(0.0001, start);
       envelope.gain.exponentialRampToValueAtTime(
-        tone.gain,
+        tone.gain * mixGain,
         start + Math.min(0.012, tone.durationSeconds / 4),
       );
       envelope.gain.exponentialRampToValueAtTime(0.0001, end);
 
       oscillator.connect(envelope);
-      envelope.connect(activeContext.destination);
+      envelope.connect(ensureMasterLimiter(activeContext));
       oscillator.addEventListener("ended", () => {
         oscillator.disconnect();
         envelope.disconnect();
@@ -499,6 +522,8 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     rainSource = null;
     windGain = null;
     rainGain = null;
+    masterLimiter?.disconnect();
+    masterLimiter = null;
     if (context !== null && context.state !== "closed") {
       await context.close();
     }
@@ -532,3 +557,17 @@ export {
   soundLibrary,
   soundLibraryEntry,
 } from "./library.js";
+
+export {
+  analyzeCueMix,
+  CUE_MIX_PROFILES,
+  type CueMixMetrics,
+  type CueMixProfile,
+  type CueMixRole,
+  cueMixGain,
+  cueMixProfile,
+  dbToGain,
+  gainToDb,
+  measureCalibrationPcm,
+  renderCueCalibrationPcm,
+} from "./mix.js";
