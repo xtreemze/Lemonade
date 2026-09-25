@@ -1,8 +1,8 @@
-import {
-  type AudioCue,
-  type AudioEnvironmentFrame,
-  type ProceduralAudioEngine,
-  type WeatherAudioCue,
+import type {
+  AudioCue,
+  AudioEnvironmentFrame,
+  ProceduralAudioEngine,
+  WeatherAudioCue,
 } from "./contracts.js";
 
 export {
@@ -34,7 +34,6 @@ export type WeatherMelodyMetadata = Readonly<{
   referenceMidi: string;
   phraseBoundary: string;
 }>;
-
 
 export interface MusicalOutputAdapter {
   play: (cue: AudioCue, tones: readonly ScheduledTone[]) => void | Promise<void>;
@@ -489,7 +488,6 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     dispose,
   });
 };
-
 
 export {
   AVAILABLE_CONTINUOUS_SOUND_LIBRARY,
