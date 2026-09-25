@@ -87,6 +87,10 @@ test("verifier enforces source resolution and high-frame-rate output", async () 
   assert.ok(verifier.includes("assertHighFrameRate"));
   assert.ok(verifier.includes("assertCapturedFrameCadence"));
   assert.ok(verifier.includes("best_effort_timestamp_time"));
+  assert.ok(verifier.includes("first="));
+  assert.ok(verifier.includes("last="));
+  assert.ok(verifier.includes("min="));
+  assert.ok(verifier.includes("max="));
   assert.ok(verifier.includes("width: 1440, height: 900"));
   assert.ok(verifier.includes("width: 390, height: 844"));
   assert.ok(verifier.includes("animated WebP"));
@@ -112,6 +116,7 @@ test("dedicated showcase workflow is independently runnable and uploads evidence
   assert.ok(workflow.includes("playwright install --with-deps chromium"));
   assert.ok(workflow.includes("ffmpeg"));
   assert.ok(workflow.includes("actions/upload-artifact"));
+  assert.ok(workflow.includes("if: always()"));
   assert.ok(workflow.includes("artifacts/e2e-media"));
 });
 
