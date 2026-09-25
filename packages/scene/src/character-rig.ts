@@ -206,11 +206,7 @@ export const applyThreeCharacterPose = (rig: ThreeCharacterRig, pose: CharacterP
   rig.poseRoot.scale.setScalar(pose.root.scale);
 
   rig.pelvis.position.y = PELVIS_Y + pose.pelvis.lift;
-  rig.pelvis.rotation.set(
-    pose.pelvis.rotation.x,
-    pose.pelvis.rotation.y,
-    pose.pelvis.rotation.z,
-  );
+  rig.pelvis.rotation.set(pose.pelvis.rotation.x, pose.pelvis.rotation.y, pose.pelvis.rotation.z);
   rig.chest.position.y = CHEST_Y + pose.chest.lift;
   rig.chest.rotation.set(pose.chest.rotation.x, pose.chest.rotation.y, pose.chest.rotation.z);
   rig.neck.position.y = NECK_Y + pose.neck.lift;
