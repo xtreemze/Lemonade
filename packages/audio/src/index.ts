@@ -1,18 +1,19 @@
-export type WeatherKind = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
-export type WeatherAudioCue = `forecast:${WeatherKind}`;
+import type {
+  AudioCue,
+  AudioEnvironmentFrame,
+  ProceduralAudioEngine,
+  WeatherAudioCue,
+} from "./contracts.js";
 
-export type AudioCue =
-  | WeatherAudioCue
-  | "day:submit"
-  | "day:profit"
-  | "day:loss"
-  | "progression:unlock"
-  | "purchase:serve"
-  | "purchase:payment"
-  | "purchase:drink"
-  | "storm:thunder"
-  | "storm:gust"
-  | "ambient:birdsong";
+export {
+  type AudioCue,
+  type AudioEnvironmentFrame,
+  type ProceduralAudioEngine,
+  WEATHER_FORECAST_DURATION_MS,
+  type WeatherAudioCue,
+  type WeatherKind,
+  weatherCue,
+} from "./contracts.js";
 
 export type WeatherToneSource = "historical-weather-excerpt";
 
@@ -34,20 +35,9 @@ export type WeatherMelodyMetadata = Readonly<{
   phraseBoundary: string;
 }>;
 
-export const WEATHER_FORECAST_DURATION_MS = 6000;
-
 export interface MusicalOutputAdapter {
   play: (cue: AudioCue, tones: readonly ScheduledTone[]) => void | Promise<void>;
   dispose: () => void | Promise<void>;
-}
-
-export interface ProceduralAudioEngine {
-  enable: () => Promise<boolean>;
-  play: (cue: AudioCue) => void;
-  setMuted: (muted: boolean) => void;
-  suspend: () => Promise<void>;
-  resume: () => Promise<void>;
-  dispose: () => Promise<void>;
 }
 
 type MotifNote = Readonly<{
@@ -144,6 +134,16 @@ const MOTIFS: Record<Exclude<AudioCue, WeatherAudioCue>, readonly MotifNote[]> =
     { note: 64, endNote: 76, beats: 0.7, waveform: "sine", gain: 0.032 },
     { note: 69, endNote: 81, beats: 0.5, waveform: "triangle", gain: 0.026 },
     { note: 74, beats: 0.18, waveform: "sine", gain: 0.022 },
+  ],
+  "purchase:pour": [
+    { note: 67, endNote: 55, beats: 1.6, waveform: "sine", gain: 0.018 },
+    { note: 74, endNote: 62, beats: 1.25, waveform: "triangle", gain: 0.014 },
+    { note: 81, endNote: 69, beats: 0.9, waveform: "sine", gain: 0.01 },
+  ],
+  "purchase:ice-clink": [
+    { note: 96, beats: 0.12, waveform: "triangle", gain: 0.032 },
+    { note: 103, beats: 0.1, waveform: "sine", gain: 0.026 },
+    { note: 91, beats: 0.14, waveform: "triangle", gain: 0.022 },
   ],
   "storm:thunder": [
     { note: 33, endNote: 25, beats: 5.5, waveform: "sawtooth", gain: 0.048 },
@@ -311,6 +311,81 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
   let context: AudioContext | null = null;
   let muted = false;
   let disposed = false;
+  let environmentFrame: AudioEnvironmentFrame = Object.freeze({
+    windIntensity: 0,
+    precipitation: 0,
+  });
+  let windSource: AudioBufferSourceNode | null = null;
+  let rainSource: AudioBufferSourceNode | null = null;
+  let windGain: GainNode | null = null;
+  let rainGain: GainNode | null = null;
+
+  const clamp01 = (value: number): number =>
+    Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
+
+  const createNoiseBuffer = (activeContext: AudioContext, seedValue: number): AudioBuffer => {
+    const length = Math.max(1, Math.round(activeContext.sampleRate * 2));
+    const buffer = activeContext.createBuffer(1, length, activeContext.sampleRate);
+    const channel = buffer.getChannelData(0);
+    let state = seedValue >>> 0;
+    for (let index = 0; index < channel.length; index += 1) {
+      state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0;
+      channel[index] = (state / 0xffff_ffff) * 2 - 1;
+    }
+    return buffer;
+  };
+
+  const applyEnvironmentGains = (): void => {
+    const activeContext = context;
+    if (activeContext === null || activeContext.state === "closed") {
+      return;
+    }
+    const windTarget = muted ? 0.0001 : 0.0001 + clamp01(environmentFrame.windIntensity) * 0.018;
+    const rainTarget = muted ? 0.0001 : 0.0001 + clamp01(environmentFrame.precipitation) * 0.03;
+    windGain?.gain.setTargetAtTime(windTarget, activeContext.currentTime, 0.08);
+    rainGain?.gain.setTargetAtTime(rainTarget, activeContext.currentTime, 0.05);
+  };
+
+  const ensureEnvironmentBeds = (activeContext: AudioContext): void => {
+    if (windSource !== null && rainSource !== null) {
+      applyEnvironmentGains();
+      return;
+    }
+
+    const nextWindSource = activeContext.createBufferSource();
+    nextWindSource.buffer = createNoiseBuffer(activeContext, 0x57_49_4e_44);
+    nextWindSource.loop = true;
+    const windFilter = activeContext.createBiquadFilter();
+    windFilter.type = "lowpass";
+    windFilter.frequency.value = 850;
+    windFilter.Q.value = 0.35;
+    const nextWindGain = activeContext.createGain();
+    nextWindGain.gain.value = 0.0001;
+    nextWindSource.connect(windFilter);
+    windFilter.connect(nextWindGain);
+    nextWindGain.connect(activeContext.destination);
+
+    const nextRainSource = activeContext.createBufferSource();
+    nextRainSource.buffer = createNoiseBuffer(activeContext, 0x52_41_49_4e);
+    nextRainSource.loop = true;
+    const rainFilter = activeContext.createBiquadFilter();
+    rainFilter.type = "bandpass";
+    rainFilter.frequency.value = 3200;
+    rainFilter.Q.value = 0.55;
+    const nextRainGain = activeContext.createGain();
+    nextRainGain.gain.value = 0.0001;
+    nextRainSource.connect(rainFilter);
+    rainFilter.connect(nextRainGain);
+    nextRainGain.connect(activeContext.destination);
+
+    windSource = nextWindSource;
+    rainSource = nextRainSource;
+    windGain = nextWindGain;
+    rainGain = nextRainGain;
+    nextWindSource.start();
+    nextRainSource.start();
+    applyEnvironmentGains();
+  };
 
   const enable = async (): Promise<boolean> => {
     if (disposed) {
@@ -327,6 +402,9 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
 
     if (context.state === "suspended") {
       await context.resume();
+    }
+    if (context.state === "running") {
+      ensureEnvironmentBeds(context);
     }
     return context.state === "running";
   };
@@ -367,8 +445,17 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     }
   };
 
+  const setEnvironmentFrame = (frame: AudioEnvironmentFrame): void => {
+    environmentFrame = Object.freeze({
+      windIntensity: clamp01(frame.windIntensity),
+      precipitation: clamp01(frame.precipitation),
+    });
+    applyEnvironmentGains();
+  };
+
   const setMuted = (value: boolean): void => {
     muted = value;
+    applyEnvironmentGains();
   };
 
   const suspend = async (): Promise<void> => {
@@ -385,13 +472,46 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
 
   const dispose = async (): Promise<void> => {
     disposed = true;
+    try {
+      windSource?.stop();
+      rainSource?.stop();
+    } catch {
+      // Sources may already be stopped as the context closes.
+    }
+    windSource = null;
+    rainSource = null;
+    windGain = null;
+    rainGain = null;
     if (context !== null && context.state !== "closed") {
       await context.close();
     }
     context = null;
   };
 
-  return Object.freeze({ enable, play, setMuted, suspend, resume, dispose });
+  return Object.freeze({
+    enable,
+    play,
+    setEnvironmentFrame,
+    setMuted,
+    suspend,
+    resume,
+    dispose,
+  });
 };
 
-export const weatherCue = (weather: WeatherKind): WeatherAudioCue => `forecast:${weather}`;
+export {
+  AVAILABLE_CONTINUOUS_SOUND_LIBRARY,
+  AVAILABLE_SOUND_LIBRARY,
+  availableSounds,
+  type ContinuousSoundId,
+  MISSING_SOUND_LIBRARY,
+  type MissingSoundId,
+  missingSounds,
+  type SoundImplementation,
+  type SoundLibraryCategory,
+  type SoundLibraryEntry,
+  type SoundLibraryId,
+  type SoundLibraryStatus,
+  soundLibrary,
+  soundLibraryEntry,
+} from "./library.js";

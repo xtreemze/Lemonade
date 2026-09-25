@@ -906,12 +906,7 @@ export const createLemonsvilleScene = (
     animateSeller(seconds, elapsedMs);
     ambientLife?.update(state.weather, state.phase, elapsedMs, storyboard.durationMs);
 
-    const remainingStock =
-      state.phase === "forecast"
-        ? 0
-        : state.phase === "idle"
-          ? remainingCupsAt(storyboard, storyboard.durationMs)
-          : remainingCupsAt(storyboard, elapsedMs);
+    const remainingStock = state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs);
     cupInventory?.setStock(remainingStock, storyboard.prepared);
     standDetail?.setStock(remainingStock, storyboard.prepared);
 

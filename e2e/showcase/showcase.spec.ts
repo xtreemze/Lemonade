@@ -172,6 +172,16 @@ const startCanvasCapture = async (
   const fps = manifest.capture.videoFps;
   const videoBitsPerSecond = formFactor === "desktop" ? 20_000_000 : 8_000_000;
   const audioBitsPerSecond = 192_000;
+  await page.waitForFunction(
+    () =>
+      (
+        window as typeof window & {
+          __lemonadeShowcaseAudio?: Readonly<{ stream: MediaStream }>;
+        }
+      ).__lemonadeShowcaseAudio !== undefined,
+    undefined,
+    { timeout: 5000 },
+  );
   const result = await page.evaluate(
     async ({ requestedFps, videoBitrate, audioBitrate }) => {
       const canvas = document.querySelector<HTMLCanvasElement>("#scene-canvas");

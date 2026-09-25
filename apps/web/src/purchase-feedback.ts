@@ -1,5 +1,7 @@
 export type PurchaseFeedbackBeat = Readonly<{
   saleNumber: number;
+  iceClinkAtMs: number;
+  pourAtMs: number;
   serveAtMs: number;
   paymentAtMs: number;
   drinkAtMs: number;
@@ -40,9 +42,13 @@ export const createPurchaseFeedbackSchedule = (
   return Object.freeze(
     sampledSaleIndexes(sold).map((saleIndex) => {
       const paymentAtMs = Math.round(saleSpacingMs * (saleIndex + 1));
+      const serveAtMs = Math.max(0, Math.round(paymentAtMs - serveLeadMs));
+      const preparationWindowMs = Math.min(120, Math.max(42, serveLeadMs * 0.9));
       return Object.freeze({
         saleNumber: saleIndex + 1,
-        serveAtMs: Math.max(0, Math.round(paymentAtMs - serveLeadMs)),
+        iceClinkAtMs: Math.max(0, Math.round(serveAtMs - preparationWindowMs)),
+        pourAtMs: Math.max(0, Math.round(serveAtMs - preparationWindowMs * 0.48)),
+        serveAtMs,
         paymentAtMs,
         drinkAtMs: Math.min(durationMs, Math.round(paymentAtMs + drinkDelayMs)),
       });
