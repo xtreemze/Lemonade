@@ -200,7 +200,7 @@ const startCanvasCapture = async (
       const videoStream = canvas.captureStream(requestedFps);
       const audioStream = new MediaStream(audioTracks);
       const videoMimeType =
-        ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((candidate) =>
+        ["video/webm;codecs=vp8", "video/webm;codecs=vp9", "video/webm"].find((candidate) =>
           MediaRecorder.isTypeSupported(candidate),
         ) ?? "";
       const audioMimeType =
