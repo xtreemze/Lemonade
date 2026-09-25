@@ -49,6 +49,54 @@ const frameRate = (value) => {
   return Number(numerator) / Number(denominator);
 };
 
+const probeFrameStats = (filePath) => {
+  const result = spawnSync(
+    "ffprobe",
+    [
+      "-v",
+      "error",
+      "-count_frames",
+      "-select_streams",
+      "v:0",
+      "-show_entries",
+      "stream=nb_read_frames:format=duration",
+      "-of",
+      "json",
+      filePath,
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error(`ffprobe frame counting failed for ${filePath}: ${result.stderr}`);
+  }
+
+  const parsed = JSON.parse(result.stdout);
+  const frames = Number(parsed.streams?.[0]?.nb_read_frames);
+  const duration = Number(parsed.format?.duration);
+  if (!Number.isFinite(frames) || frames <= 0 || !Number.isFinite(duration) || duration <= 0) {
+    throw new Error(`Unable to measure captured frame cadence for ${filePath}.`);
+  }
+
+  return { frames, duration, fps: frames / duration };
+};
+
+const assertCapturedFrameCadence = (filePath, expectedDurationSeconds) => {
+  const stats = probeFrameStats(filePath);
+  const minimumDuration = expectedDurationSeconds * 0.97;
+  if (stats.duration < minimumDuration) {
+    throw new Error(
+      `${filePath} captured only ${stats.duration.toFixed(3)}s; expected at least ${minimumDuration.toFixed(3)}s.`,
+    );
+  }
+
+  const minimumFps = manifest.capture.videoFps - 1;
+  if (stats.fps < minimumFps) {
+    throw new Error(
+      `${filePath} contains ${String(stats.frames)} actual frames across ${stats.duration.toFixed(3)}s (${stats.fps.toFixed(2)} fps); expected at least ${minimumFps.toFixed(2)} fps before encoding.`,
+    );
+  }
+};
+
 const dimensions = {
   desktop: { width: 1440, height: 900 },
   mobile: { width: 390, height: 844 },
@@ -132,6 +180,8 @@ for (const formFactor of ["desktop", "mobile"]) {
       if (metadata.requestedFps !== manifest.capture.videoFps) {
         throw new Error(`${formFactor}/${feature.id} did not request the showcase capture fps.`);
       }
+      assertDimensions(`${rawBase}.webm`, dimensions[formFactor]);
+      assertCapturedFrameCadence(`${rawBase}.webm`, Number(feature.durationSeconds));
     } else if (feature.media === "screenshot") {
       await requireFile(`${rawBase}.png`);
       assertDimensions(`${rawBase}.png`, dimensions[formFactor]);
