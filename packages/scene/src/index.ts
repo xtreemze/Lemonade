@@ -143,10 +143,7 @@ type SellerRig = Readonly<{
   mouth: readonly [Group, Group];
 }>;
 
-type CharacterExpressionApplier = (
-  root: Object3D,
-  expression: CharacterExpressionPose,
-) => void;
+type CharacterExpressionApplier = (root: Object3D, expression: CharacterExpressionPose) => void;
 
 let applyCharacterFaceExpression: CharacterExpressionApplier | null = null;
 const neutralExpression = neutralCharacterPose().expression;
@@ -203,11 +200,7 @@ const createSeller = (geometries: CharacterGeometrySet, characterSeed: number): 
   });
 };
 
-const applySellerExpression = (
-  seller: SellerRig,
-  confidence: number,
-  elapsedMs = 0,
-): void => {
+const applySellerExpression = (seller: SellerRig, confidence: number, elapsedMs = 0): void => {
   const pose = sellerConfidencePose(confidence);
   applyThreeCharacterPose(seller.person, pose);
   seller.person.cup.visible = false;
@@ -834,13 +827,7 @@ export const createLemonsvilleScene = (
       activeBuyerPositions.push(finalPos);
       buyer.root.position.set(finalPos.x, personGroundY(buyer), finalPos.z);
       buyer.root.rotation.y = motion.heading;
-      applyBuyerPose(
-        buyer,
-        motion.phase,
-        motion.travelDistance,
-        sale.saleNumber,
-        elapsedMs,
-      );
+      applyBuyerPose(buyer, motion.phase, motion.travelDistance, sale.saleNumber, elapsedMs);
       activeBuyerCount += 1;
     }
     return activeBuyerCount;
@@ -988,11 +975,7 @@ export const createLemonsvilleScene = (
     state = nextState;
     storyboard = state.storyboard;
     updateSignPrice(storyboard.priceLabel);
-    applySellerExpression(
-      seller,
-      state.confidence,
-      presentationChanged ? 0 : lastElapsedMs,
-    );
+    applySellerExpression(seller, state.confidence, presentationChanged ? 0 : lastElapsedMs);
     if (presentationChanged) {
       animationEpoch = performance.now();
       lastElapsedMs = 0;
