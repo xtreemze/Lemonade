@@ -45,7 +45,7 @@ type MotifNote = Readonly<{
   note: number;
   beats: number;
   waveform: OscillatorType;
-  gain?: number;
+  gain: number;
   endNote?: number;
 }>;
 
@@ -532,6 +532,8 @@ export {
   cueMixProfile,
   dbToGain,
   gainToDb,
+  measureCalibrationPcm,
+  renderCueCalibrationPcm,
   type CueMixMetrics,
   type CueMixProfile,
   type CueMixRole,
