@@ -46,9 +46,7 @@ it("represents every generated sidewalk segment and non-main street", () => {
 });
 
 it("preserves near and far semantic sides only for main-street sidewalk nodes", () => {
-  const graph = createNeighborhoodNavigationGraph(
-    generateResidentialLayout(NAVIGATION_SEED),
-  );
+  const graph = createNeighborhoodNavigationGraph(generateResidentialLayout(NAVIGATION_SEED));
   const mainNodes = graph.nodes.filter(
     (node) => node.role === "sidewalk" && node.streetId === "main",
   );
