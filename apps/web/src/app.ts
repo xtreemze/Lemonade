@@ -1,9 +1,8 @@
 import {
   type AudioCue,
-  createProceduralAudioEngine,
   WEATHER_FORECAST_DURATION_MS,
   weatherCue,
-} from "@lemonade/audio";
+} from "@lemonade/audio/contracts";
 import {
   type EnvironmentPresentationPhase,
   environmentOccurrenceSchedule,
@@ -47,6 +46,7 @@ import {
   type EnvironmentAudioController,
 } from "./environment-audio.js";
 import type { HapticCue, HapticEngine } from "./haptics.js";
+import { createLazyProceduralAudioEngine } from "./lazy-audio.js";
 import {
   clearCurrentRun,
   exportRunSnapshot,
@@ -330,7 +330,7 @@ export class LemonadeApp {
   readonly #elements: AppElements;
   readonly #runSeed: Seed;
   readonly #random: RandomSource;
-  readonly #audio = createProceduralAudioEngine();
+  readonly #audio = createLazyProceduralAudioEngine();
   readonly #environmentAudio: EnvironmentAudioController = createEnvironmentAudioController(
     this.#audio,
   );
