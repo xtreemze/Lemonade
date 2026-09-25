@@ -5,8 +5,8 @@ import {
   weatherCue,
 } from "@lemonade/audio";
 import {
-  environmentOccurrenceSchedule,
   type EnvironmentPresentationPhase,
+  environmentOccurrenceSchedule,
 } from "@lemonade/scene/environment-presentation";
 import {
   availableOperatingFunds,
