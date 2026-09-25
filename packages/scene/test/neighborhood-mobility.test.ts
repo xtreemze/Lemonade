@@ -105,6 +105,42 @@ describe("unified neighborhood mobility", () => {
     expect(yielding.every((actor) => actor.speed === 0)).toBe(true);
   });
 
+  it("moves the shared pedestrian crossing from an actor-owned distance clock", () => {
+    const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
+    const samples = Array.from({ length: 281 }, (_, index) =>
+      system.sample({
+        weather: "sunny",
+        phase: "simulation",
+        elapsedMs: index * 50,
+        durationMs: 14_000,
+        dayNumber: 2,
+        focus: { x: 0, z: 0 },
+      }),
+    );
+    const crossing = samples
+      .map((sample) => sample.actors.find((actor) => actor.id === "resident-crossing"))
+      .filter((actor): actor is NonNullable<typeof actor> => actor !== undefined);
+
+    expect(crossing.length).toBeGreaterThan(0);
+    expect(crossing.every((actor) => actor.travelDistance !== null)).toBe(true);
+    const visible = crossing.filter((actor) => actor.visible);
+    expect(visible.length).toBeGreaterThan(0);
+
+    for (let index = 1; index < visible.length; index += 1) {
+      const previous = visible[index - 1];
+      const current = visible[index];
+      if (previous === undefined || current === undefined) {
+        continue;
+      }
+      const displacement = Math.hypot(current.x - previous.x, current.z - previous.z);
+      expect(displacement).toBeLessThanOrEqual(0.07);
+      expect(current.speed).toBeLessThanOrEqual(1.32);
+      expect((current.travelDistance ?? 0) + 0.000001).toBeGreaterThanOrEqual(
+        previous.travelDistance ?? 0,
+      );
+    }
+  });
+
   it("coordinates deterministic right-of-way between cars and bicycles", () => {
     const system = createNeighborhoodMobilitySystem(MOBILITY_SEED);
     const samples = Array.from({ length: 96 }, (_, index) =>
