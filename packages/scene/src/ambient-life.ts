@@ -13,7 +13,6 @@ import { applyCharacterExpressionPose, decorateCharacter } from "./character-det
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
 import {
   CHARACTER_ANATOMY,
-  type CharacterPose,
   characterExpressionAt,
   characterPoseAtDistance,
   neutralCharacterPose,
