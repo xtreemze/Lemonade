@@ -207,15 +207,6 @@ const sampleRouteDistance = (
   });
 };
 
-const sampleRouteProgress = (
-  route: Route,
-  progress: number,
-): Readonly<{ point: ResidentialPoint; yaw: number; distance: number }> => {
-  const distance = clamp01(progress) * route.total;
-  const sampled = sampleRouteDistance(route, distance);
-  return Object.freeze({ ...sampled, distance });
-};
-
 const orientation = (
   from: ResidentialPoint,
   to: ResidentialPoint,
