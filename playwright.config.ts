@@ -10,8 +10,10 @@ export default defineConfig({
   testIgnore: ["**/showcase/**"],
   fullyParallel: true,
   forbidOnly: isCi,
-  retries: isCi ? 2 : 0,
-  reporter: isCi ? "github" : "list",
+  retries: isCi ? 1 : 0,
+  reporter: isCi
+    ? [["github"], ["junit", { outputFile: "test-results/playwright-junit.xml" }]]
+    : "list",
   expect: {
     timeout: 7500,
   },

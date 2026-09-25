@@ -11,6 +11,7 @@ interface CanvasCaptureState {
   readonly videoRecorder: MediaRecorder;
   readonly videoChunks: Blob[];
   readonly videoStream: MediaStream;
+  readonly videoFrameTimer: number;
   readonly audioRecorder: MediaRecorder;
   readonly audioChunks: Blob[];
   readonly audioStream: MediaStream;
@@ -207,7 +208,19 @@ const startCanvasCapture = async (
         throw new Error("Showcase audio capture stream is unavailable.");
       }
 
-      const videoStream = canvas.captureStream(requestedFps);
+      // captureStream(fps) is allowed to emit only when the canvas changes, which can
+      // collapse a visually static interval to a single encoded frame. Use manual
+      // CanvasCaptureMediaStreamTrack requests so the raw recording contains evidence
+      // for every requested capture interval rather than relying on encoder duplication.
+      const videoStream = canvas.captureStream(0);
+      const videoTrack = videoStream.getVideoTracks()[0];
+      if (
+        videoTrack === undefined ||
+        typeof (videoTrack as CanvasCaptureMediaStreamTrack).requestFrame !== "function"
+      ) {
+        throw new Error("Manual canvas frame capture is unavailable.");
+      }
+      const canvasTrack = videoTrack as CanvasCaptureMediaStreamTrack;
       const audioStream = new MediaStream(audioTracks);
       const videoMimeType =
         ["video/webm;codecs=vp8", "video/webm;codecs=vp9", "video/webm"].find((candidate) =>
@@ -246,10 +259,24 @@ const startCanvasCapture = async (
         }
       });
 
+      audioRecorder.start();
+      videoRecorder.start();
+      if (audioRecorder.state !== "recording" || videoRecorder.state !== "recording") {
+        throw new Error("Showcase media recorders failed to enter the recording state.");
+      }
+
+      canvasTrack.requestFrame();
+      const videoFrameTimer = window.setInterval(() => {
+        if (videoRecorder.state === "recording") {
+          canvasTrack.requestFrame();
+        }
+      }, 1000 / requestedFps);
+
       const state: CanvasCaptureState = {
         videoRecorder,
         videoChunks,
         videoStream,
+        videoFrameTimer,
         audioRecorder,
         audioChunks,
         audioStream,
@@ -264,11 +291,6 @@ const startCanvasCapture = async (
         }
       ).__lemonadeShowcaseCapture = state;
 
-      audioRecorder.start();
-      videoRecorder.start();
-      if (audioRecorder.state !== "recording" || videoRecorder.state !== "recording") {
-        throw new Error("Showcase media recorders failed to enter the recording state.");
-      }
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
       return {
@@ -313,6 +335,15 @@ const stopCanvasCapture = async (page: Page): Promise<CanvasCaptureResult> =>
         );
         recorder.stop();
       });
+
+    window.clearInterval(state.videoFrameTimer);
+    const finalVideoTrack = state.videoStream.getVideoTracks()[0] as
+      | CanvasCaptureMediaStreamTrack
+      | undefined;
+    if (finalVideoTrack !== undefined && typeof finalVideoTrack.requestFrame === "function") {
+      finalVideoTrack.requestFrame();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
 
     await Promise.all([stopRecorder(state.videoRecorder), stopRecorder(state.audioRecorder)]);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
