@@ -9,6 +9,7 @@ import {
   neutralCharacterPose,
   seatedCharacterPose,
   sellerConfidencePose,
+  serviceInteractionPose,
 } from "../src/character-model.js";
 import { characterProfileFor } from "../src/characters.js";
 import { WORLD_SCALE } from "../src/world-scale.js";
@@ -62,6 +63,20 @@ describe("renderer-neutral character model", () => {
     expect(Math.abs(driver.legs[0].ankle.rotation.x)).toBeGreaterThan(0);
     expect(Math.abs(rider.arms[0].elbow.rotation.x)).toBeGreaterThan(0);
     expect(Math.abs(rider.arms[0].wrist.rotation.x)).toBeGreaterThan(0);
+  });
+
+  it("models renderer-neutral service interactions without renderer-owned joint mutations", () => {
+    const gardening = serviceInteractionPose("gardening", 1_250);
+    const gardeningLater = serviceInteractionPose("gardening", 1_500);
+    const mailbox = serviceInteractionPose("mailbox", 1_250);
+
+    expect(gardening.arms[0].shoulder.rotation.x).toBeLessThan(-1);
+    expect(gardening.arms[1].elbow.rotation.x).toBeLessThan(-0.5);
+    expect(gardening.chest.rotation.z).not.toBe(gardeningLater.chest.rotation.z);
+    expect(mailbox.arms[1].shoulder.rotation.x).toBeLessThan(-1);
+    expect(mailbox.arms[0].shoulder.rotation.x).toBe(0);
+    expect(gardening.expression.gazeY).toBeLessThan(0);
+    expect(mailbox.expression.gazeY).toBeLessThan(0);
   });
 
   it("models purchase and drinking poses through shared articulation", () => {
