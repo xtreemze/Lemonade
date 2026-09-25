@@ -117,7 +117,7 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
   return `${weather} weather; the seller looks ${sellerMoodForConfidence(input.confidence)}; ${String(input.visibleSigns)} advertising signs at ${price} per cup; ${String(input.prepared)} glasses prepared; ${activity}.`;
 };
 
-const createState = (
+export const createLemonsvilleSceneState = (
   input: LemonsvilleSceneInput,
   reducedMotion: boolean,
 ): LemonsvilleSceneState => {
@@ -138,7 +138,7 @@ const createState = (
     storyboard: createStreetStoryboard({
       durationMs: Math.max(1, durationMs),
       prepared,
-      sold: input.phase === "simulation" ? sold : 0,
+      sold: input.phase === "forecast" ? 0 : sold,
       visibleSigns: input.visibleSigns,
       priceCents,
       ambientPedestrianCount: pedestrianCount[customerActivity],
@@ -175,7 +175,7 @@ export const createLemonsvilleSceneView = (
       }
 
       const description = describeScene(lastInput);
-      const state = createState(lastInput, reducedMotion);
+      const state = createLemonsvilleSceneState(lastInput, reducedMotion);
       const nextController = createScene(elements.canvas, state, options.sceneOptions);
 
       if (nextController === null) {
@@ -217,7 +217,7 @@ export const createLemonsvilleSceneView = (
     lastInput = input;
 
     const description = describeScene(input);
-    const state = createState(input, reducedMotion);
+    const state = createLemonsvilleSceneState(input, reducedMotion);
     elements.canvas.setAttribute("aria-label", description);
     elements.canvas.dataset["presentationDurationMs"] = String(Math.max(0, input.durationMs));
     elements.canvas.dataset["preparedCups"] = String(Math.max(0, input.prepared));
