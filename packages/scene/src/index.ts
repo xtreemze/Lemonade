@@ -32,6 +32,7 @@ import {
   characterPoseAtDistance,
   neutralCharacterPose,
   sellerConfidencePose,
+  sellerPresentationPose,
 } from "./character-model.js";
 import {
   applyThreeCharacterPose,
@@ -200,11 +201,16 @@ const createSeller = (geometries: CharacterGeometrySet, characterSeed: number): 
   });
 };
 
-const applySellerExpression = (seller: SellerRig, confidence: number, elapsedMs = 0): void => {
-  const pose = sellerConfidencePose(confidence);
+const applySellerExpression = (
+  seller: SellerRig,
+  confidence: number,
+  elapsedMs = 0,
+  animated = false,
+  serving = false,
+): void => {
+  const pose = sellerPresentationPose(confidence, elapsedMs, { animated, serving });
   applyThreeCharacterPose(seller.person, pose);
   seller.person.cup.visible = false;
-  seller.person.headPivot.position.y -= 0.05;
   applyPersonExpression(seller.person, pose.expression, elapsedMs);
 };
 
@@ -875,26 +881,15 @@ export const createLemonsvilleScene = (
     return endingConfidenceAt(storyboard, elapsedMs, state.confidence, state.nextConfidence);
   };
 
-  const animateSeller = (seconds: number, elapsedMs: number): void => {
+  const animateSeller = (elapsedMs: number): void => {
     seller.person.root.visible = state.phase !== "forecast";
     if (state.phase === "forecast") {
       return;
     }
-    applySellerExpression(seller, sellerConfidenceAt(elapsedMs), elapsedMs);
-    if (state.reducedMotion || state.phase === "idle") {
-      return;
-    }
-    const breathing = Math.sin(seconds * 2.1) * 0.025;
-    seller.person.chest.position.y += breathing;
-    seller.person.headPivot.position.y -= breathing * 0.3;
-    seller.person.arms[0].root.rotation.x += Math.sin(seconds * 1.7) * 0.035;
-    seller.person.arms[1].root.rotation.x += Math.sin(seconds * 1.7 + 0.8) * 0.035;
-
-    const serving = storyboard.sales.some((sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing");
-    if (serving) {
-      seller.person.arms[1].root.rotation.x = -1.2;
-      seller.person.chest.rotation.x -= 0.06;
-    }
+    const animated = !state.reducedMotion && state.phase !== "idle";
+    const serving =
+      animated && storyboard.sales.some((sale) => buyerPhaseAt(sale, elapsedMs) === "purchasing");
+    applySellerExpression(seller, sellerConfidenceAt(elapsedMs), elapsedMs, animated, serving);
   };
 
   const animate = (timestamp: number): void => {
@@ -917,7 +912,7 @@ export const createLemonsvilleScene = (
 
     animateBuyers(elapsedMs);
     animatePassersBy(elapsedMs);
-    animateSeller(seconds, elapsedMs);
+    animateSeller(elapsedMs);
     ambientLife?.update(state.weather, state.phase, elapsedMs, storyboard.durationMs);
 
     const remainingStock = state.phase === "forecast" ? 0 : remainingCupsAt(storyboard, elapsedMs);
