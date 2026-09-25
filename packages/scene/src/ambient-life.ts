@@ -836,11 +836,7 @@ export const createAmbientLife = (
         vehicle.rotation.y = -pose.yaw;
         applyCharacterExpressionPose(
           vehicle,
-          characterExpressionAt(
-            ambientNeutralExpression,
-            actorIdentitySalt(pose.id),
-            elapsedMs,
-          ),
+          characterExpressionAt(ambientNeutralExpression, actorIdentitySalt(pose.id), elapsedMs),
         );
       }
       return sample;
