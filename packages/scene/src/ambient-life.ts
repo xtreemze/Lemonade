@@ -11,10 +11,7 @@ import {
 } from "three";
 import { decorateCharacter } from "./character-detail.js";
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
-import {
-  characterPoseAtDistance,
-  seatedCharacterPose,
-} from "./character-model.js";
+import { characterPoseAtDistance, seatedCharacterPose } from "./character-model.js";
 import {
   applyThreeCharacterPose,
   createThreeCharacterRig,
