@@ -1,5 +1,15 @@
+import type {
+  NeighborhoodRoadSegment,
+  NeighborhoodSidewalkSegment,
+  NeighborhoodTopology,
+} from "./neighborhood-topology.js";
+import { generateNeighborhoodTopology } from "./neighborhood-topology.js";
 import type { ResidentialLayout, ResidentialPoint } from "./residential-layout.js";
-import { type SidewalkSide, STREET_LAYOUT } from "./street-layout.js";
+import {
+  type SidewalkSide,
+  STREET_LAYOUT,
+  sidewalkSideForZ,
+} from "./street-layout.js";
 
 export type NavigationNodeRole = "sidewalk" | "stand-entry" | "stand-service";
 
@@ -11,6 +21,8 @@ export type NavigationNode = Readonly<{
   z: number;
   role: NavigationNodeRole;
   side: SidewalkSide | null;
+  streetId: string | null;
+  segmentId: string | null;
 }>;
 
 export type NavigationEdge = Readonly<{
@@ -27,38 +39,41 @@ export type NeighborhoodNavigationGraph = Readonly<{
   standServiceNodeId: string;
 }>;
 
-const coordinateKey = (value: number): string => value.toFixed(3);
-
-const sidewalkNodeId = (side: SidewalkSide, x: number): string =>
-  `sidewalk:${side}:${coordinateKey(x)}`;
+type SegmentEndpoint = "start" | "end";
 
 const pointDistance = (
   left: Pick<NavigationNode, "x" | "z">,
   right: Pick<NavigationNode, "x" | "z">,
 ): number => Math.hypot(right.x - left.x, right.z - left.z);
 
-const distinctSorted = (values: readonly number[]): readonly number[] =>
-  Object.freeze(
-    [...new Set(values.map((value) => Number(value.toFixed(3))))].sort(
-      (left, right) => left - right,
-    ),
-  );
+const pointDistanceTo = (
+  left: Pick<NavigationNode, "x" | "z">,
+  right: ResidentialPoint,
+): number => Math.hypot(right.x - left.x, right.z - left.z);
 
-const verticalRoadCenters = (layout: ResidentialLayout): readonly number[] =>
-  distinctSorted(
-    layout.exclusions
-      .filter((rect) => rect.role === "road" && rect.maxX - rect.minX < rect.maxZ - rect.minZ)
-      .map((rect) => (rect.minX + rect.maxX) / 2),
-  );
+const sidewalkNodeId = (
+  segment: NeighborhoodSidewalkSegment,
+  endpoint: SegmentEndpoint,
+): string => `navigation:${segment.id}:${endpoint}`;
 
-const sidewalkAnchors = (layout: ResidentialLayout): readonly number[] =>
-  distinctSorted([
-    -60,
-    0,
-    60,
-    ...verticalRoadCenters(layout),
-    ...layout.frontProperties.map((property) => Math.max(-60, Math.min(60, property.houseX))),
-  ]);
+const sidewalkSide = (segment: NeighborhoodSidewalkSegment): SidewalkSide | null =>
+  segment.streetId === "main" ? sidewalkSideForZ(segment.center.z) : null;
+
+const sidewalkNode = (
+  segment: NeighborhoodSidewalkSegment,
+  endpoint: SegmentEndpoint,
+): NavigationNode => {
+  const position = endpoint === "start" ? segment.start : segment.end;
+  return Object.freeze({
+    id: sidewalkNodeId(segment, endpoint),
+    x: position.x,
+    z: position.z,
+    role: "sidewalk",
+    side: sidewalkSide(segment),
+    streetId: segment.streetId,
+    segmentId: segment.id,
+  });
+};
 
 const addDirectedEdge = (
   edges: NavigationEdge[],
@@ -66,6 +81,13 @@ const addDirectedEdge = (
   to: NavigationNode,
   kind: NavigationEdgeKind,
 ): void => {
+  const duplicate = edges.some(
+    (edge) => edge.from === from.id && edge.to === to.id && edge.kind === kind,
+  );
+  if (duplicate) {
+    return;
+  }
+
   edges.push(
     Object.freeze({
       from: from.id,
@@ -94,65 +116,182 @@ const findNode = (nodes: readonly NavigationNode[], id: string): NavigationNode 
   return node;
 };
 
-export const createNeighborhoodNavigationGraph = (
-  layout: ResidentialLayout,
-): NeighborhoodNavigationGraph => {
-  const anchors = sidewalkAnchors(layout);
-  const nodes: NavigationNode[] = [];
+const addSegmentNodes = (
+  nodes: NavigationNode[],
+  edges: NavigationEdge[],
+  segment: NeighborhoodSidewalkSegment,
+): void => {
+  const start = sidewalkNode(segment, "start");
+  const end = sidewalkNode(segment, "end");
+  nodes.push(start, end);
+  addBidirectionalEdge(edges, start, end, "sidewalk");
+};
 
-  for (const side of ["near", "far"] as const) {
-    const sidewalk = side === "near" ? STREET_LAYOUT.nearSidewalk : STREET_LAYOUT.farSidewalk;
-    for (const x of anchors) {
-      nodes.push(
-        Object.freeze({
-          id: sidewalkNodeId(side, x),
-          x,
-          z: sidewalk.centerZ,
-          role: "sidewalk",
-          side,
-        }),
-      );
+const roadSegmentIndex = (segment: NeighborhoodSidewalkSegment): number =>
+  Math.floor(segment.segmentIndex / 2);
+
+const connectStreetContinuity = (
+  topology: NeighborhoodTopology,
+  nodes: readonly NavigationNode[],
+  edges: NavigationEdge[],
+): void => {
+  const streetIds = [...new Set(topology.sidewalks.map((segment) => segment.streetId))].sort();
+
+  for (const streetId of streetIds) {
+    for (const localSide of [-1, 1] as const) {
+      const segments = topology.sidewalks
+        .filter((segment) => segment.streetId === streetId && segment.side === localSide)
+        .sort((left, right) => roadSegmentIndex(left) - roadSegmentIndex(right));
+
+      for (let index = 1; index < segments.length; index += 1) {
+        const previous = segments[index - 1];
+        const current = segments[index];
+        if (
+          previous === undefined ||
+          current === undefined ||
+          roadSegmentIndex(current) - roadSegmentIndex(previous) !== 1
+        ) {
+          continue;
+        }
+
+        const previousEnd = findNode(nodes, sidewalkNodeId(previous, "end"));
+        const currentStart = findNode(nodes, sidewalkNodeId(current, "start"));
+        addBidirectionalEdge(edges, previousEnd, currentStart, "sidewalk");
+      }
+    }
+  }
+};
+
+const segmentIntersection = (
+  first: NeighborhoodRoadSegment,
+  second: NeighborhoodRoadSegment,
+): ResidentialPoint | null => {
+  const firstX = first.end.x - first.start.x;
+  const firstZ = first.end.z - first.start.z;
+  const secondX = second.end.x - second.start.x;
+  const secondZ = second.end.z - second.start.z;
+  const denominator = firstX * secondZ - firstZ * secondX;
+  if (Math.abs(denominator) < 0.000_001) {
+    return null;
+  }
+
+  const deltaX = second.start.x - first.start.x;
+  const deltaZ = second.start.z - first.start.z;
+  const firstProgress = (deltaX * secondZ - deltaZ * secondX) / denominator;
+  const secondProgress = (deltaX * firstZ - deltaZ * firstX) / denominator;
+  if (
+    firstProgress < 0 ||
+    firstProgress > 1 ||
+    secondProgress < 0 ||
+    secondProgress > 1
+  ) {
+    return null;
+  }
+
+  return Object.freeze({
+    x: first.start.x + firstX * firstProgress,
+    z: first.start.z + firstZ * firstProgress,
+  });
+};
+
+const mainStreetIntersections = (topology: NeighborhoodTopology): readonly ResidentialPoint[] => {
+  const main = topology.roads.filter((road) => road.streetId === "main");
+  const others = topology.roads.filter((road) => road.streetId !== "main");
+  const intersections: ResidentialPoint[] = [];
+  const keys = new Set<string>();
+
+  for (const mainSegment of main) {
+    for (const other of others) {
+      const point = segmentIntersection(mainSegment, other);
+      if (point === null) {
+        continue;
+      }
+      const key = `${point.x.toFixed(3)}:${point.z.toFixed(3)}`;
+      if (keys.has(key)) {
+        continue;
+      }
+      keys.add(key);
+      intersections.push(point);
     }
   }
 
-  const standEntry = Object.freeze({
+  return Object.freeze(intersections);
+};
+
+const nearestNode = (
+  nodes: readonly NavigationNode[],
+  point: ResidentialPoint,
+): NavigationNode => {
+  const first = nodes[0];
+  if (first === undefined) {
+    throw new Error("navigation graph has no candidate sidewalk nodes");
+  }
+
+  return nodes.reduce(
+    (best, candidate) =>
+      pointDistanceTo(candidate, point) < pointDistanceTo(best, point) ? candidate : best,
+    first,
+  );
+};
+
+const addMainCrossings = (
+  topology: NeighborhoodTopology,
+  nodes: readonly NavigationNode[],
+  edges: NavigationEdge[],
+): void => {
+  const near = nodes.filter((node) => node.role === "sidewalk" && node.side === "near");
+  const far = nodes.filter((node) => node.role === "sidewalk" && node.side === "far");
+
+  for (const intersection of mainStreetIntersections(topology)) {
+    addBidirectionalEdge(
+      edges,
+      nearestNode(near, intersection),
+      nearestNode(far, intersection),
+      "crossing",
+    );
+  }
+};
+
+const standNodes = (): readonly [NavigationNode, NavigationNode] => {
+  const entry = Object.freeze({
     id: "stand:entry",
     x: 0,
     z: STREET_LAYOUT.nearSidewalk.minZ - 0.2,
     role: "stand-entry" as const,
     side: "near" as const,
+    streetId: null,
+    segmentId: null,
   });
-  const standService = Object.freeze({
+  const service = Object.freeze({
     id: "stand:service",
     x: 0,
     z: STREET_LAYOUT.nearSidewalk.minZ - 0.95,
     role: "stand-service" as const,
     side: "near" as const,
+    streetId: null,
+    segmentId: null,
   });
-  nodes.push(standEntry, standService);
+  return Object.freeze([entry, service]);
+};
 
+export const createNeighborhoodNavigationGraphFromTopology = (
+  topology: NeighborhoodTopology,
+): NeighborhoodNavigationGraph => {
+  const nodes: NavigationNode[] = [];
   const edges: NavigationEdge[] = [];
-  for (const side of ["near", "far"] as const) {
-    const sideNodes = nodes
-      .filter((node) => node.role === "sidewalk" && node.side === side)
-      .sort((left, right) => left.x - right.x);
-    for (let index = 0; index < sideNodes.length - 1; index += 1) {
-      const left = sideNodes[index];
-      const right = sideNodes[index + 1];
-      if (left !== undefined && right !== undefined) {
-        addBidirectionalEdge(edges, left, right, "sidewalk");
-      }
-    }
-  }
 
-  for (const x of verticalRoadCenters(layout)) {
-    const near = findNode(nodes, sidewalkNodeId("near", x));
-    const far = findNode(nodes, sidewalkNodeId("far", x));
-    addBidirectionalEdge(edges, near, far, "crossing");
+  for (const segment of topology.sidewalks) {
+    addSegmentNodes(nodes, edges, segment);
   }
+  connectStreetContinuity(topology, nodes, edges);
+  addMainCrossings(topology, nodes, edges);
 
-  const nearCenter = findNode(nodes, sidewalkNodeId("near", 0));
-  addBidirectionalEdge(edges, nearCenter, standEntry, "stand-access");
+  const [standEntry, standService] = standNodes();
+  nodes.push(standEntry, standService);
+  const nearMainNodes = nodes.filter(
+    (node) => node.role === "sidewalk" && node.side === "near" && node.streetId === "main",
+  );
+  addBidirectionalEdge(edges, nearestNode(nearMainNodes, standEntry), standEntry, "stand-access");
   addBidirectionalEdge(edges, standEntry, standService, "stand-access");
 
   return Object.freeze({
@@ -162,6 +301,11 @@ export const createNeighborhoodNavigationGraph = (
     standServiceNodeId: standService.id,
   });
 };
+
+export const createNeighborhoodNavigationGraph = (
+  layout: Pick<ResidentialLayout, "seed">,
+): NeighborhoodNavigationGraph =>
+  createNeighborhoodNavigationGraphFromTopology(generateNeighborhoodTopology(layout.seed));
 
 export const navigationNode = (
   graph: NeighborhoodNavigationGraph,
@@ -181,10 +325,7 @@ export const nearestSidewalkNode = (
 
   return candidates.reduce(
     (best, candidate) =>
-      Math.hypot(candidate.x - point.x, candidate.z - point.z) <
-      Math.hypot(best.x - point.x, best.z - point.z)
-        ? candidate
-        : best,
+      pointDistanceTo(candidate, point) < pointDistanceTo(best, point) ? candidate : best,
     first,
   );
 };
