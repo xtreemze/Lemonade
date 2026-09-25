@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   type AudioCue,
   compileCue,
+  cueMixTrimDb,
   environmentBedGainTargets,
   WEATHER_FORECAST_DURATION_MS,
   type WeatherAudioCue,
@@ -88,6 +89,41 @@ describe("procedural cue compiler", () => {
         previousStart = tone.startSeconds;
       }
     }
+  });
+
+  it("keeps foreground purchase cue peaks within a four-decibel mix window", () => {
+    const purchaseCues: readonly AudioCue[] = [
+      "purchase:serve",
+      "purchase:payment",
+      "purchase:drink",
+      "purchase:pour",
+      "purchase:ice-clink",
+    ];
+    const peaks = purchaseCues.map((cue) =>
+      Math.max(...compileCue(cue).map((tone) => tone.gain)),
+    );
+    const peakDb = peaks.map((gain) => 20 * Math.log10(gain));
+    expect(Math.max(...peakDb) - Math.min(...peakDb)).toBeLessThanOrEqual(4);
+  });
+
+  it("uses explicit bounded per-cue trims rather than an implicit global loudness assumption", () => {
+    for (const cue of cues) {
+      expect(cueMixTrimDb(cue)).toBeGreaterThanOrEqual(-6);
+      expect(cueMixTrimDb(cue)).toBeLessThanOrEqual(6);
+    }
+    expect(cueMixTrimDb("purchase:payment")).toBeLessThan(0);
+    expect(cueMixTrimDb("purchase:pour")).toBeGreaterThan(0);
+    expect(cueMixTrimDb("day:loss")).toBeGreaterThan(cueMixTrimDb("day:profit"));
+  });
+
+  it("adds small-speaker spectral support to thunder and gust without raising their bass peaks", () => {
+    const thunder = compileCue("storm:thunder");
+    const gust = compileCue("storm:gust");
+
+    expect(thunder.some((tone) => tone.midiNote >= 57)).toBe(true);
+    expect(gust.some((tone) => tone.midiNote >= 60)).toBe(true);
+    expect(Math.max(...thunder.map((tone) => tone.gain))).toBeLessThanOrEqual(0.048);
+    expect(Math.max(...gust.map((tone) => tone.gain))).toBeLessThanOrEqual(0.022);
   });
 
   it("uses a lightweight high-register motif for ambient birdsong", () => {
