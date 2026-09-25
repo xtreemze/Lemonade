@@ -7,6 +7,8 @@ describe("purchase feedback schedule", () => {
     const schedule = createPurchaseFeedbackSchedule(5, 5000);
     expect(schedule).toHaveLength(5);
     for (const beat of schedule) {
+      expect(beat.iceClinkAtMs).toBeLessThanOrEqual(beat.pourAtMs);
+      expect(beat.pourAtMs).toBeLessThanOrEqual(beat.serveAtMs);
       expect(beat.serveAtMs).toBeLessThan(beat.paymentAtMs);
       expect(beat.paymentAtMs).toBeLessThan(beat.drinkAtMs);
       expect(beat.drinkAtMs).toBeLessThanOrEqual(5000);
