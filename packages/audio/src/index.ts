@@ -490,7 +490,6 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
   });
 };
 
-export const weatherCue = (weather: WeatherKind): WeatherAudioCue => `forecast:${weather}`;
 
 export {
   AVAILABLE_CONTINUOUS_SOUND_LIBRARY,
