@@ -1248,20 +1248,20 @@ export const createNeighborhoodMobilitySystem = (seed: number): NeighborhoodMobi
           const active = departure.visible ? departure : approach.visible ? approach : null;
           const mailPoint = dwelling
             ? mailTarget.point
-            : active?.point ?? (departed ? departure.point : approach.point);
+            : (active?.point ?? (departed ? departure.point : approach.point));
           const mailYaw = dwelling
             ? Math.atan2(
                 mailTarget.point.z - STREET_LAYOUT.nearSidewalk.centerZ,
                 mailTarget.point.x - mailPoint.x,
               )
-            : active?.yaw ?? departure.yaw;
+            : (active?.yaw ?? departure.yaw);
           const mailTravelDistance = approach.travelDistance + departure.travelDistance;
           const mailCarrier = makePose(
             "mail-carrier",
             "mail-carrier",
             mailPoint,
             mailYaw,
-            dwelling ? 0 : active?.speed ?? 0,
+            dwelling ? 0 : (active?.speed ?? 0),
             focus,
             dwelling ? "mailbox" : "none",
             mailTarget.propertyRole,
@@ -1316,8 +1316,8 @@ export const createNeighborhoodMobilitySystem = (seed: number): NeighborhoodMobi
             input.elapsedMs >= approach.completedAtMs &&
             input.elapsedMs < departureStartAtMs;
           const active = departure.visible ? departure : approach.visible ? approach : null;
-          const gardenerPoint = gardening ? garden : active?.point ?? departure.point;
-          const gardenerYaw = gardening ? approach.yaw : active?.yaw ?? departure.yaw;
+          const gardenerPoint = gardening ? garden : (active?.point ?? departure.point);
+          const gardenerYaw = gardening ? approach.yaw : (active?.yaw ?? departure.yaw);
           const gardenerTravelDistance = approach.travelDistance + departure.travelDistance;
           patchProperty(properties, gardenerProperty.role, {
             gardenerPresent: gardening,
@@ -1327,7 +1327,7 @@ export const createNeighborhoodMobilitySystem = (seed: number): NeighborhoodMobi
             "gardener",
             gardenerPoint,
             gardenerYaw,
-            gardening ? 0 : active?.speed ?? 0,
+            gardening ? 0 : (active?.speed ?? 0),
             focus,
             gardening ? "gardening" : "none",
             gardenerProperty.role,
