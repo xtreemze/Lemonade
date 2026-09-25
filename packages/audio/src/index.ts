@@ -324,9 +324,7 @@ export const environmentBedGainTargets = (
 
   return Object.freeze({
     wind: ENVIRONMENT_GAIN_FLOOR + clamp01(frame.windIntensity) * MAX_WIND_GAIN,
-    rain:
-      ENVIRONMENT_GAIN_FLOOR +
-      Math.pow(clamp01(frame.precipitation), 1.35) * MAX_RAIN_GAIN,
+    rain: ENVIRONMENT_GAIN_FLOOR + Math.pow(clamp01(frame.precipitation), 1.35) * MAX_RAIN_GAIN,
   });
 };
 
