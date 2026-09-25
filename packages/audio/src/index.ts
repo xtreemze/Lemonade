@@ -508,12 +508,14 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
 export const weatherCue = (weather: WeatherKind): WeatherAudioCue => `forecast:${weather}`;
 
 export {
+  AVAILABLE_CONTINUOUS_SOUND_LIBRARY,
   AVAILABLE_SOUND_LIBRARY,
   MISSING_SOUND_LIBRARY,
   availableSounds,
   missingSounds,
   soundLibrary,
   soundLibraryEntry,
+  type ContinuousSoundId,
   type MissingSoundId,
   type SoundImplementation,
   type SoundLibraryCategory,
