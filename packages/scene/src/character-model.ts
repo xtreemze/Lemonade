@@ -217,10 +217,7 @@ export const seatedCharacterPose = (kind: SeatedCharacterKind): CharacterPose =>
 
 export type BuyerInteractionKind = "purchasing" | "drinking";
 
-export const buyerInteractionPose = (
-  kind: BuyerInteractionKind,
-  index = 0,
-): CharacterPose => {
+export const buyerInteractionPose = (kind: BuyerInteractionKind, index = 0): CharacterPose => {
   if (kind === "purchasing") {
     return createPose({
       chest: joint(0.07),
@@ -240,10 +237,10 @@ export const buyerInteractionPose = (
   return createPose({
     chest: joint(-0.025),
     head: joint(0.14, 0, headRoll),
-    arms: Object.freeze([
-      arm(),
-      arm(joint(-1.05), joint(-1.42), joint()),
-    ]) as readonly [ArmPose, ArmPose],
+    arms: Object.freeze([arm(), arm(joint(-1.05), joint(-1.42), joint())]) as readonly [
+      ArmPose,
+      ArmPose,
+    ],
     expression: expression({
       valence: 0.35,
       mouthCurve: 0.16,
