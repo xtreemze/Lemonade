@@ -56,6 +56,7 @@ export type CharacterPoseOptions = Readonly<{
 }>;
 
 export type SeatedCharacterKind = "driver" | "rider";
+export type ServiceInteractionKind = "gardening" | "mailbox";
 
 const rotation = (x = 0, y = 0, z = 0): Rotation3 => Object.freeze({ x, y, z });
 
@@ -212,6 +213,40 @@ export const seatedCharacterPose = (kind: SeatedCharacterKind): CharacterPose =>
       leg(joint(0.62), joint(-1.08), joint(0.42)),
       leg(joint(0.62), joint(-1.08), joint(0.42)),
     ]) as readonly [LegPose, LegPose],
+  });
+};
+
+export const serviceInteractionPose = (
+  kind: ServiceInteractionKind,
+  elapsedMs = 0,
+): CharacterPose => {
+  const elapsed = Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0);
+  if (kind === "gardening") {
+    return createPose({
+      chest: joint(0.06, 0, Math.sin(elapsed * 0.004) * 0.08),
+      head: joint(-0.03),
+      arms: Object.freeze([
+        arm(joint(-1.05), joint(-0.42), joint()),
+        arm(joint(-0.72), joint(-0.56), joint()),
+      ]) as readonly [ArmPose, ArmPose],
+      expression: expression({
+        browTilt: -0.08,
+        gazeY: -0.08,
+      }),
+    });
+  }
+
+  return createPose({
+    chest: joint(0.035),
+    head: joint(-0.025),
+    arms: Object.freeze([
+      arm(),
+      arm(joint(-1.15), joint(-0.38), joint()),
+    ]) as readonly [ArmPose, ArmPose],
+    expression: expression({
+      browTilt: -0.04,
+      gazeY: -0.05,
+    }),
   });
 };
 
