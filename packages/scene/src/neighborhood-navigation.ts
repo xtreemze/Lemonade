@@ -131,21 +131,32 @@ const connectStreetSidewalks = (
   }
 };
 
+const nearestJunctionSidewalks = (
+  topology: NeighborhoodTopology,
+  streetId: string,
+  point: ResidentialPoint,
+): readonly NeighborhoodSidewalkSegment[] =>
+  Object.freeze(
+    ([-1, 1] as const).flatMap((side) => {
+      const candidate = topology.sidewalks
+        .filter((segment) => segment.streetId === streetId && segment.side === side)
+        .sort(
+          (left, right) =>
+            Math.hypot(left.center.x - point.x, left.center.z - point.z) -
+            Math.hypot(right.center.x - point.x, right.center.z - point.z),
+        )[0];
+      return candidate === undefined ? [] : [candidate];
+    }),
+  );
+
 const connectJunctions = (
   topology: NeighborhoodTopology,
   nodesBySegment: ReadonlyMap<string, NavigationNode>,
   edges: NavigationEdge[],
 ): void => {
-  const sidewalksByRoad = new Map<string, NeighborhoodSidewalkSegment[]>();
-  for (const sidewalk of topology.sidewalks) {
-    const group = sidewalksByRoad.get(sidewalk.parentRoadId) ?? [];
-    group.push(sidewalk);
-    sidewalksByRoad.set(sidewalk.parentRoadId, group);
-  }
-
   for (const junction of topology.junctions) {
-    const candidates = junction.roadSegmentIds.flatMap(
-      (roadSegmentId) => sidewalksByRoad.get(roadSegmentId) ?? [],
+    const candidates = junction.streetIds.flatMap((streetId) =>
+      nearestJunctionSidewalks(topology, streetId, junction.point),
     );
     const candidateNodes = candidates
       .map((segment) => nodesBySegment.get(segment.id))
