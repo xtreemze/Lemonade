@@ -172,6 +172,7 @@ const applySellerExpression = (seller: SellerRig, confidence: number): void => {
   const pose = sellerConfidencePose(confidence);
   const progress = (pose.expression.valence + 1) / 2;
   applyThreeCharacterPose(seller.person, pose);
+  seller.person.cup.visible = false;
   seller.person.headPivot.position.y -= 0.05;
 
   seller.eyebrows[0].rotation.z = pose.expression.browTilt;
