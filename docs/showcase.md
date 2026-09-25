@@ -14,7 +14,7 @@ Desktop uses a 1440×900 Chromium viewport. Mobile uses the project’s certifie
 
 ## Capture policy
 
-Dynamic 3D evidence is captured directly from `#scene-canvas` with `HTMLCanvasElement.captureStream(60)` and a video `MediaRecorder`. In parallel, a showcase-only init script subclasses `AudioContext` and mirrors nodes connected to the normal audio destination into a 48 kHz `MediaStreamAudioDestinationNode`, which is recorded by a separate audio `MediaRecorder`. No showcase capture hooks ship in the production application. The two raw streams are muxed deterministically by FFmpeg into the published H.264/AAC video. This avoids Chromium’s unreliable combined WebM container path, preserves the scene’s render surface, and requests 60 fps at capture time. Desktop video capture targets 20 Mbps; mobile targets 8 Mbps, with a 192 kbps audio target.
+Dynamic 3D evidence is captured directly from `#scene-canvas` with `HTMLCanvasElement.captureStream(60)` and a video `MediaRecorder`. In parallel, a showcase-only init script subclasses `AudioContext` and mirrors nodes connected to the normal audio destination into a 48 kHz `MediaStreamAudioDestinationNode`, which is recorded by a separate audio `MediaRecorder`. No showcase capture hooks ship in the production application. The two raw streams are muxed deterministically by FFmpeg into the published H.264/AAC video. This avoids Chromium’s unreliable combined WebM container path and preserves the scene’s render surface. Showcase Chromium runs with frame-rate/background throttling disabled, and the raw recorder prefers VP8 over VP9 to reduce real-time encoder pressure. `captureStream(60)` sets the target, but that request alone is not accepted as proof of 60 fps: CI counts decoded raw frames with FFprobe and requires at least 59 actual captured frames per second across the intended scene duration before FFmpeg normalization is allowed. Desktop video capture targets 20 Mbps; mobile targets 8 Mbps, with a 192 kbps audio target.
 
 Static product states are not recorded as video. Planning, day report, and sales history are captured once as full-viewport PNG screenshots after interactions settle. This keeps text, charts, controls, and report typography crisp instead of converting unchanged pixels into low-frame-rate animation.
 
@@ -24,9 +24,9 @@ FFmpeg creates three layers of output:
 
 - source-resolution H.264/AAC MP4 files for each 3D scene at 60 fps with 48 kHz application audio;
 - source-resolution H.264/AAC desktop and mobile highlight reels at 60 fps, with static PNGs held as still segments and silent 48 kHz audio beds between the moving 3D scenes;
-- 30 fps animated WebP derivatives for Markdown/presentation surfaces, plus the untouched PNGs for static states.
+- 60 fps animated WebP derivatives for Markdown/presentation surfaces, plus the untouched PNGs for static states.
 
-The animated WebPs are presentation derivatives, not the canonical recordings. They may be scaled for payload efficiency; the MP4 scene captures and highlight reels retain the full desktop or mobile target resolution.
+The animated WebPs are presentation derivatives, not the canonical recordings. They preserve the 60 fps temporal cadence while they may still be scaled spatially for payload efficiency; the MP4 scene captures and highlight reels retain the full desktop or mobile target resolution.
 
 ## Presentation evidence
 
@@ -84,6 +84,7 @@ The verifier uses FFprobe to assert that:
 - static screenshots match the target viewport resolution;
 - each rendered 3D MP4 matches its desktop/mobile source target;
 - both H.264 highlight reels match their target resolution;
+- each raw dynamic WebM sustains at least 59 decoded source frames per second across its intended capture duration, so a slower capture padded to a nominal 60 fps fails CI;
 - source videos and highlight reels report 60 fps and contain 48 kHz audio streams;
 - dynamic raw captures, rendered scene videos, and highlight reels contain measurable non-silent program audio;
 - the mixed presentation asset set exactly matches the manifest;
