@@ -6,6 +6,7 @@ import {
   LinearFilter,
   Mesh,
   MeshStandardMaterial,
+  type Object3D,
   PerspectiveCamera,
   PlaneGeometry,
   Scene,
@@ -26,7 +27,10 @@ import {
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
 import {
   buyerInteractionPose,
+  type CharacterExpressionPose,
+  characterExpressionAt,
   characterPoseAtDistance,
+  neutralCharacterPose,
   sellerConfidencePose,
 } from "./character-model.js";
 import {
@@ -139,6 +143,33 @@ type SellerRig = Readonly<{
   mouth: readonly [Group, Group];
 }>;
 
+type CharacterExpressionApplier = (
+  root: Object3D,
+  expression: CharacterExpressionPose,
+) => void;
+
+let applyCharacterFaceExpression: CharacterExpressionApplier | null = null;
+const neutralExpression = neutralCharacterPose().expression;
+
+const personExpressionSeed = (person: PersonRig): number => {
+  const profileIndex: unknown = person.root.userData["characterProfileIndex"];
+  return typeof profileIndex === "number" && Number.isFinite(profileIndex)
+    ? Math.trunc(profileIndex)
+    : 0;
+};
+
+const applyPersonExpression = (
+  person: PersonRig,
+  expression: CharacterExpressionPose,
+  elapsedMs: number,
+  identitySeed = personExpressionSeed(person),
+): void => {
+  applyCharacterFaceExpression?.(
+    person.head,
+    characterExpressionAt(expression, identitySeed, elapsedMs),
+  );
+};
+
 const personGroundY = (person: PersonRig): number =>
   characterGroundClearance(person.profile.heightScale);
 
@@ -172,38 +203,37 @@ const createSeller = (geometries: CharacterGeometrySet, characterSeed: number): 
   });
 };
 
-const applySellerExpression = (seller: SellerRig, confidence: number): void => {
+const applySellerExpression = (
+  seller: SellerRig,
+  confidence: number,
+  elapsedMs = 0,
+): void => {
   const pose = sellerConfidencePose(confidence);
-  const progress = (pose.expression.valence + 1) / 2;
   applyThreeCharacterPose(seller.person, pose);
   seller.person.cup.visible = false;
   seller.person.headPivot.position.y -= 0.05;
-
-  seller.eyebrows[0].rotation.z = pose.expression.browTilt;
-  seller.eyebrows[1].rotation.z = -pose.expression.browTilt;
-  seller.eyebrows[0].position.y = 0.125 + progress * 0.018;
-  seller.eyebrows[1].position.y = 0.125 + progress * 0.018;
-  seller.mouth[0].rotation.z = -pose.expression.mouthCurve;
-  seller.mouth[1].rotation.z = pose.expression.mouthCurve;
-  seller.mouth[0].position.y = -0.09 + pose.expression.valence * 0.012;
-  seller.mouth[1].position.y = -0.09 + pose.expression.valence * 0.012;
+  applyPersonExpression(seller.person, pose.expression, elapsedMs);
 };
 
 const resetPersonPose = (person: PersonRig): void => {
   resetThreeCharacterPose(person);
   person.cup.visible = false;
+  applyPersonExpression(person, neutralExpression, 0);
 };
 
 const applyWalkingPose = (
   person: PersonRig,
   travelDistance: number,
   carryingCup: boolean,
+  elapsedMs = 0,
+  identitySeed = personExpressionSeed(person),
 ): void => {
   const pose = characterPoseAtDistance(person.profile, travelDistance, {
     carryingCup,
   });
   applyThreeCharacterPose(person, pose);
   person.cup.visible = pose.rightHandOccupancy === "cup";
+  applyPersonExpression(person, pose.expression, elapsedMs, identitySeed);
 };
 
 const applyBuyerPose = (
@@ -211,16 +241,18 @@ const applyBuyerPose = (
   phase: BuyerPhase,
   travelDistance: number,
   index: number,
+  elapsedMs: number,
 ): void => {
   resetPersonPose(person);
   if (phase === "approaching") {
-    applyWalkingPose(person, travelDistance, false);
+    applyWalkingPose(person, travelDistance, false, elapsedMs, index);
   } else if (phase === "purchasing" || phase === "drinking") {
     const pose = buyerInteractionPose(phase, index);
     applyThreeCharacterPose(person, pose);
     person.cup.visible = pose.rightHandOccupancy === "cup";
+    applyPersonExpression(person, pose.expression, elapsedMs, index);
   } else if (phase === "departing") {
-    applyWalkingPose(person, travelDistance, true);
+    applyWalkingPose(person, travelDistance, true, elapsedMs, index);
   }
 
   if (person.cup.visible) {
@@ -639,11 +671,13 @@ export const createLemonsvilleScene = (
     .catch(() => undefined);
 
   void import("./character-detail.js")
-    .then(({ decorateSceneCharacters }) => {
+    .then(({ applyCharacterExpressionPose, decorateSceneCharacters }) => {
       if (disposed) {
         return;
       }
+      applyCharacterFaceExpression = applyCharacterExpressionPose;
       decorateSceneCharacters(customers, buyers, seller.person, seller.eyebrows, seller.mouth);
+      applySellerExpression(seller, state.confidence, lastElapsedMs);
       render();
     })
     .catch(() => undefined);
@@ -721,7 +755,7 @@ export const createLemonsvilleScene = (
 
   const resetAnimatedObjects = (): void => {
     positionStaticPedestrians();
-    applySellerExpression(seller, state.confidence);
+    applySellerExpression(seller, state.confidence, 0);
     applyPhaseStaging();
     signs.forEach((sign) => {
       sign.root.rotation.z = 0;
@@ -800,7 +834,13 @@ export const createLemonsvilleScene = (
       activeBuyerPositions.push(finalPos);
       buyer.root.position.set(finalPos.x, personGroundY(buyer), finalPos.z);
       buyer.root.rotation.y = motion.heading;
-      applyBuyerPose(buyer, motion.phase, motion.travelDistance, sale.saleNumber);
+      applyBuyerPose(
+        buyer,
+        motion.phase,
+        motion.travelDistance,
+        sale.saleNumber,
+        elapsedMs,
+      );
       activeBuyerCount += 1;
     }
     return activeBuyerCount;
@@ -837,7 +877,7 @@ export const createLemonsvilleScene = (
 
       customer.root.position.set(pose.x, personGroundY(customer), pose.z);
       customer.root.rotation.y = pose.heading;
-      applyWalkingPose(customer, pose.travelDistance, false);
+      applyWalkingPose(customer, pose.travelDistance, false, elapsedMs, index);
     });
   };
 
@@ -853,7 +893,7 @@ export const createLemonsvilleScene = (
     if (state.phase === "forecast") {
       return;
     }
-    applySellerExpression(seller, sellerConfidenceAt(elapsedMs));
+    applySellerExpression(seller, sellerConfidenceAt(elapsedMs), elapsedMs);
     if (state.reducedMotion || state.phase === "idle") {
       return;
     }
@@ -948,7 +988,11 @@ export const createLemonsvilleScene = (
     state = nextState;
     storyboard = state.storyboard;
     updateSignPrice(storyboard.priceLabel);
-    applySellerExpression(seller, state.confidence);
+    applySellerExpression(
+      seller,
+      state.confidence,
+      presentationChanged ? 0 : lastElapsedMs,
+    );
     if (presentationChanged) {
       animationEpoch = performance.now();
       lastElapsedMs = 0;
