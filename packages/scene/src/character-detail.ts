@@ -1,6 +1,7 @@
 import type { Group, Object3D } from "three";
 import { BoxGeometry, CylinderGeometry, Mesh, MeshStandardMaterial, SphereGeometry } from "three";
 
+import type { CharacterExpressionPose } from "./character-model.js";
 import type { CharacterProfile } from "./characters.js";
 
 export type CharacterGender = "male" | "female";
@@ -48,6 +49,79 @@ const mark = <T extends Object3D>(object: T, role: string): T => {
   return object;
 };
 
+type CharacterFacePart = "brow" | "mouth" | "eye-white" | "eye-pupil";
+type CharacterFaceSide = -1 | 0 | 1;
+
+const markFacePart = <T extends Object3D>(
+  object: T,
+  part: CharacterFacePart,
+  side: CharacterFaceSide,
+): T => {
+  object.userData["characterFacePart"] = part;
+  object.userData["characterFaceSide"] = side;
+  object.userData["characterFaceBaseX"] = object.position.x;
+  object.userData["characterFaceBaseY"] = object.position.y;
+  object.userData["characterFaceBaseRotationZ"] = object.rotation.z;
+  object.userData["characterFaceBaseScaleY"] = object.scale.y;
+  return object;
+};
+
+const faceNumber = (object: Object3D, key: string, fallback: number): number => {
+  const value: unknown = object.userData[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+};
+
+const clamp01 = (value: number): number =>
+  Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
+
+const clampSigned = (value: number): number =>
+  Math.min(1, Math.max(-1, Number.isFinite(value) ? value : 0));
+
+export const applyCharacterExpressionPose = (
+  root: Object3D,
+  expression: CharacterExpressionPose,
+): void => {
+  const blink = clamp01(expression.blink);
+  const gazeX = clampSigned(expression.gazeX);
+  const gazeY = clampSigned(expression.gazeY);
+  const mouthOpen = clamp01(expression.mouthOpen);
+  const browTilt = clampSigned(expression.browTilt);
+  const mouthCurve = clampSigned(expression.mouthCurve);
+  const valence = clampSigned(expression.valence);
+
+  root.traverse((object) => {
+    const part: unknown = object.userData["characterFacePart"];
+    if (typeof part !== "string") {
+      return;
+    }
+
+    const side = faceNumber(object, "characterFaceSide", 0);
+    const baseX = faceNumber(object, "characterFaceBaseX", object.position.x);
+    const baseY = faceNumber(object, "characterFaceBaseY", object.position.y);
+    const baseRotationZ = faceNumber(
+      object,
+      "characterFaceBaseRotationZ",
+      object.rotation.z,
+    );
+    const baseScaleY = faceNumber(object, "characterFaceBaseScaleY", object.scale.y);
+
+    if (part === "eye-white") {
+      object.scale.y = baseScaleY * Math.max(0.08, 1 - blink * 0.92);
+    } else if (part === "eye-pupil") {
+      object.position.x = baseX + gazeX * 0.018;
+      object.position.y = baseY + gazeY * 0.014;
+      object.scale.y = baseScaleY * Math.max(0.08, 1 - blink * 0.92);
+    } else if (part === "brow") {
+      object.rotation.z = baseRotationZ - side * browTilt;
+      object.position.y = baseY + Math.abs(browTilt) * 0.008;
+    } else if (part === "mouth") {
+      object.rotation.z = baseRotationZ + side * mouthCurve;
+      object.position.y = baseY + valence * 0.008 - mouthOpen * 0.012;
+      object.scale.y = baseScaleY * (1 + mouthOpen * 2.4);
+    }
+  });
+};
+
 const characterBodyDecorationRoot = (root: Group): Group => {
   let anchor: Group | undefined;
   root.traverse((object) => {
@@ -64,6 +138,8 @@ const addFaceBar = (
   position: readonly [number, number, number],
   rotationZ: number,
   color: number,
+  part: "brow" | "mouth",
+  side: -1 | 1,
 ): Mesh => {
   const bar = mark(
     new Mesh(new BoxGeometry(width, 0.022, 0.024), material(color)),
@@ -71,6 +147,7 @@ const addFaceBar = (
   );
   bar.position.set(...position);
   bar.rotation.z = rotationZ;
+  markFacePart(bar, part, side);
   head.add(bar);
   return bar;
 };
@@ -79,7 +156,7 @@ export const decorateCharacterHead = (
   head: Mesh,
   profile: CharacterProfile,
   identity: CharacterIdentity,
-  includeMouth = true,
+  includeExpression = true,
 ): void => {
   head.scale.x *= profile.headWidthScale;
   head.scale.y *= profile.headHeightScale;
@@ -93,6 +170,7 @@ export const decorateCharacterHead = (
     );
     white.scale.set(1.08, 0.82, 0.42);
     white.position.set(direction * profile.eyeSpacing, 0.047, 0.251);
+    markFacePart(white, "eye-white", direction);
     head.add(white);
 
     const pupil = mark(
@@ -100,6 +178,7 @@ export const decorateCharacterHead = (
       "eye-pupil",
     );
     pupil.position.set(direction * profile.eyeSpacing, 0.047, 0.273);
+    markFacePart(pupil, "eye-pupil", direction);
     head.add(pupil);
   }
 
@@ -108,19 +187,35 @@ export const decorateCharacterHead = (
   nose.position.set(0, -0.015, 0.258);
   head.add(nose);
 
-  const expressionColor = 0x4d_30_2d;
-  const browTilt =
-    identity.expression === "curious"
-      ? 0.16
-      : identity.expression === "focused"
-        ? -0.13
-        : identity.expression === "smile"
-          ? 0.06
-          : 0;
-  addFaceBar(head, 0.075, [-profile.eyeSpacing, 0.112, 0.264], browTilt, expressionColor);
-  addFaceBar(head, 0.075, [profile.eyeSpacing, 0.112, 0.264], -browTilt, expressionColor);
+  if (includeExpression) {
+    const expressionColor = 0x4d_30_2d;
+    const browTilt =
+      identity.expression === "curious"
+        ? 0.16
+        : identity.expression === "focused"
+          ? -0.13
+          : identity.expression === "smile"
+            ? 0.06
+            : 0;
+    addFaceBar(
+      head,
+      0.075,
+      [-profile.eyeSpacing, 0.112, 0.264],
+      browTilt,
+      expressionColor,
+      "brow",
+      -1,
+    );
+    addFaceBar(
+      head,
+      0.075,
+      [profile.eyeSpacing, 0.112, 0.264],
+      -browTilt,
+      expressionColor,
+      "brow",
+      1,
+    );
 
-  if (includeMouth) {
     const mouthTilt =
       identity.expression === "smile"
         ? 0.24
@@ -130,8 +225,24 @@ export const decorateCharacterHead = (
             ? 0.08
             : 0;
     const mouthY = identity.expression === "focused" ? -0.098 : -0.105;
-    addFaceBar(head, 0.07, [-0.035, mouthY, 0.266], -mouthTilt, 0x8b_4c_48);
-    addFaceBar(head, 0.07, [0.035, mouthY, 0.266], mouthTilt, 0x8b_4c_48);
+    addFaceBar(
+      head,
+      0.07,
+      [-0.035, mouthY, 0.266],
+      -mouthTilt,
+      0x8b_4c_48,
+      "mouth",
+      -1,
+    );
+    addFaceBar(
+      head,
+      0.07,
+      [0.035, mouthY, 0.266],
+      mouthTilt,
+      0x8b_4c_48,
+      "mouth",
+      1,
+    );
   }
 
   // Every hairstyle starts with a full crown shell. Style-specific geometry sits
@@ -396,11 +507,11 @@ export const decorateCharacter = (
   head: Mesh,
   profile: CharacterProfile,
   index: number,
-  includeMouth = true,
+  includeExpression = true,
 ): void => {
   const identity = characterIdentityFor(index, profile);
   decorateCharacterBody(root, profile, identity);
-  decorateCharacterHead(head, profile, identity, includeMouth);
+  decorateCharacterHead(head, profile, identity, includeExpression);
 };
 
 export const decorateSellerExpression = (
@@ -408,20 +519,22 @@ export const decorateSellerExpression = (
   mouth: readonly [Group, Group],
 ): void => {
   const expressionMaterial = material(0x3a_2a_25);
-  for (const brow of eyebrows) {
+  eyebrows.forEach((brow, index) => {
+    markFacePart(brow, "brow", index === 0 ? -1 : 1);
     const mesh = mark(
       new Mesh(new BoxGeometry(0.11, 0.018, 0.018), expressionMaterial.clone()),
       "face-expression",
     );
     brow.add(mesh);
-  }
-  for (const half of mouth) {
+  });
+  mouth.forEach((half, index) => {
+    markFacePart(half, "mouth", index === 0 ? -1 : 1);
     const mesh = mark(
       new Mesh(new BoxGeometry(0.12, 0.018, 0.018), expressionMaterial.clone()),
       "face-expression",
     );
     half.add(mesh);
-  }
+  });
 };
 
 export type DecoratableCharacter = Readonly<{
