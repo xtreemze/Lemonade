@@ -1,4 +1,4 @@
-import type { ProceduralAudioEngine } from "@lemonade/audio";
+import type { ProceduralAudioEngine } from "@lemonade/audio/contracts";
 import {
   type EnvironmentPresentationPhase,
   type EnvironmentWeatherKind,
