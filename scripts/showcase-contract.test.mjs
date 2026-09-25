@@ -22,7 +22,7 @@ test("showcase manifest defines exactly five durable capabilities and source-app
     ["video", "screenshot", "video", "screenshot", "screenshot"],
   );
   assert.equal(manifest.capture.videoFps, 60);
-  assert.equal(manifest.capture.animatedGraphicFps, 30);
+  assert.equal(manifest.capture.animatedGraphicFps, manifest.capture.videoFps);
 });
 
 test("normal E2E discovery excludes showcase specs", async () => {
@@ -39,12 +39,17 @@ test("showcase config structurally separates desktop and mobile Chromium capture
   assert.ok(config.includes("hasTouch: true"));
   assert.ok(config.includes('video: "off"'));
   assert.ok(config.includes("--autoplay-policy=no-user-gesture-required"));
+  assert.ok(config.includes("--disable-background-timer-throttling"));
+  assert.ok(config.includes("--disable-frame-rate-limit"));
 });
 
 test("showcase specs capture dynamic 3D scenes directly and static states as screenshots", async () => {
   const spec = await read("e2e/showcase/showcase.spec.ts");
   assert.ok(spec.includes("canvas.captureStream(requestedFps)"));
   assert.ok(spec.includes("new MediaRecorder"));
+  assert.ok(
+    spec.includes('["video/webm;codecs=vp8", "video/webm;codecs=vp9", "video/webm"]'),
+  );
   assert.ok(spec.includes("videoBitsPerSecond"));
   assert.ok(spec.includes("audioBitsPerSecond"));
   assert.ok(spec.includes("getAudioTracks"));
@@ -82,6 +87,8 @@ test("verifier enforces source resolution and high-frame-rate output", async () 
   const verifier = await read("scripts/verify-showcase.mjs");
   assert.ok(verifier.includes('"ffprobe"'));
   assert.ok(verifier.includes("assertHighFrameRate"));
+  assert.ok(verifier.includes("assertCapturedFrameCadence"));
+  assert.ok(verifier.includes("best_effort_timestamp_time"));
   assert.ok(verifier.includes("width: 1440, height: 900"));
   assert.ok(verifier.includes("width: 390, height: 844"));
   assert.ok(verifier.includes("animated WebP"));

@@ -49,6 +49,67 @@ const frameRate = (value) => {
   return Number(numerator) / Number(denominator);
 };
 
+const probeFrameStats = (filePath) => {
+  const result = spawnSync(
+    "ffprobe",
+    [
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
+      "-show_frames",
+      "-show_entries",
+      "frame=best_effort_timestamp_time",
+      "-of",
+      "csv=p=0",
+      filePath,
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error(`ffprobe frame timing failed for ${filePath}: ${result.stderr}`);
+  }
+
+  const timestamps = result.stdout
+    .split(/\r?\n/u)
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isFinite(value));
+  if (timestamps.length < 2) {
+    throw new Error(`Unable to measure captured frame cadence for ${filePath}.`);
+  }
+
+  const firstTimestamp = timestamps[0];
+  const lastTimestamp = timestamps.at(-1);
+  if (firstTimestamp === undefined || lastTimestamp === undefined) {
+    throw new Error(`Unable to measure captured frame timestamps for ${filePath}.`);
+  }
+
+  const duration = lastTimestamp - firstTimestamp;
+  if (!Number.isFinite(duration) || duration <= 0) {
+    throw new Error(`Invalid captured frame duration for ${filePath}.`);
+  }
+
+  const frameIntervals = timestamps.length - 1;
+  return { frames: timestamps.length, duration, fps: frameIntervals / duration };
+};
+
+const assertCapturedFrameCadence = (filePath, expectedDurationSeconds) => {
+  const stats = probeFrameStats(filePath);
+  const minimumDuration = expectedDurationSeconds * 0.97;
+  if (stats.duration < minimumDuration) {
+    throw new Error(
+      `${filePath} captured only ${stats.duration.toFixed(3)}s; expected at least ${minimumDuration.toFixed(3)}s.`,
+    );
+  }
+
+  const minimumFps = manifest.capture.videoFps - 1;
+  if (stats.fps < minimumFps) {
+    throw new Error(
+      `${filePath} contains ${String(stats.frames)} actual frames across ${stats.duration.toFixed(3)}s (${stats.fps.toFixed(2)} fps); expected at least ${minimumFps.toFixed(2)} fps before encoding.`,
+    );
+  }
+};
+
 const dimensions = {
   desktop: { width: 1440, height: 900 },
   mobile: { width: 390, height: 844 },
@@ -132,6 +193,8 @@ for (const formFactor of ["desktop", "mobile"]) {
       if (metadata.requestedFps !== manifest.capture.videoFps) {
         throw new Error(`${formFactor}/${feature.id} did not request the showcase capture fps.`);
       }
+      assertDimensions(`${rawBase}.webm`, dimensions[formFactor]);
+      assertCapturedFrameCadence(`${rawBase}.webm`, Number(feature.durationSeconds));
     } else if (feature.media === "screenshot") {
       await requireFile(`${rawBase}.png`);
       assertDimensions(`${rawBase}.png`, dimensions[formFactor]);
