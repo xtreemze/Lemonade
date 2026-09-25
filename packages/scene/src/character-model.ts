@@ -313,8 +313,7 @@ export const characterExpressionAt = (
   const gazeStep = Math.floor(gazeClock / gazeIntervalMs);
   const gazeProgress = (gazeClock % gazeIntervalMs) / gazeIntervalMs;
   const transitionProgress = clamp01((gazeProgress - 0.78) / 0.22);
-  const easedTransition =
-    transitionProgress * transitionProgress * (3 - 2 * transitionProgress);
+  const easedTransition = transitionProgress * transitionProgress * (3 - 2 * transitionProgress);
   const gazeValue = (salt: number): number =>
     lerp(
       seededSignedUnit(seed, gazeStep, salt),
