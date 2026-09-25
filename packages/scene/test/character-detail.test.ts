@@ -2,6 +2,7 @@ import { Group, Mesh, type Object3D, SphereGeometry } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
+  applyCharacterExpressionPose,
   characterIdentityFor,
   decorateCharacterBody,
   decorateCharacterHead,
@@ -27,6 +28,55 @@ describe("character geometry detail", () => {
       expect(roles.has("eye-white")).toBe(true);
       expect(roles.has("eye-pupil")).toBe(true);
     }
+  });
+
+  it("projects blink, gaze, brow, and mouth channels while preserving seeded baselines", () => {
+    const profile = characterProfileFor(0x1e_ad_20_26, 3);
+    const head = new Mesh(new SphereGeometry(0.27, 12, 8));
+    decorateCharacterHead(head, profile, characterIdentityFor(3, profile));
+
+    const faceObjects = head.children.filter(
+      (child) => typeof child.userData["characterFacePart"] === "string",
+    );
+    const pupil = faceObjects.find(
+      (child) => child.userData["characterFacePart"] === "eye-pupil",
+    );
+    const eyeWhite = faceObjects.find(
+      (child) => child.userData["characterFacePart"] === "eye-white",
+    );
+    const brow = faceObjects.find((child) => child.userData["characterFacePart"] === "brow");
+    const mouth = faceObjects.find((child) => child.userData["characterFacePart"] === "mouth");
+    expect(pupil).toBeDefined();
+    expect(eyeWhite).toBeDefined();
+    expect(brow).toBeDefined();
+    expect(mouth).toBeDefined();
+    if (pupil === undefined || eyeWhite === undefined || brow === undefined || mouth === undefined) {
+      return;
+    }
+
+    const pupilX = pupil.position.x;
+    const pupilY = pupil.position.y;
+    const eyeScaleY = eyeWhite.scale.y;
+    const browRotation = brow.rotation.z;
+    const mouthRotation = mouth.rotation.z;
+    const mouthScaleY = mouth.scale.y;
+
+    applyCharacterExpressionPose(head, {
+      valence: 0.5,
+      browTilt: 0.2,
+      mouthCurve: 0.3,
+      mouthOpen: 0.6,
+      gazeX: 0.5,
+      gazeY: -0.4,
+      blink: 1,
+    });
+
+    expect(pupil.position.x).not.toBeCloseTo(pupilX);
+    expect(pupil.position.y).not.toBeCloseTo(pupilY);
+    expect(eyeWhite.scale.y).toBeLessThan(eyeScaleY * 0.2);
+    expect(brow.rotation.z).not.toBeCloseTo(browRotation);
+    expect(mouth.rotation.z).not.toBeCloseTo(mouthRotation);
+    expect(mouth.scale.y).toBeGreaterThan(mouthScaleY);
   });
 
   it("adds garment geometry beyond the base body for adults and children", () => {
