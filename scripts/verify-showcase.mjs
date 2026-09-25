@@ -55,29 +55,42 @@ const probeFrameStats = (filePath) => {
     [
       "-v",
       "error",
-      "-count_frames",
       "-select_streams",
       "v:0",
+      "-show_frames",
       "-show_entries",
-      "stream=nb_read_frames:format=duration",
+      "frame=best_effort_timestamp_time",
       "-of",
-      "json",
+      "csv=p=0",
       filePath,
     ],
     { encoding: "utf8" },
   );
   if (result.status !== 0) {
-    throw new Error(`ffprobe frame counting failed for ${filePath}: ${result.stderr}`);
+    throw new Error(`ffprobe frame timing failed for ${filePath}: ${result.stderr}`);
   }
 
-  const parsed = JSON.parse(result.stdout);
-  const frames = Number(parsed.streams?.[0]?.nb_read_frames);
-  const duration = Number(parsed.format?.duration);
-  if (!Number.isFinite(frames) || frames <= 0 || !Number.isFinite(duration) || duration <= 0) {
+  const timestamps = result.stdout
+    .split(/\r?\n/u)
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isFinite(value));
+  if (timestamps.length < 2) {
     throw new Error(`Unable to measure captured frame cadence for ${filePath}.`);
   }
 
-  return { frames, duration, fps: frames / duration };
+  const firstTimestamp = timestamps[0];
+  const lastTimestamp = timestamps.at(-1);
+  if (firstTimestamp === undefined || lastTimestamp === undefined) {
+    throw new Error(`Unable to measure captured frame timestamps for ${filePath}.`);
+  }
+
+  const duration = lastTimestamp - firstTimestamp;
+  if (!Number.isFinite(duration) || duration <= 0) {
+    throw new Error(`Invalid captured frame duration for ${filePath}.`);
+  }
+
+  const frameIntervals = timestamps.length - 1;
+  return { frames: timestamps.length, duration, fps: frameIntervals / duration };
 };
 
 const assertCapturedFrameCadence = (filePath, expectedDurationSeconds) => {
