@@ -115,4 +115,13 @@ describe("renderer-neutral character model", () => {
     expect(first.blink).toBeLessThanOrEqual(1);
     expect([later.gazeX, later.gazeY]).not.toEqual([first.gazeX, first.gazeY]);
   });
+
+  it("changes gaze continuously across deterministic target boundaries", () => {
+    const base = neutralCharacterPose().expression;
+    const beforeBoundary = characterExpressionAt(base, 0x51_a7, 1_462);
+    const afterBoundary = characterExpressionAt(base, 0x51_a7, 1_464);
+
+    expect(Math.abs(afterBoundary.gazeX - beforeBoundary.gazeX)).toBeLessThan(0.01);
+    expect(Math.abs(afterBoundary.gazeY - beforeBoundary.gazeY)).toBeLessThan(0.01);
+  });
 });
