@@ -1,4 +1,5 @@
 import {
+  Box3,
   BoxGeometry,
   CylinderGeometry,
   Group,
@@ -11,7 +12,6 @@ import {
 import { decorateCharacter } from "./character-detail.js";
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
 import {
-  CHARACTER_ANATOMY,
   characterPoseAtDistance,
   seatedCharacterPose,
 } from "./character-model.js";
@@ -395,12 +395,10 @@ const createVehicle = (
   const driver = createTransportCharacter(geometries, seed ^ 0x51_a7, 10_100 + index);
   driver.root.userData["sceneRole"] = "ambient-driver";
   applyThreeCharacterPose(driver, seatedCharacterPose("driver"));
+  driver.root.updateMatrixWorld(true);
+  const renderedBounds = new Box3().setFromObject(driver.root);
   const roofY = spec.wheelRadius + spec.bodyHeight + spec.cabinHeight;
-  const renderedHeadTop =
-    (driver.head.position.y + CHARACTER_ANATOMY.head.radius * 1.04) *
-    driver.profile.heightScale *
-    WORLD_SCALE.character.renderScale;
-  driver.root.position.set(cabinX, roofY - renderedHeadTop - 0.04, 0.12);
+  driver.root.position.set(cabinX, roofY - renderedBounds.max.y - 0.04, 0.12);
   root.add(driver.root);
 
   return root;
