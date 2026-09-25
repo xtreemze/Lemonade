@@ -307,6 +307,29 @@ export const weatherMelodyMetadata = (cue: WeatherAudioCue): WeatherMelodyMetada
 
 const midiToFrequency = (note: number): number => 440 * 2 ** ((note - 69) / 12);
 
+const clamp01 = (value: number): number =>
+  Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
+
+const ENVIRONMENT_GAIN_FLOOR = 0.0001;
+const MAX_WIND_GAIN = 0.018;
+const MAX_RAIN_GAIN = 0.006;
+
+export const environmentBedGainTargets = (
+  frame: AudioEnvironmentFrame,
+  muted = false,
+): Readonly<{ wind: number; rain: number }> => {
+  if (muted) {
+    return Object.freeze({ wind: ENVIRONMENT_GAIN_FLOOR, rain: ENVIRONMENT_GAIN_FLOOR });
+  }
+
+  return Object.freeze({
+    wind: ENVIRONMENT_GAIN_FLOOR + clamp01(frame.windIntensity) * MAX_WIND_GAIN,
+    rain:
+      ENVIRONMENT_GAIN_FLOOR +
+      Math.pow(clamp01(frame.precipitation), 1.35) * MAX_RAIN_GAIN,
+  });
+};
+
 export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
   let context: AudioContext | null = null;
   let muted = false;
@@ -319,9 +342,6 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
   let rainSource: AudioBufferSourceNode | null = null;
   let windGain: GainNode | null = null;
   let rainGain: GainNode | null = null;
-
-  const clamp01 = (value: number): number =>
-    Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
 
   const createNoiseBuffer = (activeContext: AudioContext, seedValue: number): AudioBuffer => {
     const length = Math.max(1, Math.round(activeContext.sampleRate * 2));
@@ -340,10 +360,9 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     if (activeContext === null || activeContext.state === "closed") {
       return;
     }
-    const windTarget = muted ? 0.0001 : 0.0001 + clamp01(environmentFrame.windIntensity) * 0.018;
-    const rainTarget = muted ? 0.0001 : 0.0001 + clamp01(environmentFrame.precipitation) * 0.03;
-    windGain?.gain.setTargetAtTime(windTarget, activeContext.currentTime, 0.08);
-    rainGain?.gain.setTargetAtTime(rainTarget, activeContext.currentTime, 0.05);
+    const targets = environmentBedGainTargets(environmentFrame, muted);
+    windGain?.gain.setTargetAtTime(targets.wind, activeContext.currentTime, 0.08);
+    rainGain?.gain.setTargetAtTime(targets.rain, activeContext.currentTime, 0.08);
   };
 
   const ensureEnvironmentBeds = (activeContext: AudioContext): void => {
@@ -370,8 +389,8 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     nextRainSource.loop = true;
     const rainFilter = activeContext.createBiquadFilter();
     rainFilter.type = "bandpass";
-    rainFilter.frequency.value = 3200;
-    rainFilter.Q.value = 0.55;
+    rainFilter.frequency.value = 2200;
+    rainFilter.Q.value = 0.7;
     const nextRainGain = activeContext.createGain();
     nextRainGain.gain.value = 0.0001;
     nextRainSource.connect(rainFilter);
