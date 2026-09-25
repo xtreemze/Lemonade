@@ -36,6 +36,13 @@ export type NeighborhoodSidewalkSegment = Readonly<{
   rotationY: number;
 }>;
 
+export type NeighborhoodRoadJunction = Readonly<{
+  id: string;
+  point: ResidentialPoint;
+  roadSegmentIds: readonly [string, string];
+  streetIds: readonly [string, string];
+}>;
+
 export type NeighborhoodPropertyGroup = "front" | "middle" | "back" | "outer";
 
 export type NeighborhoodPropertyTopology = Readonly<{
@@ -75,6 +82,7 @@ export type NeighborhoodTopology = Readonly<{
   seed: number;
   roads: readonly NeighborhoodRoadSegment[];
   sidewalks: readonly NeighborhoodSidewalkSegment[];
+  junctions: readonly NeighborhoodRoadJunction[];
   properties: readonly NeighborhoodPropertyTopology[];
 }>;
 
@@ -111,6 +119,92 @@ const projectRoad = (strip: StreetStripSpec): NeighborhoodRoadSegment =>
     width: strip.width,
     rotationY: strip.rotationY,
   });
+
+const lineSegmentIntersection = (
+  first: Pick<NeighborhoodRoadSegment, "start" | "end">,
+  second: Pick<NeighborhoodRoadSegment, "start" | "end">,
+): ResidentialPoint | null => {
+  const firstDx = first.end.x - first.start.x;
+  const firstDz = first.end.z - first.start.z;
+  const secondDx = second.end.x - second.start.x;
+  const secondDz = second.end.z - second.start.z;
+  const denominator = firstDx * secondDz - firstDz * secondDx;
+  if (Math.abs(denominator) < 1e-8) {
+    return null;
+  }
+
+  const deltaX = second.start.x - first.start.x;
+  const deltaZ = second.start.z - first.start.z;
+  const firstT = (deltaX * secondDz - deltaZ * secondDx) / denominator;
+  const secondT = (deltaX * firstDz - deltaZ * firstDx) / denominator;
+  const tolerance = 1e-6;
+  if (
+    firstT < -tolerance ||
+    firstT > 1 + tolerance ||
+    secondT < -tolerance ||
+    secondT > 1 + tolerance
+  ) {
+    return null;
+  }
+
+  return point(first.start.x + firstDx * firstT, first.start.z + firstDz * firstT);
+};
+
+const junctionId = (
+  first: NeighborhoodRoadSegment,
+  second: NeighborhoodRoadSegment,
+  pointValue: ResidentialPoint,
+): string => {
+  const streetIds = [first.streetId, second.streetId].sort();
+  return `junction:${streetIds[0]}:${streetIds[1]}:${pointValue.x.toFixed(3)}:${pointValue.z.toFixed(3)}`;
+};
+
+const projectJunctions = (
+  roads: readonly NeighborhoodRoadSegment[],
+): readonly NeighborhoodRoadJunction[] => {
+  const result = new Map<string, NeighborhoodRoadJunction>();
+
+  for (let firstIndex = 0; firstIndex < roads.length; firstIndex += 1) {
+    const first = roads[firstIndex];
+    if (first === undefined) {
+      continue;
+    }
+    for (let secondIndex = firstIndex + 1; secondIndex < roads.length; secondIndex += 1) {
+      const second = roads[secondIndex];
+      if (second === undefined || first.streetId === second.streetId) {
+        continue;
+      }
+      const intersection = lineSegmentIntersection(first, second);
+      if (intersection === null) {
+        continue;
+      }
+
+      const id = junctionId(first, second, intersection);
+      if (result.has(id)) {
+        continue;
+      }
+      const orderedRoads = [first, second].sort((left, right) => left.id.localeCompare(right.id));
+      const orderedStreets = [first.streetId, second.streetId].sort();
+      result.set(
+        id,
+        Object.freeze({
+          id,
+          point: intersection,
+          roadSegmentIds: Object.freeze([
+            orderedRoads[0]?.id ?? first.id,
+            orderedRoads[1]?.id ?? second.id,
+          ]) as readonly [string, string],
+          streetIds: Object.freeze([
+            orderedStreets[0] ?? first.streetId,
+            orderedStreets[1] ?? second.streetId,
+          ]) as readonly [string, string],
+        }),
+      );
+    }
+  }
+
+  return Object.freeze([...result.values()].sort((left, right) => left.id.localeCompare(right.id)));
+};
 
 const projectSidewalk = (strip: StreetStripSpec): NeighborhoodSidewalkSegment => {
   const roadSegmentIndex = Math.floor(strip.segmentIndex / 2);
@@ -257,11 +351,13 @@ export const generateNeighborhoodTopology = (
   seed = DEFAULT_RESIDENTIAL_SEED,
 ): NeighborhoodTopology => {
   const streetNetwork = generateStreetNetwork(seed);
+  const roads = Object.freeze(streetNetwork.roads.map(projectRoad));
 
   return Object.freeze({
     seed: streetNetwork.seed,
-    roads: Object.freeze(streetNetwork.roads.map(projectRoad)),
+    roads,
     sidewalks: Object.freeze(streetNetwork.sidewalks.map(projectSidewalk)),
+    junctions: projectJunctions(roads),
     properties: projectProperties(streetNetwork.seed, streetNetwork.roads, streetNetwork.sidewalks),
   });
 };
