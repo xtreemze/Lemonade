@@ -21,6 +21,8 @@ const PLAYABLE_CUE_IDS: readonly AudioCue[] = [
   "purchase:serve",
   "purchase:payment",
   "purchase:drink",
+  "purchase:pour",
+  "purchase:ice-clink",
   "storm:thunder",
   "storm:gust",
   "ambient:birdsong",
@@ -46,7 +48,8 @@ describe("sound library", () => {
     expect(soundLibraryEntry("weather:rain")?.status).toBe("available");
     expect(soundLibraryEntry("weather:wind-bed")?.status).toBe("available");
     expect(missingSounds.some((entry) => entry.id === "neighborhood:sprinkler")).toBe(true);
-    expect(missingSounds.some((entry) => entry.id === "purchase:pour")).toBe(true);
+    expect(soundLibraryEntry("purchase:pour")?.status).toBe("available");
+    expect(soundLibraryEntry("purchase:ice-clink")?.status).toBe("available");
   });
 
   it("uses unique stable IDs across the complete inventory", () => {

@@ -10,6 +10,8 @@ export type AudioCue =
   | "purchase:serve"
   | "purchase:payment"
   | "purchase:drink"
+  | "purchase:pour"
+  | "purchase:ice-clink"
   | "storm:thunder"
   | "storm:gust"
   | "ambient:birdsong";

@@ -23,13 +23,15 @@ timers.
 | `purchase:serve` | Serve lemonade | Purchase | Procedural tonal | Purchase serve beat |
 | `purchase:payment` | Payment | Purchase | Procedural tonal | Purchase payment beat |
 | `purchase:drink` | Drink | Purchase | Procedural tonal | Purchase drinking beat |
+| `purchase:pour` | Lemonade pour | Purchase | Procedural hybrid | Purchase preparation beat |
+| `purchase:ice-clink` | Ice and cup clink | Purchase | Procedural hybrid | Purchase preparation beat |
 | `storm:thunder` | Thunder | Weather | Procedural tonal | Thunder occurrence |
 | `storm:gust` | Wind gust | Weather | Procedural tonal | Gust occurrence |
 | `ambient:birdsong` | Birdsong | Ambient | Procedural tonal | Sunny ambient-life occurrence |
 | `weather:rain` | Rain / precipitation | Weather | Procedural noise | Environment precipitation frame |
 | `weather:wind-bed` | Continuous wind | Weather | Procedural noise | Environment wind-intensity frame |
 
-Total available: **16**.
+Total available: **18**.
 
 The four forecast cues reproduce the historical Apple II weather excerpts already documented in
 `docs/weather-audio.md`. The remaining cues are original procedural motifs/effects.
@@ -53,10 +55,8 @@ semantic state, occurrence, customer outcome, or visible action that can own the
 | `neighborhood:window-activity` | Household window activity | Window-activity occurrence | Quiet, distance-limited texture |
 | `customer:price-reject` | Price rejection | Authoritative customer outcome | Brief non-verbal tonal cue |
 | `customer:stockout` | Stockout reaction | Authoritative customer outcome | Brief non-verbal tonal cue |
-| `purchase:pour` | Lemonade pour | Purchase pour stage | Liquid-like filtered noise |
-| `purchase:ice-clink` | Ice/cup/straw handling | Purchase preparation stage | Short metallic/glass transients |
 
-Total missing: **14**.
+Total missing: **12**.
 
 ## Implementation order
 
@@ -66,7 +66,8 @@ timing authority.
 1. Environment synchronization: rain and continuous wind now consume the renderer-neutral environment
    frame, and thunder, gusts, and birdsong consume its occurrence schedule. Preserve that single semantic
    source as weather audio expands.
-2. Purchase detail: pour and ice/cup handling, synchronized to the existing purchase storyboard.
+2. Purchase detail now uses the existing purchase feedback schedule for ice/cup handling, pour, serve,
+   payment, and drinking. Keep this ordering and dense-day sampling bounded as visual timing evolves.
 3. Neighborhood occurrences: footsteps, vehicles, bicycles, pets, mail, gardening, sprinklers, doors, and
    window activity, driven by the deterministic neighborhood occurrence ledger.
 4. Customer outcomes: price rejection and stockout cues, driven only by authoritative customer outcomes.

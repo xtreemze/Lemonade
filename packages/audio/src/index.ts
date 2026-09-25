@@ -48,6 +48,15 @@ type MotifNote = Readonly<{
   endNote?: number;
 }>;
 
+type NoiseAccent = Readonly<{
+  durationSeconds: number;
+  gain: number;
+  filterType: BiquadFilterType;
+  frequency: number;
+  q: number;
+  seed: number;
+}>;
+
 type AppleSpeakerStep = Readonly<{
   pitchValue: number | "rest";
   durationUnits: number;
@@ -135,6 +144,13 @@ const MOTIFS: Record<Exclude<AudioCue, WeatherAudioCue>, readonly MotifNote[]> =
     { note: 69, endNote: 81, beats: 0.5, waveform: "triangle", gain: 0.026 },
     { note: 74, beats: 0.18, waveform: "sine", gain: 0.022 },
   ],
+  "purchase:pour": [
+    { note: 69, endNote: 74, beats: 1.65, waveform: "sine", gain: 0.012 },
+  ],
+  "purchase:ice-clink": [
+    { note: 96, beats: 0.12, waveform: "triangle", gain: 0.028 },
+    { note: 103, beats: 0.1, waveform: "sine", gain: 0.022 },
+  ],
   "storm:thunder": [
     { note: 33, endNote: 25, beats: 5.5, waveform: "sawtooth", gain: 0.048 },
     { note: 28, endNote: 20, beats: 4.5, waveform: "sawtooth", gain: 0.04 },
@@ -153,6 +169,29 @@ const MOTIFS: Record<Exclude<AudioCue, WeatherAudioCue>, readonly MotifNote[]> =
     { note: 96, beats: 0.24, waveform: "sine", gain: 0.015 },
   ],
 };
+
+const NOISE_ACCENTS: Partial<Record<AudioCue, readonly NoiseAccent[]>> = Object.freeze({
+  "purchase:pour": Object.freeze([
+    Object.freeze({
+      durationSeconds: 0.24,
+      gain: 0.018,
+      filterType: "bandpass",
+      frequency: 1_750,
+      q: 0.42,
+      seed: 0x50_4f_55_52,
+    }),
+  ]),
+  "purchase:ice-clink": Object.freeze([
+    Object.freeze({
+      durationSeconds: 0.032,
+      gain: 0.012,
+      filterType: "highpass",
+      frequency: 4_800,
+      q: 0.7,
+      seed: 0x49_43_45,
+    }),
+  ]),
+});
 
 /**
  * Weather melodies transcribed from the 1979 Applesoft BASIC weather-report
@@ -307,6 +346,7 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
   });
   let windSource: AudioBufferSourceNode | null = null;
   let rainSource: AudioBufferSourceNode | null = null;
+  let noiseAccentCounter = 0;
   let windGain: GainNode | null = null;
   let rainGain: GainNode | null = null;
 
@@ -432,6 +472,39 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
       });
       oscillator.start(start);
       oscillator.stop(end + 0.004);
+    }
+
+    const accents = NOISE_ACCENTS[cue] ?? [];
+    for (const accent of accents) {
+      const source = activeContext.createBufferSource();
+      source.buffer = createNoiseBuffer(
+        activeContext,
+        (accent.seed + noiseAccentCounter * 0x9e_37_79_b9) >>> 0,
+      );
+      noiseAccentCounter += 1;
+      const filter = activeContext.createBiquadFilter();
+      filter.type = accent.filterType;
+      filter.frequency.value = accent.frequency;
+      filter.Q.value = accent.q;
+      const envelope = activeContext.createGain();
+      const start = baseTime;
+      const end = start + accent.durationSeconds;
+      envelope.gain.setValueAtTime(0.0001, start);
+      envelope.gain.exponentialRampToValueAtTime(
+        accent.gain,
+        start + Math.min(0.008, accent.durationSeconds / 4),
+      );
+      envelope.gain.exponentialRampToValueAtTime(0.0001, end);
+      source.connect(filter);
+      filter.connect(envelope);
+      envelope.connect(activeContext.destination);
+      source.addEventListener("ended", () => {
+        source.disconnect();
+        filter.disconnect();
+        envelope.disconnect();
+      });
+      source.start(start);
+      source.stop(end + 0.004);
     }
   };
 

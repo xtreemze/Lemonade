@@ -20,6 +20,8 @@ const cues: readonly AudioCue[] = [
   "purchase:serve",
   "purchase:payment",
   "purchase:drink",
+  "purchase:pour",
+  "purchase:ice-clink",
   "storm:thunder",
   "storm:gust",
   "ambient:birdsong",
@@ -76,8 +78,10 @@ describe("procedural cue compiler", () => {
     expect(birdsong.every((tone) => tone.gain <= 0.022)).toBe(true);
   });
 
-  it("uses frequency sweeps for drinking, thunder, and wind gusts", () => {
+  it("uses frequency sweeps for drinking, pour, thunder, and wind gusts", () => {
     expect(compileCue("purchase:drink").some((tone) => tone.endMidiNote !== undefined)).toBe(true);
+    expect(compileCue("purchase:pour").some((tone) => tone.endMidiNote !== undefined)).toBe(true);
+    expect(compileCue("purchase:ice-clink").every((tone) => tone.midiNote >= 96)).toBe(true);
     expect(compileCue("storm:thunder").every((tone) => tone.endMidiNote !== undefined)).toBe(true);
     const gust = compileCue("storm:gust");
     expect(gust.every((tone) => tone.endMidiNote !== undefined)).toBe(true);

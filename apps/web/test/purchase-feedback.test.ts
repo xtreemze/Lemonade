@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import { createPurchaseFeedbackSchedule } from "../src/purchase-feedback.js";
 
 describe("purchase feedback schedule", () => {
-  it("schedules serve, payment and drink in order for every small-day sale", () => {
+  it("schedules ice, pour, serve, payment and drink in order for every small-day sale", () => {
     const schedule = createPurchaseFeedbackSchedule(5, 5000);
     expect(schedule).toHaveLength(5);
     for (const beat of schedule) {
+      expect(beat.iceAtMs).toBeLessThanOrEqual(beat.pourAtMs);
+      expect(beat.pourAtMs).toBeLessThanOrEqual(beat.serveAtMs);
       expect(beat.serveAtMs).toBeLessThan(beat.paymentAtMs);
       expect(beat.paymentAtMs).toBeLessThan(beat.drinkAtMs);
       expect(beat.drinkAtMs).toBeLessThanOrEqual(5000);
