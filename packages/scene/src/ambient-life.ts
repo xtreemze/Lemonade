@@ -7,6 +7,7 @@ import {
   type Object3D,
   type Scene,
   SphereGeometry,
+  Vector3,
 } from "three";
 import { decorateCharacter } from "./character-detail.js";
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
@@ -17,6 +18,7 @@ import {
 } from "./character-model.js";
 import {
   applyThreeCharacterPose,
+  characterRotationYForRouteYaw,
   createThreeCharacterRig,
   type ThreeCharacterRig,
 } from "./character-rig.js";
@@ -252,6 +254,7 @@ const createBicycle = (
   rider.root.userData["sceneRole"] = "ambient-rider";
   applyThreeCharacterPose(rider, seatedCharacterPose("rider"));
   rider.root.position.set(-0.02, wheelRadius - 0.08, 0);
+  rider.root.rotation.y = characterRotationYForRouteYaw(0);
   rider.root.rotation.z = -0.12;
   root.add(rider.root);
   return root;
@@ -396,10 +399,15 @@ const createVehicle = (
   driver.root.userData["sceneRole"] = "ambient-driver";
   applyThreeCharacterPose(driver, seatedCharacterPose("driver"));
   const roofY = spec.wheelRadius + spec.bodyHeight + spec.cabinHeight;
-  const renderedHeadTop =
-    (driver.head.position.y + CHARACTER_ANATOMY.head.radius * 1.04) *
+  driver.root.rotation.y = characterRotationYForRouteYaw(0);
+  driver.root.updateMatrixWorld(true);
+  const headCenter = driver.head.getWorldPosition(new Vector3());
+  const renderedHeadRadiusY =
+    CHARACTER_ANATOMY.head.radius *
+    1.04 *
     driver.profile.heightScale *
     WORLD_SCALE.character.renderScale;
+  const renderedHeadTop = headCenter.y + renderedHeadRadiusY;
   driver.root.position.set(cabinX, roofY - renderedHeadTop - 0.04, 0.12);
   root.add(driver.root);
 
@@ -566,7 +574,7 @@ const placeRig = (
   }
   applyMobilityRenderDetail(rig.root, pose.detail);
   rig.root.position.set(pose.x, 0, pose.z);
-  rig.root.rotation.y = -pose.yaw;
+  rig.root.rotation.y = characterRotationYForRouteYaw(pose.yaw);
   rig.root.rotation.z = 0;
   // Clock-driven actors expose authoritative locomotion distance. Legacy
   // service/crossing actors remain on a temporary renderer fallback until #212
