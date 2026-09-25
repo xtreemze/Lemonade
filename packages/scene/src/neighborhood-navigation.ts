@@ -1,9 +1,9 @@
-import type {
-  NeighborhoodRoadSegment,
-  NeighborhoodSidewalkSegment,
-  NeighborhoodTopology,
+import {
+  generateNeighborhoodTopology,
+  type NeighborhoodRoadSegment,
+  type NeighborhoodSidewalkSegment,
+  type NeighborhoodTopology,
 } from "./neighborhood-topology.js";
-import { generateNeighborhoodTopology } from "./neighborhood-topology.js";
 import type { ResidentialLayout, ResidentialPoint } from "./residential-layout.js";
 import {
   type SidewalkSide,
