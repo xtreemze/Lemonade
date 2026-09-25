@@ -59,6 +59,30 @@ type AppleWeatherMelody = Readonly<{
   steps: readonly AppleSpeakerStep[];
 }>;
 
+const CUE_MIX_TRIM_DB: Readonly<Record<AudioCue, number>> = Object.freeze({
+  "forecast:sunny": -2,
+  "forecast:cloudy": -2,
+  "forecast:hot-and-dry": -2,
+  "forecast:thunderstorm": -2,
+  "day:submit": -1,
+  "day:profit": -2,
+  "day:loss": 3,
+  "progression:unlock": -1,
+  "purchase:serve": 0,
+  "purchase:payment": -3,
+  "purchase:drink": 3,
+  "purchase:pour": 6,
+  "purchase:ice-clink": 1,
+  "storm:thunder": 0,
+  "storm:gust": 0,
+  "ambient:birdsong": 0,
+});
+
+export const cueMixTrimDb = (cue: AudioCue): number => CUE_MIX_TRIM_DB[cue];
+
+const dbToLinear = (db: number): number => 10 ** (db / 20);
+const mixedGain = (cue: AudioCue, gain: number): number => gain * dbToLinear(cueMixTrimDb(cue));
+
 const WEATHER_MELODY_METADATA: Readonly<Record<WeatherAudioCue, WeatherMelodyMetadata>> =
   Object.freeze({
     "forecast:sunny": Object.freeze({
@@ -266,7 +290,7 @@ const compileAppleWeatherExcerpt = (
           midiNote: applePitchToMidi(step.pitchValue),
           startSeconds: cursor,
           durationSeconds,
-          gain: APPLE_SPEAKER_GAIN,
+          gain: mixedGain(cue, APPLE_SPEAKER_GAIN),
           waveform: "square",
           source: "historical-weather-excerpt",
         }),
