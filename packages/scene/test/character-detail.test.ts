@@ -6,6 +6,7 @@ import {
   characterIdentityFor,
   decorateCharacterBody,
   decorateCharacterHead,
+  decorateSceneCharacters,
   decorateSellerExpression,
 } from "../src/character-detail.js";
 import { characterProfileFor } from "../src/characters.js";
@@ -108,6 +109,48 @@ describe("character geometry detail", () => {
         group.children.some((child) => sceneRole(child) === "face-expression"),
       ),
     ).toBe(true);
+  });
+
+  it("decorates pooled buyers from the rig's authoritative profile index", () => {
+    const seed = 0x1e_ad_20_26;
+    const customerProfile = characterProfileFor(seed, 0);
+    const buyerProfile = characterProfileFor(seed, 128);
+    const sellerProfile = characterProfileFor(seed, 10_001);
+
+    const customer = {
+      root: new Group(),
+      head: new Mesh(new SphereGeometry(0.27, 12, 8)),
+      profile: customerProfile,
+    };
+    customer.root.userData["characterProfileIndex"] = 0;
+
+    const buyer = {
+      root: new Group(),
+      head: new Mesh(new SphereGeometry(0.27, 12, 8)),
+      profile: buyerProfile,
+    };
+    buyer.root.userData["characterProfileIndex"] = 128;
+
+    const seller = {
+      root: new Group(),
+      head: new Mesh(new SphereGeometry(0.27, 12, 8)),
+      profile: sellerProfile,
+    };
+    seller.root.userData["characterProfileIndex"] = 10_001;
+
+    decorateSceneCharacters(
+      [customer],
+      [buyer],
+      seller,
+      [new Group(), new Group()],
+      [new Group(), new Group()],
+    );
+
+    const authoritativeIdentity = characterIdentityFor(128, buyerProfile);
+    const legacyFallbackIdentity = characterIdentityFor(1, buyerProfile);
+    expect(buyer.root.userData["characterGender"]).toBe(authoritativeIdentity.gender);
+    expect(authoritativeIdentity.gender).not.toBe(legacyFallbackIdentity.gender);
+    expect(buyer.root.userData["characterAgeGroup"]).toBe(authoritativeIdentity.ageGroup);
   });
 
   it("adds garment geometry beyond the base body for adults and children", () => {
