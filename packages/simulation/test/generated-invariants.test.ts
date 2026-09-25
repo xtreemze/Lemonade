@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -5,28 +7,19 @@ import {
   createInitialState,
   createSeededRandom,
   type DayDecision,
+  type GameState,
   generateEnvironment,
   glassCount,
-  type GameState,
   moneyCents,
   operatingScaleForState,
-  predictableFixedObligations,
   type ProgressionTier,
+  predictableFixedObligations,
   seed,
   signCount,
   simulateDay,
 } from "../src/index.js";
 
-const GENERATED_SEEDS = Object.freeze([
-  1,
-  2,
-  3,
-  17,
-  42,
-  99,
-  0x12_34_56_78,
-  0xde_ad_be_ef,
-] as const);
+const GENERATED_SEEDS = Object.freeze([1, 2, 3, 17, 42, 99, 0x12_34_56_78, 0xde_ad_be_ef] as const);
 
 const MAX_GENERATED_DAYS = 64;
 
@@ -76,7 +69,8 @@ const generatedDecision = (
 const runGeneratedCorpus = (initialState: GameState, seedValue: number): GameState => {
   let state = initialState;
   const environmentRandom = createSeededRandom(seed(seedValue));
-  const decisionRandom = createSeededRandom(seed((seedValue ^ 0x9e_37_79_b9) >>> 0));
+  const decisionSeed = (seedValue + 0x9e_37_79_b9) % 0x1_00_00_00_00;
+  const decisionRandom = createSeededRandom(seed(decisionSeed));
 
   for (let index = 0; index < MAX_GENERATED_DAYS; index += 1) {
     if (Number(availableOperatingFunds(state)) < Number(predictableFixedObligations(state))) {
@@ -88,22 +82,23 @@ const runGeneratedCorpus = (initialState: GameState, seedValue: number): GameSta
     const resolution = simulateDay(state, decision, environment);
     const { entry, nextState, previousState } = resolution;
 
-    expect(Number(entry.sold)).toBeLessThanOrEqual(Number(entry.decision.glasses));
-    expect(Number(entry.revenue)).toBe(Number(entry.sold) * Number(entry.decision.price));
-    expect(Number(entry.revenue) + Number(entry.financeIncome) - Number(entry.expenses)).toBe(
+    assert.ok(Number(entry.sold) <= Number(entry.decision.glasses));
+    assert.equal(Number(entry.revenue), Number(entry.sold) * Number(entry.decision.price));
+    assert.equal(
+      Number(entry.revenue) + Number(entry.financeIncome) - Number(entry.expenses),
       Number(entry.net),
     );
 
     const openingEquity = Number(previousState.cash) - Number(previousState.loanBalance);
     const endingEquity = Number(entry.endingCash) - Number(entry.endingLoanBalance);
-    expect(endingEquity).toBe(openingEquity + Number(entry.net));
-    expect(Number(entry.cashDelta)).toBe(Number(entry.endingCash) - Number(previousState.cash));
+    assert.equal(endingEquity, openingEquity + Number(entry.net));
+    assert.equal(Number(entry.cashDelta), Number(entry.endingCash) - Number(previousState.cash));
 
-    expect(nextState.cash).toBe(entry.endingCash);
-    expect(nextState.loanBalance).toBe(entry.endingLoanBalance);
-    expect(Number(nextState.day)).toBe(Number(previousState.day) + 1);
-    expect(nextState.ledger).toHaveLength(previousState.ledger.length + 1);
-    expect(nextState.ledger.at(-1)).toBe(entry);
+    assert.equal(nextState.cash, entry.endingCash);
+    assert.equal(nextState.loanBalance, entry.endingLoanBalance);
+    assert.equal(Number(nextState.day), Number(previousState.day) + 1);
+    assert.equal(nextState.ledger.length, previousState.ledger.length + 1);
+    assert.equal(nextState.ledger.at(-1), entry);
 
     state = nextState;
   }
