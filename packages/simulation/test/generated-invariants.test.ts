@@ -76,7 +76,7 @@ const generatedDecision = (
 const runGeneratedCorpus = (initialState: GameState, seedValue: number): GameState => {
   let state = initialState;
   const environmentRandom = createSeededRandom(seed(seedValue));
-  const decisionRandom = createSeededRandom(seed(seedValue ^ 0x9e_37_79_b9));
+  const decisionRandom = createSeededRandom(seed((seedValue ^ 0x9e_37_79_b9) >>> 0));
 
   for (let index = 0; index < MAX_GENERATED_DAYS; index += 1) {
     if (Number(availableOperatingFunds(state)) < Number(predictableFixedObligations(state))) {
