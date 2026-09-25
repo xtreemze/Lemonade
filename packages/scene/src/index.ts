@@ -31,7 +31,6 @@ import {
   characterExpressionAt,
   characterPoseAtDistance,
   neutralCharacterPose,
-  sellerConfidencePose,
   sellerPresentationPose,
 } from "./character-model.js";
 import {
