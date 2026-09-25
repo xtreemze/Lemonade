@@ -24,7 +24,11 @@ import {
   writeSceneCameraZoomPreference,
 } from "./camera-zoom.js";
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
-import { characterPoseAtDistance, sellerConfidencePose } from "./character-model.js";
+import {
+  buyerInteractionPose,
+  characterPoseAtDistance,
+  sellerConfidencePose,
+} from "./character-model.js";
 import {
   applyThreeCharacterPose,
   createThreeCharacterRig,
@@ -211,19 +215,10 @@ const applyBuyerPose = (
   resetPersonPose(person);
   if (phase === "approaching") {
     applyWalkingPose(person, travelDistance, false);
-  } else if (phase === "purchasing") {
-    person.arms[1].root.rotation.x = -0.88;
-    person.arms[1].lower.rotation.x = -1.0;
-    person.arms[0].root.rotation.x = -0.12;
-    person.chest.rotation.x = 0.07;
-    person.headPivot.rotation.x = -0.04;
-  } else if (phase === "drinking") {
-    person.cup.visible = true;
-    person.arms[1].root.rotation.x = -1.05;
-    person.arms[1].lower.rotation.x = -1.42;
-    person.headPivot.rotation.x = 0.14;
-    person.headPivot.rotation.z = index % 2 === 0 ? -0.055 : 0.055;
-    person.chest.rotation.x = -0.025;
+  } else if (phase === "purchasing" || phase === "drinking") {
+    const pose = buyerInteractionPose(phase, index);
+    applyThreeCharacterPose(person, pose);
+    person.cup.visible = pose.rightHandOccupancy === "cup";
   } else if (phase === "departing") {
     applyWalkingPose(person, travelDistance, true);
   }
