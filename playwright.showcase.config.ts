@@ -23,13 +23,13 @@ export default defineConfig({
     video: "off",
     launchOptions: {
       args: [
-          "--autoplay-policy=no-user-gesture-required",
-          "--disable-background-timer-throttling",
-          "--disable-renderer-backgrounding",
-          "--disable-backgrounding-occluded-windows",
-          "--disable-frame-rate-limit",
-          "--disable-gpu-vsync",
-        ],
+        "--autoplay-policy=no-user-gesture-required",
+        "--disable-background-timer-throttling",
+        "--disable-renderer-backgrounding",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-frame-rate-limit",
+        "--disable-gpu-vsync",
+      ],
     },
   },
   projects: [
