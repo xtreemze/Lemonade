@@ -31,9 +31,7 @@ export type MissingSoundId =
   | "neighborhood:door"
   | "neighborhood:window-activity"
   | "customer:price-reject"
-  | "customer:stockout"
-  | "purchase:pour"
-  | "purchase:ice-clink";
+  | "customer:stockout";
 
 export type SoundLibraryId = AudioCue | ContinuousSoundId | MissingSoundId;
 
@@ -172,6 +170,22 @@ export const AVAILABLE_SOUND_LIBRARY: Readonly<Record<AudioCue, SoundLibraryEntr
       "procedural-tonal",
       "purchase feedback schedule",
       "Short upward sweeps synchronized to drinking.",
+    ),
+    "purchase:pour": available(
+      "purchase:pour",
+      "Lemonade pour",
+      "purchase",
+      "procedural-hybrid",
+      "purchase feedback schedule",
+      "Layered descending liquid-like sweeps synchronized immediately before serving.",
+    ),
+    "purchase:ice-clink": available(
+      "purchase:ice-clink",
+      "Ice and cup clink",
+      "purchase",
+      "procedural-hybrid",
+      "purchase feedback schedule",
+      "Sparse high transient accents synchronized to cup preparation.",
     ),
     "storm:thunder": available(
       "storm:thunder",
@@ -317,22 +331,6 @@ export const MISSING_SOUND_LIBRARY: readonly SoundLibraryEntry[] = Object.freeze
     "procedural-tonal",
     "authoritative customer stockout outcome",
     "Brief cue for a customer who wanted lemonade but could not be served.",
-  ),
-  missing(
-    "purchase:pour",
-    "Lemonade pour",
-    "purchase",
-    "procedural-noise",
-    "purchase storyboard serve/pour stage",
-    "Liquid pour texture aligned with the visible pouring animation.",
-  ),
-  missing(
-    "purchase:ice-clink",
-    "Ice and cup clink",
-    "purchase",
-    "procedural-hybrid",
-    "purchase storyboard cup preparation stage",
-    "Sparse transient accents for ice, cup, and straw handling.",
   ),
 ]);
 
