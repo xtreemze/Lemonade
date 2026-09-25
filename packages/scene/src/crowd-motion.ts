@@ -1,4 +1,4 @@
-import type { Group, Scene } from "three";
+import { Group, type Scene } from "three";
 
 import { walkingCycleAtDistance } from "./gait.js";
 import { PASSERBY_FOREGROUND_TARGET } from "./scene-capacity.js";
