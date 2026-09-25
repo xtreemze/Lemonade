@@ -52,8 +52,7 @@ export const CUE_MIX_PROFILES: Readonly<Record<AudioCue, CueMixProfile>> = Objec
 
 const MIN_DB = -120;
 
-export const dbToGain = (db: number): number =>
-  Number.isFinite(db) ? 10 ** (db / 20) : 0;
+export const dbToGain = (db: number): number => (Number.isFinite(db) ? 10 ** (db / 20) : 0);
 
 export const gainToDb = (gain: number): number =>
   gain > 0 && Number.isFinite(gain) ? 20 * Math.log10(gain) : MIN_DB;
@@ -68,9 +67,7 @@ const aWeightDb = (frequency: number): number => {
   const f2 = frequency * frequency;
   const numerator = 12_200 ** 2 * f2 * f2;
   const denominator =
-    (f2 + 20.6 ** 2) *
-    Math.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2)) *
-    (f2 + 12_200 ** 2);
+    (f2 + 20.6 ** 2) * Math.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2)) * (f2 + 12_200 ** 2);
   const ra = denominator > 0 ? numerator / denominator : 0;
   return ra > 0 ? 20 * Math.log10(ra) + 2 : MIN_DB;
 };
@@ -102,20 +99,14 @@ const toneRepresentativeFrequency = (tone: CueMixTone): number => {
  * it applies oscillator RMS, cue trim, an envelope-energy approximation and
  * A-weighting to provide a stable relative signal for regression tests.
  */
-export const analyzeCueMix = (
-  cue: AudioCue,
-  tones: readonly CueMixTone[],
-): CueMixMetrics => {
+export const analyzeCueMix = (cue: AudioCue, tones: readonly CueMixTone[]): CueMixMetrics => {
   const profile = cueMixProfile(cue);
   const trimGain = cueMixGain(cue);
   const durationSeconds = Math.max(
     0.001,
     tones.reduce((sum, tone) => sum + Math.max(0, tone.durationSeconds), 0),
   );
-  const peakGain = tones.reduce(
-    (peak, tone) => Math.max(peak, tone.gain * trimGain),
-    0,
-  );
+  const peakGain = tones.reduce((peak, tone) => Math.max(peak, tone.gain * trimGain), 0);
 
   let weightedEnergy = 0;
   let smallSpeakerPresenceGain = 0;
@@ -125,10 +116,7 @@ export const analyzeCueMix = (
     const weight = dbToGain(aWeightDb(frequency));
     const rms = tone.gain * trimGain * waveformRms(tone.waveform) * 0.58;
     weightedEnergy += rms * rms * weight * weight * duration;
-    smallSpeakerPresenceGain = Math.max(
-      smallSpeakerPresenceGain,
-      tone.gain * trimGain * weight,
-    );
+    smallSpeakerPresenceGain = Math.max(smallSpeakerPresenceGain, tone.gain * trimGain * weight);
   }
 
   const approximateRms = Math.sqrt(weightedEnergy / durationSeconds);
@@ -197,7 +185,10 @@ export const renderCueCalibrationPcm = (
       phase += (Math.PI * 2 * frequency) / safeRate;
 
       const attack = Math.min(1, elapsed / Math.min(0.012, duration / 4));
-      const release = Math.min(1, Math.max(0, (duration - elapsed) / Math.min(0.012, duration / 4)));
+      const release = Math.min(
+        1,
+        Math.max(0, (duration - elapsed) / Math.min(0.012, duration / 4)),
+      );
       const envelope = Math.max(0, Math.min(attack, release));
       samples[index] =
         (samples[index] ?? 0) +
