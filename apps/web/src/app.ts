@@ -1,8 +1,4 @@
-import {
-  type AudioCue,
-  WEATHER_FORECAST_DURATION_MS,
-  weatherCue,
-} from "@lemonade/audio/contracts";
+import { type AudioCue, WEATHER_FORECAST_DURATION_MS, weatherCue } from "@lemonade/audio/contracts";
 import {
   type EnvironmentPresentationPhase,
   environmentOccurrenceSchedule,
