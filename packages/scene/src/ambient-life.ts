@@ -9,10 +9,7 @@ import {
   SphereGeometry,
   Vector3,
 } from "three";
-import {
-  applyCharacterExpressionPose,
-  decorateCharacter,
-} from "./character-detail.js";
+import { applyCharacterExpressionPose, decorateCharacter } from "./character-detail.js";
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
 import {
   CHARACTER_ANATOMY,
@@ -592,11 +589,7 @@ const placeRig = (
     (pose.travelDistance !== null || pose.speed > 0) &&
     pose.interaction !== "gardening" &&
     pose.interaction !== "mailbox";
-  const characterPose = applyTransportWalk(
-    rig,
-    travelDistance,
-    preserveLocomotionPose,
-  );
+  const characterPose = applyTransportWalk(rig, travelDistance, preserveLocomotionPose);
   if (pose.interaction === "gardening") {
     rig.arms[0].root.rotation.x = -1.05;
     rig.arms[1].root.rotation.x = -0.72;
@@ -606,11 +599,7 @@ const placeRig = (
   }
   applyCharacterExpressionPose(
     rig.head,
-    characterExpressionAt(
-      characterPose.expression,
-      actorIdentitySalt(pose.id),
-      elapsedMs,
-    ),
+    characterExpressionAt(characterPose.expression, actorIdentitySalt(pose.id), elapsedMs),
   );
 };
 
@@ -819,11 +808,7 @@ export const createAmbientLife = (
         bicycle.rotation.y = -pose.yaw;
         applyCharacterExpressionPose(
           bicycle,
-          characterExpressionAt(
-            ambientNeutralExpression,
-            actorIdentitySalt(pose.id),
-            elapsedMs,
-          ),
+          characterExpressionAt(ambientNeutralExpression, actorIdentitySalt(pose.id), elapsedMs),
         );
       }
 
