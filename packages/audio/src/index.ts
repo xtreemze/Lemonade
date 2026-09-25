@@ -1,18 +1,19 @@
-export type WeatherKind = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
-export type WeatherAudioCue = `forecast:${WeatherKind}`;
+import {
+  type AudioCue,
+  type AudioEnvironmentFrame,
+  type ProceduralAudioEngine,
+  type WeatherAudioCue,
+} from "./contracts.js";
 
-export type AudioCue =
-  | WeatherAudioCue
-  | "day:submit"
-  | "day:profit"
-  | "day:loss"
-  | "progression:unlock"
-  | "purchase:serve"
-  | "purchase:payment"
-  | "purchase:drink"
-  | "storm:thunder"
-  | "storm:gust"
-  | "ambient:birdsong";
+export {
+  type AudioCue,
+  type AudioEnvironmentFrame,
+  type ProceduralAudioEngine,
+  WEATHER_FORECAST_DURATION_MS,
+  type WeatherAudioCue,
+  type WeatherKind,
+  weatherCue,
+} from "./contracts.js";
 
 export type WeatherToneSource = "historical-weather-excerpt";
 
@@ -34,26 +35,10 @@ export type WeatherMelodyMetadata = Readonly<{
   phraseBoundary: string;
 }>;
 
-export const WEATHER_FORECAST_DURATION_MS = 6000;
 
 export interface MusicalOutputAdapter {
   play: (cue: AudioCue, tones: readonly ScheduledTone[]) => void | Promise<void>;
   dispose: () => void | Promise<void>;
-}
-
-export type AudioEnvironmentFrame = Readonly<{
-  windIntensity: number;
-  precipitation: number;
-}>;
-
-export interface ProceduralAudioEngine {
-  enable: () => Promise<boolean>;
-  play: (cue: AudioCue) => void;
-  setEnvironmentFrame: (frame: AudioEnvironmentFrame) => void;
-  setMuted: (muted: boolean) => void;
-  suspend: () => Promise<void>;
-  resume: () => Promise<void>;
-  dispose: () => Promise<void>;
 }
 
 type MotifNote = Readonly<{
