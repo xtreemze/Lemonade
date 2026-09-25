@@ -289,3 +289,35 @@ export const blinkAmountAt = (identitySeed: number, elapsedMs: number): number =
   const progress = (phase - startMs) / durationMs;
   return clamp01(progress <= 0.5 ? progress * 2 : (1 - progress) * 2);
 };
+
+const clampSigned = (value: number): number => Math.min(1, Math.max(-1, value));
+
+const seededSignedUnit = (identitySeed: number, step: number, salt: number): number => {
+  let value =
+    ((identitySeed >>> 0) ^
+      Math.imul((step + 1) >>> 0, 0x9e_37_79_b1) ^
+      (salt >>> 0)) >>>
+    0;
+  value = Math.imul(value ^ (value >>> 16), 0x21_f0_aa_ad);
+  value = Math.imul(value ^ (value >>> 15), 0x73_5a_2d_97);
+  return (((value ^ (value >>> 15)) >>> 0) / 0xff_ff_ff_ff) * 2 - 1;
+};
+
+export const characterExpressionAt = (
+  base: CharacterExpressionPose,
+  identitySeed: number,
+  elapsedMs: number,
+): CharacterExpressionPose => {
+  const seed = Number.isFinite(identitySeed) ? Math.abs(Math.trunc(identitySeed)) >>> 0 : 0;
+  const elapsed = Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0);
+  const gazeIntervalMs = 1500 + (seed % 1100);
+  const gazeOffsetMs = (seed >>> 9) % gazeIntervalMs;
+  const gazeStep = Math.floor((elapsed + gazeOffsetMs) / gazeIntervalMs);
+
+  return expression({
+    ...base,
+    gazeX: clampSigned(base.gazeX + seededSignedUnit(seed, gazeStep, 0x47_41_5a_45) * 0.14),
+    gazeY: clampSigned(base.gazeY + seededSignedUnit(seed, gazeStep, 0x45_59_45_53) * 0.07),
+    blink: Math.max(clamp01(base.blink), blinkAmountAt(seed, elapsed)),
+  });
+};
