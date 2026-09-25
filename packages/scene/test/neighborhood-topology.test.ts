@@ -64,9 +64,7 @@ it("projects every generated street surface deterministically", () => {
   expect(first.roads).toHaveLength(network.roads.length);
   expect(first.sidewalks).toHaveLength(network.sidewalks.length);
   expect(new Set(first.roads.map((road) => road.id)).size).toBe(first.roads.length);
-  expect(new Set(first.sidewalks.map((sidewalk) => sidewalk.id)).size).toBe(
-    first.sidewalks.length,
-  );
+  expect(new Set(first.sidewalks.map((sidewalk) => sidewalk.id)).size).toBe(first.sidewalks.length);
 
   for (const road of first.roads) {
     expect(
