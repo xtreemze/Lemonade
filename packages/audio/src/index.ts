@@ -348,6 +348,22 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
   let rainSource: AudioBufferSourceNode | null = null;
   let windGain: GainNode | null = null;
   let rainGain: GainNode | null = null;
+  let masterLimiter: DynamicsCompressorNode | null = null;
+
+  const ensureMasterLimiter = (activeContext: AudioContext): DynamicsCompressorNode => {
+    if (masterLimiter !== null) {
+      return masterLimiter;
+    }
+    const limiter = activeContext.createDynamicsCompressor();
+    limiter.threshold.value = -4;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.002;
+    limiter.release.value = 0.08;
+    limiter.connect(activeContext.destination);
+    masterLimiter = limiter;
+    return limiter;
+  };
 
   const createNoiseBuffer = (activeContext: AudioContext, seedValue: number): AudioBuffer => {
     const length = Math.max(1, Math.round(activeContext.sampleRate * 2));
@@ -388,7 +404,7 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     nextWindGain.gain.value = 0.0001;
     nextWindSource.connect(windFilter);
     windFilter.connect(nextWindGain);
-    nextWindGain.connect(activeContext.destination);
+    nextWindGain.connect(ensureMasterLimiter(activeContext));
 
     const nextRainSource = activeContext.createBufferSource();
     nextRainSource.buffer = createNoiseBuffer(activeContext, 0x52_41_49_4e);
@@ -401,7 +417,7 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     nextRainGain.gain.value = 0.0001;
     nextRainSource.connect(rainFilter);
     rainFilter.connect(nextRainGain);
-    nextRainGain.connect(activeContext.destination);
+    nextRainGain.connect(ensureMasterLimiter(activeContext));
 
     windSource = nextWindSource;
     rainSource = nextRainSource;
@@ -461,7 +477,7 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
       envelope.gain.exponentialRampToValueAtTime(0.0001, end);
 
       oscillator.connect(envelope);
-      envelope.connect(activeContext.destination);
+      envelope.connect(ensureMasterLimiter(activeContext));
       oscillator.addEventListener("ended", () => {
         oscillator.disconnect();
         envelope.disconnect();
@@ -508,6 +524,8 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     rainSource = null;
     windGain = null;
     rainGain = null;
+    masterLimiter?.disconnect();
+    masterLimiter = null;
     if (context !== null && context.state !== "closed") {
       await context.close();
     }
