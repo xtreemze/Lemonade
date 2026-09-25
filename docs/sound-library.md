@@ -26,8 +26,10 @@ timers.
 | `storm:thunder` | Thunder | Weather | Procedural tonal | Thunder occurrence |
 | `storm:gust` | Wind gust | Weather | Procedural tonal | Gust occurrence |
 | `ambient:birdsong` | Birdsong | Ambient | Procedural tonal | Sunny ambient-life occurrence |
+| `weather:rain` | Rain / precipitation | Weather | Procedural noise | Environment precipitation frame |
+| `weather:wind-bed` | Continuous wind | Weather | Procedural noise | Environment wind-intensity frame |
 
-Total available: **14**.
+Total available: **16**.
 
 The four forecast cues reproduce the historical Apple II weather excerpts already documented in
 `docs/weather-audio.md`. The remaining cues are original procedural motifs/effects.
@@ -39,8 +41,6 @@ semantic state, occurrence, customer outcome, or visible action that can own the
 
 | Proposed cue | Sound | Trigger source | Recommended synthesis |
 | --- | --- | --- | --- |
-| `weather:rain` | Rain / precipitation | Environment precipitation state | Filtered noise |
-| `weather:wind-bed` | Continuous wind | Environment `windIntensity` | Filtered noise |
 | `ambient:hot-insects` | Hot-weather insects | Hot-and-dry environment | Sparse hybrid procedural |
 | `neighborhood:resident-footsteps` | Resident footsteps | Resident departure/arrival | Surface-aware noise transients |
 | `neighborhood:vehicle-engine` | Vehicle engine/pass-by | Vehicle departure/arrival | Oscillator + filtered noise |
@@ -56,16 +56,16 @@ semantic state, occurrence, customer outcome, or visible action that can own the
 | `purchase:pour` | Lemonade pour | Purchase pour stage | Liquid-like filtered noise |
 | `purchase:ice-clink` | Ice/cup/straw handling | Purchase preparation stage | Short metallic/glass transients |
 
-Total missing: **16**.
+Total missing: **14**.
 
 ## Implementation order
 
 The next audio implementation should prioritize semantic synchronization and avoid creating a second
 timing authority.
 
-1. Environment beds: rain and continuous wind, consuming the renderer-neutral environment presentation
-   contract. Thunder, gusts, and birdsong should migrate to that same occurrence timing rather than remain
-   independently scheduled.
+1. Environment synchronization: rain and continuous wind now consume the renderer-neutral environment
+   frame, and thunder, gusts, and birdsong consume its occurrence schedule. Preserve that single semantic
+   source as weather audio expands.
 2. Purchase detail: pour and ice/cup handling, synchronized to the existing purchase storyboard.
 3. Neighborhood occurrences: footsteps, vehicles, bicycles, pets, mail, gardening, sprinklers, doors, and
    window activity, driven by the deterministic neighborhood occurrence ledger.
