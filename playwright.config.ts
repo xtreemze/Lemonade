@@ -12,10 +12,7 @@ export default defineConfig({
   forbidOnly: isCi,
   retries: isCi ? 1 : 0,
   reporter: isCi
-    ? [
-        ["github"],
-        ["junit", { outputFile: "test-results/playwright-junit.xml" }],
-      ]
+    ? [["github"], ["junit", { outputFile: "test-results/playwright-junit.xml" }]]
     : "list",
   expect: {
     timeout: 7500,
