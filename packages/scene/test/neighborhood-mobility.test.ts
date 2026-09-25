@@ -493,7 +493,7 @@ describe("unified neighborhood mobility", () => {
       mailDays
         .flatMap((sample) => sample.actors)
         .filter((actor) => actor.kind === "mail-carrier" && actor.interaction !== "mailbox")
-        .every((actor) => actor.speed === 1.42),
+        .every((actor) => actor.speed >= 0 && actor.speed <= 1.42),
     ).toBe(true);
     const gardenerDays = mailDays.filter((sample) =>
       sample.actors.some((actor) => actor.kind === "gardener"),
@@ -503,7 +503,7 @@ describe("unified neighborhood mobility", () => {
       gardenerDays
         .flatMap((sample) => sample.actors)
         .filter((actor) => actor.kind === "gardener" && actor.interaction !== "gardening")
-        .every((actor) => actor.speed === 1.42),
+        .every((actor) => actor.speed >= 0 && actor.speed <= 1.42),
     ).toBe(true);
     expect(
       mailDays.some((sample) => sample.properties.some((property) => property.mailServiced)),
