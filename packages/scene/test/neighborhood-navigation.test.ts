@@ -31,9 +31,7 @@ describe("semantic neighborhood navigation", () => {
     const topology = generateNeighborhoodTopology(77);
     const graph = createNeighborhoodNavigationGraphFromTopology(topology);
     const sidewalkIds = new Set(
-      graph.nodes
-        .filter((node) => node.role === "sidewalk")
-        .map((node) => node.sidewalkSegmentId),
+      graph.nodes.filter((node) => node.role === "sidewalk").map((node) => node.sidewalkSegmentId),
     );
 
     for (const sidewalk of topology.sidewalks) {
@@ -52,7 +50,9 @@ describe("semantic neighborhood navigation", () => {
       crossingEdges.some((edge) => {
         const from = navigationNode(graph, edge.from);
         const to = navigationNode(graph, edge.to);
-        return from.streetId !== undefined && to.streetId !== undefined && from.streetId !== to.streetId;
+        return (
+          from.streetId !== undefined && to.streetId !== undefined && from.streetId !== to.streetId
+        );
       }),
     ).toBe(true);
   });
@@ -61,9 +61,7 @@ describe("semantic neighborhood navigation", () => {
     const topology = generateNeighborhoodTopology(91);
     const graph = createNeighborhoodNavigationGraphFromTopology(topology);
     const start = graph.nodes
-      .filter(
-        (node) => node.role === "sidewalk" && node.streetId === "main" && node.side === "far",
-      )
+      .filter((node) => node.role === "sidewalk" && node.streetId === "main" && node.side === "far")
       .sort((left, right) => left.x - right.x)[0];
     if (start === undefined) {
       throw new Error("expected far main-street sidewalk node");
