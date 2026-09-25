@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  generateNeighborhoodTopology,
-  type NeighborhoodPropertyGroup,
-} from "../src/neighborhood-topology.js";
+import { generateNeighborhoodTopology } from "../src/neighborhood-topology.js";
 import {
   generateResidentialLayout,
   residentialAccessLayout,
@@ -54,15 +51,12 @@ describe("renderer-neutral neighborhood topology", () => {
     const seed = 0x5e_ed_12_34;
     const layout = generateResidentialLayout(seed);
     const topology = generateNeighborhoodTopology(seed);
-    const expectedGroups: readonly [
-      NeighborhoodPropertyGroup,
-      (typeof layout.frontProperties),
-    ][] = [
+    const expectedGroups = [
       ["front", layout.frontProperties],
       ["middle", layout.middleProperties],
       ["back", layout.backProperties],
       ["outer", layout.outerProperties],
-    ];
+    ] as const;
     const allProperties = expectedGroups.flatMap(([, properties]) => properties);
 
     expect(topology.properties).toHaveLength(allProperties.length);
