@@ -268,7 +268,7 @@ export const decorateCharacterBody = (
 
   if (identity.garmentStyle === 0) {
     const stripe = addGarment(
-      root,
+      bodyRoot,
       new Mesh(new BoxGeometry(0.48, 0.1, 0.035), trim.clone()),
       [0, 1.04, 0.31],
     );
@@ -284,7 +284,7 @@ export const decorateCharacterBody = (
     }
   } else if (identity.garmentStyle === 2) {
     const lower = addGarment(
-      root,
+      bodyRoot,
       new Mesh(
         new CylinderGeometry(
           identity.gender === "female" ? 0.33 : 0.31,
@@ -299,13 +299,13 @@ export const decorateCharacterBody = (
     lower.rotation.y = 0.05;
   } else {
     const pocket = addGarment(
-      root,
+      bodyRoot,
       new Mesh(new BoxGeometry(0.36, 0.19, 0.06), trim.clone()),
       [0, 0.88, 0.31],
     );
     pocket.rotation.x = -0.03;
     const hood = addGarment(
-      root,
+      bodyRoot,
       new Mesh(new SphereGeometry(0.27, 10, 7), cloth.clone()),
       [0, 1.48, -0.09],
     );
@@ -317,7 +317,7 @@ export const decorateCharacterBody = (
   );
   if (identity.garmentStyle === 0 || identity.garmentStyle === 3) {
     const belt = addGarment(
-      root,
+      bodyRoot,
       new Mesh(new BoxGeometry(0.54, 0.055, 0.05), accent.clone()),
       [0, 0.78, 0.29],
     );
@@ -326,7 +326,7 @@ export const decorateCharacterBody = (
   if (identity.garmentStyle === 1 || identity.garmentStyle === 3) {
     for (const direction of [-1, 1] as const) {
       const cuff = addGarment(
-        root,
+        bodyRoot,
         new Mesh(new CylinderGeometry(0.09, 0.09, 0.08, 8), accent.clone()),
         [direction * 0.35, 1.08, 0],
       );
@@ -335,7 +335,7 @@ export const decorateCharacterBody = (
   }
   if (identity.garmentStyle === 2) {
     const scarf = addGarment(
-      root,
+      bodyRoot,
       new Mesh(new CylinderGeometry(0.27, 0.29, 0.08, 10), accent.clone()),
       [0, 1.39, 0],
     );
