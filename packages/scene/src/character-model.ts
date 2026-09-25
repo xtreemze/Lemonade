@@ -215,6 +215,44 @@ export const seatedCharacterPose = (kind: SeatedCharacterKind): CharacterPose =>
   });
 };
 
+export type BuyerInteractionKind = "purchasing" | "drinking";
+
+export const buyerInteractionPose = (
+  kind: BuyerInteractionKind,
+  index = 0,
+): CharacterPose => {
+  if (kind === "purchasing") {
+    return createPose({
+      chest: joint(0.07),
+      head: joint(-0.04),
+      arms: Object.freeze([
+        arm(joint(-0.12), joint(), joint()),
+        arm(joint(-0.88), joint(-1), joint()),
+      ]) as readonly [ArmPose, ArmPose],
+      expression: expression({
+        browTilt: -0.08,
+        gazeY: -0.04,
+      }),
+    });
+  }
+
+  const headRoll = Math.abs(Math.trunc(index)) % 2 === 0 ? -0.055 : 0.055;
+  return createPose({
+    chest: joint(-0.025),
+    head: joint(0.14, 0, headRoll),
+    arms: Object.freeze([
+      arm(),
+      arm(joint(-1.05), joint(-1.42), joint()),
+    ]) as readonly [ArmPose, ArmPose],
+    expression: expression({
+      valence: 0.35,
+      mouthCurve: 0.16,
+      gazeY: 0.04,
+    }),
+    rightHandOccupancy: "cup",
+  });
+};
+
 const clamp01 = (value: number): number =>
   Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
 
