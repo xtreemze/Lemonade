@@ -211,7 +211,6 @@ const applySellerExpression = (seller: SellerRig, confidence: number, elapsedMs 
 const resetPersonPose = (person: PersonRig): void => {
   resetThreeCharacterPose(person);
   person.cup.visible = false;
-  applyPersonExpression(person, neutralExpression, 0);
 };
 
 const applyWalkingPose = (
@@ -713,6 +712,7 @@ export const createLemonsvilleScene = (
       }
       customer.root.position.set(pose.x, personGroundY(customer), pose.z);
       customer.root.rotation.y = pose.heading;
+      applyPersonExpression(customer, neutralExpression, 0, index);
     });
     for (const buyer of buyers) {
       resetPersonPose(buyer);
