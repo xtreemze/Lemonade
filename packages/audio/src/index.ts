@@ -41,9 +41,15 @@ export interface MusicalOutputAdapter {
   dispose: () => void | Promise<void>;
 }
 
+export type AudioEnvironmentFrame = Readonly<{
+  windIntensity: number;
+  precipitation: number;
+}>;
+
 export interface ProceduralAudioEngine {
   enable: () => Promise<boolean>;
   play: (cue: AudioCue) => void;
+  setEnvironmentFrame: (frame: AudioEnvironmentFrame) => void;
   setMuted: (muted: boolean) => void;
   suspend: () => Promise<void>;
   resume: () => Promise<void>;
@@ -311,6 +317,81 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
   let context: AudioContext | null = null;
   let muted = false;
   let disposed = false;
+  let environmentFrame: AudioEnvironmentFrame = Object.freeze({
+    windIntensity: 0,
+    precipitation: 0,
+  });
+  let windSource: AudioBufferSourceNode | null = null;
+  let rainSource: AudioBufferSourceNode | null = null;
+  let windGain: GainNode | null = null;
+  let rainGain: GainNode | null = null;
+
+  const clamp01 = (value: number): number =>
+    Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
+
+  const createNoiseBuffer = (activeContext: AudioContext, seedValue: number): AudioBuffer => {
+    const length = Math.max(1, Math.round(activeContext.sampleRate * 2));
+    const buffer = activeContext.createBuffer(1, length, activeContext.sampleRate);
+    const channel = buffer.getChannelData(0);
+    let state = seedValue >>> 0;
+    for (let index = 0; index < channel.length; index += 1) {
+      state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0;
+      channel[index] = (state / 0xffff_ffff) * 2 - 1;
+    }
+    return buffer;
+  };
+
+  const applyEnvironmentGains = (): void => {
+    const activeContext = context;
+    if (activeContext === null || activeContext.state === "closed") {
+      return;
+    }
+    const windTarget = muted ? 0.0001 : 0.0001 + clamp01(environmentFrame.windIntensity) * 0.018;
+    const rainTarget = muted ? 0.0001 : 0.0001 + clamp01(environmentFrame.precipitation) * 0.03;
+    windGain?.gain.setTargetAtTime(windTarget, activeContext.currentTime, 0.08);
+    rainGain?.gain.setTargetAtTime(rainTarget, activeContext.currentTime, 0.05);
+  };
+
+  const ensureEnvironmentBeds = (activeContext: AudioContext): void => {
+    if (windSource !== null && rainSource !== null) {
+      applyEnvironmentGains();
+      return;
+    }
+
+    const nextWindSource = activeContext.createBufferSource();
+    nextWindSource.buffer = createNoiseBuffer(activeContext, 0x57_49_4e_44);
+    nextWindSource.loop = true;
+    const windFilter = activeContext.createBiquadFilter();
+    windFilter.type = "lowpass";
+    windFilter.frequency.value = 850;
+    windFilter.Q.value = 0.35;
+    const nextWindGain = activeContext.createGain();
+    nextWindGain.gain.value = 0.0001;
+    nextWindSource.connect(windFilter);
+    windFilter.connect(nextWindGain);
+    nextWindGain.connect(activeContext.destination);
+
+    const nextRainSource = activeContext.createBufferSource();
+    nextRainSource.buffer = createNoiseBuffer(activeContext, 0x52_41_49_4e);
+    nextRainSource.loop = true;
+    const rainFilter = activeContext.createBiquadFilter();
+    rainFilter.type = "bandpass";
+    rainFilter.frequency.value = 3200;
+    rainFilter.Q.value = 0.55;
+    const nextRainGain = activeContext.createGain();
+    nextRainGain.gain.value = 0.0001;
+    nextRainSource.connect(rainFilter);
+    rainFilter.connect(nextRainGain);
+    nextRainGain.connect(activeContext.destination);
+
+    windSource = nextWindSource;
+    rainSource = nextRainSource;
+    windGain = nextWindGain;
+    rainGain = nextRainGain;
+    nextWindSource.start();
+    nextRainSource.start();
+    applyEnvironmentGains();
+  };
 
   const enable = async (): Promise<boolean> => {
     if (disposed) {
@@ -327,6 +408,9 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
 
     if (context.state === "suspended") {
       await context.resume();
+    }
+    if (context.state === "running") {
+      ensureEnvironmentBeds(context);
     }
     return context.state === "running";
   };
@@ -367,8 +451,17 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
     }
   };
 
+  const setEnvironmentFrame = (frame: AudioEnvironmentFrame): void => {
+    environmentFrame = Object.freeze({
+      windIntensity: clamp01(frame.windIntensity),
+      precipitation: clamp01(frame.precipitation),
+    });
+    applyEnvironmentGains();
+  };
+
   const setMuted = (value: boolean): void => {
     muted = value;
+    applyEnvironmentGains();
   };
 
   const suspend = async (): Promise<void> => {
@@ -385,13 +478,31 @@ export const createProceduralAudioEngine = (): ProceduralAudioEngine => {
 
   const dispose = async (): Promise<void> => {
     disposed = true;
+    try {
+      windSource?.stop();
+      rainSource?.stop();
+    } catch {
+      // Sources may already be stopped as the context closes.
+    }
+    windSource = null;
+    rainSource = null;
+    windGain = null;
+    rainGain = null;
     if (context !== null && context.state !== "closed") {
       await context.close();
     }
     context = null;
   };
 
-  return Object.freeze({ enable, play, setMuted, suspend, resume, dispose });
+  return Object.freeze({
+    enable,
+    play,
+    setEnvironmentFrame,
+    setMuted,
+    suspend,
+    resume,
+    dispose,
+  });
 };
 
 export const weatherCue = (weather: WeatherKind): WeatherAudioCue => `forecast:${weather}`;
