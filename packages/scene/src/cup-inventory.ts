@@ -7,6 +7,7 @@ import {
   Matrix4,
   Mesh,
   MeshStandardMaterial,
+  Quaternion,
 } from "three";
 
 import { STAND_LAYOUT } from "./stand-layout.js";
@@ -23,11 +24,26 @@ const HELD_CUP_GRIP = Object.freeze({
   scale: 0.9,
 });
 
+const cupParentWorldRotation = new Quaternion();
+
+export const keepLemonadeCupUpright = (cup: Group): void => {
+  const parent = cup.parent;
+  if (parent === null) {
+    cup.rotation.set(0, 0, 0);
+    return;
+  }
+
+  parent.updateWorldMatrix(true, false);
+  parent.getWorldQuaternion(cupParentWorldRotation);
+  cup.quaternion.copy(cupParentWorldRotation.invert());
+};
+
 export const attachLemonadeCupToHand = (hand: Object3D, cup: Group): void => {
   cup.position.set(...HELD_CUP_GRIP.position);
-  cup.rotation.set(0, 0, -0.08);
+  cup.rotation.set(0, 0, 0);
   cup.scale.setScalar(HELD_CUP_GRIP.scale);
   hand.add(cup);
+  keepLemonadeCupUpright(cup);
 };
 
 const finiteStock = (value: number): number =>
