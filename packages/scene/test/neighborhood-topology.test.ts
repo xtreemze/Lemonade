@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { generateNeighborhoodTopology } from "../src/neighborhood-topology.js";
-import {
-  generateResidentialLayout,
-  residentialAccessLayout,
-} from "../src/residential-layout.js";
+import { generateResidentialLayout, residentialAccessLayout } from "../src/residential-layout.js";
 import { generateStreetNetwork } from "../src/street-layout.js";
 import { WORLD_SCALE } from "../src/world-scale.js";
 
@@ -18,9 +15,7 @@ describe("renderer-neutral neighborhood topology", () => {
     expect(repeated).toEqual(first);
     expect(first.roads).toHaveLength(network.roads.length);
     expect(first.sidewalks).toHaveLength(network.sidewalks.length);
-    expect(new Set(first.roads.map((road) => road.id)).size).toBe(
-      first.roads.length,
-    );
+    expect(new Set(first.roads.map((road) => road.id)).size).toBe(first.roads.length);
     expect(new Set(first.sidewalks.map((sidewalk) => sidewalk.id)).size).toBe(
       first.sidewalks.length,
     );
@@ -28,8 +23,7 @@ describe("renderer-neutral neighborhood topology", () => {
     for (const road of first.roads) {
       const source = network.roads.find(
         (candidate) =>
-          candidate.streetId === road.streetId &&
-          candidate.segmentIndex === road.segmentIndex,
+          candidate.streetId === road.streetId && candidate.segmentIndex === road.segmentIndex,
       );
       expect(source).toBeDefined();
       expect(road.width).toBeCloseTo(WORLD_SCALE.street.roadWidth);
@@ -63,9 +57,7 @@ describe("renderer-neutral neighborhood topology", () => {
 
     for (const [group, properties] of expectedGroups) {
       for (const property of properties) {
-        const projected = topology.properties.find(
-          (candidate) => candidate.role === property.role,
-        );
+        const projected = topology.properties.find((candidate) => candidate.role === property.role);
         expect(projected).toBeDefined();
         if (projected === undefined) {
           continue;
@@ -86,9 +78,8 @@ describe("renderer-neutral neighborhood topology", () => {
           x: access.entryX,
           z: access.entryZ,
         });
-        expect(projected.path.sidewalkSegmentId.startsWith("sidewalk:")).toBe(
-          true,
-        );
+        expect(projected.path.sidewalkSegmentId.startsWith("sidewalk:")).toBe(true);
+        expect(projected.path.sidewalkSegmentGap).toBeGreaterThanOrEqual(0);
 
         if (property.drivewayX === null) {
           expect(projected.driveway).toBeNull();
@@ -104,21 +95,16 @@ describe("renderer-neutral neighborhood topology", () => {
           x: access.roadEdgeX,
           z: access.roadEdgeZ,
         });
-        expect(projected.driveway?.roadSegmentId.startsWith("road:")).toBe(
-          true,
-        );
-        expect(projected.driveway?.width).toBeCloseTo(
-          WORLD_SCALE.street.drivewayWidth,
-        );
+        expect(projected.driveway?.roadSegmentId.startsWith("road:")).toBe(true);
+        expect(projected.driveway?.roadSegmentGap).toBeGreaterThanOrEqual(0);
+        expect(projected.driveway?.width).toBeCloseTo(WORLD_SCALE.street.drivewayWidth);
       }
     }
   });
 
   it("keeps the featured stand home in the same topology contract as other residences", () => {
     const topology = generateNeighborhoodTopology(1234);
-    const standHome = topology.properties.find(
-      (property) => property.role === "stand-home",
-    );
+    const standHome = topology.properties.find((property) => property.role === "stand-home");
 
     expect(standHome).toBeDefined();
     expect(standHome?.group).toBe("front");
