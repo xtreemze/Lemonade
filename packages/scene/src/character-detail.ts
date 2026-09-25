@@ -523,6 +523,16 @@ export type DecoratableCharacter = Readonly<{
   profile: CharacterProfile;
 }>;
 
+const characterProfileIndexFor = (
+  person: DecoratableCharacter,
+  fallbackIndex: number,
+): number => {
+  const profileIndex: unknown = person.root.userData["characterProfileIndex"];
+  return typeof profileIndex === "number" && Number.isFinite(profileIndex)
+    ? Math.abs(Math.trunc(profileIndex))
+    : fallbackIndex;
+};
+
 export const decorateSceneCharacters = (
   customers: readonly DecoratableCharacter[],
   buyers: readonly DecoratableCharacter[],
@@ -531,11 +541,27 @@ export const decorateSceneCharacters = (
   mouth: readonly [Group, Group],
 ): void => {
   customers.forEach((person, index) => {
-    decorateCharacter(person.root, person.head, person.profile, index);
+    decorateCharacter(
+      person.root,
+      person.head,
+      person.profile,
+      characterProfileIndexFor(person, index),
+    );
   });
   buyers.forEach((person, index) => {
-    decorateCharacter(person.root, person.head, person.profile, index + customers.length);
+    decorateCharacter(
+      person.root,
+      person.head,
+      person.profile,
+      characterProfileIndexFor(person, index + customers.length),
+    );
   });
-  decorateCharacter(seller.root, seller.head, seller.profile, 10_001, false);
+  decorateCharacter(
+    seller.root,
+    seller.head,
+    seller.profile,
+    characterProfileIndexFor(seller, 10_001),
+    false,
+  );
   decorateSellerExpression(eyebrows, mouth);
 };
