@@ -309,12 +309,23 @@ export const characterExpressionAt = (
   const elapsed = Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0);
   const gazeIntervalMs = 1500 + (seed % 1100);
   const gazeOffsetMs = (seed >>> 9) % gazeIntervalMs;
-  const gazeStep = Math.floor((elapsed + gazeOffsetMs) / gazeIntervalMs);
+  const gazeClock = elapsed + gazeOffsetMs;
+  const gazeStep = Math.floor(gazeClock / gazeIntervalMs);
+  const gazeProgress = (gazeClock % gazeIntervalMs) / gazeIntervalMs;
+  const transitionProgress = clamp01((gazeProgress - 0.78) / 0.22);
+  const easedTransition =
+    transitionProgress * transitionProgress * (3 - 2 * transitionProgress);
+  const gazeValue = (salt: number): number =>
+    lerp(
+      seededSignedUnit(seed, gazeStep, salt),
+      seededSignedUnit(seed, gazeStep + 1, salt),
+      easedTransition,
+    );
 
   return expression({
     ...base,
-    gazeX: clampSigned(base.gazeX + seededSignedUnit(seed, gazeStep, 0x47_41_5a_45) * 0.14),
-    gazeY: clampSigned(base.gazeY + seededSignedUnit(seed, gazeStep, 0x45_59_45_53) * 0.07),
+    gazeX: clampSigned(base.gazeX + gazeValue(0x47_41_5a_45) * 0.14),
+    gazeY: clampSigned(base.gazeY + gazeValue(0x45_59_45_53) * 0.07),
     blink: Math.max(clamp01(base.blink), blinkAmountAt(seed, elapsed)),
   });
 };
