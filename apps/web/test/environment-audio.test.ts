@@ -31,25 +31,14 @@ describe("environment audio controller", () => {
 
     controller.start("thunderstorm", "simulation", 1000);
     expect(frames.at(-1)).toEqual({
-      windIntensity: environmentPresentationFrameAt(
-        "thunderstorm",
-        "simulation",
-        0,
-        1000,
-        false,
-      ).windIntensity,
+      windIntensity: environmentPresentationFrameAt("thunderstorm", "simulation", 0, 1000, false)
+        .windIntensity,
       precipitation: 1,
     });
 
     now = 500;
     callbacks.shift()?.(now);
-    const expected = environmentPresentationFrameAt(
-      "thunderstorm",
-      "simulation",
-      500,
-      1000,
-      false,
-    );
+    const expected = environmentPresentationFrameAt("thunderstorm", "simulation", 500, 1000, false);
     expect(frames.at(-1)).toEqual({
       windIntensity: expected.windIntensity,
       precipitation: expected.precipitation,
