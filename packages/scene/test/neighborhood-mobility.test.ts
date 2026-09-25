@@ -365,7 +365,12 @@ describe("unified neighborhood mobility", () => {
     for (let index = 1; index < gardener.length; index += 1) {
       const previous = gardener[index - 1];
       const current = gardener[index];
-      if (previous === undefined || current === undefined || !previous.visible || !current.visible) {
+      if (
+        previous === undefined ||
+        current === undefined ||
+        !previous.visible ||
+        !current.visible
+      ) {
         continue;
       }
       const displacement = Math.hypot(current.x - previous.x, current.z - previous.z);
