@@ -88,6 +88,24 @@ it("links each generated sidewalk to its parent road", () => {
   }
 });
 
+it("projects deterministic junctions between distinct generated streets", () => {
+  const topology = generateNeighborhoodTopology(TOPOLOGY_SEED);
+  const roadIds = new Set(topology.roads.map((road) => road.id));
+
+  expect(topology.junctions.length).toBeGreaterThan(0);
+  expect(new Set(topology.junctions.map((junction) => junction.id)).size).toBe(
+    topology.junctions.length,
+  );
+
+  for (const junction of topology.junctions) {
+    expect(junction.streetIds[0]).not.toBe(junction.streetIds[1]);
+    expect(roadIds.has(junction.roadSegmentIds[0])).toBe(true);
+    expect(roadIds.has(junction.roadSegmentIds[1])).toBe(true);
+    expect(Number.isFinite(junction.point.x)).toBe(true);
+    expect(Number.isFinite(junction.point.z)).toBe(true);
+  }
+});
+
 it("preserves semantic residential access anchors across all property groups", () => {
   const layout = generateResidentialLayout(PROPERTY_SEED);
   const topology = generateNeighborhoodTopology(PROPERTY_SEED);
