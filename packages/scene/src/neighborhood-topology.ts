@@ -151,10 +151,7 @@ const distanceSquaredToStripCenterline = (
   return dx * dx + dz * dz;
 };
 
-const nearestStrip = (
-  strips: readonly StreetStripSpec[],
-  target: ResidentialPoint,
-): StripMatch => {
+const nearestStrip = (strips: readonly StreetStripSpec[], target: ResidentialPoint): StripMatch => {
   const first = strips[0];
   if (first === undefined) {
     throw new Error("neighborhood topology requires generated street strips");
