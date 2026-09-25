@@ -23,38 +23,8 @@ timers.
 | `purchase:serve` | Serve lemonade | Purchase | Procedural tonal | Purchase serve beat |
 | `purchase:payment` | Payment | Purchase | Procedural tonal | Purchase payment beat |
 | `purchase:drink` | Drink | Purchase | Procedural tonal | Purchase drinking beat |
-| `storm:thunder` | Thunder | Weather | Procedural tonal | Thunder occurrence |
-| `storm:gust` | Wind gust | Weather | Procedural tonal | Gust occurrence |
-| `ambient:birdsong` | Birdsong | Ambient | Procedural tonal | Sunny ambient-life occurrence |
-| `weather:rain` | Rain / precipitation | Weather | Procedural noise | Environment precipitation frame |
-| `weather:wind-bed` | Continuous wind | Weather | Procedural noise | Environment wind-intensity frame |
-
-Total available: **16**.
-
-The four forecast cues reproduce the historical Apple II weather excerpts already documented in
-`docs/weather-audio.md`. The remaining cues are original procedural motifs/effects.
-
-## Missing sounds
-
-These are not currently playable. They are cataloged because the product already has a corresponding
-semantic state, occurrence, customer outcome, or visible action that can own the trigger.
-
-| Proposed cue | Sound | Trigger source | Recommended synthesis |
-| --- | --- | --- | --- |
-| `ambient:hot-insects` | Hot-weather insects | Hot-and-dry environment | Sparse hybrid procedural |
-| `neighborhood:resident-footsteps` | Resident footsteps | Resident departure/arrival | Surface-aware noise transients |
-| `neighborhood:vehicle-engine` | Vehicle engine/pass-by | Vehicle departure/arrival | Oscillator + filtered noise |
-| `neighborhood:bicycle-passby` | Bicycle pass-by | Bicycle pass-through | Mechanical hybrid procedural |
-| `neighborhood:pet-walk` | Pet movement | Pet-walk occurrence | Sparse paw/collar transients |
-| `neighborhood:mailbox` | Mail delivery | Mail-delivery occurrence | Flap/paper hybrid procedural |
-| `neighborhood:gardening` | Gardening | Gardening occurrence | Sparse clipping/rustle |
-| `neighborhood:sprinkler` | Sprinkler | Sprinkler occurrence | Rhythmic filtered noise |
-| `neighborhood:door` | House door | Resident/pet entry/exit | Creak/latch hybrid procedural |
-| `neighborhood:window-activity` | Household window activity | Window-activity occurrence | Quiet, distance-limited texture |
-| `customer:price-reject` | Price rejection | Authoritative customer outcome | Brief non-verbal tonal cue |
-| `customer:stockout` | Stockout reaction | Authoritative customer outcome | Brief non-verbal tonal cue |
-| `purchase:pour` | Lemonade pour | Purchase pour stage | Liquid-like filtered noise |
-| `purchase:ice-clink` | Ice/cup/straw handling | Purchase preparation stage | Short metallic/glass transients |
+| `purchase:pour` | Lemonade pour | Purchase | Procedural hybrid | Purchase preparation beat |
+| `purchase:ice-clink` | Ice and cup clink | Purchase | Procedural hybrid | Purchase preparation beat |
 
 Total missing: **14**.
 
@@ -69,8 +39,8 @@ timing authority.
 2. Purchase detail: pour and ice/cup handling, synchronized to the existing purchase storyboard.
 3. Neighborhood occurrences: footsteps, vehicles, bicycles, pets, mail, gardening, sprinklers, doors, and
    window activity, driven by the deterministic neighborhood occurrence ledger.
-4. Customer outcomes: price rejection and stockout cues, driven only by authoritative customer outcomes.
-5. Hot-weather ambience: add sparse insects only after environment voice limits and distance attenuation
+2. Customer outcomes: price rejection and stockout cues, driven only by authoritative customer outcomes.
+3. Hot-weather ambience: add sparse insects only after environment voice limits and distance attenuation
    are in place.
 
 ## Runtime constraints
