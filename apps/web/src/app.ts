@@ -5,6 +5,10 @@ import {
   weatherCue,
 } from "@lemonade/audio";
 import {
+  environmentOccurrenceSchedule,
+  type EnvironmentPresentationPhase,
+} from "@lemonade/scene/environment-presentation";
+import {
   availableOperatingFunds,
   createInitialState,
   createSeededRandom,
@@ -36,6 +40,10 @@ import {
   RunImportFileEvent,
 } from "./components.js";
 import { isGizmoEnabled } from "./dev-gizmo-flag.js";
+import {
+  createEnvironmentAudioController,
+  type EnvironmentAudioController,
+} from "./environment-audio.js";
 import type { ScenePreset } from "./dev-scene-launcher.js";
 import { isSceneLauncherEnabled } from "./dev-scene-launcher-flag.js";
 import type { HapticCue, HapticEngine } from "./haptics.js";
@@ -323,6 +331,9 @@ export class LemonadeApp {
   readonly #runSeed: Seed;
   readonly #random: RandomSource;
   readonly #audio = createProceduralAudioEngine();
+  readonly #environmentAudio: EnvironmentAudioController = createEnvironmentAudioController(
+    this.#audio,
+  );
   readonly #haptics: Promise<HapticEngine> = import("./haptics.js").then(({ createHapticEngine }) =>
     createHapticEngine(),
   );
@@ -442,10 +453,9 @@ export class LemonadeApp {
     }
 
     if (this.#phase.kind === "deciding") {
+      this.#startEnvironmentAudio("forecast", WEATHER_FORECAST_DURATION_MS);
       this.#playWeatherForecastCue(this.#environment.weather.kind);
-      if (this.#environment.weather.kind === "thunderstorm") {
-        this.#scheduleStormFeedback(WEATHER_FORECAST_DURATION_MS);
-      }
+      this.#scheduleEnvironmentOccurrences("forecast", WEATHER_FORECAST_DURATION_MS);
       this.#scheduleLifecycleTransition(
         { type: "forecast-completed" },
         WEATHER_FORECAST_DURATION_MS,
@@ -476,6 +486,7 @@ export class LemonadeApp {
     this.#presentationDeadline.cancel();
     this.#clearFeedbackTimers();
     void this.#haptics.then((haptics) => haptics.dispose());
+    this.#environmentAudio.dispose();
     this.#scene.dispose();
     void this.#audio.dispose();
   }
@@ -485,9 +496,11 @@ export class LemonadeApp {
       this.#presentationDeadline.pause();
       this.#clearFeedbackTimers();
       void this.#haptics.then((haptics) => haptics.cancel());
+      this.#environmentAudio.pause();
       void this.#audio.suspend();
     } else {
       this.#presentationDeadline.resume();
+      this.#environmentAudio.resume();
       void this.#audio.resume();
     }
   };
@@ -559,13 +572,9 @@ export class LemonadeApp {
         this.#audio.play("day:submit");
       }
     });
+    this.#startEnvironmentAudio("simulation", SIMULATION_PRESENTATION_MS);
     this.#schedulePurchaseFeedback(resolution);
-    if (this.#environment.weather.kind === "sunny") {
-      this.#scheduleSunnyBirdsong(ACTIVE_SIMULATION_PRESENTATION_MS);
-    }
-    if (this.#environment.weather.kind === "thunderstorm") {
-      this.#scheduleStormFeedback(SIMULATION_PRESENTATION_MS);
-    }
+    this.#scheduleEnvironmentOccurrences("simulation", SIMULATION_PRESENTATION_MS);
 
     this.#scheduleLifecycleTransition(
       { type: "simulation-completed" },
@@ -620,10 +629,9 @@ export class LemonadeApp {
     this.#render();
     this.#queueSave("Next day saved locally.");
 
+    this.#startEnvironmentAudio("forecast", WEATHER_FORECAST_DURATION_MS);
     this.#playWeatherForecastCue(nextEnvironment.weather.kind);
-    if (nextEnvironment.weather.kind === "thunderstorm") {
-      this.#scheduleStormFeedback(WEATHER_FORECAST_DURATION_MS);
-    }
+    this.#scheduleEnvironmentOccurrences("forecast", WEATHER_FORECAST_DURATION_MS);
 
     this.#scheduleLifecycleTransition({ type: "forecast-completed" }, WEATHER_FORECAST_DURATION_MS);
   };
@@ -792,28 +800,35 @@ export class LemonadeApp {
     this.#feedbackTimers.push(timer);
   }
 
-  #scheduleSunnyBirdsong(durationMs: number): void {
-    const duration = Math.max(1, durationMs);
-    for (const progress of [0.14, 0.43, 0.72] as const) {
-      this.#scheduleAudio(duration * progress, "ambient:birdsong");
-    }
+  #startEnvironmentAudio(phase: EnvironmentPresentationPhase, durationMs: number): void {
+    void this.#audio.enable().then((enabled) => {
+      if (!enabled || this.#disposed) {
+        return;
+      }
+      this.#environmentAudio.start(this.#environment.weather.kind, phase, durationMs);
+    });
   }
 
-  #scheduleStormFeedback(durationMs: number): void {
-    const duration = Math.max(700, durationMs);
-    for (const progress of [0.2, 0.57, 0.78] as const) {
-      this.#scheduleFeedback(
-        Math.min(duration - 90, duration * progress + 110),
-        "storm:thunder",
-        "storm:thunder",
-      );
-    }
-    for (const progress of [0.34, 0.72] as const) {
-      this.#scheduleFeedback(
-        Math.min(duration - 90, duration * progress),
-        "storm:gust",
-        "storm:gust",
-      );
+  #scheduleEnvironmentOccurrences(
+    phase: EnvironmentPresentationPhase,
+    durationMs: number,
+  ): void {
+    for (const occurrence of environmentOccurrenceSchedule(
+      this.#environment.weather.kind,
+      phase,
+      durationMs,
+    )) {
+      switch (occurrence.kind) {
+        case "thunder":
+          this.#scheduleFeedback(occurrence.atMs, "storm:thunder", "storm:thunder");
+          break;
+        case "gust":
+          this.#scheduleFeedback(occurrence.atMs, "storm:gust", "storm:gust");
+          break;
+        case "birdsong":
+          this.#scheduleAudio(occurrence.atMs, "ambient:birdsong");
+          break;
+      }
     }
   }
 
@@ -856,6 +871,12 @@ export class LemonadeApp {
         return;
       }
       this.#lifecycle = transition.state;
+      if (
+        this.#lifecycle.presentation !== "forecast" &&
+        this.#lifecycle.presentation !== "simulation"
+      ) {
+        this.#environmentAudio.stop();
+      }
       this.#render();
       afterTransition?.();
     });
