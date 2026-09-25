@@ -1,10 +1,11 @@
-import { Group, Matrix4, Vector3 } from "three";
+import { Group, Matrix4, Quaternion, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
   attachLemonadeCupToHand,
   createCupInventory,
   decorateLemonadeCup,
+  keepLemonadeCupUpright,
   MAX_VISIBLE_PREPARED_CUPS,
   visibleCupCountForStock,
 } from "../src/cup-inventory.js";
@@ -36,9 +37,18 @@ describe("original-art 3D lemonade cups", () => {
     arm.rotation.z = 0.35;
     arm.updateMatrixWorld(true);
 
+    keepLemonadeCupUpright(cup);
+    arm.updateMatrixWorld(true);
+
     const handWorld = hand.getWorldPosition(new Vector3());
     const cupWorld = cup.getWorldPosition(new Vector3());
     expect(handWorld.distanceTo(cupWorld)).toBeCloseTo(cup.position.length());
+
+    const cupWorldRotation = cup.getWorldQuaternion(new Quaternion());
+    const cupUp = new Vector3(0, 1, 0).applyQuaternion(cupWorldRotation);
+    expect(cupUp.x).toBeCloseTo(0, 6);
+    expect(cupUp.y).toBeCloseTo(1, 6);
+    expect(cupUp.z).toBeCloseTo(0, 6);
   });
 
   it("keeps prepared cups visibly stacked on the vendor's right side", () => {
