@@ -239,10 +239,10 @@ export const serviceInteractionPose = (
   return createPose({
     chest: joint(0.035),
     head: joint(-0.025),
-    arms: Object.freeze([
-      arm(),
-      arm(joint(-1.15), joint(-0.38), joint()),
-    ]) as readonly [ArmPose, ArmPose],
+    arms: Object.freeze([arm(), arm(joint(-1.15), joint(-0.38), joint())]) as readonly [
+      ArmPose,
+      ArmPose,
+    ],
     expression: expression({
       browTilt: -0.04,
       gazeY: -0.05,
@@ -353,9 +353,7 @@ export const sellerPresentationPose = (
       arm(
         withJointX(
           base.arms[1].shoulder,
-          serving
-            ? -1.2
-            : base.arms[1].shoulder.rotation.x + Math.sin(seconds * 1.7 + 0.8) * 0.035,
+          serving ? -1.2 : base.arms[1].shoulder.rotation.x + Math.sin(seconds * 1.7 + 0.8) * 0.035,
         ),
         base.arms[1].elbow,
         base.arms[1].wrist,
