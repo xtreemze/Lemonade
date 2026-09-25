@@ -9,7 +9,7 @@ import {
   soundLibraryEntry,
 } from "../src/index.js";
 
-const AVAILABLE_IDS: readonly AudioCue[] = [
+const PLAYABLE_CUE_IDS: readonly AudioCue[] = [
   "forecast:sunny",
   "forecast:cloudy",
   "forecast:hot-and-dry",
@@ -26,10 +26,15 @@ const AVAILABLE_IDS: readonly AudioCue[] = [
   "ambient:birdsong",
 ];
 
+const CONTINUOUS_IDS = ["weather:rain", "weather:wind-bed"] as const;
+
 describe("sound library", () => {
   it("catalogs every playable AudioCue as available", () => {
-    expect(availableSounds.map((entry) => entry.id)).toEqual(AVAILABLE_IDS);
-    for (const cue of AVAILABLE_IDS) {
+    expect(availableSounds.map((entry) => entry.id)).toEqual([
+      ...PLAYABLE_CUE_IDS,
+      ...CONTINUOUS_IDS,
+    ]);
+    for (const cue of PLAYABLE_CUE_IDS) {
       expect(soundLibraryEntry(cue)?.status).toBe("available");
       expect(compileCue(cue).length).toBeGreaterThan(0);
     }
@@ -38,7 +43,8 @@ describe("sound library", () => {
   it("keeps missing coverage targets explicit and non-playable", () => {
     expect(missingSounds.length).toBeGreaterThan(0);
     expect(missingSounds.every((entry) => entry.status === "missing")).toBe(true);
-    expect(missingSounds.some((entry) => entry.id === "weather:rain")).toBe(true);
+    expect(soundLibraryEntry("weather:rain")?.status).toBe("available");
+    expect(soundLibraryEntry("weather:wind-bed")?.status).toBe("available");
     expect(missingSounds.some((entry) => entry.id === "neighborhood:sprinkler")).toBe(true);
     expect(missingSounds.some((entry) => entry.id === "purchase:pour")).toBe(true);
   });
