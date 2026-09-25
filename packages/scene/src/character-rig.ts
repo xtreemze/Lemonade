@@ -17,6 +17,7 @@ export type ThreeCharacterRig = Readonly<{
   chest: Group;
   neck: Group;
   headPivot: Group;
+  bodyDecorationRoot: Group;
   torso: Mesh;
   head: Mesh;
   arms: readonly [LimbRig, LimbRig];
@@ -29,6 +30,7 @@ const CHEST_Y = CHARACTER_ANATOMY.torso.centerY - PELVIS_Y;
 const NECK_Y = CHARACTER_ANATOMY.torso.neckY - CHARACTER_ANATOMY.torso.centerY;
 const HEAD_Y = CHARACTER_ANATOMY.head.centerY - CHARACTER_ANATOMY.torso.neckY;
 const SHOULDER_Y = CHARACTER_ANATOMY.torso.shoulderY - CHARACTER_ANATOMY.torso.centerY;
+const BODY_DECORATION_Y = -CHARACTER_ANATOMY.torso.centerY;
 
 export const characterRotationYForRouteYaw = (routeYaw: number): number =>
   Math.PI / 2 - (Number.isFinite(routeYaw) ? routeYaw : 0);
@@ -91,16 +93,19 @@ export const createThreeCharacterRig = (
   const chest = new Group();
   const neck = new Group();
   const headPivot = new Group();
+  const bodyDecorationRoot = new Group();
+  bodyDecorationRoot.userData["characterBodyDecorationAnchor"] = true;
 
   pelvis.position.y = PELVIS_Y;
   chest.position.y = CHEST_Y;
   neck.position.y = NECK_Y;
   headPivot.position.y = HEAD_Y;
+  bodyDecorationRoot.position.y = BODY_DECORATION_Y;
 
   root.add(poseRoot);
   poseRoot.add(pelvis);
   pelvis.add(chest);
-  chest.add(neck);
+  chest.add(neck, bodyDecorationRoot);
   neck.add(headPivot);
 
   const torso = new Mesh(geometries.torso, material(profile.clothingColor));
@@ -165,6 +170,7 @@ export const createThreeCharacterRig = (
     chest,
     neck,
     headPivot,
+    bodyDecorationRoot,
     torso,
     head,
     arms: [leftArm, rightArm] as const,
