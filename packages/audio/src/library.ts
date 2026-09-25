@@ -17,9 +17,9 @@ export type SoundImplementation =
   | "procedural-noise"
   | "procedural-hybrid";
 
+export type ContinuousSoundId = "weather:rain" | "weather:wind-bed";
+
 export type MissingSoundId =
-  | "weather:rain"
-  | "weather:wind-bed"
   | "ambient:hot-insects"
   | "neighborhood:resident-footsteps"
   | "neighborhood:vehicle-engine"
@@ -35,7 +35,7 @@ export type MissingSoundId =
   | "purchase:pour"
   | "purchase:ice-clink";
 
-export type SoundLibraryId = AudioCue | MissingSoundId;
+export type SoundLibraryId = AudioCue | ContinuousSoundId | MissingSoundId;
 
 export type SoundLibraryEntry = Readonly<{
   id: SoundLibraryId;
@@ -48,7 +48,7 @@ export type SoundLibraryEntry = Readonly<{
 }>;
 
 const available = (
-  id: AudioCue,
+  id: AudioCue | ContinuousSoundId,
   label: string,
   category: SoundLibraryCategory,
   implementation: SoundImplementation,
@@ -198,23 +198,28 @@ export const AVAILABLE_SOUND_LIBRARY: Readonly<Record<AudioCue, SoundLibraryEntr
   ),
 });
 
-export const MISSING_SOUND_LIBRARY: readonly SoundLibraryEntry[] = Object.freeze([
-  missing(
+export const AVAILABLE_CONTINUOUS_SOUND_LIBRARY: Readonly<
+  Record<ContinuousSoundId, SoundLibraryEntry>
+> = Object.freeze({
+  "weather:rain": available(
     "weather:rain",
     "Rain / precipitation",
     "weather",
     "procedural-noise",
     "environment precipitation state",
-    "Continuous rain texture scaled by precipitation intensity.",
+    "Continuous deterministic filtered-noise rain texture scaled by precipitation intensity.",
   ),
-  missing(
+  "weather:wind-bed": available(
     "weather:wind-bed",
     "Continuous wind",
     "weather",
     "procedural-noise",
     "environment windIntensity",
-    "Continuous filtered-noise wind bed; discrete storm:gust remains layered above it.",
+    "Continuous deterministic filtered-noise wind bed; discrete storm:gust remains layered above it.",
   ),
+});
+
+export const MISSING_SOUND_LIBRARY: readonly SoundLibraryEntry[] = Object.freeze([
   missing(
     "ambient:hot-insects",
     "Hot-weather insects",
@@ -329,9 +334,10 @@ export const MISSING_SOUND_LIBRARY: readonly SoundLibraryEntry[] = Object.freeze
   ),
 ]);
 
-export const availableSounds: readonly SoundLibraryEntry[] = Object.freeze(
-  Object.values(AVAILABLE_SOUND_LIBRARY),
-);
+export const availableSounds: readonly SoundLibraryEntry[] = Object.freeze([
+  ...Object.values(AVAILABLE_SOUND_LIBRARY),
+  ...Object.values(AVAILABLE_CONTINUOUS_SOUND_LIBRARY),
+]);
 
 export const missingSounds: readonly SoundLibraryEntry[] = MISSING_SOUND_LIBRARY;
 
