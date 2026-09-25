@@ -70,12 +70,19 @@ const probeFrameStats = (filePath) => {
     throw new Error(`ffprobe frame timing failed for ${filePath}: ${result.stderr}`);
   }
 
-  const timestamps = result.stdout
-    .split(/\r?\n/u)
-    .map((value) => Number(value.trim()))
-    .filter((value) => Number.isFinite(value));
+  const rawRows = result.stdout
+    .split(/\\r?\\n/u)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  const timestamps = rawRows.map(Number).filter((value) => Number.isFinite(value));
   if (timestamps.length < 2) {
-    throw new Error(`Unable to measure captured frame cadence for ${filePath}.`);
+    throw new Error(
+      `Unable to measure captured frame cadence for ${filePath}; parsed ${String(
+        timestamps.length,
+      )} usable timestamps from ${String(rawRows.length)} FFprobe rows. Sample: ${rawRows
+        .slice(0, 8)
+        .join(" | ")}`,
+    );
   }
 
   const firstTimestamp = timestamps[0];
@@ -84,9 +91,18 @@ const probeFrameStats = (filePath) => {
     throw new Error(`Unable to measure captured frame timestamps for ${filePath}.`);
   }
 
+  const minTimestamp = Math.min(...timestamps);
+  const maxTimestamp = Math.max(...timestamps);
   const duration = lastTimestamp - firstTimestamp;
   if (!Number.isFinite(duration) || duration <= 0) {
-    throw new Error(`Invalid captured frame duration for ${filePath}.`);
+    const sampleRows = [...rawRows.slice(0, 4), ...rawRows.slice(-4)].join(" | ");
+    throw new Error(
+      `Invalid captured frame duration for ${filePath}: frames=${String(
+        timestamps.length,
+      )}, first=${String(firstTimestamp)}, last=${String(lastTimestamp)}, min=${String(
+        minTimestamp,
+      )}, max=${String(maxTimestamp)}, rows=${sampleRows}`,
+    );
   }
 
   const frameIntervals = timestamps.length - 1;
