@@ -290,6 +290,11 @@ const clamp01 = (value: number): number =>
 
 const lerp = (low: number, high: number, progress: number): number => low + (high - low) * progress;
 
+export type SellerPresentationOptions = Readonly<{
+  animated?: boolean;
+  serving?: boolean;
+}>;
+
 export const sellerConfidencePose = (confidence: number): CharacterPose => {
   const progress = clamp01(confidence / 5);
   const valence = progress * 2 - 1;
@@ -297,7 +302,7 @@ export const sellerConfidencePose = (confidence: number): CharacterPose => {
 
   return createPose({
     chest: joint(lerp(0.17, -0.025, progress), 0, 0, lerp(-0.035, 0.055, progress)),
-    head: joint(lerp(0.2, -0.06, progress)),
+    head: joint(lerp(0.2, -0.06, progress), 0, 0, -0.05),
     arms: Object.freeze([
       arm(joint(lerp(0.28, -0.18, progress), 0, -armSpread), joint(), joint()),
       arm(joint(lerp(0.22, -0.14, progress), 0, armSpread), joint(), joint()),
@@ -308,6 +313,54 @@ export const sellerConfidencePose = (confidence: number): CharacterPose => {
       mouthCurve: valence * 0.46,
       gazeY: lerp(-0.04, 0.02, progress),
     }),
+  });
+};
+
+export const sellerPresentationPose = (
+  confidence: number,
+  elapsedMs: number,
+  options: SellerPresentationOptions = {},
+): CharacterPose => {
+  const base = sellerConfidencePose(confidence);
+  if (!(options.animated ?? true)) {
+    return base;
+  }
+
+  const elapsed = Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0);
+  const seconds = elapsed / 1000;
+  const breathing = Math.sin(seconds * 2.1) * 0.025;
+  const serving = options.serving ?? false;
+  const withJointX = (source: JointPose, x: number, lift = source.lift): JointPose =>
+    joint(x, source.rotation.y, source.rotation.z, lift);
+
+  return createPose({
+    ...base,
+    chest: withJointX(
+      base.chest,
+      base.chest.rotation.x - (serving ? 0.06 : 0),
+      base.chest.lift + breathing,
+    ),
+    head: withJointX(base.head, base.head.rotation.x, base.head.lift - breathing * 0.3),
+    arms: Object.freeze([
+      arm(
+        withJointX(
+          base.arms[0].shoulder,
+          base.arms[0].shoulder.rotation.x + Math.sin(seconds * 1.7) * 0.035,
+        ),
+        base.arms[0].elbow,
+        base.arms[0].wrist,
+      ),
+      arm(
+        withJointX(
+          base.arms[1].shoulder,
+          serving
+            ? -1.2
+            : base.arms[1].shoulder.rotation.x + Math.sin(seconds * 1.7 + 0.8) * 0.035,
+        ),
+        base.arms[1].elbow,
+        base.arms[1].wrist,
+      ),
+    ]) as readonly [ArmPose, ArmPose],
   });
 };
 
