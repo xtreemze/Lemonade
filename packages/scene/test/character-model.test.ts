@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   blinkAmountAt,
   buyerInteractionPose,
-  characterExpressionAt,
   CHARACTER_ANATOMY,
+  characterExpressionAt,
   characterPoseAtDistance,
   neutralCharacterPose,
   seatedCharacterPose,
