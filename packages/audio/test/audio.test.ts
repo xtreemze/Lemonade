@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   type AudioCue,
   compileCue,
+  environmentBedGainTargets,
   WEATHER_FORECAST_DURATION_MS,
   type WeatherAudioCue,
   weatherMelodyMetadata,
@@ -33,6 +34,24 @@ const weatherMelodies: Readonly<Record<WeatherAudioCue, readonly number[]>> = {
 };
 
 describe("procedural cue compiler", () => {
+
+  it("keeps continuous rain subordinate to foreground cues", () => {
+    const dry = environmentBedGainTargets({ windIntensity: 0, precipitation: 0 });
+    const moderate = environmentBedGainTargets({ windIntensity: 0, precipitation: 0.5 });
+    const heavy = environmentBedGainTargets({ windIntensity: 0, precipitation: 1 });
+
+    expect(dry.rain).toBeCloseTo(0.0001, 6);
+    expect(moderate.rain).toBeLessThan(0.003);
+    expect(heavy.rain).toBeLessThanOrEqual(0.0061);
+    expect(moderate.rain).toBeLessThan(heavy.rain);
+  });
+
+  it("drops environment beds to their near-silent floor when muted", () => {
+    expect(
+      environmentBedGainTargets({ windIntensity: 1, precipitation: 1 }, true),
+    ).toEqual({ wind: 0.0001, rain: 0.0001 });
+  });
+
   it("is deterministic without an audio device", () => {
     for (const cue of cues) {
       expect(compileCue(cue)).toEqual(compileCue(cue));
