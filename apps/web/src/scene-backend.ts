@@ -1,5 +1,4 @@
-export const SCENE_BACKEND_STORAGE_KEY =
-  "LEMONADE_SCENE_BACKEND" as const;
+export const SCENE_BACKEND_STORAGE_KEY = "LEMONADE_SCENE_BACKEND" as const;
 
 export type LemonsvilleSceneBackend = "three" | "babylon";
 

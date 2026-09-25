@@ -1,8 +1,8 @@
 import { NullEngine } from "@babylonjs/core/Engines/nullEngine";
 import { Scene } from "@babylonjs/core/scene";
+import type { StreetStripSpec } from "@lemonade/scene/street-layout";
 import { describe, expect, it } from "vitest";
 
-import type { StreetStripSpec } from "@lemonade/scene/street-layout";
 import { createBabylonStreetSurfaceField } from "../src/babylon-street-surface-field.js";
 
 const strip = (
@@ -28,21 +28,13 @@ describe("Babylon street surface projection", () => {
     const scene = new Scene(engine);
     const field = createBabylonStreetSurfaceField(
       scene,
-      [
-        strip("paved-road", "main", 0, 0),
-        strip("paved-road", "cross", 1, 10),
-      ],
+      [strip("paved-road", "main", 0, 0), strip("paved-road", "cross", 1, 10)],
       [strip("sidewalk", "main", 0, 0)],
     );
 
     expect(field.anchors).toHaveLength(3);
     expect(field.batches).toHaveLength(3);
-    expect(
-      field.batches.reduce(
-        (total, batch) => total + 1 + batch.instances.length,
-        0,
-      ),
-    ).toBe(3);
+    expect(field.batches.reduce((total, batch) => total + 1 + batch.instances.length, 0)).toBe(3);
 
     scene.dispose();
     engine.dispose();
@@ -51,11 +43,7 @@ describe("Babylon street surface projection", () => {
   it("projects deterministic strip transforms into Babylon nodes", () => {
     const engine = new NullEngine();
     const scene = new Scene(engine);
-    const field = createBabylonStreetSurfaceField(
-      scene,
-      [strip("paved-road", "main", 0, 12)],
-      [],
-    );
+    const field = createBabylonStreetSurfaceField(scene, [strip("paved-road", "main", 0, 12)], []);
 
     const main = field.batches.find((batch) => batch.role === "main-road");
     expect(main).toBeDefined();

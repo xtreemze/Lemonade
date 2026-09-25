@@ -1,3 +1,1 @@
-export {
-  createBabylonLemonsvilleScene as createLemonsvilleScene,
-} from "@lemonade/scene-babylon";
+export { createBabylonLemonsvilleScene as createLemonsvilleScene } from "@lemonade/scene-babylon";

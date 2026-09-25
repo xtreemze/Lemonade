@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  SCENE_BACKEND_STORAGE_KEY,
-  sceneBackendFromStorage,
-} from "../src/scene-backend.js";
+import { SCENE_BACKEND_STORAGE_KEY, sceneBackendFromStorage } from "../src/scene-backend.js";
 
 const storageWith = (value: string | null): Pick<Storage, "getItem"> => ({
   getItem(key: string): string | null {

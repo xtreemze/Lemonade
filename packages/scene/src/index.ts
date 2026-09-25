@@ -52,13 +52,6 @@ import {
   stateUpdateElapsed,
 } from "./presentation-clock.js";
 import { type RendererDiagnostics, rendererDiagnostics } from "./renderer-diagnostics.js";
-import type {
-  LemonsvilleSceneControllerContract,
-  LemonsvilleSceneOptions,
-  LemonsvilleSceneState,
-  ScenePhase,
-  SceneWeather,
-} from "./scene-state.js";
 import {
   BUYER_PROFILE_INDEX_OFFSET,
   BUYER_VISUAL_POOL_SIZE,
@@ -67,6 +60,13 @@ import {
   PASSERBY_VISUAL_POOL_SIZE,
 } from "./scene-capacity.js";
 import { disposeSceneResources } from "./scene-disposal.js";
+import type {
+  LemonsvilleSceneControllerContract,
+  LemonsvilleSceneOptions,
+  LemonsvilleSceneState,
+  ScenePhase,
+  SceneWeather,
+} from "./scene-state.js";
 import { createAdvertisingSignField } from "./sign-field.js";
 import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
 import type { StandDetailController } from "./stand-detail.js";

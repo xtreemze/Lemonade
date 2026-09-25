@@ -17,9 +17,7 @@ const assets = await readdir(assetsUrl);
 const threeSceneChunks = assets.filter((name) =>
   /^scene-runtime-(?!babylon-)[^/]+\.js$/u.test(name),
 );
-const babylonSceneChunks = assets.filter((name) =>
-  /^scene-runtime-babylon-[^/]+\.js$/u.test(name),
-);
+const babylonSceneChunks = assets.filter((name) => /^scene-runtime-babylon-[^/]+\.js$/u.test(name));
 if (threeSceneChunks.length !== 1) {
   throw new Error(
     `Expected one lazy Three scene runtime chunk, found ${String(threeSceneChunks.length)}.`,

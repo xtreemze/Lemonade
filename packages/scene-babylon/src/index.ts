@@ -8,10 +8,6 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Scene } from "@babylonjs/core/scene";
 
-import { STAND_WORLD_Z } from "@lemonade/scene/stand-anchors";
-import {
-  generateStreetNetwork,
-} from "@lemonade/scene/street-layout";
 import type {
   LemonsvilleSceneControllerContract,
   LemonsvilleSceneOptions,
@@ -19,11 +15,13 @@ import type {
   RendererDiagnostics,
   SceneWeather,
 } from "@lemonade/scene/scene-state";
+import { STAND_WORLD_Z } from "@lemonade/scene/stand-anchors";
 import {
+  type SceneShotKind,
   sceneCameraComposition,
   sceneShotAt,
-  type SceneShotKind,
 } from "@lemonade/scene/storyboard";
+import { generateStreetNetwork } from "@lemonade/scene/street-layout";
 
 import { createBabylonStreetSurfaceField } from "./babylon-street-surface-field.js";
 
@@ -78,25 +76,13 @@ export const createBabylonLemonsvilleScene = (
   const scene = new Scene(engine);
   scene.clearColor = clearColorForWeather(initialState.weather);
 
-  const camera = new FreeCamera(
-    "lemonsville-camera",
-    new Vector3(0, 6.8, 13.5),
-    scene,
-  );
+  const camera = new FreeCamera("lemonsville-camera", new Vector3(0, 6.8, 13.5), scene);
   scene.activeCamera = camera;
 
-  const hemisphere = new HemisphericLight(
-    "ambient",
-    new Vector3(0, 1, 0),
-    scene,
-  );
+  const hemisphere = new HemisphericLight("ambient", new Vector3(0, 1, 0), scene);
   hemisphere.intensity = 1.25;
 
-  const sunlight = new DirectionalLight(
-    "sun",
-    new Vector3(-0.45, -1, -0.35),
-    scene,
-  );
+  const sunlight = new DirectionalLight("sun", new Vector3(-0.45, -1, -0.35), scene);
   sunlight.intensity = 1.65;
 
   const ground = MeshBuilder.CreateGround(
@@ -110,14 +96,8 @@ export const createBabylonLemonsvilleScene = (
   groundMaterial.specularColor = Color3.Black();
   ground.material = groundMaterial;
 
-  const streetNetwork = generateStreetNetwork(
-    initialState.characterSeed ^ 0x4c_45_4d_4f,
-  );
-  createBabylonStreetSurfaceField(
-    scene,
-    streetNetwork.roads,
-    streetNetwork.sidewalks,
-  );
+  const streetNetwork = generateStreetNetwork(initialState.characterSeed ^ 0x4c_45_4d_4f);
+  createBabylonStreetSurfaceField(scene, streetNetwork.roads, streetNetwork.sidewalks);
 
   const stand = MeshBuilder.CreateBox(
     "stand-migration-shell",
@@ -149,16 +129,11 @@ export const createBabylonLemonsvilleScene = (
   let animationEpoch = performance.now();
   let viewportWidth = Math.max(1, canvas.clientWidth);
   let viewportHeight = Math.max(1, canvas.clientHeight);
-  let currentShot: SceneShotKind =
-    state.phase === "forecast" ? "forecast" : "stand";
+  let currentShot: SceneShotKind = state.phase === "forecast" ? "forecast" : "stand";
 
   const applyCameraShot = (shot: SceneShotKind): void => {
     currentShot = shot;
-    const composition = sceneCameraComposition(
-      viewportWidth,
-      viewportHeight,
-      shot,
-    );
+    const composition = sceneCameraComposition(viewportWidth, viewportHeight, shot);
     camera.position.set(...composition.position);
     camera.setTarget(new Vector3(...composition.lookAt));
     camera.fov = (composition.fov * Math.PI) / 180;
@@ -173,14 +148,18 @@ export const createBabylonLemonsvilleScene = (
   };
 
   const renderFrame = (): void => {
-    if (disposed || state.phase === "idle") return;
+    if (disposed || state.phase === "idle") {
+      return;
+    }
     if (state.phase === "simulation" && !state.reducedMotion) {
       const elapsedMs = Math.min(
         state.storyboard.durationMs,
         Math.max(0, performance.now() - animationEpoch),
       );
       const nextShot = sceneShotAt(state.storyboard, elapsedMs);
-      if (nextShot !== currentShot) applyCameraShot(nextShot);
+      if (nextShot !== currentShot) {
+        applyCameraShot(nextShot);
+      }
     }
     frame += 1;
     scene.render();
@@ -189,8 +168,7 @@ export const createBabylonLemonsvilleScene = (
   let renderLoopRunning = false;
 
   const syncRenderLoop = (): void => {
-    const shouldAnimate =
-      !disposed && state.phase === "simulation" && !state.reducedMotion;
+    const shouldAnimate = !disposed && state.phase === "simulation" && !state.reducedMotion;
 
     if (shouldAnimate && !renderLoopRunning) {
       engine.runRenderLoop(renderFrame);
@@ -203,7 +181,9 @@ export const createBabylonLemonsvilleScene = (
       renderLoopRunning = false;
     }
 
-    if (!shouldAnimate) renderFrame();
+    if (!shouldAnimate) {
+      renderFrame();
+    }
   };
 
   applyState(initialState);
@@ -211,17 +191,23 @@ export const createBabylonLemonsvilleScene = (
 
   return Object.freeze({
     update(nextState: LemonsvilleSceneState): void {
-      if (disposed) return;
+      if (disposed) {
+        return;
+      }
       const restartAnimation =
         state.phase !== nextState.phase ||
         state.durationMs !== nextState.durationMs ||
         state.storyboard !== nextState.storyboard;
-      if (restartAnimation) animationEpoch = performance.now();
+      if (restartAnimation) {
+        animationEpoch = performance.now();
+      }
       applyState(nextState);
       syncRenderLoop();
     },
     resize(width: number, height: number): void {
-      if (disposed) return;
+      if (disposed) {
+        return;
+      }
       viewportWidth = Math.max(1, Math.floor(width));
       viewportHeight = Math.max(1, Math.floor(height));
       engine.setSize(
@@ -246,7 +232,9 @@ export const createBabylonLemonsvilleScene = (
       });
     },
     dispose(): void {
-      if (disposed) return;
+      if (disposed) {
+        return;
+      }
       disposed = true;
       if (renderLoopRunning) {
         engine.stopRenderLoop(renderFrame);
@@ -254,7 +242,7 @@ export const createBabylonLemonsvilleScene = (
       }
       scene.dispose();
       engine.dispose();
-      delete canvas.dataset["rendererBackend"];
+      canvas.removeAttribute("data-renderer-backend");
     },
   });
 };
