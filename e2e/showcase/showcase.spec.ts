@@ -657,6 +657,7 @@ const recordFeature = async (
   const audioStartedAt = Date.now();
   await page.clock.pauseAt(showcaseClockPause);
   await demonstrate();
+  await page.clock.runFor(16);
 
   const captureInfo = await startCanvasFrameCapture(page, formFactor, feature.durationSeconds);
   await advanceCanvasFrameCapture(page, captureInfo.targetFrames, manifest.capture.videoFps);
