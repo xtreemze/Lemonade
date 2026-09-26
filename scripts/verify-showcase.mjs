@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { appendFile, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -144,36 +145,65 @@ const videoStream = (filePath) => {
   return stream;
 };
 
-const probeFrameDimensions = (filePath) => {
-  const result = spawnSync(
-    "ffprobe",
-    [
-      "-v",
-      "error",
-      "-select_streams",
-      "v:0",
-      "-read_intervals",
-      "%+#1",
-      "-show_frames",
-      "-show_entries",
-      "frame=width,height",
-      "-of",
-      "json",
-      filePath,
-    ],
-    { encoding: "utf8" },
-  );
-  if (result.status !== 0) {
-    throw new Error(`ffprobe frame-dimension probe failed for ${filePath}: ${result.stderr}`);
+const readUint24LE = (buffer, offset) =>
+  buffer[offset] | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16);
+
+const probeAnimatedWebp = (filePath) => {
+  const data = readFileSync(filePath);
+  if (
+    data.length < 20 ||
+    data.toString("ascii", 0, 4) !== "RIFF" ||
+    data.toString("ascii", 8, 12) !== "WEBP"
+  ) {
+    throw new Error(`${filePath} is not a valid RIFF WebP file.`);
   }
-  const parsed = JSON.parse(result.stdout);
-  const frame = Array.isArray(parsed.frames) ? parsed.frames[0] : undefined;
-  const width = Number(frame?.width);
-  const height = Number(frame?.height);
-  if (!Number.isInteger(width) || width <= 0 || !Number.isInteger(height) || height <= 0) {
-    throw new Error(`No usable decoded frame dimensions found in ${filePath}.`);
+
+  let width;
+  let height;
+  let frames = 0;
+  let durationMs = 0;
+  const frameDurationsMs = [];
+
+  for (let offset = 12; offset + 8 <= data.length; ) {
+    const chunkType = data.toString("ascii", offset, offset + 4);
+    const chunkSize = data.readUInt32LE(offset + 4);
+    const payload = offset + 8;
+    const chunkEnd = payload + chunkSize;
+    if (chunkEnd > data.length) {
+      throw new Error(`${filePath} contains a truncated ${chunkType} chunk.`);
+    }
+
+    if (chunkType === "VP8X") {
+      if (chunkSize < 10) {
+        throw new Error(`${filePath} has an invalid VP8X chunk.`);
+      }
+      width = readUint24LE(data, payload + 4) + 1;
+      height = readUint24LE(data, payload + 7) + 1;
+    } else if (chunkType === "ANMF") {
+      if (chunkSize < 16) {
+        throw new Error(`${filePath} has an invalid ANMF frame chunk.`);
+      }
+      const frameDurationMs = readUint24LE(data, payload + 12);
+      frames += 1;
+      durationMs += frameDurationMs;
+      frameDurationsMs.push(frameDurationMs);
+    }
+
+    offset = chunkEnd + (chunkSize % 2);
   }
-  return { width, height };
+
+  if (
+    !Number.isInteger(width) ||
+    width <= 0 ||
+    !Number.isInteger(height) ||
+    height <= 0 ||
+    frames < 1 ||
+    durationMs <= 0
+  ) {
+    throw new Error(`${filePath} does not contain usable animated WebP canvas/frame metadata.`);
+  }
+
+  return { width, height, frames, durationMs, frameDurationsMs };
 };
 
 const assertAudio = (filePath) => {
@@ -207,16 +237,23 @@ const assertAudible = (filePath) => {
 };
 
 const assertDimensions = (filePath, expected) => {
+  const isWebp = path.extname(filePath).toLowerCase() === ".webp";
+  if (isWebp) {
+    const webp = probeAnimatedWebp(filePath);
+    if (webp.width !== expected.width || webp.height !== expected.height) {
+      throw new Error(
+        `${filePath} is ${String(webp.width)}×${String(webp.height)}; expected ${String(
+          expected.width,
+        )}×${String(expected.height)}.`,
+      );
+    }
+    return null;
+  }
+
   const stream = videoStream(filePath);
-  const streamWidth = Number(stream.width);
-  const streamHeight = Number(stream.height);
-  const actual =
-    Number.isInteger(streamWidth) && streamWidth > 0 && Number.isInteger(streamHeight) && streamHeight > 0
-      ? { width: streamWidth, height: streamHeight }
-      : probeFrameDimensions(filePath);
-  if (actual.width !== expected.width || actual.height !== expected.height) {
+  if (stream.width !== expected.width || stream.height !== expected.height) {
     throw new Error(
-      `${filePath} is ${String(actual.width)}×${String(actual.height)}; expected ${String(
+      `${filePath} is ${String(stream.width)}×${String(stream.height)}; expected ${String(
         expected.width,
       )}×${String(expected.height)}.`,
     );
@@ -225,6 +262,42 @@ const assertDimensions = (filePath, expected) => {
 };
 
 const assertFrameProfile = (filePath, expected, expectedFps, expectedFrames, expectedDurationSeconds) => {
+  const isWebp = path.extname(filePath).toLowerCase() === ".webp";
+  if (isWebp) {
+    const webp = probeAnimatedWebp(filePath);
+    if (webp.width !== expected.width || webp.height !== expected.height) {
+      throw new Error(
+        `${filePath} is ${String(webp.width)}×${String(webp.height)}; expected ${String(
+          expected.width,
+        )}×${String(expected.height)}.`,
+      );
+    }
+    if (webp.frames !== expectedFrames) {
+      throw new Error(
+        `${filePath} contains ${String(webp.frames)} ANMF frames; expected exactly ${String(
+          expectedFrames,
+        )} source-derived frames with no duplication or interpolation.`,
+      );
+    }
+    const duration = webp.durationMs / 1000;
+    const fps = webp.frames / duration;
+    if (Math.abs(duration - expectedDurationSeconds) > 0.15) {
+      throw new Error(
+        `${filePath} animation duration is ${duration.toFixed(3)}s; expected ${expectedDurationSeconds.toFixed(
+          3,
+        )}s from the source timeline.`,
+      );
+    }
+    if (Math.abs(fps - expectedFps) > 1) {
+      throw new Error(
+        `${filePath} animated WebP cadence is ${fps.toFixed(2)} fps; expected approximately ${String(
+          expectedFps,
+        )} fps after WebP millisecond-duration quantization.`,
+      );
+    }
+    return;
+  }
+
   const stream = assertDimensions(filePath, expected);
   const fps = frameRate(stream.avg_frame_rate);
   if (!Number.isFinite(fps) || Math.abs(fps - expectedFps) > 0.5) {
