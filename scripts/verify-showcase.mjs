@@ -144,6 +144,38 @@ const videoStream = (filePath) => {
   return stream;
 };
 
+const probeFrameDimensions = (filePath) => {
+  const result = spawnSync(
+    "ffprobe",
+    [
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
+      "-read_intervals",
+      "%+#1",
+      "-show_frames",
+      "-show_entries",
+      "frame=width,height",
+      "-of",
+      "json",
+      filePath,
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error(`ffprobe frame-dimension probe failed for ${filePath}: ${result.stderr}`);
+  }
+  const parsed = JSON.parse(result.stdout);
+  const frame = Array.isArray(parsed.frames) ? parsed.frames[0] : undefined;
+  const width = Number(frame?.width);
+  const height = Number(frame?.height);
+  if (!Number.isInteger(width) || width <= 0 || !Number.isInteger(height) || height <= 0) {
+    throw new Error(`No usable decoded frame dimensions found in ${filePath}.`);
+  }
+  return { width, height };
+};
+
 const assertAudio = (filePath) => {
   const stream = probeStreams(filePath).find((candidate) => candidate.codec_type === "audio");
   if (stream === undefined) {
@@ -176,9 +208,15 @@ const assertAudible = (filePath) => {
 
 const assertDimensions = (filePath, expected) => {
   const stream = videoStream(filePath);
-  if (stream.width !== expected.width || stream.height !== expected.height) {
+  const streamWidth = Number(stream.width);
+  const streamHeight = Number(stream.height);
+  const actual =
+    Number.isInteger(streamWidth) && streamWidth > 0 && Number.isInteger(streamHeight) && streamHeight > 0
+      ? { width: streamWidth, height: streamHeight }
+      : probeFrameDimensions(filePath);
+  if (actual.width !== expected.width || actual.height !== expected.height) {
     throw new Error(
-      `${filePath} is ${String(stream.width)}×${String(stream.height)}; expected ${String(
+      `${filePath} is ${String(actual.width)}×${String(actual.height)}; expected ${String(
         expected.width,
       )}×${String(expected.height)}.`,
     );
