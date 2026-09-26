@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -18,7 +19,7 @@ jobs:
   build:
     name: Build Pages artifact
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -36,33 +37,73 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Install FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes ffmpeg
-
-      - name: Verify showcase contracts
-        run: pnpm test:showcase-contract
-
-      - name: Capture source-quality showcase media
-        run: pnpm showcase:capture
-
-      - name: Render showcase videos, graphics, and reels
-        run: pnpm showcase:render
-
-      - name: Verify showcase media
-        run: pnpm showcase:verify
-
       - name: Build project-page bundle
         run: pnpm --filter @lemonade/web exec vite build --base=/Lemonade/
 
-      - name: Publish showcase into Pages bundle
+      - name: Restore latest valid showcase artifact
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -u
+          rm -rf artifacts/e2e-media
+          mkdir -p artifacts/e2e-media
+
+          found=false
+          while read -r run_id head_sha; do
+            [ -z "${run_id}" ] && continue
+
+            rm -rf artifacts/e2e-media
+            mkdir -p artifacts/e2e-media
+            if gh run download "${run_id}" --name lemonade-showcase-latest --dir artifacts/e2e-media; then
+              found=true
+              echo "Restored verified showcase artifact from run ${run_id}."
+              break
+            fi
+
+            rm -rf artifacts/e2e-media
+            mkdir -p artifacts/e2e-media
+            if gh run download "${run_id}" --name "lemonade-showcase-${head_sha}" --dir artifacts/e2e-media; then
+              found=true
+              echo "Restored legacy showcase artifact from run ${run_id}."
+              break
+            fi
+          done < <(
+            gh run list \
+              --workflow "Visual Showcase" \
+              --branch master \
+              --status success \
+              --limit 10 \
+              --json databaseId,headSha \
+              --jq '.[] | "\(.databaseId) \(.headSha)"'
+          )
+
+          if [ "${found}" != "true" ]; then
+            rm -rf artifacts/e2e-media
+            echo "No valid completed showcase artifact was available; continuing with the application build."
+          fi
+
+      - name: Publish showcase into Pages bundle when available
         shell: bash
         run: |
           set -euo pipefail
+
+          required_paths=(
+            "artifacts/e2e-media/graphics/desktop"
+            "artifacts/e2e-media/graphics/mobile"
+            "artifacts/e2e-media/videos/desktop"
+            "artifacts/e2e-media/videos/mobile"
+            "artifacts/e2e-media/reels"
+          )
+
+          for required_path in "${required_paths[@]}"; do
+            if [ ! -d "${required_path}" ]; then
+              echo "Showcase artifact is unavailable or incomplete; deploying without a showcase refresh."
+              exit 0
+            fi
+          done
+
           mkdir -p apps/web/dist/showcase/desktop
           mkdir -p apps/web/dist/showcase/mobile
           mkdir -p apps/web/dist/showcase/videos/desktop
