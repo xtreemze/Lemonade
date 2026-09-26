@@ -320,6 +320,20 @@ const stopAudioCapture = async (page: Page): Promise<AudioCaptureResult> =>
     };
   });
 
+const waitForShowcaseCanvasSize = async (
+  page: Page,
+  expectedSize: Readonly<{ width: number; height: number }>,
+): Promise<void> => {
+  await page.waitForFunction(
+    ({ width, height }) => {
+      const canvas = document.querySelector<HTMLCanvasElement>("#scene-canvas");
+      return canvas?.width === width && canvas.height === height;
+    },
+    expectedSize,
+    { timeout: 10_000 },
+  );
+};
+
 const startCanvasFrameCapture = async (
   page: Page,
   formFactor: FormFactor,
@@ -335,6 +349,8 @@ const startCanvasFrameCapture = async (
   const targetFrames = Math.round(durationSeconds * fps);
   const expectedSize =
     formFactor === "desktop" ? { width: 1440, height: 900 } : { width: 390, height: 844 };
+
+  await waitForShowcaseCanvasSize(page, expectedSize);
 
   const result = await page.evaluate(
     async ({ requestedFps, videoBitrate, requestedFrames, expectedWidth, expectedHeight }) => {
@@ -739,13 +755,11 @@ const openHistory = async (page: Page): Promise<void> => {
 
 test("01-weather-forecast", async ({ page }, testInfo) => {
   const feature = getFeature("01-weather-forecast");
-  await page.goto("./", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("main")).toHaveAttribute("data-view", "forecast");
-
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     window.localStorage.setItem("LEMONADE_DEV_SCENE_LAUNCHER", "1");
   });
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "forecast");
 
   await recordFeature(page, testInfo, feature, async () => {
     const forecastPreset = page.getByRole("button", { name: /Sunny Forecast/u });

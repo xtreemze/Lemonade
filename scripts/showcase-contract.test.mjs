@@ -69,6 +69,20 @@ test("showcase specs capture dynamic 3D scenes directly and static states as scr
   assert.ok(spec.includes('media === "video"'));
 });
 
+test("showcase frame capture waits for the source-sized WebGL canvas", async () => {
+  const spec = await read("e2e/showcase/showcase.spec.ts");
+  assert.ok(spec.includes("waitForShowcaseCanvasSize"));
+  assert.ok(spec.includes("await waitForShowcaseCanvasSize(page, expectedSize)"));
+});
+
+test("scene launcher exposes each active preview phase to the render shell", async () => {
+  const app = await read("apps/web/src/app.ts");
+  assert.match(
+    app,
+    /this\.#elements\.gameShell\.dataset\["view"\]\s*=\s*preset\.phase\s*===\s*"idle"\s*\?\s*"planning"\s*:\s*preset\.phase;/u,
+  );
+});
+
 test("renderer creates source-quality reels plus mixed PNG and animated WebP presentation assets", async () => {
   const renderer = await read("scripts/render-showcase.mjs");
   assert.ok(renderer.includes("lemonade-desktop-highlight.mp4"));

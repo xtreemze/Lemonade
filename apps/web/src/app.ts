@@ -412,6 +412,8 @@ export class LemonadeApp {
         this.#sceneSoldOverride = preset.sold ?? null;
         this.#glasses = preset.prepared ?? 5;
         this.#signs = preset.visibleSigns ?? 1;
+        this.#elements.gameShell.dataset["view"] =
+          preset.phase === "idle" ? "planning" : preset.phase;
 
         this.#renderScene();
       };
