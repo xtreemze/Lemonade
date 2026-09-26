@@ -392,7 +392,7 @@ const measureCaptureProfile = async (page: Page): Promise<CaptureProfile> => {
 
   const measuredAnimationFrameFps = (probeFrames * 1000) / probeDurationMs;
   const fps = manifest.capture.videoFpsCandidates.find(
-    (candidate) => measuredAnimationFrameFps >= candidate * 0.95,
+    (candidate) => measuredAnimationFrameFps >= candidate - 1,
   );
   if (fps === undefined || fps < manifest.capture.minimumVideoFps) {
     throw new Error(
