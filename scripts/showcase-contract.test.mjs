@@ -118,6 +118,8 @@ test("verifier enforces source resolution and high-frame-rate output", async () 
   assert.ok(verifier.includes("no duplication or interpolation"));
   assert.ok(verifier.includes("metadata.measuredAnimationFrameFps"));
   assert.ok(verifier.includes("best_effort_timestamp_time"));
+  assert.ok(verifier.includes("probeFrameDimensions"));
+  assert.ok(verifier.includes("frame=width,height"));
   assert.ok(verifier.includes("expected exactly"));
   assert.ok(verifier.includes('"deterministic-webcodecs-vp8"'));
   assert.ok(verifier.includes("metadata.capturedFrames"));
