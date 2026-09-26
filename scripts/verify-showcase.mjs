@@ -109,25 +109,24 @@ const probeFrameStats = (filePath) => {
   return { frames: timestamps.length, duration, fps: frameIntervals / duration };
 };
 
-const assertCapturedFrameCadence = (filePath, expectedDurationSeconds) => {
+const assertCapturedFrameCadence = (filePath, expectedDurationSeconds, expectedFps, expectedFrames) => {
   const stats = probeFrameStats(filePath);
-  const expectedFrames = Math.round(expectedDurationSeconds * manifest.capture.videoFps);
   if (stats.frames !== expectedFrames) {
     throw new Error(
       `${filePath} contains ${String(stats.frames)} decoded source frames; expected exactly ${String(expectedFrames)} browser-rendered frames.`,
     );
   }
 
-  const expectedSpan = (expectedFrames - 1) / manifest.capture.videoFps;
+  const expectedSpan = (expectedFrames - 1) / expectedFps;
   if (Math.abs(stats.duration - expectedSpan) > 0.05) {
     throw new Error(
-      `${filePath} spans ${stats.duration.toFixed(3)}s across ${String(stats.frames)} source frames; expected ${expectedSpan.toFixed(3)}s at ${String(manifest.capture.videoFps)} fps.`,
+      `${filePath} spans ${stats.duration.toFixed(3)}s across ${String(stats.frames)} source frames; expected ${expectedSpan.toFixed(3)}s at ${String(expectedFps)} fps.`,
     );
   }
 
-  if (Math.abs(stats.fps - manifest.capture.videoFps) > 0.25) {
+  if (Math.abs(stats.fps - expectedFps) > 0.25) {
     throw new Error(
-      `${filePath} contains ${String(stats.frames)} actual frames across ${stats.duration.toFixed(3)}s (${stats.fps.toFixed(2)} fps); expected native ${String(manifest.capture.videoFps)} fps source cadence.`,
+      `${filePath} contains ${String(stats.frames)} actual frames across ${stats.duration.toFixed(3)}s (${stats.fps.toFixed(2)} fps); expected native ${String(expectedFps)} fps source cadence.`,
     );
   }
 };
@@ -187,17 +186,38 @@ const assertDimensions = (filePath, expected) => {
   return stream;
 };
 
-const assertHighFrameRate = (filePath, expected) => {
+const assertFrameProfile = (filePath, expected, expectedFps, expectedFrames, expectedDurationSeconds) => {
   const stream = assertDimensions(filePath, expected);
   const fps = frameRate(stream.avg_frame_rate);
-  if (!Number.isFinite(fps) || Math.abs(fps - manifest.capture.videoFps) > 0.5) {
+  if (!Number.isFinite(fps) || Math.abs(fps - expectedFps) > 0.5) {
     throw new Error(
-      `${filePath} reports ${String(stream.avg_frame_rate)} fps; expected ${String(
-        manifest.capture.videoFps,
-      )} fps.`,
+      `${filePath} reports ${String(stream.avg_frame_rate)} fps; expected ${String(expectedFps)} fps inherited from the raw source.`,
     );
   }
+
+  const stats = probeFrameStats(filePath);
+  if (stats.frames !== expectedFrames) {
+    throw new Error(
+      `${filePath} contains ${String(stats.frames)} decoded frames; expected exactly ${String(expectedFrames)} source-derived frames with no duplication or interpolation.`,
+    );
+  }
+  const expectedSpan = (expectedFrames - 1) / expectedFps;
+  if (Math.abs(stats.duration - expectedSpan) > 0.06) {
+    throw new Error(
+      `${filePath} spans ${stats.duration.toFixed(3)}s across ${String(stats.frames)} frames; expected ${expectedSpan.toFixed(3)}s at ${String(expectedFps)} fps.`,
+    );
+  }
+  if (Math.abs(stats.fps - expectedFps) > 0.5) {
+    throw new Error(
+      `${filePath} decoded cadence is ${stats.fps.toFixed(2)} fps; expected ${String(expectedFps)} fps.`,
+    );
+  }
+  if (Math.abs(expectedDurationSeconds - expectedFrames / expectedFps) > 0.05) {
+    throw new Error(`${filePath} expected duration/frame contract is internally inconsistent.`);
+  }
 };
+
+const captureProfiles = {};
 
 for (const formFactor of ["desktop", "mobile"]) {
   for (const feature of manifest.features) {
@@ -212,12 +232,22 @@ for (const formFactor of ["desktop", "mobile"]) {
       }
       assertAudio(`${rawBase}.audio.webm`);
       assertAudible(`${rawBase}.audio.webm`);
-      if (metadata.requestedFps !== manifest.capture.videoFps) {
-        throw new Error(`${formFactor}/${feature.id} did not request the showcase capture fps.`);
+      const sourceFps = Number(metadata.source?.fps ?? metadata.requestedFps);
+      if (!Number.isFinite(sourceFps) || sourceFps < manifest.capture.minimumVideoFps) {
+        throw new Error(`${formFactor}/${feature.id} has an invalid source fps: ${String(sourceFps)}.`);
       }
-      const expectedFrames = Math.round(
-        Number(feature.durationSeconds) * manifest.capture.videoFps,
-      );
+      if (metadata.requestedFps !== sourceFps) {
+        throw new Error(`${formFactor}/${feature.id} requested fps does not match its source fps.`);
+      }
+      if (
+        !Number.isFinite(Number(metadata.measuredAnimationFrameFps)) ||
+        Number(metadata.measuredAnimationFrameFps) < sourceFps * 0.95
+      ) {
+        throw new Error(
+          `${formFactor}/${feature.id} selected ${String(sourceFps)} fps without measuring enough source animation frames.`,
+        );
+      }
+      const expectedFrames = Math.round(Number(feature.durationSeconds) * sourceFps);
       if (
         metadata.frameProduction !== "deterministic-webcodecs-vp8" ||
         metadata.capturedFrames !== expectedFrames
@@ -226,8 +256,29 @@ for (const formFactor of ["desktop", "mobile"]) {
           `${formFactor}/${feature.id} did not produce exactly ${String(expectedFrames)} deterministic browser-rendered source frames.`,
         );
       }
-      assertDimensions(`${rawBase}.webm`, dimensions[formFactor]);
-      assertCapturedFrameCadence(`${rawBase}.webm`, Number(feature.durationSeconds));
+      const sourceDimensions = {
+        width: Number(metadata.source?.width),
+        height: Number(metadata.source?.height),
+      };
+      assertDimensions(`${rawBase}.webm`, sourceDimensions);
+      assertCapturedFrameCadence(
+        `${rawBase}.webm`,
+        Number(feature.durationSeconds),
+        sourceFps,
+        expectedFrames,
+      );
+
+      const existingProfile = captureProfiles[formFactor];
+      if (existingProfile === undefined) {
+        captureProfiles[formFactor] = { ...sourceDimensions, fps: sourceFps };
+      } else if (
+        existingProfile.fps !== sourceFps ||
+        existingProfile.width !== sourceDimensions.width ||
+        existingProfile.height !== sourceDimensions.height
+      ) {
+        throw new Error(`${formFactor} raw dynamic captures disagree on source fps or dimensions.`);
+      }
+    
     } else if (feature.media === "screenshot") {
       await requireFile(`${rawBase}.png`);
       assertDimensions(`${rawBase}.png`, dimensions[formFactor]);
@@ -238,16 +289,14 @@ for (const formFactor of ["desktop", "mobile"]) {
 }
 
 const budgets = {
-  desktop: { perGraphic: 10 * MiB, totalGraphics: 32 * MiB, animatedReel: 18 * MiB },
-  mobile: { perGraphic: 5 * MiB, totalGraphics: 16 * MiB, animatedReel: 10 * MiB },
+  desktop: { perGraphic: 24 * MiB, totalGraphics: 72 * MiB, animatedReel: 48 * MiB },
+  mobile: { perGraphic: 8 * MiB, totalGraphics: 24 * MiB, animatedReel: 16 * MiB },
 };
 
 const summary = [
   "### Visual showcase media",
   "",
-  `Source video/reels: ${String(manifest.capture.videoFps)} fps with 48 kHz audio. Animated README graphics: ${String(
-    manifest.capture.animatedGraphicFps,
-  )} fps.`,
+  "All encoded motion assets inherit the verified raw source FPS and source dimensions; no FFmpeg frame-rate normalization or downscaling is permitted.",
   "",
   "| Form | Presentation asset | Type | Size |",
   "| --- | --- | --- | ---: |",
@@ -256,6 +305,15 @@ const summary = [
 let combinedGraphics = 0;
 
 for (const formFactor of ["desktop", "mobile"]) {
+  const profile = captureProfiles[formFactor];
+  if (profile === undefined) {
+    throw new Error(`Missing verified capture profile for ${formFactor}.`);
+  }
+  const expectedDimensions = { width: profile.width, height: profile.height };
+  summary.push(
+    `**${formFactor}:** ${String(profile.width)}×${String(profile.height)} at ${String(profile.fps)} fps.`,
+    "",
+  );
   const graphicDir = path.join(artifactRoot, "graphics", formFactor);
   const graphicNames = (await readdir(graphicDir)).sort();
   const expected = manifest.features
@@ -284,9 +342,24 @@ for (const formFactor of ["desktop", "mobile"]) {
     );
 
     if (feature.media === "video") {
+      const expectedFrames = Math.round(Number(feature.durationSeconds) * profile.fps);
+      assertFrameProfile(
+        filePath,
+        expectedDimensions,
+        profile.fps,
+        expectedFrames,
+        Number(feature.durationSeconds),
+      );
+
       const video = path.join(artifactRoot, "videos", formFactor, `${feature.id}.mp4`);
       await requireFile(video);
-      assertHighFrameRate(video, dimensions[formFactor]);
+      assertFrameProfile(
+        video,
+        expectedDimensions,
+        profile.fps,
+        expectedFrames,
+        Number(feature.durationSeconds),
+      );
       assertAudio(video);
       assertAudible(video);
     }
@@ -308,11 +381,23 @@ for (const formFactor of ["desktop", "mobile"]) {
     formFactor === "desktop" ? "lemonade-desktop-highlight.webp" : "lemonade-mobile-highlight.webp";
   const reel = path.join(artifactRoot, "reels", reelName);
   const animatedReel = path.join(artifactRoot, "reels", animatedReelName);
+  const reelDuration = manifest.features.reduce(
+    (total, feature) => total + Number(feature.durationSeconds),
+    0,
+  );
+  const expectedReelFrames = Math.round(reelDuration * profile.fps);
   await requireFile(reel);
-  assertHighFrameRate(reel, dimensions[formFactor]);
+  assertFrameProfile(reel, expectedDimensions, profile.fps, expectedReelFrames, reelDuration);
   assertAudio(reel);
   assertAudible(reel);
   const animatedSize = await requireFile(animatedReel);
+  assertFrameProfile(
+    animatedReel,
+    expectedDimensions,
+    profile.fps,
+    expectedReelFrames,
+    reelDuration,
+  );
   if (animatedSize > budgets[formFactor].animatedReel) {
     throw new Error(
       `${animatedReelName} is ${formatMiB(animatedSize)}, above the ${formatMiB(
@@ -322,11 +407,11 @@ for (const formFactor of ["desktop", "mobile"]) {
   }
 }
 
-if (combinedGraphics > 48 * MiB) {
+if (combinedGraphics > 96 * MiB) {
   throw new Error(
     `Combined README/presentation media is ${formatMiB(
       combinedGraphics,
-    )}, above the 48.00 MiB review budget.`,
+    )}, above the 96.00 MiB review budget.`,
   );
 }
 
