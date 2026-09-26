@@ -71,7 +71,7 @@ const probeFrameStats = (filePath) => {
   }
 
   const rawRows = result.stdout
-    .split(/\\r?\\n/u)
+    .split(/\r?\n/u)
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
   const timestamps = rawRows.map(Number).filter((value) => Number.isFinite(value));
@@ -111,17 +111,23 @@ const probeFrameStats = (filePath) => {
 
 const assertCapturedFrameCadence = (filePath, expectedDurationSeconds) => {
   const stats = probeFrameStats(filePath);
-  const minimumDuration = expectedDurationSeconds * 0.97;
-  if (stats.duration < minimumDuration) {
+  const expectedFrames = Math.round(expectedDurationSeconds * manifest.capture.videoFps);
+  if (stats.frames !== expectedFrames) {
     throw new Error(
-      `${filePath} captured only ${stats.duration.toFixed(3)}s; expected at least ${minimumDuration.toFixed(3)}s.`,
+      `${filePath} contains ${String(stats.frames)} decoded source frames; expected exactly ${String(expectedFrames)} browser-rendered frames.`,
     );
   }
 
-  const minimumFps = manifest.capture.videoFps - 1;
-  if (stats.fps < minimumFps) {
+  const expectedSpan = (expectedFrames - 1) / manifest.capture.videoFps;
+  if (Math.abs(stats.duration - expectedSpan) > 0.05) {
     throw new Error(
-      `${filePath} contains ${String(stats.frames)} actual frames across ${stats.duration.toFixed(3)}s (${stats.fps.toFixed(2)} fps); expected at least ${minimumFps.toFixed(2)} fps before encoding.`,
+      `${filePath} spans ${stats.duration.toFixed(3)}s across ${String(stats.frames)} source frames; expected ${expectedSpan.toFixed(3)}s at ${String(manifest.capture.videoFps)} fps.`,
+    );
+  }
+
+  if (Math.abs(stats.fps - manifest.capture.videoFps) > 0.25) {
+    throw new Error(
+      `${filePath} contains ${String(stats.frames)} actual frames across ${stats.duration.toFixed(3)}s (${stats.fps.toFixed(2)} fps); expected native ${String(manifest.capture.videoFps)} fps source cadence.`,
     );
   }
 };
@@ -208,6 +214,17 @@ for (const formFactor of ["desktop", "mobile"]) {
       assertAudible(`${rawBase}.audio.webm`);
       if (metadata.requestedFps !== manifest.capture.videoFps) {
         throw new Error(`${formFactor}/${feature.id} did not request the showcase capture fps.`);
+      }
+      const expectedFrames = Math.round(
+        Number(feature.durationSeconds) * manifest.capture.videoFps,
+      );
+      if (
+        metadata.frameProduction !== "deterministic-webcodecs-vp8" ||
+        metadata.capturedFrames !== expectedFrames
+      ) {
+        throw new Error(
+          `${formFactor}/${feature.id} did not produce exactly ${String(expectedFrames)} deterministic browser-rendered source frames.`,
+        );
       }
       assertDimensions(`${rawBase}.webm`, dimensions[formFactor]);
       assertCapturedFrameCadence(`${rawBase}.webm`, Number(feature.durationSeconds));
