@@ -21,8 +21,8 @@ test("showcase manifest defines exactly five durable capabilities and source-app
     manifest.features.map((feature) => feature.media),
     ["video", "screenshot", "video", "screenshot", "screenshot"],
   );
-  assert.equal(manifest.capture.minimumVideoFps, 60);
-  assert.deepEqual(manifest.capture.videoFpsCandidates, [240, 165, 144, 120, 90, 60]);
+  assert.equal(manifest.capture.minimumVideoFps, 30);
+  assert.deepEqual(manifest.capture.videoFpsCandidates, [120, 90, 60, 30]);
 });
 
 test("normal E2E discovery excludes showcase specs", async () => {
