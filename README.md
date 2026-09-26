@@ -24,7 +24,7 @@ Weather and sentiment are conditions to reason about, not additional controls. P
 
 ## Product in motion
 
-CI captures the real application in Chromium with media chosen for the content rather than forcing every state through video. Forecast and simulation render the actual WebGL canvas at deterministic 1/60-second browser-time steps, and Chromium WebCodecs encodes every rendered source frame before FFmpeg sees the video. CI requires the exact native frame count for each scene, so a slower capture cannot pass through duplicated or padded frames. The application’s real procedural Web Audio is muxed into the recording, then encoded as high-quality H.264/AAC. Planning, day report, and sales history remain lossless PNG screenshots. Animated WebP derivatives preserve the 60 fps source cadence for Markdown and presentation surfaces.
+CI captures the real application in Chromium with media chosen for the content rather than forcing every state through video. Forecast and simulation first probe the browser’s native source-frame cadence, select the highest certified rate it actually produces (60 fps minimum), and then render the real WebGL canvas at deterministic steps matching that source FPS. Chromium WebCodecs encodes every rendered source frame before FFmpeg sees the video. CI requires exact frame-count, decoded-cadence, and source-dimension preservation through H.264 and animated WebP derivatives, so downstream encoding cannot repair a slower capture by duplication/interpolation or hide it by downscaling. Planning, day report, and sales history remain lossless PNG screenshots.
 
 ### Desktop
 
@@ -36,7 +36,7 @@ Read the day’s weather and neighborhood conditions before opening the stand.
 
 <img src="https://xtreemze.github.io/Lemonade/showcase/desktop/01-weather-forecast.webp" alt="Lemonade weather forecast over the Lemonsville neighborhood" width="960" />
 
-[Watch the source-resolution 60 fps weather scene](https://xtreemze.github.io/Lemonade/showcase/videos/desktop/01-weather-forecast.mp4)
+[Watch the source-resolution weather scene](https://xtreemze.github.io/Lemonade/showcase/videos/desktop/01-weather-forecast.mp4)
 
 #### Three-decision planning
 
@@ -50,7 +50,7 @@ Watch the stand, neighborhood, customers, weather, and inventory resolve the bus
 
 <img src="https://xtreemze.github.io/Lemonade/showcase/desktop/03-lemonsville-simulation.webp" alt="Lemonsville 3D neighborhood simulation around the lemonade stand" width="960" />
 
-[Watch the source-resolution 60 fps simulation](https://xtreemze.github.io/Lemonade/showcase/videos/desktop/03-lemonsville-simulation.mp4)
+[Watch the source-resolution simulation](https://xtreemze.github.io/Lemonade/showcase/videos/desktop/03-lemonsville-simulation.mp4)
 
 #### Day report
 
@@ -64,7 +64,7 @@ Review accessible trends and ledger history before planning the next day.
 
 <img src="https://xtreemze.github.io/Lemonade/showcase/desktop/05-sales-history.png" alt="Lemonade sales history charts and ledger" width="960" />
 
-[Watch the source-resolution 60 fps desktop highlight reel](https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-desktop-highlight.mp4)
+[Watch the source-resolution desktop highlight reel](https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-desktop-highlight.mp4)
 
 ### Mobile
 
@@ -76,7 +76,7 @@ Read the day’s weather and neighborhood conditions before opening the stand.
 
 <img src="https://xtreemze.github.io/Lemonade/showcase/mobile/01-weather-forecast.webp" alt="Lemonade weather forecast over the Lemonsville neighborhood" width="390" />
 
-[Watch the source-resolution 60 fps weather scene](https://xtreemze.github.io/Lemonade/showcase/videos/mobile/01-weather-forecast.mp4)
+[Watch the source-resolution weather scene](https://xtreemze.github.io/Lemonade/showcase/videos/mobile/01-weather-forecast.mp4)
 
 #### Three-decision planning
 
@@ -90,7 +90,7 @@ Watch the stand, neighborhood, customers, weather, and inventory resolve the bus
 
 <img src="https://xtreemze.github.io/Lemonade/showcase/mobile/03-lemonsville-simulation.webp" alt="Lemonsville 3D neighborhood simulation around the lemonade stand" width="390" />
 
-[Watch the source-resolution 60 fps simulation](https://xtreemze.github.io/Lemonade/showcase/videos/mobile/03-lemonsville-simulation.mp4)
+[Watch the source-resolution simulation](https://xtreemze.github.io/Lemonade/showcase/videos/mobile/03-lemonsville-simulation.mp4)
 
 #### Day report
 
@@ -104,7 +104,7 @@ Review accessible trends and ledger history before planning the next day.
 
 <img src="https://xtreemze.github.io/Lemonade/showcase/mobile/05-sales-history.png" alt="Lemonade sales history charts and ledger" width="390" />
 
-[Watch the source-resolution 60 fps mobile highlight reel](https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-mobile-highlight.mp4)
+[Watch the source-resolution mobile highlight reel](https://xtreemze.github.io/Lemonade/showcase/reels/lemonade-mobile-highlight.mp4)
 
 The capture, rendering, frame-rate, resolution, payload-budget, and publication contract is documented in [`docs/showcase.md`](docs/showcase.md).
 
