@@ -24,7 +24,7 @@ Weather and sentiment are conditions to reason about, not additional controls. P
 
 ## Product in motion
 
-CI captures the real application in Chromium with media chosen for the content rather than forcing every state through video. Forecast and simulation first probe the browser’s native source-frame cadence, select the highest certified rate it actually produces (60 fps minimum), and then render the real WebGL canvas at deterministic steps matching that source FPS. Chromium WebCodecs encodes every rendered source frame before FFmpeg sees the video. CI requires exact frame-count, decoded-cadence, and source-dimension preservation through H.264 and animated WebP derivatives, so downstream encoding cannot repair a slower capture by duplication/interpolation or hide it by downscaling. Planning, day report, and sales history remain lossless PNG screenshots.
+CI captures the real application in Chromium with media chosen for the content rather than forcing every state through video. Forecast and simulation first probe the browser’s native source-frame cadence, select the highest certified rate it actually produces from 120/90/60/30 fps, and then render the real WebGL canvas at deterministic steps matching that source FPS. Chromium WebCodecs encodes every rendered source frame before FFmpeg sees the video. CI requires exact frame-count, decoded-cadence, and source-dimension preservation through H.264 and animated WebP derivatives, so downstream encoding cannot repair a slower capture by duplication/interpolation or hide it by downscaling. Planning, day report, and sales history remain lossless PNG screenshots.
 
 ### Desktop
 
