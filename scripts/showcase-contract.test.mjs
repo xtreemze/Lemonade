@@ -21,8 +21,8 @@ test("showcase manifest defines exactly five durable capabilities and source-app
     manifest.features.map((feature) => feature.media),
     ["video", "screenshot", "video", "screenshot", "screenshot"],
   );
-  assert.equal(manifest.capture.videoFps, 60);
-  assert.equal(manifest.capture.animatedGraphicFps, manifest.capture.videoFps);
+  assert.equal(manifest.capture.minimumVideoFps, 30);
+  assert.deepEqual(manifest.capture.videoFpsCandidates, [120, 90, 60, 30]);
 });
 
 test("normal E2E discovery excludes showcase specs", async () => {
@@ -52,7 +52,10 @@ test("showcase specs capture dynamic 3D scenes directly and static states as scr
   assert.ok(spec.includes("new VideoFrame"));
   assert.ok(spec.includes("page.clock.install({ time: showcaseClockStart })"));
   assert.ok(spec.includes("page.clock.pauseAt"));
-  assert.ok(spec.includes("page.clock.runFor(16)"));
+  assert.ok(spec.includes("measureCaptureProfile"));
+  assert.ok(spec.includes("videoFpsCandidates.find"));
+  assert.ok(spec.includes("measuredAnimationFrameFps"));
+  assert.ok(spec.includes("Math.round(1000 / captureProfile.fps)"));
   assert.ok(spec.includes("page.clock.runFor(nextMs - previousMs)"));
   assert.ok(spec.includes('"deterministic-webcodecs-vp8"'));
   assert.ok(spec.includes('"vp8"'));
@@ -90,10 +93,15 @@ test("renderer creates source-quality reels plus mixed PNG and animated WebP pre
   assert.ok(renderer.includes("lemonade-desktop-highlight.webp"));
   assert.ok(renderer.includes("lemonade-mobile-highlight.webp"));
   assert.ok(renderer.includes("libwebp_anim"));
-  assert.ok(renderer.includes("animatedGraphicFps"));
+  assert.ok(renderer.includes("readCaptureProfile"));
+  assert.ok(renderer.includes("captureProfile.fps"));
   assert.ok(renderer.includes("const encodeStaticClip"));
   assert.ok(renderer.includes('"-crf",\n    "17"'));
-  assert.ok(renderer.includes("flags=lanczos"));
+  assert.ok(renderer.includes('"-fps_mode"'));
+  assert.ok(renderer.includes('"passthrough"'));
+  assert.ok(!renderer.includes("fps="));
+  assert.ok(!renderer.includes("scale="));
+  assert.ok(!renderer.includes("graphicWidth"));
   assert.ok(renderer.includes('"1:a:0"'));
   assert.ok(renderer.includes("anullsrc=channel_layout=stereo:sample_rate=48000"));
   assert.ok(renderer.includes("concat=n="));
@@ -105,8 +113,10 @@ test("renderer creates source-quality reels plus mixed PNG and animated WebP pre
 test("verifier enforces source resolution and high-frame-rate output", async () => {
   const verifier = await read("scripts/verify-showcase.mjs");
   assert.ok(verifier.includes('"ffprobe"'));
-  assert.ok(verifier.includes("assertHighFrameRate"));
+  assert.ok(verifier.includes("assertFrameProfile"));
   assert.ok(verifier.includes("assertCapturedFrameCadence"));
+  assert.ok(verifier.includes("no duplication or interpolation"));
+  assert.ok(verifier.includes("metadata.measuredAnimationFrameFps"));
   assert.ok(verifier.includes("best_effort_timestamp_time"));
   assert.ok(verifier.includes("expected exactly"));
   assert.ok(verifier.includes('"deterministic-webcodecs-vp8"'));
@@ -170,7 +180,7 @@ test("README and docs use animated graphics only for dynamic scenes", async () =
   assert.ok(readme.includes("lemonade-desktop-highlight.webp"));
   assert.ok(readme.includes("lemonade-mobile-highlight.webp"));
   assert.ok(docs.includes("WebCodecs"));
-  assert.ok(docs.includes("exactly 360 source frames"));
+  assert.ok(docs.includes("source-frame-rate probe"));
   assert.ok(docs.includes("source-resolution H.264/AAC MP4"));
   assert.ok(docs.includes("animated WebP"));
 });
