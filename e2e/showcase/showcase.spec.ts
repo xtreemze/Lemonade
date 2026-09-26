@@ -47,6 +47,13 @@ interface CanvasFrameCaptureResult {
   readonly capturedFrames: number;
 }
 
+interface CaptureProfile {
+  readonly fps: number;
+  readonly measuredAnimationFrameFps: number;
+  readonly probeFrames: number;
+  readonly probeDurationMs: number;
+}
+
 const artifactRoot = path.resolve("artifacts/e2e-media");
 const showcaseClockStart = new Date("2026-01-01T00:00:00.000Z");
 const showcaseClockPause = new Date("2026-01-01T01:00:00.000Z");
@@ -334,17 +341,88 @@ const waitForShowcaseCanvasSize = async (
   );
 };
 
+const measureCaptureProfile = async (page: Page): Promise<CaptureProfile> => {
+  const probeDurationMs = 1000;
+  await page.evaluate(() => {
+    const scope = window as typeof window & {
+      __lemonadeShowcaseFpsProbe?: {
+        frames: number;
+        active: boolean;
+        animationFrame: number | null;
+      };
+    };
+    const state = {
+      frames: 0,
+      active: true,
+      animationFrame: null as number | null,
+    };
+    const tick = (): void => {
+      if (!state.active) {
+        return;
+      }
+      state.frames += 1;
+      state.animationFrame = requestAnimationFrame(tick);
+    };
+    state.animationFrame = requestAnimationFrame(tick);
+    scope.__lemonadeShowcaseFpsProbe = state;
+  });
+
+  await page.clock.runFor(probeDurationMs);
+
+  const probeFrames = await page.evaluate(() => {
+    const scope = window as typeof window & {
+      __lemonadeShowcaseFpsProbe?: {
+        frames: number;
+        active: boolean;
+        animationFrame: number | null;
+      };
+    };
+    const state = scope.__lemonadeShowcaseFpsProbe;
+    if (state === undefined) {
+      throw new Error("Showcase source-frame-rate probe is unavailable.");
+    }
+    state.active = false;
+    if (state.animationFrame !== null) {
+      cancelAnimationFrame(state.animationFrame);
+    }
+    const frames = state.frames;
+    delete scope.__lemonadeShowcaseFpsProbe;
+    return frames;
+  });
+
+  const measuredAnimationFrameFps = (probeFrames * 1000) / probeDurationMs;
+  const fps = manifest.capture.videoFpsCandidates.find(
+    (candidate) => measuredAnimationFrameFps >= candidate * 0.95,
+  );
+  if (fps === undefined || fps < manifest.capture.minimumVideoFps) {
+    throw new Error(
+      "Showcase source produced " +
+        measuredAnimationFrameFps.toFixed(2) +
+        " animation frames/s; minimum certified source cadence is " +
+        String(manifest.capture.minimumVideoFps) +
+        " fps.",
+    );
+  }
+
+  return {
+    fps,
+    measuredAnimationFrameFps,
+    probeFrames,
+    probeDurationMs,
+  };
+};
+
 const startCanvasFrameCapture = async (
   page: Page,
   formFactor: FormFactor,
   durationSeconds: number,
+  fps: number,
 ): Promise<{
   videoBitsPerSecond: number;
   width: number;
   height: number;
   targetFrames: number;
 }> => {
-  const fps = manifest.capture.videoFps;
   const videoBitsPerSecond = formFactor === "desktop" ? 20_000_000 : 8_000_000;
   const targetFrames = Math.round(durationSeconds * fps);
   const expectedSize =
@@ -669,14 +747,20 @@ const recordFeature = async (
   }
 
   const targetMs = Math.round(feature.durationSeconds * 1000);
+  await page.clock.pauseAt(showcaseClockPause);
+  const captureProfile = await measureCaptureProfile(page);
   const audioInfo = await startAudioCapture(page);
   const audioStartedAt = Date.now();
-  await page.clock.pauseAt(showcaseClockPause);
   await demonstrate();
-  await page.clock.runFor(16);
+  await page.clock.runFor(Math.max(1, Math.round(1000 / captureProfile.fps)));
 
-  const captureInfo = await startCanvasFrameCapture(page, formFactor, feature.durationSeconds);
-  await advanceCanvasFrameCapture(page, captureInfo.targetFrames, manifest.capture.videoFps);
+  const captureInfo = await startCanvasFrameCapture(
+    page,
+    formFactor,
+    feature.durationSeconds,
+    captureProfile.fps,
+  );
+  await advanceCanvasFrameCapture(page, captureInfo.targetFrames, captureProfile.fps);
   const capture = await stopCanvasFrameCapture(page);
 
   const audioElapsedMs = Date.now() - audioStartedAt;
@@ -704,7 +788,10 @@ const recordFeature = async (
         media,
         viewport,
         durationSeconds: feature.durationSeconds,
-        requestedFps: manifest.capture.videoFps,
+        requestedFps: captureProfile.fps,
+        measuredAnimationFrameFps: captureProfile.measuredAnimationFrameFps,
+        fpsProbeFrames: captureProfile.probeFrames,
+        fpsProbeDurationMs: captureProfile.probeDurationMs,
         videoBitsPerSecond: captureInfo.videoBitsPerSecond,
         audioBitsPerSecond: audioInfo.audioBitsPerSecond,
         frameProduction: "deterministic-webcodecs-vp8",
@@ -712,6 +799,7 @@ const recordFeature = async (
         source: {
           width: capture.width,
           height: capture.height,
+          fps: captureProfile.fps,
           videoCodec: capture.videoCodec,
           videoMimeType: "video/webm;codecs=vp8",
           audioMimeType: audioCapture.audioMimeType,
