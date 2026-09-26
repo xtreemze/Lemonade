@@ -2,8 +2,15 @@
   "product": "Lemonade",
   "stableBaseUrl": "https://xtreemze.github.io/Lemonade/showcase",
   "capture": {
-    "videoFps": 60,
-    "animatedGraphicFps": 60
+    "minimumVideoFps": 60,
+    "videoFpsCandidates": [
+      240,
+      165,
+      144,
+      120,
+      90,
+      60
+    ]
   },
   "features": [
     {
