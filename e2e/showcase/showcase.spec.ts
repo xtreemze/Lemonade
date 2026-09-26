@@ -48,9 +48,11 @@ interface CanvasFrameCaptureResult {
 }
 
 const artifactRoot = path.resolve("artifacts/e2e-media");
+const showcaseClockStart = new Date("2026-01-01T00:00:00.000Z");
+const showcaseClockPause = new Date("2026-01-01T01:00:00.000Z");
 
 test.beforeEach(async ({ page }) => {
-  await page.clock.install();
+  await page.clock.install({ time: showcaseClockStart });
   await page.addInitScript(() => {
     const NativeAudioContext = window.AudioContext;
     const captureByContext = new WeakMap<BaseAudioContext, MediaStreamAudioDestinationNode>();
@@ -653,8 +655,7 @@ const recordFeature = async (
   const targetMs = Math.round(feature.durationSeconds * 1000);
   const audioInfo = await startAudioCapture(page);
   const audioStartedAt = Date.now();
-  const pageNow = await page.evaluate(() => Date.now());
-  await page.clock.pauseAt(pageNow);
+  await page.clock.pauseAt(showcaseClockPause);
   await demonstrate();
 
   const captureInfo = await startCanvasFrameCapture(page, formFactor, feature.durationSeconds);
