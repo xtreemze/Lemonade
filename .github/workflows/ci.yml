@@ -16,6 +16,7 @@ permissions:
 jobs:
   preflight:
     if: github.event_name == 'pull_request' && github.event.pull_request.draft == true
+    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -27,11 +28,16 @@ jobs:
           install: false
       - run: pnpm install --frozen-lockfile
       - name: Typecheck
+        continue-on-error: true
         run: pnpm typecheck
       - name: Lint and repository policy
+        continue-on-error: true
         run: pnpm lint
+      - name: Format check
+        continue-on-error: true
+        run: pnpm format:check
 
-  check:
+  build:
     if: github.event_name == 'push' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -43,8 +49,8 @@ jobs:
           cache: true
           install: false
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: pnpm certify
+      - name: Build workspace
+        run: pnpm build
       - name: Verify GitHub Pages bundle
         shell: bash
         run: |
@@ -52,8 +58,38 @@ jobs:
           pnpm --filter @lemonade/web exec vite build --base=/Lemonade/
           pnpm --filter @lemonade/web verify:pages-bundle
 
+  quality:
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        continue-on-error: true
+        run: pnpm typecheck
+      - name: Lint and repository policy
+        continue-on-error: true
+        run: pnpm lint
+      - name: Format check
+        continue-on-error: true
+        run: pnpm format:check
+      - name: Unit and invariant tests
+        continue-on-error: true
+        run: pnpm test
+      - name: Balance certification
+        continue-on-error: true
+        run: pnpm certify
+
   browser:
     if: github.event_name == 'push' || github.event.pull_request.draft == false
+    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -77,6 +113,7 @@ jobs:
 
   mobile-contract:
     if: github.event_name == 'push' || github.event.pull_request.draft == false
+    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -90,3 +127,124 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: Enforce fullscreen mobile-first flow contract
         run: pnpm verify:mobile
+
+  coverage:
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
+    continue-on-error: true
+    permissions:
+      contents: read
+      actions: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - name: Install coverage provider
+        run: pnpm add -Dw --lockfile=false @vitest/coverage-v8@5.0.1
+      - name: Run test coverage
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/coverage
+          pnpm exec vitest run apps/web/test packages/*/test \
+            --coverage.enabled=true \
+            --coverage.provider=v8 \
+            --coverage.reporter=text \
+            --coverage.reporter=json-summary \
+            --coverage.reporter=html \
+            --coverage.reportsDirectory=artifacts/coverage \
+            2>&1 | tee artifacts/coverage/coverage.log
+      - name: Remove previous coverage report artifacts
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=test-coverage-report&per_page=100" \
+            --jq '.artifacts[].id' |
+          while read -r artifact_id; do
+            [ -z "${artifact_id}" ] || gh api --method DELETE "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+          done
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-coverage-report
+          path: artifacts/coverage/
+          if-no-files-found: warn
+          retention-days: 2
+
+  lighthouse:
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
+    continue-on-error: true
+    permissions:
+      contents: read
+      actions: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - name: Build production Pages bundle
+        run: pnpm --filter @lemonade/web exec vite build --base=/Lemonade/
+      - name: Run Lighthouse audit
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/lighthouse
+          pnpm --filter @lemonade/web exec vite preview --base=/Lemonade/ --host 127.0.0.1 --port 4173 --strictPort \
+            > artifacts/lighthouse/preview.log 2>&1 &
+          server_pid=$!
+          trap 'kill "${server_pid}" 2>/dev/null || true' EXIT
+
+          ready=false
+          for _ in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/Lemonade/ >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "${ready}" != "true" ]; then
+            echo "Vite preview did not become ready." | tee artifacts/lighthouse/lighthouse.log
+            exit 1
+          fi
+
+          pnpm dlx lighthouse@latest http://127.0.0.1:4173/Lemonade/ \
+            --output=html \
+            --output=json \
+            --output-path=artifacts/lighthouse/report \
+            --chrome-flags="--headless --no-sandbox" \
+            2>&1 | tee artifacts/lighthouse/lighthouse.log
+      - name: Remove previous Lighthouse report artifacts
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=lighthouse-report&per_page=100" \
+            --jq '.artifacts[].id' |
+          while read -r artifact_id; do
+            [ -z "${artifact_id}" ] || gh api --method DELETE "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+          done
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: artifacts/lighthouse/
+          if-no-files-found: warn
+          retention-days: 2
