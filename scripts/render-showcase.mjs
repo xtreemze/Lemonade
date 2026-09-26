@@ -275,7 +275,7 @@ const renderSection = (formFactor, heading) => {
 const readme = [
   "## Product in motion",
   "",
-  "The 3D scenes are captured directly from the real WebGL canvas at source resolution and 60 fps with the application’s procedural audio. Static interface and report states use lossless screenshots rather than video frames.",
+  "The 3D scenes are rendered from the real WebGL canvas as exact 60 fps browser source frames with the application’s procedural audio. Static interface and report states use lossless screenshots rather than video frames.",
   "",
   ...renderSection("desktop", "Desktop"),
   ...renderSection("mobile", "Mobile"),

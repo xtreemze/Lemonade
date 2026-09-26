@@ -7,6 +7,7 @@ const previewOrigin = "http://127.0.0.1:4173";
 
 export default defineConfig({
   testDir: "./e2e/showcase",
+  timeout: 120_000,
   fullyParallel: false,
   workers: 1,
   forbidOnly: isCi,
@@ -27,8 +28,6 @@ export default defineConfig({
         "--disable-background-timer-throttling",
         "--disable-renderer-backgrounding",
         "--disable-backgrounding-occluded-windows",
-        "--disable-frame-rate-limit",
-        "--disable-gpu-vsync",
       ],
     },
   },

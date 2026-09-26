@@ -14,7 +14,9 @@ Desktop uses a 1440×900 Chromium viewport. Mobile uses the project’s certifie
 
 ## Capture policy
 
-Dynamic 3D evidence is captured directly from `#scene-canvas` with `HTMLCanvasElement.captureStream(60)` and a video `MediaRecorder`. In parallel, a showcase-only init script subclasses `AudioContext` and mirrors nodes connected to the normal audio destination into a 48 kHz `MediaStreamAudioDestinationNode`, which is recorded by a separate audio `MediaRecorder`. No showcase capture hooks ship in the production application. The two raw streams are muxed deterministically by FFmpeg into the published H.264/AAC video. This avoids Chromium’s unreliable combined WebM container path and preserves the scene’s render surface. Showcase Chromium runs with frame-rate/background throttling disabled, and the raw recorder prefers VP8 over VP9 to reduce real-time encoder pressure. `captureStream(60)` sets the target, but that request alone is not accepted as proof of 60 fps: CI counts decoded raw frames with FFprobe and requires at least 59 actual captured frames per second across the intended scene duration before FFmpeg normalization is allowed. Desktop video capture targets 20 Mbps; mobile targets 8 Mbps, with a 192 kbps audio target.
+Dynamic 3D evidence is captured directly from `#scene-canvas` as browser-rendered source frames. The showcase installs Playwright Clock at a known time, pauses it at a deterministic later point before each dynamic demonstration, initializes capture only after the requested scene state is ready, and then advances `requestAnimationFrame` and timer-driven scene time in deterministic 1/60-second steps. Each rendered canvas state is submitted to Chromium’s WebCodecs `VideoEncoder` as VP8; the resulting VP8 frames are wrapped in IVF and losslessly remuxed to WebM without frame-rate conversion. A 6-second scene therefore contains exactly 360 source frames and a 10-second scene exactly 600. FFmpeg is not allowed to manufacture missing source frames.
+
+In parallel, a showcase-only init script subclasses `AudioContext` and mirrors nodes connected to the normal audio destination into a 48 kHz `MediaStreamAudioDestinationNode`, recorded by an audio-only `MediaRecorder`. No showcase capture hooks ship in the production application. The source video and application audio are then muxed into the published H.264/AAC media. Desktop VP8 encoding targets 20 Mbps; mobile targets 8 Mbps, with a 192 kbps audio target.
 
 Static product states are not recorded as video. Planning, day report, and sales history are captured once as full-viewport PNG screenshots after interactions settle. This keeps text, charts, controls, and report typography crisp instead of converting unchanged pixels into low-frame-rate animation.
 
@@ -63,7 +65,7 @@ README markup is generated from `e2e/showcase/manifest.json` into the CI artifac
 
 Each successful showcase run uploads `artifacts/e2e-media` with:
 
-- four raw canvas WebM video captures and four parallel Opus/WebM audio captures: forecast and simulation for desktop/mobile;
+- four raw VP8/WebM frame captures produced from the real canvas and four parallel Opus/WebM audio captures: forecast and simulation for desktop/mobile;
 - six raw full-viewport PNG screenshots: planning, report, and history for desktop/mobile;
 - per-scene metadata;
 - four full-resolution 60 fps H.264 scene videos;
@@ -84,7 +86,7 @@ The verifier uses FFprobe to assert that:
 - static screenshots match the target viewport resolution;
 - each rendered 3D MP4 matches its desktop/mobile source target;
 - both H.264 highlight reels match their target resolution;
-- each raw dynamic WebM sustains at least 59 decoded source frames per second across its intended capture duration, so a slower capture padded to a nominal 60 fps fails CI;
+- each raw dynamic WebM has the exact source frame count required by its duration (360 frames for 6 seconds, 600 frames for 10 seconds), source timestamps resolve to native 60 fps cadence, and the source dimensions match the desktop/mobile viewport;
 - source videos and highlight reels report 60 fps and contain 48 kHz audio streams;
 - dynamic raw captures, rendered scene videos, and highlight reels contain measurable non-silent program audio;
 - the mixed presentation asset set exactly matches the manifest;
