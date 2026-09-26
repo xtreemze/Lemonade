@@ -17,27 +17,64 @@ const run = (args) => {
 
 const formFactors = {
   desktop: {
-    width: 1440,
-    height: 900,
-    graphicWidth: 960,
     reelName: "lemonade-desktop-highlight.mp4",
     animatedReelName: "lemonade-desktop-highlight.webp",
   },
   mobile: {
-    width: 390,
-    height: 844,
-    graphicWidth: 390,
     reelName: "lemonade-mobile-highlight.mp4",
     animatedReelName: "lemonade-mobile-highlight.webp",
   },
 };
 
-const videoFilter = (format) =>
-  `fps=${String(manifest.capture.videoFps)},scale=${String(format.width)}:${String(
-    format.height,
-  )}:flags=lanczos,setsar=1`;
+const readCaptureProfile = async (rawDir, formFactor) => {
+  const dynamicMetadata = [];
+  for (const feature of manifest.features.filter((candidate) => candidate.media === "video")) {
+    const metadata = JSON.parse(await readFile(path.join(rawDir, `${feature.id}.json`), "utf8"));
+    const profile = {
+      fps: Number(metadata.source?.fps ?? metadata.requestedFps),
+      width: Number(metadata.source?.width),
+      height: Number(metadata.source?.height),
+    };
+    if (
+      !Number.isFinite(profile.fps) ||
+      profile.fps <= 0 ||
+      !Number.isInteger(profile.width) ||
+      profile.width <= 0 ||
+      !Number.isInteger(profile.height) ||
+      profile.height <= 0
+    ) {
+      throw new Error(`Invalid raw capture profile for ${formFactor}/${feature.id}.`);
+    }
+    dynamicMetadata.push({ id: feature.id, ...profile });
+  }
 
-const encodeDynamicClip = (videoInput, audioInput, output, format, duration) => {
+  const first = dynamicMetadata[0];
+  if (first === undefined) {
+    throw new Error(`No dynamic source media exists for ${formFactor}.`);
+  }
+  for (const profile of dynamicMetadata.slice(1)) {
+    if (profile.fps !== first.fps || profile.width !== first.width || profile.height !== first.height) {
+      throw new Error(
+        `${formFactor} raw captures disagree on source profile: ${JSON.stringify(dynamicMetadata)}`,
+      );
+    }
+  }
+
+  for (const feature of manifest.features) {
+    const metadata = JSON.parse(await readFile(path.join(rawDir, `${feature.id}.json`), "utf8"));
+    if (metadata.viewport?.width !== first.width || metadata.viewport?.height !== first.height) {
+      throw new Error(
+        `${formFactor}/${feature.id} viewport ${String(metadata.viewport?.width)}×${String(
+          metadata.viewport?.height,
+        )} does not match source ${String(first.width)}×${String(first.height)}.`,
+      );
+    }
+  }
+
+  return { fps: first.fps, width: first.width, height: first.height };
+};
+
+const encodeDynamicClip = (videoInput, audioInput, output, duration) => {
   run([
     "-y",
     "-i",
@@ -50,8 +87,8 @@ const encodeDynamicClip = (videoInput, audioInput, output, format, duration) => 
     "0:v:0",
     "-map",
     "1:a:0",
-    "-vf",
-    videoFilter(format),
+    "-fps_mode",
+    "passthrough",
     "-c:v",
     "libx264",
     "-preset",
@@ -76,13 +113,13 @@ const encodeDynamicClip = (videoInput, audioInput, output, format, duration) => 
   ]);
 };
 
-const encodeStaticClip = (input, output, format, duration) => {
+const encodeStaticClip = (input, output, fps, duration) => {
   run([
     "-y",
     "-loop",
     "1",
     "-framerate",
-    String(manifest.capture.videoFps),
+    String(fps),
     "-i",
     input,
     "-f",
@@ -95,8 +132,8 @@ const encodeStaticClip = (input, output, format, duration) => {
     "0:v:0",
     "-map",
     "1:a:0",
-    "-vf",
-    videoFilter(format),
+    "-fps_mode",
+    "passthrough",
     "-c:v",
     "libx264",
     "-preset",
@@ -121,14 +158,14 @@ const encodeStaticClip = (input, output, format, duration) => {
   ]);
 };
 
-const encodeAnimatedWebp = (input, output, width) => {
+const encodeAnimatedWebp = (input, output) => {
   run([
     "-y",
     "-i",
     input,
-    "-vf",
-    `fps=${String(manifest.capture.animatedGraphicFps)},scale=${String(width)}:-2:flags=lanczos`,
     "-an",
+    "-fps_mode",
+    "passthrough",
     "-c:v",
     "libwebp_anim",
     "-lossless",
@@ -154,8 +191,12 @@ await writeFile(
   "utf8",
 );
 
+const captureProfiles = {};
+
 for (const [formFactor, format] of Object.entries(formFactors)) {
   const rawDir = path.join(artifactRoot, "raw", formFactor);
+  const captureProfile = await readCaptureProfile(rawDir, formFactor);
+  captureProfiles[formFactor] = captureProfile;
   const videoDir = path.join(artifactRoot, "videos", formFactor);
   const graphicDir = path.join(artifactRoot, "graphics", formFactor);
   const clipDir = path.join(artifactRoot, ".render", formFactor);
@@ -177,14 +218,14 @@ for (const [formFactor, format] of Object.entries(formFactors)) {
       const video = path.join(videoDir, `${feature.id}.mp4`);
       const graphic = path.join(graphicDir, `${feature.id}.webp`);
 
-      encodeDynamicClip(videoInput, audioInput, video, format, duration);
+      encodeDynamicClip(videoInput, audioInput, video, duration);
       await copyFile(video, clip);
-      encodeAnimatedWebp(video, graphic, format.graphicWidth);
+      encodeAnimatedWebp(video, graphic);
     } else if (feature.media === "screenshot") {
       const input = path.join(rawDir, `${feature.id}.png`);
       const graphic = path.join(graphicDir, `${feature.id}.png`);
       await copyFile(input, graphic);
-      encodeStaticClip(input, clip, format, duration);
+      encodeStaticClip(input, clip, captureProfile.fps, duration);
     } else {
       throw new Error(`Unknown showcase media type: ${String(feature.media)}`);
     }
@@ -204,8 +245,8 @@ for (const [formFactor, format] of Object.entries(formFactors)) {
     "[outv]",
     "-map",
     "[outa]",
-    "-r",
-    String(manifest.capture.videoFps),
+    "-fps_mode",
+    "passthrough",
     "-c:v",
     "libx264",
     "-preset",
@@ -229,13 +270,17 @@ for (const [formFactor, format] of Object.entries(formFactors)) {
     reel,
   ]);
 
-  encodeAnimatedWebp(reel, path.join(reelDir, format.animatedReelName), format.graphicWidth);
+  encodeAnimatedWebp(reel, path.join(reelDir, format.animatedReelName));
 }
 
 const imageWidth = { desktop: 960, mobile: 390 };
 const mediaExtension = (feature) => (feature.media === "video" ? "webp" : "png");
 const renderSection = (formFactor, heading) => {
   const width = imageWidth[formFactor];
+  const captureProfile = captureProfiles[formFactor];
+  if (captureProfile === undefined) {
+    throw new Error(`Missing capture profile for ${formFactor}.`);
+  }
   const animatedReelName =
     formFactor === "desktop" ? "lemonade-desktop-highlight.webp" : "lemonade-mobile-highlight.webp";
   const reelName =
@@ -259,14 +304,14 @@ const renderSection = (formFactor, heading) => {
     );
     if (feature.media === "video") {
       lines.push(
-        `[Watch the source-resolution ${String(manifest.capture.videoFps)} fps scene capture](${manifest.stableBaseUrl}/videos/${formFactor}/${feature.id}.mp4)`,
+        `[Watch the source-resolution ${String(captureProfile.fps)} fps scene capture](${manifest.stableBaseUrl}/videos/${formFactor}/${feature.id}.mp4)`,
         "",
       );
     }
   }
 
   lines.push(
-    `[Watch the source-resolution ${String(manifest.capture.videoFps)} fps ${heading.toLowerCase()} highlight reel](${manifest.stableBaseUrl}/reels/${reelName})`,
+    `[Watch the source-resolution ${String(captureProfile.fps)} fps ${heading.toLowerCase()} highlight reel](${manifest.stableBaseUrl}/reels/${reelName})`,
     "",
   );
   return lines;
@@ -275,7 +320,7 @@ const renderSection = (formFactor, heading) => {
 const readme = [
   "## Product in motion",
   "",
-  "The 3D scenes are rendered from the real WebGL canvas as exact 60 fps browser source frames with the application’s procedural audio. Static interface and report states use lossless screenshots rather than video frames.",
+  "The 3D scenes are rendered from the real WebGL canvas at the highest source frame rate certified by the capture probe, with the application’s procedural audio. Every later video and animated-image encoding preserves that source cadence and source dimensions. Static interface and report states use lossless screenshots rather than video frames.",
   "",
   ...renderSection("desktop", "Desktop"),
   ...renderSection("mobile", "Mobile"),
