@@ -331,16 +331,26 @@ const startCanvasFrameCapture = async (
   const fps = manifest.capture.videoFps;
   const videoBitsPerSecond = formFactor === "desktop" ? 20_000_000 : 8_000_000;
   const targetFrames = Math.round(durationSeconds * fps);
+  const expectedSize =
+    formFactor === "desktop" ? { width: 1440, height: 900 } : { width: 390, height: 844 };
 
   const result = await page.evaluate(
-    async ({ requestedFps, videoBitrate, requestedFrames }) => {
+    async ({ requestedFps, videoBitrate, requestedFrames, expectedWidth, expectedHeight }) => {
       const canvas = document.querySelector<HTMLCanvasElement>("#scene-canvas");
-      if (canvas === null || canvas.width <= 1 || canvas.height <= 1) {
+      if (
+        canvas === null ||
+        canvas.width !== expectedWidth ||
+        canvas.height !== expectedHeight
+      ) {
         throw new Error(
-          "Showcase 3D canvas is unavailable or not source-sized: " +
+          "Showcase 3D canvas is not source-sized: " +
             String(canvas?.width ?? 0) +
             "×" +
             String(canvas?.height ?? 0) +
+            "; expected " +
+            String(expectedWidth) +
+            "×" +
+            String(expectedHeight) +
             ".",
         );
       }
@@ -431,6 +441,8 @@ const startCanvasFrameCapture = async (
       requestedFps: fps,
       videoBitrate: videoBitsPerSecond,
       requestedFrames: targetFrames,
+      expectedWidth: expectedSize.width,
+      expectedHeight: expectedSize.height,
     },
   );
 
@@ -649,7 +661,6 @@ const recordFeature = async (
   const pageNow = await page.evaluate(() => Date.now());
   await page.clock.pauseAt(pageNow);
   await demonstrate();
-  await page.clock.runFor(16);
 
   const captureInfo = await startCanvasFrameCapture(page, formFactor, feature.durationSeconds);
   await advanceCanvasFrameCapture(page, captureInfo.targetFrames, manifest.capture.videoFps);
