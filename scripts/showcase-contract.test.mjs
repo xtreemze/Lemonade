@@ -38,6 +38,7 @@ test("showcase config structurally separates desktop and mobile Chromium capture
   assert.ok(config.includes("width: 390, height: 844"));
   assert.ok(config.includes("hasTouch: true"));
   assert.ok(config.includes('video: "off"'));
+  assert.ok(config.includes("timeout: 120_000"));
   assert.ok(config.includes("--autoplay-policy=no-user-gesture-required"));
   assert.ok(config.includes("--disable-background-timer-throttling"));
   assert.ok(!config.includes("--disable-frame-rate-limit"));
@@ -51,7 +52,8 @@ test("showcase specs capture dynamic 3D scenes directly and static states as scr
   assert.ok(spec.includes("new VideoFrame"));
   assert.ok(spec.includes("page.clock.install({ time: showcaseClockStart })"));
   assert.ok(spec.includes("page.clock.pauseAt"));
-  assert.ok(spec.includes("page.clock.runFor"));
+  assert.ok(spec.includes("page.clock.runFor(16)"));
+  assert.ok(spec.includes("page.clock.runFor(nextMs - previousMs)"));
   assert.ok(spec.includes('"deterministic-webcodecs-vp8"'));
   assert.ok(spec.includes('"vp8"'));
   assert.ok(spec.includes("videoBitsPerSecond"));
