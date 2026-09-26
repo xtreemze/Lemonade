@@ -337,11 +337,7 @@ const startCanvasFrameCapture = async (
   const result = await page.evaluate(
     async ({ requestedFps, videoBitrate, requestedFrames, expectedWidth, expectedHeight }) => {
       const canvas = document.querySelector<HTMLCanvasElement>("#scene-canvas");
-      if (
-        canvas === null ||
-        canvas.width !== expectedWidth ||
-        canvas.height !== expectedHeight
-      ) {
+      if (canvas === null || canvas.width !== expectedWidth || canvas.height !== expectedHeight) {
         throw new Error(
           "Showcase 3D canvas is not source-sized: " +
             String(canvas?.width ?? 0) +
@@ -525,8 +521,7 @@ const stopCanvasFrameCapture = async (page: Page): Promise<CanvasFrameCaptureRes
       );
     }
 
-    const byteLength =
-      32 + chunks.reduce((total, chunk) => total + 12 + chunk.data.byteLength, 0);
+    const byteLength = 32 + chunks.reduce((total, chunk) => total + 12 + chunk.data.byteLength, 0);
     const ivf = new Uint8Array(byteLength);
     const view = new DataView(ivf.buffer);
     ivf.set([0x44, 0x4b, 0x49, 0x46], 0);
