@@ -153,7 +153,8 @@ test("README and docs use animated graphics only for dynamic scenes", async () =
   }
   assert.ok(readme.includes("lemonade-desktop-highlight.webp"));
   assert.ok(readme.includes("lemonade-mobile-highlight.webp"));
-  assert.ok(docs.includes("captureStream(60)"));
+  assert.ok(docs.includes("WebCodecs"));
+  assert.ok(docs.includes("exactly 360 source frames"));
   assert.ok(docs.includes("source-resolution H.264/AAC MP4"));
   assert.ok(docs.includes("animated WebP"));
 });
