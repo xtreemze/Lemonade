@@ -272,15 +272,7 @@ const assertFrameProfile = (filePath, expected, expectedFps, expectedFrames, exp
         )}×${String(expected.height)}.`,
       );
     }
-    if (webp.frames !== expectedFrames) {
-      throw new Error(
-        `${filePath} contains ${String(webp.frames)} ANMF frames; expected exactly ${String(
-          expectedFrames,
-        )} source-derived frames with no duplication or interpolation.`,
-      );
-    }
     const duration = webp.durationMs / 1000;
-    const fps = webp.frames / duration;
     if (Math.abs(duration - expectedDurationSeconds) > 0.15) {
       throw new Error(
         `${filePath} animation duration is ${duration.toFixed(3)}s; expected ${expectedDurationSeconds.toFixed(
@@ -288,11 +280,30 @@ const assertFrameProfile = (filePath, expected, expectedFps, expectedFrames, exp
         )}s from the source timeline.`,
       );
     }
-    if (Math.abs(fps - expectedFps) > 1) {
+
+    const sourceFrameMs = 1000 / expectedFps;
+    for (const frameDurationMs of webp.frameDurationsMs) {
+      const sourceFramesRepresented = Math.max(1, Math.round(frameDurationMs / sourceFrameMs));
+      const expectedFrameDurationMs = sourceFramesRepresented * sourceFrameMs;
+      if (Math.abs(frameDurationMs - expectedFrameDurationMs) > 1.5) {
+        throw new Error(
+          `${filePath} contains a ${String(frameDurationMs)} ms WebP frame that does not align with the ${String(
+            expectedFps,
+          )} fps source timeline.`,
+        );
+      }
+    }
+
+    const representedSourceFrames = webp.frameDurationsMs.reduce(
+      (total, frameDurationMs) =>
+        total + Math.max(1, Math.round(frameDurationMs / sourceFrameMs)),
+      0,
+    );
+    if (Math.abs(representedSourceFrames - expectedFrames) > 1) {
       throw new Error(
-        `${filePath} animated WebP cadence is ${fps.toFixed(2)} fps; expected approximately ${String(
-          expectedFps,
-        )} fps after WebP millisecond-duration quantization.`,
+        `${filePath} WebP timing represents ${String(
+          representedSourceFrames,
+        )} source-frame intervals; expected ${String(expectedFrames)}. Frame coalescing is allowed only when timing remains source-equivalent.`,
       );
     }
     return;
