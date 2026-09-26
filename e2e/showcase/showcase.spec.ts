@@ -201,7 +201,7 @@ const startAudioCapture = async (
           stream: MediaStream;
           enable: () => Promise<void>;
         }>;
-        __lemonadeShowcaseAudioCapture?: AudioCaptureState;
+        __lemonadeShowcaseAudioCapture: AudioCaptureState | undefined;
       };
       const audioBridge = scope.__lemonadeShowcaseAudio;
       if (audioBridge === undefined) {
@@ -256,7 +256,7 @@ const startAudioCapture = async (
 const stopAudioCapture = async (page: Page): Promise<AudioCaptureResult> =>
   page.evaluate(async () => {
     const scope = window as typeof window & {
-      __lemonadeShowcaseAudioCapture?: AudioCaptureState;
+      __lemonadeShowcaseAudioCapture: AudioCaptureState | undefined;
     };
     const state = scope.__lemonadeShowcaseAudioCapture;
     if (state === undefined) {
@@ -386,7 +386,7 @@ const startCanvasFrameCapture = async (
       encoder.configure(support.config ?? config);
 
       const scope = window as typeof window & {
-        __lemonadeShowcaseFrameCapture?: FrameCaptureState;
+        __lemonadeShowcaseFrameCapture: FrameCaptureState | undefined;
       };
       let state: FrameCaptureState;
       const frameDurationUs = 1_000_000 / requestedFps;
@@ -453,7 +453,7 @@ const flushCanvasFrameCapture = async (page: Page): Promise<number> =>
   page.evaluate(async () => {
     const state = (
       window as typeof window & {
-        __lemonadeShowcaseFrameCapture?: FrameCaptureState;
+        __lemonadeShowcaseFrameCapture: FrameCaptureState | undefined;
       }
     ).__lemonadeShowcaseFrameCapture;
     if (state === undefined) {
@@ -496,7 +496,7 @@ const advanceCanvasFrameCapture = async (
 const stopCanvasFrameCapture = async (page: Page): Promise<CanvasFrameCaptureResult> =>
   page.evaluate(async () => {
     const scope = window as typeof window & {
-      __lemonadeShowcaseFrameCapture?: FrameCaptureState;
+      __lemonadeShowcaseFrameCapture: FrameCaptureState | undefined;
     };
     const state = scope.__lemonadeShowcaseFrameCapture;
     if (state === undefined) {
