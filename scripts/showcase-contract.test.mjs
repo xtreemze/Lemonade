@@ -40,20 +40,25 @@ test("showcase config structurally separates desktop and mobile Chromium capture
   assert.ok(config.includes('video: "off"'));
   assert.ok(config.includes("--autoplay-policy=no-user-gesture-required"));
   assert.ok(config.includes("--disable-background-timer-throttling"));
-  assert.ok(config.includes("--disable-frame-rate-limit"));
+  assert.ok(!config.includes("--disable-frame-rate-limit"));
+  assert.ok(!config.includes("--disable-gpu-vsync"));
 });
 
 test("showcase specs capture dynamic 3D scenes directly and static states as screenshots", async () => {
   const spec = await read("e2e/showcase/showcase.spec.ts");
-  assert.ok(spec.includes("canvas.captureStream(requestedFps)"));
-  assert.ok(spec.includes("new MediaRecorder"));
-  assert.ok(spec.includes('["video/webm;codecs=vp8", "video/webm;codecs=vp9", "video/webm"]'));
+  assert.ok(!spec.includes("canvas.captureStream(requestedFps)"));
+  assert.ok(spec.includes("new VideoEncoder"));
+  assert.ok(spec.includes("new VideoFrame"));
+  assert.ok(spec.includes("page.clock.install()"));
+  assert.ok(spec.includes("page.clock.pauseAt"));
+  assert.ok(spec.includes("page.clock.runFor"));
+  assert.ok(spec.includes('"deterministic-webcodecs-vp8"'));
+  assert.ok(spec.includes('"vp8"'));
   assert.ok(spec.includes("videoBitsPerSecond"));
   assert.ok(spec.includes("audioBitsPerSecond"));
   assert.ok(spec.includes("getAudioTracks"));
   assert.ok(spec.includes(".audio.webm"));
-  assert.ok(spec.includes("videoRecorder"));
-  assert.ok(spec.includes("audioRecorder"));
+  assert.ok(spec.includes("new MediaRecorder"));
   assert.ok(spec.includes("createMediaStreamDestination"));
   assert.ok(spec.includes("AudioNode.prototype"));
   assert.ok(spec.includes("__lemonadeShowcaseAudio"));
@@ -87,6 +92,9 @@ test("verifier enforces source resolution and high-frame-rate output", async () 
   assert.ok(verifier.includes("assertHighFrameRate"));
   assert.ok(verifier.includes("assertCapturedFrameCadence"));
   assert.ok(verifier.includes("best_effort_timestamp_time"));
+  assert.ok(verifier.includes("expected exactly"));
+  assert.ok(verifier.includes('"deterministic-webcodecs-vp8"'));
+  assert.ok(verifier.includes("metadata.capturedFrames"));
   assert.ok(verifier.includes("first="));
   assert.ok(verifier.includes("last="));
   assert.ok(verifier.includes("min="));
