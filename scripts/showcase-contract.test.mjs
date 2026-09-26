@@ -38,7 +38,7 @@ test("showcase config structurally separates desktop and mobile Chromium capture
   assert.ok(config.includes("width: 390, height: 844"));
   assert.ok(config.includes("hasTouch: true"));
   assert.ok(config.includes('video: "off"'));
-  assert.ok(config.includes("timeout: 120_000"));
+  assert.ok(config.includes("timeout: 300_000"));
   assert.ok(config.includes("--autoplay-policy=no-user-gesture-required"));
   assert.ok(config.includes("--disable-background-timer-throttling"));
   assert.ok(!config.includes("--disable-frame-rate-limit"));
