@@ -87,7 +87,7 @@ The verifier uses FFprobe to assert that:
 - each rendered 3D MP4 matches its desktop/mobile source target;
 - both H.264 highlight reels match their target resolution;
 - each raw dynamic WebM has the exact source frame count required by `duration × selected source FPS`, decoded timestamps resolve to that measured native cadence, and source dimensions match the desktop/mobile viewport;
-- every H.264 and animated WebP derivative preserves the raw frame count, decoded cadence, and source dimensions, so downstream encoding cannot silently duplicate/interpolate frames or downscale the capture;
+- every H.264 derivative preserves the raw frame count, decoded cadence, and source dimensions; animated WebP may coalesce visually identical adjacent frames, but its per-frame durations must remain aligned to the verified source timeline and preserve the full source dimensions;
 - source videos and highlight reels contain 48 kHz audio streams;
 - dynamic raw captures, rendered scene videos, and highlight reels contain measurable non-silent program audio;
 - the mixed presentation asset set exactly matches the manifest;
