@@ -749,6 +749,11 @@ const recordFeature = async (
   const targetMs = Math.round(feature.durationSeconds * 1000);
   await page.clock.pauseAt(showcaseClockPause);
   const captureProfile = await measureCaptureProfile(page);
+  console.log(
+    `Showcase source profile ${formFactor}/${feature.id}: ${String(
+      captureProfile.fps,
+    )} fps selected from ${captureProfile.measuredAnimationFrameFps.toFixed(2)} measured rAF fps.`,
+  );
   const audioInfo = await startAudioCapture(page);
   const audioStartedAt = Date.now();
   await demonstrate();
