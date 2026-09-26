@@ -49,7 +49,7 @@ test("showcase specs capture dynamic 3D scenes directly and static states as scr
   assert.ok(!spec.includes("canvas.captureStream(requestedFps)"));
   assert.ok(spec.includes("new VideoEncoder"));
   assert.ok(spec.includes("new VideoFrame"));
-  assert.ok(spec.includes("page.clock.install()"));
+  assert.ok(spec.includes("page.clock.install({ time: showcaseClockStart })"));
   assert.ok(spec.includes("page.clock.pauseAt"));
   assert.ok(spec.includes("page.clock.runFor"));
   assert.ok(spec.includes('"deterministic-webcodecs-vp8"'));
