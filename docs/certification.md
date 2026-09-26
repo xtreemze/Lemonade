@@ -53,7 +53,7 @@ A revision is release-certified only when all of the following pass for the same
 6. Visual showcase evidence
    - `pnpm test:showcase-contract` protects media configuration and normal-E2E isolation;
    - the dedicated `Visual Showcase` workflow captures 5/5 desktop and 5/5 mobile capabilities from real Chromium using source-appropriate media;
-   - forecast and simulation probe Chromium’s native source cadence, select the highest certified candidate the browser actually produces (60 fps minimum), and capture deterministic WebGL source frames at that rate with real procedural Web Audio in parallel; planning/report/history use full-viewport PNG screenshots;
+   - forecast and simulation probe Chromium’s native source cadence, select the highest certified candidate the browser actually produces from 120/90/60/30 fps (30 fps minimum, 120 fps maximum), and capture deterministic WebGL source frames at that rate with real procedural Web Audio in parallel; planning/report/history use full-viewport PNG screenshots;
    - four source-resolution H.264/AAC scene videos, six static PNGs, four source-resolution animated WebPs, two source-resolution H.264/AAC highlight reels, and two source-resolution animated WebP presentation reels must all preserve the verified raw FPS, frame count, and dimensions before artifact upload;
    - FFprobe resolution/frame-rate/audio-stream checks, FFmpeg non-silence checks, and presentation payload budgets are reported and enforced;
    - Pages publishes the verified media beneath `/Lemonade/showcase/` at stable URLs used by the README and presentation documentation.
