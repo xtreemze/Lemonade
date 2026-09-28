@@ -19,6 +19,22 @@ const ORGANIC_CONFIDENCE_STEP_BPS = 100;
 const ORGANIC_SATISFACTION_MAX_ADJUSTMENT_BPS = 250;
 const ORGANIC_HISTORY_MAX_ADJUSTMENT_BPS = 500;
 
+const ORGANIC_TYPE_ADJUSTMENT_BPS: Readonly<Record<CustomerTraits["type"], number>> =
+  Object.freeze({
+    impulse: 0,
+    "price-sensitive": 50,
+    regular: 250,
+    destination: 150,
+  });
+
+const ADVERTISING_TYPE_MULTIPLIER_BPS: Readonly<Record<CustomerTraits["type"], number>> =
+  Object.freeze({
+    impulse: 11_000,
+    "price-sensitive": 10_500,
+    regular: 9000,
+    destination: 7500,
+  });
+
 const MAX_SIGNS_BY_LEVEL: Readonly<Record<OperatingScaleLevel, number>> = Object.freeze({
   1: 3,
   2: 10,
@@ -96,6 +112,7 @@ export const organicAwarenessProbability = (
     800 +
       Number(traits.familiarity) * 0.32 +
       Number(traits.loyalty) * 0.12 +
+      ORGANIC_TYPE_ADJUSTMENT_BPS[traits.type] +
       organicHistoryAdjustment(context),
   );
 
@@ -107,11 +124,17 @@ export const effectiveAdvertisingReach = (
 ): BasisPoints => {
   const baseReach = Number(advertisingBaseReach(signs)) / 10_000;
   const responsiveness = Number(traits.advertisingResponsiveness) / 10_000;
+  const typeResponsiveness = ADVERTISING_TYPE_MULTIPLIER_BPS[traits.type] / 10_000;
   const weatherAttention = Number(weatherAdvertisingAttention(weather)) / 10_000;
   const fatiguePenalty = Number(advertisingFatigueReachPenalty(fatigue)) / 10_000;
 
   return boundedBasisPoints(
-    baseReach * responsiveness * weatherAttention * (1 - fatiguePenalty) * 10_000,
+    baseReach *
+      responsiveness *
+      typeResponsiveness *
+      weatherAttention *
+      (1 - fatiguePenalty) *
+      10_000,
   );
 };
 
