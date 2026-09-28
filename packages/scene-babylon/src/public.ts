@@ -8,4 +8,4 @@ export declare const createBabylonLemonsvilleScene: (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
   options?: LemonsvilleSceneOptions,
-) => LemonsvilleSceneControllerContract | null;
+) => Promise<LemonsvilleSceneControllerContract | null>;
