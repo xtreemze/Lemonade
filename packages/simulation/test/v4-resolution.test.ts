@@ -4,6 +4,7 @@ import {
   basisPoints,
   createInitialState,
   dayNumber,
+  DecisionOutsideOperatingScaleError,
   glassCount,
   moneyCents,
   neutralEnvironment,
@@ -13,6 +14,7 @@ import {
   signCount,
   signedMoneyCents,
   simulateDayV4,
+  UnaffordableDecisionError,
   type DailyLedgerEntry,
   type DayDecision,
   type DayEnvironment,
@@ -184,6 +186,43 @@ describe("v4 customer-funnel day resolution", () => {
     expect(Number(result.market.memoryAfter.satisfaction)).toBeLessThanOrEqual(10_000);
   });
 
+
+
+  it("rejects invalid decisions before resolving the market funnel", () => {
+    expect(() =>
+      simulateDayV4(
+        createInitialState(),
+        decision(5, 1, 0),
+        neutralEnvironment(),
+        seed(1),
+        neutralMarketMemory(),
+      ),
+    ).toThrow("price must be greater than zero");
+
+    expect(() =>
+      simulateDayV4(
+        createInitialState(),
+        decision(16, 1, 150),
+        neutralEnvironment(),
+        seed(2),
+        neutralMarketMemory(),
+      ),
+    ).toThrow(DecisionOutsideOperatingScaleError);
+
+    const cashPoor = Object.freeze({
+      ...createInitialState(),
+      cash: moneyCents(100),
+    });
+    expect(() =>
+      simulateDayV4(
+        cashPoor,
+        decision(2, 0, 150),
+        neutralEnvironment(),
+        seed(3),
+        neutralMarketMemory(),
+      ),
+    ).toThrow(UnaffordableDecisionError);
+  });
 
   it("turns willing customers into stockouts when no inventory is prepared", () => {
     const result = simulateDayV4(
