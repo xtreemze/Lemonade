@@ -6,14 +6,13 @@ import "./persistence.css";
 
 import { createFreshRunSnapshot, LemonadeApp } from "./app.js";
 import { isRendererStressFixtureEnabled, isSceneViewerEnabled } from "./dev-scene-viewer-flag.js";
-import { clearCurrentRun, loadCurrentRun, RunPersistenceError } from "./persistence.js";
 
 const root = document.querySelector("#root");
 if (!(root instanceof HTMLElement)) {
   throw new TypeError("Expected #root application mount point.");
 }
 
-const renderRecovery = (error: RunPersistenceError): void => {
+const renderRecovery = (error: Error, clearCurrentRun: () => Promise<void>): void => {
   root.innerHTML = `
     <main class="game-shell bootstrap-shell">
       <section class="decision-panel bootstrap-recovery" aria-labelledby="recovery-title">
@@ -62,8 +61,10 @@ const start = async (): Promise<LemonadeApp | undefined> => {
     }
   }
 
+  const persistence = await import("./persistence.js");
+
   try {
-    const restored = await loadCurrentRun();
+    const restored = await persistence.loadCurrentRun();
     return new LemonadeApp(
       root,
       restored?.snapshot ?? createFreshRunSnapshot(),
@@ -78,7 +79,7 @@ const start = async (): Promise<LemonadeApp | undefined> => {
     );
   } catch (error) {
     if (
-      error instanceof RunPersistenceError &&
+      error instanceof persistence.RunPersistenceError &&
       (error.code === "storage-unavailable" || error.code === "storage-failed")
     ) {
       return new LemonadeApp(root, createFreshRunSnapshot(), {
@@ -87,8 +88,8 @@ const start = async (): Promise<LemonadeApp | undefined> => {
       });
     }
 
-    if (error instanceof RunPersistenceError) {
-      renderRecovery(error);
+    if (error instanceof persistence.RunPersistenceError) {
+      renderRecovery(error, persistence.clearCurrentRun);
       return;
     }
 
