@@ -15,7 +15,9 @@ import {
   glassCount,
   isLegacyBankrupt,
   legacyConfidenceForState,
+  type MarketMemory,
   moneyCents,
+  neutralMarketMemory,
   type OperatingScaleLevel,
   operatingScaleForState,
   predictableFixedObligations,
@@ -23,7 +25,8 @@ import {
   type Seed,
   seed,
   signCount,
-  simulateDay,
+  SIMULATION_RULESET_VERSION,
+  simulateDayV4,
 } from "@lemonade/simulation";
 import { renderLedgerHistory, summarizeCompletedWeek } from "@lemonade/ui";
 
@@ -154,6 +157,8 @@ export const createFreshRunSnapshot = (): RunSnapshot => {
   const environment = generateEnvironment(state.day, random);
   return Object.freeze({
     seed: DEFAULT_RUN_SEED,
+    rulesetVersion: SIMULATION_RULESET_VERSION,
+    marketMemory: neutralMarketMemory(),
     state,
     environment,
     draft: Object.freeze({
@@ -337,6 +342,7 @@ export class LemonadeApp {
   readonly #persistenceEnabled: boolean;
 
   #game: GameState;
+  #marketMemory: MarketMemory;
   #environment: DayEnvironment;
   #phase: RunPhase;
   #lifecycle: RunLifecycleState;
@@ -362,6 +368,7 @@ export class LemonadeApp {
     this.#runSeed = initialRun.seed;
     this.#random = restoreEnvironmentRandom(initialRun);
     this.#game = initialRun.state;
+    this.#marketMemory = initialRun.marketMemory;
     this.#environment = initialRun.environment;
     this.#phase = initialRun.phase;
     this.#lifecycle = restoreRunLifecycle(initialRun.phase.kind);
@@ -549,7 +556,8 @@ export class LemonadeApp {
 
     void this.#haptics.then((haptics) => haptics.play("purchase:serve"));
 
-    const resolution = simulateDay(
+    const marketMemoryBefore = this.#marketMemory;
+    const resolution = simulateDayV4(
       this.#game,
       Object.freeze({
         glasses: glassCount(this.#glasses),
@@ -557,10 +565,18 @@ export class LemonadeApp {
         price: moneyCents(this.#price),
       }),
       this.#environment,
+      this.#runSeed,
+      marketMemoryBefore,
     );
+    this.#marketMemory = resolution.market.memoryAfter;
     const previousTier = this.#game.tier;
     const previousScaleLevel = operatingScaleForState(this.#game).level;
-    this.#phase = Object.freeze({ kind: "report", resolution });
+    this.#phase = Object.freeze({
+      kind: "report",
+      rulesetVersion: SIMULATION_RULESET_VERSION,
+      marketMemoryBefore,
+      resolution,
+    });
     this.#lifecycle = lifecycleTransition.state;
     this.#render();
     this.#queueSave("Day report saved locally.");
@@ -690,6 +706,8 @@ export class LemonadeApp {
   #snapshot(): RunSnapshot {
     return Object.freeze({
       seed: this.#runSeed,
+      rulesetVersion: SIMULATION_RULESET_VERSION,
+      marketMemory: this.#marketMemory,
       state: this.#game,
       environment: this.#environment,
       draft: Object.freeze({

@@ -5,7 +5,7 @@ import {
   type DayAudience,
   type MarketMemory,
   customerTraitsFor,
-  dayAudienceFor,
+  dayAudienceForWeather,
   summarizeAudience,
 } from "./audience.js";
 import { conversionForCustomer } from "./conversion.js";
@@ -43,7 +43,7 @@ const customerOutcomesForDay = (
   summary: AudienceSummary;
 }> => {
   const level = operatingScaleForState(state).level;
-  const audience = dayAudienceFor(runSeed, state.day, level);
+  const audience = dayAudienceForWeather(runSeed, state.day, level, environment.weather.kind);
   const confidence = legacyConfidenceForState(state);
   let purchased = 0;
 
@@ -57,6 +57,8 @@ const customerOutcomesForDay = (
         signs: decision.signs,
         weather: environment.weather.kind,
         advertisingFatigue: memory.advertisingFatigue,
+        confidence,
+        satisfaction: memory.satisfaction,
       });
 
       if (awareness.kind === "unaware") {

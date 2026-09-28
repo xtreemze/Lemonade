@@ -8,6 +8,7 @@ import {
   customerId,
   customerTraitsFor,
   dayAudienceFor,
+  dayAudienceForWeather,
   dayNumber,
   seed,
   summarizeAudience,
@@ -87,6 +88,94 @@ describe("audience identity and selection", () => {
     expect(customerTraitsFor(runSeed, recurringId)).toEqual(
       customerTraitsFor(runSeed, recurringId),
     );
+  });
+});
+
+
+describe("weather-conditioned audience selection", () => {
+  it("keeps audience size and neighborhood size independent from weather", () => {
+    const runSeed = seed(0x44_33_22_11);
+    const day = dayNumber(9);
+
+    for (const level of [1, 2, 3, 4] as const) {
+      const baseline = dayAudienceForWeather(runSeed, day, level, "sunny");
+      for (const weather of ["cloudy", "hot-and-dry", "thunderstorm"] as const) {
+        const conditioned = dayAudienceForWeather(runSeed, day, level, weather);
+        expect(conditioned.neighborhoodSize).toBe(baseline.neighborhoodSize);
+        expect(conditioned.customerIds).toHaveLength(baseline.customerIds.length);
+      }
+    }
+  });
+
+  it("replays identical weather-conditioned customer ids", () => {
+    const input = Object.freeze({
+      runSeed: seed(0x0f_0e_0d_0c),
+      day: dayNumber(14),
+      level: 3 as const,
+      weather: "thunderstorm" as const,
+    });
+
+    expect(
+      dayAudienceForWeather(input.runSeed, input.day, input.level, input.weather),
+    ).toEqual(dayAudienceForWeather(input.runSeed, input.day, input.level, input.weather));
+  });
+
+  it("keeps storm selection bounded instead of replacing the whole audience", () => {
+    const runSeed = seed(0x10_20_30_40);
+    const day = dayNumber(17);
+    const sunny = dayAudienceForWeather(runSeed, day, 3, "sunny");
+    const storm = dayAudienceForWeather(runSeed, day, 3, "thunderstorm");
+    const sunnyIds = new Set(sunny.customerIds.map(Number));
+    const overlap = storm.customerIds.filter((id) => sunnyIds.has(Number(id))).length;
+
+    expect(overlap / sunny.customerIds.length).toBeGreaterThanOrEqual(0.55);
+    expect(storm.customerIds).not.toEqual(sunny.customerIds);
+  });
+
+  it("shifts storm composition toward committed regular and destination customers", () => {
+    let sunnyPreferred = 0;
+    let stormPreferred = 0;
+    let sunnyImpulse = 0;
+    let stormImpulse = 0;
+
+    for (let seedValue = 1; seedValue <= 48; seedValue += 1) {
+      const runSeed = seed(seedValue);
+      const day = dayNumber((seedValue % 20) + 1);
+      const sunny = dayAudienceForWeather(runSeed, day, 2, "sunny");
+      const storm = dayAudienceForWeather(runSeed, day, 2, "thunderstorm");
+
+      for (const id of sunny.customerIds) {
+        const traits = customerTraitsFor(runSeed, id);
+        sunnyPreferred +=
+          traits.type === "regular" || traits.type === "destination" ? 1 : 0;
+        sunnyImpulse += traits.type === "impulse" ? 1 : 0;
+      }
+      for (const id of storm.customerIds) {
+        const traits = customerTraitsFor(runSeed, id);
+        stormPreferred +=
+          traits.type === "regular" || traits.type === "destination" ? 1 : 0;
+        stormImpulse += traits.type === "impulse" ? 1 : 0;
+      }
+    }
+
+    expect(stormPreferred).toBeGreaterThan(sunnyPreferred);
+    expect(stormImpulse).toBeLessThan(sunnyImpulse);
+  });
+
+  it("does not let unrelated market RNG draws perturb weather-conditioned selection", () => {
+    const runSeed = seed(0xfe_dc_ba_98);
+    const day = dayNumber(12);
+    const before = dayAudienceForWeather(runSeed, day, 2, "thunderstorm");
+    const unrelated = createMarketRandom(runSeed, "conversion", {
+      day,
+      customerId: customerId(9),
+    });
+
+    for (let draw = 0; draw < 100; draw += 1) {
+      unrelated.nextUnit();
+    }
+
+    expect(dayAudienceForWeather(runSeed, day, 2, "thunderstorm")).toEqual(before);
   });
 });
 

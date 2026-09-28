@@ -10,20 +10,26 @@ import {
   type GameState,
   generateEnvironment,
   glassCount,
+  LEGACY_SIMULATION_RULESET_VERSION,
   type LedgerLine,
+  type MarketMemory,
   moneyCents,
+  neutralMarketMemory,
   type ProgressionTier,
   type RandomSource,
   replayLegacyDay,
   type Seed,
+  SIMULATION_RULESET_VERSION,
   SIMULATION_SCHEMA_VERSION,
   seed,
   signCount,
   signedMoneyCents,
   simulateDay,
+  simulateDayV4,
+  type V4DayResolution,
 } from "@lemonade/simulation";
 
-export const RUN_SAVE_SCHEMA_VERSION = 2 as const;
+export const RUN_SAVE_SCHEMA_VERSION = 3 as const;
 
 const DATABASE_NAME = "lemonade";
 const DATABASE_VERSION = 1;
@@ -52,10 +58,22 @@ const phaseKinds = ["deciding", "report"] as const;
 
 export type RunPhase =
   | Readonly<{ kind: "deciding" }>
-  | Readonly<{ kind: "report"; resolution: DayResolution }>;
+  | Readonly<{
+      kind: "report";
+      rulesetVersion: typeof LEGACY_SIMULATION_RULESET_VERSION;
+      resolution: DayResolution;
+    }>
+  | Readonly<{
+      kind: "report";
+      rulesetVersion: typeof SIMULATION_RULESET_VERSION;
+      marketMemoryBefore: MarketMemory;
+      resolution: V4DayResolution;
+    }>;
 
 export type RunSnapshot = Readonly<{
   seed: Seed;
+  rulesetVersion: typeof SIMULATION_RULESET_VERSION;
+  marketMemory: MarketMemory;
   state: GameState;
   environment: DayEnvironment;
   draft: DayDecision;
@@ -110,6 +128,14 @@ type SerializedLedgerEntry = Readonly<{
   lines: readonly SerializedLedgerLine[];
 }>;
 
+type SerializedMarketMemory = Readonly<{
+  expectedPrice: number;
+  advertisingFatigue: number;
+  stockoutPressure: number;
+  excessPressure: number;
+  satisfaction: number;
+}>;
+
 type SerializedGameState = Readonly<{
   day: number;
   cash: number;
@@ -122,7 +148,12 @@ type SerializedGameState = Readonly<{
 
 type SerializedPhase =
   | Readonly<{ kind: "deciding" }>
-  | Readonly<{ kind: "report"; nextState: SerializedGameState }>;
+  | Readonly<{
+      kind: "report";
+      rulesetVersion: number;
+      nextState: SerializedGameState;
+      marketMemoryBefore?: SerializedMarketMemory;
+    }>;
 
 type RunSaveDocumentV1 = Readonly<{
   saveSchemaVersion: 1;
@@ -136,10 +167,24 @@ type RunSaveDocumentV1 = Readonly<{
 }>;
 
 type RunSaveDocumentV2 = Readonly<{
+  saveSchemaVersion: 2;
+  simulationSchemaVersion: number;
+  run: Readonly<{
+    seed: number;
+    state: unknown;
+    environment: unknown;
+    draft: unknown;
+    phase: unknown;
+  }>;
+}>;
+
+type RunSaveDocumentV3 = Readonly<{
   saveSchemaVersion: typeof RUN_SAVE_SCHEMA_VERSION;
   simulationSchemaVersion: typeof SIMULATION_SCHEMA_VERSION;
   run: Readonly<{
     seed: number;
+    rulesetVersion: typeof SIMULATION_RULESET_VERSION;
+    marketMemory: SerializedMarketMemory;
     state: SerializedGameState;
     environment: SerializedEnvironment;
     draft: SerializedDecision;
@@ -152,6 +197,7 @@ type PersistenceErrorCode =
   | "invalid-save"
   | "unsupported-save-version"
   | "unsupported-simulation-version"
+  | "unsupported-ruleset-version"
   | "storage-unavailable"
   | "storage-failed";
 
@@ -189,6 +235,56 @@ const asNonNegativeInteger = (value: unknown, path: string): number => {
     return invalidSave(path, "expected a non-negative integer");
   }
   return integer;
+};
+
+const asMarketBasisPoints = (value: unknown, path: string) => {
+  const integer = asNonNegativeInteger(value, path);
+  if (integer > 10_000) {
+    return invalidSave(path, "expected market basis points from 0 through 10000");
+  }
+  return basisPoints(integer);
+};
+
+const parseMarketMemory = (value: unknown, path: string): MarketMemory => {
+  const record = asRecord(value, path);
+  return Object.freeze({
+    expectedPrice: moneyCents(
+      asNonNegativeInteger(record["expectedPrice"], `${path}["expectedPrice"]`),
+    ),
+    advertisingFatigue: asMarketBasisPoints(
+      record["advertisingFatigue"],
+      `${path}["advertisingFatigue"]`,
+    ),
+    stockoutPressure: asMarketBasisPoints(
+      record["stockoutPressure"],
+      `${path}["stockoutPressure"]`,
+    ),
+    excessPressure: asMarketBasisPoints(
+      record["excessPressure"],
+      `${path}["excessPressure"]`,
+    ),
+    satisfaction: asMarketBasisPoints(
+      record["satisfaction"],
+      `${path}["satisfaction"]`,
+    ),
+  });
+};
+
+const parseRulesetVersion = (
+  value: unknown,
+  path: string,
+): typeof LEGACY_SIMULATION_RULESET_VERSION | typeof SIMULATION_RULESET_VERSION => {
+  const version = asSafeInteger(value, path);
+  if (
+    version !== LEGACY_SIMULATION_RULESET_VERSION &&
+    version !== SIMULATION_RULESET_VERSION
+  ) {
+    throw new RunPersistenceError(
+      "unsupported-ruleset-version",
+      `Ruleset version ${String(version)} at ${path} is not supported.`,
+    );
+  }
+  return version;
 };
 
 const asString = (value: unknown, path: string): string => {
@@ -359,6 +455,18 @@ const serializeDecision = (decision: DayDecision): SerializedDecision =>
     price: Number(decision["price"]),
   });
 
+const serializeMarketMemory = (memory: MarketMemory): SerializedMarketMemory =>
+  Object.freeze({
+    expectedPrice: Number(memory.expectedPrice),
+    advertisingFatigue: Number(memory.advertisingFatigue),
+    stockoutPressure: Number(memory.stockoutPressure),
+    excessPressure: Number(memory.excessPressure),
+    satisfaction: Number(memory.satisfaction),
+  });
+
+const marketMemoriesEqual = (left: MarketMemory, right: MarketMemory): boolean =>
+  JSON.stringify(serializeMarketMemory(left)) === JSON.stringify(serializeMarketMemory(right));
+
 const serializeEnvironment = (environment: DayEnvironment): SerializedEnvironment =>
   Object.freeze({
     weather: Object.freeze({
@@ -414,20 +522,35 @@ const serializeGameState = (state: GameState): SerializedGameState =>
     ledger: Object.freeze(state["ledger"].map(serializeLedgerEntry)),
   });
 
-const serializePhase = (phase: RunPhase): SerializedPhase =>
-  phase["kind"] === "deciding"
-    ? Object.freeze({ kind: "deciding" })
-    : Object.freeze({
-        kind: "report",
-        nextState: serializeGameState(phase.resolution["nextState"]),
-      });
+const serializePhase = (phase: RunPhase): SerializedPhase => {
+  if (phase["kind"] === "deciding") {
+    return Object.freeze({ kind: "deciding" });
+  }
 
-export const createRunSaveDocument = (snapshot: RunSnapshot): RunSaveDocumentV2 =>
+  if (phase.rulesetVersion === LEGACY_SIMULATION_RULESET_VERSION) {
+    return Object.freeze({
+      kind: "report",
+      rulesetVersion: LEGACY_SIMULATION_RULESET_VERSION,
+      nextState: serializeGameState(phase.resolution["nextState"]),
+    });
+  }
+
+  return Object.freeze({
+    kind: "report",
+    rulesetVersion: SIMULATION_RULESET_VERSION,
+    nextState: serializeGameState(phase.resolution["nextState"]),
+    marketMemoryBefore: serializeMarketMemory(phase.marketMemoryBefore),
+  });
+};
+
+export const createRunSaveDocument = (snapshot: RunSnapshot): RunSaveDocumentV3 =>
   Object.freeze({
     saveSchemaVersion: RUN_SAVE_SCHEMA_VERSION,
     simulationSchemaVersion: SIMULATION_SCHEMA_VERSION,
     run: Object.freeze({
       seed: Number(snapshot["seed"]),
+      rulesetVersion: snapshot.rulesetVersion,
+      marketMemory: serializeMarketMemory(snapshot.marketMemory),
       state: serializeGameState(snapshot["state"]),
       environment: serializeEnvironment(snapshot["environment"]),
       draft: serializeDecision(snapshot["draft"]),
@@ -453,16 +576,46 @@ const migrateVersionZero = (value: Record<string, unknown>): RunSaveDocumentV1 =
   });
 };
 
-const migrateVersionOne = (value: Record<string, unknown>): Record<string, unknown> => {
+const migrateVersionOne = (value: Record<string, unknown>): RunSaveDocumentV2 => {
   const run = asRecord(value["run"], "save.run");
-  return {
+  return Object.freeze({
+    saveSchemaVersion: 2,
+    simulationSchemaVersion: asSafeInteger(
+      value["simulationSchemaVersion"],
+      "save.simulationSchemaVersion",
+    ),
+    run: Object.freeze({
+      seed: asNonNegativeInteger(run["seed"], "save.run.seed"),
+      state: run["state"],
+      environment: run["environment"],
+      draft: run["draft"],
+      phase: Object.freeze({ kind: "deciding" }),
+    }),
+  });
+};
+
+const migrateVersionTwo = (value: Record<string, unknown>): Record<string, unknown> => {
+  const run = asRecord(value["run"], "save.run");
+  const phase = asRecord(run["phase"], 'save.run["phase"]');
+  const kind = asLiteral(phase["kind"], phaseKinds, 'save.run["phase"]["kind"]');
+  const migratedPhase =
+    kind === "deciding"
+      ? Object.freeze({ kind: "deciding" })
+      : Object.freeze({
+          ...phase,
+          rulesetVersion: LEGACY_SIMULATION_RULESET_VERSION,
+        });
+
+  return Object.freeze({
     ...value,
     saveSchemaVersion: RUN_SAVE_SCHEMA_VERSION,
-    run: {
+    run: Object.freeze({
       ...run,
-      phase: Object.freeze({ kind: "deciding" }),
-    },
-  };
+      rulesetVersion: SIMULATION_RULESET_VERSION,
+      marketMemory: serializeMarketMemory(neutralMarketMemory()),
+      phase: migratedPhase,
+    }),
+  });
 };
 
 export const migrateRunSaveDocument = (value: unknown): unknown => {
@@ -478,10 +631,15 @@ export const migrateRunSaveDocument = (value: unknown): unknown => {
   }
 
   if (version === 0) {
-    return migrateVersionOne(asRecord(migrateVersionZero(record), "save"));
+    const versionOne = asRecord(migrateVersionZero(record), "save");
+    const versionTwo = asRecord(migrateVersionOne(versionOne), "save");
+    return migrateVersionTwo(versionTwo);
   }
   if (version === 1) {
-    return migrateVersionOne(record);
+    return migrateVersionTwo(asRecord(migrateVersionOne(record), "save"));
+  }
+  if (version === 2) {
+    return migrateVersionTwo(record);
   }
   if (version === RUN_SAVE_SCHEMA_VERSION) {
     return record;
@@ -501,6 +659,8 @@ const parsePhase = (
   state: GameState,
   environment: DayEnvironment,
   draft: DayDecision,
+  runSeed: Seed,
+  currentMarketMemory: MarketMemory,
   path: string,
 ): RunPhase => {
   const record = asRecord(value, path);
@@ -510,27 +670,67 @@ const parsePhase = (
   }
 
   const nextState = parseGameState(record["nextState"], `${path}["nextState"]`);
-  let expected: DayResolution;
-  try {
-    expected = simulateDay(state, draft, environment);
-  } catch (error) {
-    if (!(error instanceof DecisionOutsideOperatingScaleError)) {
-      throw error;
+  const rulesetVersion = parseRulesetVersion(
+    record["rulesetVersion"],
+    `${path}["rulesetVersion"]`,
+  );
+
+  if (rulesetVersion === LEGACY_SIMULATION_RULESET_VERSION) {
+    if (!marketMemoriesEqual(currentMarketMemory, neutralMarketMemory())) {
+      return invalidSave(
+        path,
+        "legacy report migration must begin v4 with neutral market memory",
+      );
     }
-    expected = replayLegacyDay(state, draft, environment);
-  }
-  if (!serializedStatesEqual(nextState, expected["nextState"])) {
-    return invalidSave(path, "report state does not match the deterministic day resolution");
+
+    let expected: DayResolution;
+    try {
+      expected = simulateDay(state, draft, environment);
+    } catch (error) {
+      if (!(error instanceof DecisionOutsideOperatingScaleError)) {
+        throw error;
+      }
+      expected = replayLegacyDay(state, draft, environment);
+    }
+    if (!serializedStatesEqual(nextState, expected["nextState"])) {
+      return invalidSave(path, "report state does not match the deterministic legacy day resolution");
+    }
+
+    const entry = nextState["ledger"].at(-1);
+    if (entry === undefined) {
+      return invalidSave(path, "report state must contain the resolved day");
+    }
+
+    return Object.freeze({
+      kind: "report",
+      rulesetVersion: LEGACY_SIMULATION_RULESET_VERSION,
+      resolution: Object.freeze({ previousState: state, nextState, entry }),
+    });
   }
 
-  const entry = nextState["ledger"].at(-1);
-  if (entry === undefined) {
-    return invalidSave(path, "report state must contain the resolved day");
+  const marketMemoryBefore = parseMarketMemory(
+    record["marketMemoryBefore"],
+    `${path}["marketMemoryBefore"]`,
+  );
+  const expected = simulateDayV4(
+    state,
+    draft,
+    environment,
+    runSeed,
+    marketMemoryBefore,
+  );
+  if (!serializedStatesEqual(nextState, expected.nextState)) {
+    return invalidSave(path, "report state does not match the deterministic v4 day resolution");
+  }
+  if (!marketMemoriesEqual(currentMarketMemory, expected.market.memoryAfter)) {
+    return invalidSave(path, "persisted market memory does not match v4 report replay");
   }
 
   return Object.freeze({
     kind: "report",
-    resolution: Object.freeze({ previousState: state, nextState, entry }),
+    rulesetVersion: SIMULATION_RULESET_VERSION,
+    marketMemoryBefore,
+    resolution: expected,
   });
 };
 
@@ -586,15 +786,37 @@ export const decodeRunSaveDocument = (value: unknown): RunSnapshot => {
   }
 
   const run = asRecord(migrated["run"], "save.run");
+  const runSeed = seed(asNonNegativeInteger(run["seed"], "save.run.seed"));
+  const rulesetVersion = parseRulesetVersion(
+    run["rulesetVersion"],
+    "save.run.rulesetVersion",
+  );
+  if (rulesetVersion !== SIMULATION_RULESET_VERSION) {
+    throw new RunPersistenceError(
+      "unsupported-ruleset-version",
+      `Current run ruleset ${String(rulesetVersion)} is not supported for continuation; expected ${String(SIMULATION_RULESET_VERSION)}.`,
+    );
+  }
+  const marketMemory = parseMarketMemory(run["marketMemory"], "save.run.marketMemory");
   const state = parseGameState(run["state"], "save.run.state");
   const environment = parseEnvironment(run["environment"], "save.run.environment");
   const draft = parseDecision(run["draft"], "save.run.draft");
   const snapshot = Object.freeze({
-    seed: seed(asNonNegativeInteger(run["seed"], "save.run.seed")),
+    seed: runSeed,
+    rulesetVersion: SIMULATION_RULESET_VERSION,
+    marketMemory,
     state,
     environment,
     draft,
-    phase: parsePhase(run["phase"], state, environment, draft, "save.run.phase"),
+    phase: parsePhase(
+      run["phase"],
+      state,
+      environment,
+      draft,
+      runSeed,
+      marketMemory,
+      "save.run.phase",
+    ),
   }) satisfies RunSnapshot;
 
   restoreEnvironmentRandom(snapshot);
@@ -686,7 +908,9 @@ const openDatabase = async (): Promise<IDBDatabase> => {
 
 const isUnsupportedStoredRun = (error: unknown): boolean =>
   error instanceof RunPersistenceError &&
-  (error.code === "unsupported-save-version" || error.code === "unsupported-simulation-version");
+  (error.code === "unsupported-save-version" ||
+    error.code === "unsupported-simulation-version" ||
+    error.code === "unsupported-ruleset-version");
 
 const decodeStoredRun = (stored: unknown, path: string): RunSnapshot | null => {
   if (stored === undefined) {
