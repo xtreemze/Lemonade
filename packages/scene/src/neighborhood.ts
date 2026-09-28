@@ -164,8 +164,18 @@ const distanceLod = (
   return root;
 };
 
-const houseLod = (x: number, z: number, color: number, scale: number, rotationY: number): Group =>
-  distanceLod(detailedHouse(color), distantHouse(color), 34, x, z, scale, rotationY);
+const HOUSE_DETAIL_LOD_DISTANCE = 34;
+const FRONT_HOUSE_DETAIL_LOD_DISTANCE = 64;
+
+const houseLod = (
+  x: number,
+  z: number,
+  color: number,
+  scale: number,
+  rotationY: number,
+  detailDistance = HOUSE_DETAIL_LOD_DISTANCE,
+): Group =>
+  distanceLod(detailedHouse(color), distantHouse(color), detailDistance, x, z, scale, rotationY);
 
 const plantUnit = (seed: number, salt: number): number => {
   let value = Math.imul((seed ^ salt) >>> 0, 0x9e_37_79_b1);
@@ -673,6 +683,9 @@ export const populateNeighborhood = (
       color,
       property.scale,
       property.rotationY,
+      layout.frontProperties.includes(property)
+        ? FRONT_HOUSE_DETAIL_LOD_DISTANCE
+        : HOUSE_DETAIL_LOD_DISTANCE,
     );
     home.userData["sceneRole"] = layout.frontProperties.includes(property)
       ? property.role
