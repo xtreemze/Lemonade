@@ -57,6 +57,8 @@ const customerOutcomesForDay = (
         signs: decision.signs,
         weather: environment.weather.kind,
         advertisingFatigue: memory.advertisingFatigue,
+        confidence,
+        satisfaction: memory.satisfaction,
       });
 
       if (awareness.kind === "unaware") {
