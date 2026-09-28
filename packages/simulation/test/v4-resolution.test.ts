@@ -311,6 +311,61 @@ describe("v4 customer-funnel day resolution", () => {
     expect(Number(exactResult.entry.sold)).toBe(exactResult.market.summary.willing);
   });
 
+
+  it("carries market memory explicitly across consecutive v4 days", () => {
+    const runSeed = seed(0x55_aa_55_aa);
+    const first = simulateDayV4(
+      stateAtScale(1),
+      decision(10, 3, 200),
+      neutralEnvironment(),
+      runSeed,
+      neutralMarketMemory(),
+    );
+    const second = simulateDayV4(
+      first.nextState,
+      decision(10, 0, 200),
+      neutralEnvironment(),
+      runSeed,
+      first.market.memoryAfter,
+    );
+
+    expect(second.market.memoryBefore).toEqual(first.market.memoryAfter);
+    expect(Number(first.market.memoryAfter.advertisingFatigue)).toBeGreaterThan(0);
+    expect(Number(second.market.memoryAfter.advertisingFatigue)).toBeLessThan(
+      Number(first.market.memoryAfter.advertisingFatigue),
+    );
+    expect(Number(second.market.memoryAfter.expectedPrice)).toBe(200);
+  });
+
+  it("keeps recurring customer core identity stable across days", () => {
+    const runSeed = seed(0x13_57_9b_df);
+    const first = simulateDayV4(
+      stateAtScale(2),
+      decision(20, 2, 200),
+      neutralEnvironment(),
+      runSeed,
+      neutralMarketMemory(),
+    );
+    const second = simulateDayV4(
+      first.nextState,
+      decision(20, 2, 200),
+      neutralEnvironment(),
+      runSeed,
+      first.market.memoryAfter,
+    );
+
+    const firstById = new Map(first.market.outcomes.map((outcome) => [Number(outcome.id), outcome]));
+    const recurring = second.market.outcomes.filter((outcome) => firstById.has(Number(outcome.id)));
+
+    expect(recurring.length).toBeGreaterThan(0);
+    for (const outcome of recurring) {
+      const previous = firstById.get(Number(outcome.id));
+      expect(previous).toBeDefined();
+      expect(outcome.type).toBe(previous?.type);
+      expect(outcome.visualSeed).toBe(previous?.visualSeed);
+    }
+  });
+
   it("keeps customer outcomes exhaustive and internally consistent", () => {
     const result = simulateDayV4(
       Object.freeze({ ...createInitialState(), cash: moneyCents(10_000) }),
