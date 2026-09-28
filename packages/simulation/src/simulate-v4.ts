@@ -2,6 +2,8 @@ import { awarenessForCustomer } from "./advertising.js";
 import {
   type AudienceSummary,
   type CustomerOutcome,
+  type DayAudience,
+  type MarketMemory,
   customerTraitsFor,
   dayAudienceFor,
   summarizeAudience,
@@ -14,7 +16,6 @@ import { glassCount, type Seed } from "./primitives.js";
 import { operatingScaleForState } from "./scale.js";
 import { resolveDayFromSales } from "./simulate.js";
 import { SIMULATION_RULESET_VERSION } from "./version.js";
-import type { DayAudience, MarketMemory } from "./audience.js";
 
 export type V4MarketDayResolution = Readonly<{
   rulesetVersion: typeof SIMULATION_RULESET_VERSION;
@@ -78,6 +79,10 @@ const customerOutcomesForDay = (
         confidence,
         memory,
       });
+
+      if (conversion.kind === "not-evaluated") {
+        throw new Error("aware customers must receive an evaluated v4 conversion outcome");
+      }
 
       if (conversion.kind === "price-rejected") {
         return Object.freeze({
