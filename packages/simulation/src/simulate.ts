@@ -13,7 +13,13 @@ import type {
   GameState,
   LedgerLine,
 } from "./model.js";
-import { dayNumber, glassCount, moneyCents, signedMoneyCents } from "./primitives.js";
+import {
+  dayNumber,
+  type GlassCount,
+  glassCount,
+  moneyCents,
+  signedMoneyCents,
+} from "./primitives.js";
 import { potentialDemand } from "./rules.js";
 import { operatingScaleForState } from "./scale.js";
 import { productionCostForDay } from "./state.js";
@@ -59,14 +65,22 @@ const ledgerLine = (
   direction: LedgerLine["direction"],
 ): LedgerLine => Object.freeze({ kind, label, amount, direction });
 
-const resolveDay = (
+export const resolveDayFromSales = (
   state: GameState,
   decision: DayDecision,
   environment: DayEnvironment,
+  sold: GlassCount,
+  reportedDemand: GlassCount,
   enforceOperatingScale: boolean,
 ): DayResolution => {
   if (Number(decision.price) <= 0) {
     throw new RangeError("price must be greater than zero");
+  }
+  if (Number(sold) > Number(decision.glasses)) {
+    throw new RangeError("sold glasses cannot exceed prepared glasses");
+  }
+  if (Number(reportedDemand) < Number(sold)) {
+    throw new RangeError("reported demand cannot be lower than sold glasses");
   }
 
   if (enforceOperatingScale) {
@@ -98,15 +112,6 @@ const resolveDay = (
   const initialBorrowCents = Math.max(0, Number(predictableExpenses) - openingCashCents);
   let loanBalanceCents = Number(state.loanBalance) + initialBorrowCents;
   let cashCents = openingCashCents + initialBorrowCents - Number(predictableExpenses);
-
-  const calculatedDemand = potentialDemand(
-    decision.price,
-    decision.signs,
-    legacyConfidenceForState(state),
-    environment,
-  );
-  const sold = resolveSold(decision, Number(calculatedDemand));
-  const reportedDemand = calculatedDemand;
 
   const revenue = moneyCents(Number(sold) * Number(decision.price));
   cashCents += Number(revenue);
@@ -212,11 +217,34 @@ const resolveDay = (
   return Object.freeze({ previousState: state, nextState, entry });
 };
 
+const resolveLegacyDay = (
+  state: GameState,
+  decision: DayDecision,
+  environment: DayEnvironment,
+  enforceOperatingScale: boolean,
+): DayResolution => {
+  const calculatedDemand = potentialDemand(
+    decision.price,
+    decision.signs,
+    legacyConfidenceForState(state),
+    environment,
+  );
+  const sold = resolveSold(decision, Number(calculatedDemand));
+  return resolveDayFromSales(
+    state,
+    decision,
+    environment,
+    sold,
+    calculatedDemand,
+    enforceOperatingScale,
+  );
+};
+
 export const simulateDay = (
   state: GameState,
   decision: DayDecision,
   environment: DayEnvironment,
-): DayResolution => resolveDay(state, decision, environment, true);
+): DayResolution => resolveLegacyDay(state, decision, environment, true);
 
 /**
  * Deterministic compatibility replay for save documents produced before
@@ -227,4 +255,4 @@ export const replayLegacyDay = (
   state: GameState,
   decision: DayDecision,
   environment: DayEnvironment,
-): DayResolution => resolveDay(state, decision, environment, false);
+): DayResolution => resolveLegacyDay(state, decision, environment, false);
