@@ -1,6 +1,7 @@
 import type { BasisPoints, CustomerId, DayNumber, MoneyCents, Seed } from "./primitives.js";
 import { basisPoints, customerId, moneyCents, seed } from "./primitives.js";
 import { createSeededRandom, type RandomSource } from "./rng.js";
+import type { Weather } from "./model.js";
 import type { OperatingScaleLevel } from "./scale.js";
 
 export type CustomerType = "impulse" | "price-sensitive" | "regular" | "destination";
@@ -71,7 +72,8 @@ export type MarketRandomStream =
   | "conversion"
   | "customer-traits"
   | "customer-visual"
-  | "market-memory";
+  | "market-memory"
+  | "weather-audience-selection";
 
 export type MarketRandomScope = Readonly<{
   day?: DayNumber;
@@ -172,6 +174,61 @@ export const dayAudienceFor = (
       customerId: id,
     });
     return Object.freeze({ id, score: random.nextUnit() });
+  });
+
+  ranked.sort((left, right) => left.score - right.score || Number(left.id) - Number(right.id));
+
+  return Object.freeze({
+    neighborhoodSize: targets.neighborhoodSize,
+    customerIds: Object.freeze(ranked.slice(0, targets.dailyAudience).map(({ id }) => id)),
+  });
+};
+
+const STORM_TYPE_SELECTION_BIAS: Readonly<Record<CustomerType, number>> = Object.freeze({
+  impulse: 0.12,
+  "price-sensitive": 0.05,
+  regular: -0.05,
+  destination: -0.1,
+});
+
+const stormSelectionScore = (
+  runSeed: Seed,
+  day: DayNumber,
+  id: CustomerId,
+): number => {
+  const baseline = createMarketRandom(runSeed, "audience-selection", {
+    day,
+    customerId: id,
+  }).nextUnit();
+  const weatherRandom = createMarketRandom(runSeed, "weather-audience-selection", {
+    day,
+    customerId: id,
+  });
+  const traits = customerTraitsFor(runSeed, id);
+  const commitment = Number(traits.weatherCommitment) / 10_000;
+  const commitmentBias = -0.06 * (commitment - 0.5);
+  const boundedJitter = (weatherRandom.nextUnit() - 0.5) * 0.02;
+
+  return baseline + STORM_TYPE_SELECTION_BIAS[traits.type] + commitmentBias + boundedJitter;
+};
+
+export const dayAudienceForWeather = (
+  runSeed: Seed,
+  day: DayNumber,
+  level: OperatingScaleLevel,
+  weather: Weather["kind"],
+): DayAudience => {
+  if (weather !== "thunderstorm") {
+    return dayAudienceFor(runSeed, day, level);
+  }
+
+  const targets = audienceTargetsForLevel(level);
+  const ranked = Array.from({ length: targets.neighborhoodSize }, (_, index) => {
+    const id = customerId(index);
+    return Object.freeze({
+      id,
+      score: stormSelectionScore(runSeed, day, id),
+    });
   });
 
   ranked.sort((left, right) => left.score - right.score || Number(left.id) - Number(right.id));
