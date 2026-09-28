@@ -3,15 +3,19 @@ import { describe, expect, it } from "vitest";
 import {
   basisPoints,
   createInitialState,
+  dayNumber,
   glassCount,
   moneyCents,
   neutralEnvironment,
   neutralMarketMemory,
+  OPERATING_SCALE_THRESHOLDS_CENTS,
   seed,
   signCount,
   simulateDayV4,
+  type DailyLedgerEntry,
   type DayDecision,
   type DayEnvironment,
+  type GameState,
 } from "../src/index.js";
 
 const decision = (glasses: number, signs: number, priceCents: number): DayDecision =>
@@ -30,6 +34,54 @@ const stormEnvironment = (): DayEnvironment => {
     }),
     sentiment: neutral.sentiment,
     event: neutral.event,
+  });
+};
+
+
+const stateAtScale = (level: 1 | 2 | 3 | 4): GameState => {
+  const initial = createInitialState();
+  if (level === 1) {
+    return Object.freeze({ ...initial, cash: moneyCents(1_000_000) });
+  }
+
+  const targetBalance =
+    level === 2
+      ? OPERATING_SCALE_THRESHOLDS_CENTS.level2
+      : level === 3
+        ? OPERATING_SCALE_THRESHOLDS_CENTS.level3
+        : OPERATING_SCALE_THRESHOLDS_CENTS.level4;
+  const operatingProfit = targetBalance - 1000;
+  const historicalEntry: DailyLedgerEntry = Object.freeze({
+    day: dayNumber(1),
+    tier: 0,
+    decision: decision(1, 0, operatingProfit),
+    environment: neutralEnvironment(),
+    potentialDemand: glassCount(1),
+    sold: glassCount(1),
+    revenue: moneyCents(operatingProfit),
+    financeIncome: moneyCents(0),
+    expenses: moneyCents(0),
+    net: operatingProfit as DailyLedgerEntry["net"],
+    cashDelta: operatingProfit as DailyLedgerEntry["cashDelta"],
+    borrowed: moneyCents(0),
+    repaid: moneyCents(0),
+    endingCash: moneyCents(targetBalance),
+    endingLoanBalance: moneyCents(0),
+    lines: Object.freeze([
+      Object.freeze({
+        kind: "revenue" as const,
+        label: "Historical scale fixture",
+        amount: moneyCents(operatingProfit),
+        direction: "credit" as const,
+      }),
+    ]),
+  });
+
+  return Object.freeze({
+    ...initial,
+    day: dayNumber(2),
+    cash: moneyCents(1_000_000),
+    ledger: Object.freeze([historicalEntry]),
   });
 };
 
@@ -129,6 +181,94 @@ describe("v4 customer-funnel day resolution", () => {
     }
     expect(Number(result.market.memoryAfter.satisfaction)).toBeGreaterThanOrEqual(0);
     expect(Number(result.market.memoryAfter.satisfaction)).toBeLessThanOrEqual(10_000);
+  });
+
+
+  it("turns willing customers into stockouts when no inventory is prepared", () => {
+    const result = simulateDayV4(
+      stateAtScale(1),
+      decision(0, 3, 100),
+      neutralEnvironment(),
+      seed(0x00_ab_cd_ef),
+      neutralMarketMemory(),
+    );
+
+    expect(result.market.summary.purchased).toBe(0);
+    expect(Number(result.entry.sold)).toBe(0);
+    expect(Number(result.entry.revenue)).toBe(0);
+    expect(result.market.summary.stockout).toBe(result.market.summary.willing);
+    expect(
+      result.market.outcomes.some((outcome) => outcome.fulfillment.kind === "stockout"),
+    ).toBe(result.market.summary.willing > 0);
+  });
+
+  it("never invents advertising awareness when the player bought no signs", () => {
+    const result = simulateDayV4(
+      stateAtScale(1),
+      decision(5, 0, 150),
+      neutralEnvironment(),
+      seed(404),
+      neutralMarketMemory(),
+    );
+
+    expect(result.market.summary.advertisingAware).toBe(0);
+    expect(
+      result.market.outcomes.some((outcome) => outcome.awareness.kind === "advertising"),
+    ).toBe(false);
+  });
+
+  it("accepts the exact maximum decision envelope at every operating scale", () => {
+    const envelopes = [
+      Object.freeze({ level: 1 as const, glasses: 15, signs: 3, price: 299 }),
+      Object.freeze({ level: 2 as const, glasses: 50, signs: 10, price: 399 }),
+      Object.freeze({ level: 3 as const, glasses: 140, signs: 25, price: 699 }),
+      Object.freeze({ level: 4 as const, glasses: 400, signs: 40, price: 999 }),
+    ];
+
+    for (const envelope of envelopes) {
+      const result = simulateDayV4(
+        stateAtScale(envelope.level),
+        decision(envelope.glasses, envelope.signs, envelope.price),
+        neutralEnvironment(),
+        seed(1000 + envelope.level),
+        neutralMarketMemory(),
+      );
+
+      expect(Number(result.entry.decision.glasses)).toBe(envelope.glasses);
+      expect(Number(result.entry.decision.signs)).toBe(envelope.signs);
+      expect(Number(result.entry.decision.price)).toBe(envelope.price);
+      expect(Number(result.entry.sold)).toBeLessThanOrEqual(envelope.glasses);
+      expect(result.market.summary.audience).toBeGreaterThan(0);
+    }
+  });
+
+  it("does not create stockouts when prepared inventory exactly covers willing demand", () => {
+    const state = stateAtScale(1);
+    const environment = neutralEnvironment();
+    const memory = neutralMarketMemory();
+    let exactResult: ReturnType<typeof simulateDayV4> | undefined;
+
+    for (let value = 1; value <= 128 && exactResult === undefined; value += 1) {
+      const runSeed = seed(value);
+      const probe = simulateDayV4(state, decision(15, 0, 299), environment, runSeed, memory);
+      if (probe.market.summary.willing <= 15) {
+        exactResult = simulateDayV4(
+          state,
+          decision(probe.market.summary.willing, 0, 299),
+          environment,
+          runSeed,
+          memory,
+        );
+      }
+    }
+
+    expect(exactResult).toBeDefined();
+    if (exactResult === undefined) {
+      return;
+    }
+    expect(exactResult.market.summary.stockout).toBe(0);
+    expect(exactResult.market.summary.purchased).toBe(exactResult.market.summary.willing);
+    expect(Number(exactResult.entry.sold)).toBe(exactResult.market.summary.willing);
   });
 
   it("keeps customer outcomes exhaustive and internally consistent", () => {
