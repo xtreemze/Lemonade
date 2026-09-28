@@ -4,12 +4,16 @@ import {
   dayNumber,
   generateEnvironment,
   glassCount,
+  LEGACY_SIMULATION_RULESET_VERSION,
   moneyCents,
+  neutralMarketMemory,
   replayLegacyDay,
+  SIMULATION_RULESET_VERSION,
   SIMULATION_SCHEMA_VERSION,
   seed,
   signCount,
   simulateDay,
+  simulateDayV4,
 } from "@lemonade/simulation";
 import { describe, expect, it } from "vitest";
 
@@ -35,11 +39,20 @@ const createDecidingFixture = (): RunSnapshot => {
   const random = createSeededRandom(RUN_SEED);
   const initialState = createInitialState();
   const dayOneEnvironment = generateEnvironment(initialState.day, random);
-  const resolution = simulateDay(initialState, decision, dayOneEnvironment);
+  const memoryBefore = neutralMarketMemory();
+  const resolution = simulateDayV4(
+    initialState,
+    decision,
+    dayOneEnvironment,
+    RUN_SEED,
+    memoryBefore,
+  );
   const dayTwoEnvironment = generateEnvironment(resolution.nextState.day, random);
 
   return Object.freeze({
     seed: RUN_SEED,
+    rulesetVersion: SIMULATION_RULESET_VERSION,
+    marketMemory: resolution.market.memoryAfter,
     state: resolution.nextState,
     environment: dayTwoEnvironment,
     draft: decision,
@@ -51,14 +64,43 @@ const createReportFixture = (): RunSnapshot => {
   const random = createSeededRandom(RUN_SEED);
   const state = createInitialState();
   const environment = generateEnvironment(state.day, random);
+  const memoryBefore = neutralMarketMemory();
+  const resolution = simulateDayV4(state, decision, environment, RUN_SEED, memoryBefore);
+
+  return Object.freeze({
+    seed: RUN_SEED,
+    rulesetVersion: SIMULATION_RULESET_VERSION,
+    marketMemory: resolution.market.memoryAfter,
+    state,
+    environment,
+    draft: decision,
+    phase: Object.freeze({
+      kind: "report",
+      rulesetVersion: SIMULATION_RULESET_VERSION,
+      marketMemoryBefore: memoryBefore,
+      resolution,
+    }),
+  });
+};
+
+const createLegacyReportFixture = (): RunSnapshot => {
+  const random = createSeededRandom(RUN_SEED);
+  const state = createInitialState();
+  const environment = generateEnvironment(state.day, random);
   const resolution = simulateDay(state, decision, environment);
 
   return Object.freeze({
     seed: RUN_SEED,
+    rulesetVersion: SIMULATION_RULESET_VERSION,
+    marketMemory: neutralMarketMemory(),
     state,
     environment,
     draft: decision,
-    phase: Object.freeze({ kind: "report", resolution }),
+    phase: Object.freeze({
+      kind: "report",
+      rulesetVersion: LEGACY_SIMULATION_RULESET_VERSION,
+      resolution,
+    }),
   });
 };
 
@@ -80,6 +122,17 @@ describe("run persistence", () => {
     expect(restored).toEqual(snapshot);
     expect(restored.state.day).toBe(snapshot.state.day);
     expect(restored.phase.kind).toBe("report");
+    if (restored.phase.kind === "report") {
+      expect(restored.phase.rulesetVersion).toBe(SIMULATION_RULESET_VERSION);
+      if (restored.phase.rulesetVersion === SIMULATION_RULESET_VERSION) {
+        expect(restored.phase.resolution.market.outcomes).toEqual(
+          snapshot.phase.kind === "report" &&
+            snapshot.phase.rulesetVersion === SIMULATION_RULESET_VERSION
+            ? snapshot.phase.resolution.market.outcomes
+            : [],
+        );
+      }
+    }
   });
 
   it("replays report saves created before operating-scale enforcement", () => {
@@ -97,10 +150,16 @@ describe("run persistence", () => {
     const resolution = replayLegacyDay(state, legacyDecision, environment);
     const snapshot: RunSnapshot = Object.freeze({
       seed: RUN_SEED,
+      rulesetVersion: SIMULATION_RULESET_VERSION,
+      marketMemory: neutralMarketMemory(),
       state,
       environment,
       draft: legacyDecision,
-      phase: Object.freeze({ kind: "report", resolution }),
+      phase: Object.freeze({
+        kind: "report",
+        rulesetVersion: LEGACY_SIMULATION_RULESET_VERSION,
+        resolution,
+      }),
     });
 
     const restored = importRunSnapshot(exportRunSnapshot(snapshot));
@@ -109,11 +168,20 @@ describe("run persistence", () => {
     expect(restored.phase.kind).toBe("report");
   });
 
-  it("writes explicit save and simulation schema versions", () => {
-    const document = createRunSaveDocument(createDecidingFixture());
+  it("writes explicit save schema, simulation schema, ruleset, and compact market memory", () => {
+    const snapshot = createDecidingFixture();
+    const document = createRunSaveDocument(snapshot);
 
     expect(document.saveSchemaVersion).toBe(RUN_SAVE_SCHEMA_VERSION);
     expect(document.simulationSchemaVersion).toBe(SIMULATION_SCHEMA_VERSION);
+    expect(document.run.rulesetVersion).toBe(SIMULATION_RULESET_VERSION);
+    expect(document.run.marketMemory).toEqual({
+      expectedPrice: Number(snapshot.marketMemory.expectedPrice),
+      advertisingFatigue: Number(snapshot.marketMemory.advertisingFatigue),
+      stockoutPressure: Number(snapshot.marketMemory.stockoutPressure),
+      excessPressure: Number(snapshot.marketMemory.excessPressure),
+      satisfaction: Number(snapshot.marketMemory.satisfaction),
+    });
   });
 
   it("migrates the pre-versioned prototype shape through schema version 2", () => {
@@ -153,6 +221,73 @@ describe("run persistence", () => {
 
     expect(restored.phase.kind).toBe("deciding");
     expect(restored.state).toEqual(createDecidingFixture().state);
+  });
+
+
+  it("migrates schema version 2 deciding saves to an explicit neutral v4 boundary", () => {
+    const legacy = createLegacyReportFixture();
+    const legacyNext =
+      legacy.phase.kind === "report" ? legacy.phase.resolution.nextState : legacy.state;
+    const currentShape = createRunSaveDocument(
+      Object.freeze({
+        ...legacy,
+        state: legacyNext,
+        phase: Object.freeze({ kind: "deciding" }),
+      }),
+    );
+    const versionTwo = {
+      saveSchemaVersion: 2,
+      simulationSchemaVersion: currentShape.simulationSchemaVersion,
+      run: {
+        seed: currentShape.run.seed,
+        state: currentShape.run.state,
+        environment: currentShape.run.environment,
+        draft: currentShape.run.draft,
+        phase: { kind: "deciding" },
+      },
+    };
+
+    const restored = decodeRunSaveDocument(versionTwo);
+
+    expect(restored.rulesetVersion).toBe(SIMULATION_RULESET_VERSION);
+    expect(restored.marketMemory).toEqual(neutralMarketMemory());
+    expect(restored.state).toEqual(legacyNext);
+    expect(restored.state.ledger).toEqual(legacyNext.ledger);
+    expect(restored.phase.kind).toBe("deciding");
+  });
+
+  it("preserves an in-progress v3 report while making the next unresolved day v4", () => {
+    const legacy = createLegacyReportFixture();
+    const currentShape = createRunSaveDocument(legacy);
+    if (currentShape.run.phase.kind !== "report") {
+      throw new Error("expected report fixture");
+    }
+    const versionTwo = {
+      saveSchemaVersion: 2,
+      simulationSchemaVersion: currentShape.simulationSchemaVersion,
+      run: {
+        seed: currentShape.run.seed,
+        state: currentShape.run.state,
+        environment: currentShape.run.environment,
+        draft: currentShape.run.draft,
+        phase: {
+          kind: "report",
+          nextState: currentShape.run.phase.nextState,
+        },
+      },
+    };
+
+    const restored = decodeRunSaveDocument(versionTwo);
+
+    expect(restored.rulesetVersion).toBe(SIMULATION_RULESET_VERSION);
+    expect(restored.marketMemory).toEqual(neutralMarketMemory());
+    expect(restored.phase.kind).toBe("report");
+    if (restored.phase.kind === "report") {
+      expect(restored.phase.rulesetVersion).toBe(LEGACY_SIMULATION_RULESET_VERSION);
+      expect(restored.phase.resolution.nextState).toEqual(
+        legacy.phase.kind === "report" ? legacy.phase.resolution.nextState : legacy.state,
+      );
+    }
   });
 
   it("restores the RNG after the current environment draw", () => {
@@ -229,6 +364,58 @@ describe("run persistence", () => {
         simulationSchemaVersion: SIMULATION_SCHEMA_VERSION + 1,
       }),
     ).toThrow(/requires/);
+  });
+
+
+  it("rejects unknown current ruleset metadata", () => {
+    const document = createRunSaveDocument(createDecidingFixture());
+
+    expect(() =>
+      decodeRunSaveDocument({
+        ...document,
+        run: {
+          ...document.run,
+          rulesetVersion: 99,
+        },
+      }),
+    ).toThrow(/ruleset/i);
+  });
+
+  it("rejects out-of-range compact market memory", () => {
+    const document = createRunSaveDocument(createDecidingFixture());
+
+    expect(() =>
+      decodeRunSaveDocument({
+        ...document,
+        run: {
+          ...document.run,
+          marketMemory: {
+            ...document.run.marketMemory,
+            satisfaction: 10_001,
+          },
+        },
+      }),
+    ).toThrow(/marketMemory/i);
+  });
+
+  it("rejects a v4 report whose persisted post-day memory does not match replay", () => {
+    const document = createRunSaveDocument(createReportFixture());
+    if (document.run.phase.kind !== "report") {
+      throw new Error("expected report fixture");
+    }
+
+    expect(() =>
+      decodeRunSaveDocument({
+        ...document,
+        run: {
+          ...document.run,
+          marketMemory: {
+            ...document.run.marketMemory,
+            expectedPrice: document.run.marketMemory.expectedPrice + 1,
+          },
+        },
+      }),
+    ).toThrow(/market memory/i);
   });
 
   it("rejects corrupt ledger history instead of recomputing it", () => {
