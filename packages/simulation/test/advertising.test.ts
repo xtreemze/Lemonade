@@ -11,6 +11,7 @@ import {
   effectiveAdvertisingReach,
   moneyCents,
   nextAdvertisingFatigue,
+  organicAwarenessProbability,
   seed,
   signCount,
   weatherAdvertisingAttention,
@@ -87,6 +88,44 @@ describe("advertising awareness", () => {
     expect(Number(advertisingFatigueReachPenalty(fatigue))).toBeLessThan(repeatedPenalty);
   });
 
+
+  it("preserves the existing organic-awareness baseline at neutral history", () => {
+    expect(
+      Number(
+        organicAwarenessProbability(traits, {
+          confidence: 3,
+          satisfaction: basisPoints(5000),
+        }),
+      ),
+    ).toBe(1680);
+  });
+
+  it("adds bounded confidence and satisfaction influence to organic awareness", () => {
+    const neutral = Number(
+      organicAwarenessProbability(traits, {
+        confidence: 3,
+        satisfaction: basisPoints(5000),
+      }),
+    );
+    const discouraged = Number(
+      organicAwarenessProbability(traits, {
+        confidence: 0,
+        satisfaction: basisPoints(0),
+      }),
+    );
+    const trusted = Number(
+      organicAwarenessProbability(traits, {
+        confidence: 5,
+        satisfaction: basisPoints(10_000),
+      }),
+    );
+
+    expect(discouraged).toBeLessThan(neutral);
+    expect(trusted).toBeGreaterThan(neutral);
+    expect(neutral - discouraged).toBeLessThanOrEqual(500);
+    expect(trusted - neutral).toBeLessThanOrEqual(500);
+  });
+
   it("can produce organic awareness with zero advertising", () => {
     let foundOrganic = false;
 
@@ -98,6 +137,8 @@ describe("advertising awareness", () => {
         signs: signCount(0),
         weather: "sunny",
         advertisingFatigue: basisPoints(0),
+        confidence: 3,
+        satisfaction: basisPoints(5000),
       });
       foundOrganic ||= awareness.kind === "organic";
     }
@@ -113,6 +154,8 @@ describe("advertising awareness", () => {
       signs: signCount(7),
       weather: "cloudy",
       advertisingFatigue: basisPoints(2500),
+      confidence: 4 as const,
+      satisfaction: basisPoints(6200),
     });
 
     const first = awarenessForCustomer(input);
