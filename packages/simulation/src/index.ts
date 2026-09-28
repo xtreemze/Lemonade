@@ -13,5 +13,6 @@ export * from "./rng.js";
 export * from "./rules.js";
 export * from "./scale.js";
 export * from "./simulate.js";
+export * from "./simulate-v4.js";
 export * from "./state.js";
 export * from "./version.js";
