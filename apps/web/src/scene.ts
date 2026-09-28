@@ -9,7 +9,6 @@ import { createStreetStoryboard, MIN_STREET_PEDESTRIANS } from "@lemonade/scene/
 import type { DayEnvironment } from "@lemonade/simulation";
 
 import { sceneBackendFromStorage } from "./scene-backend.js";
-import type { createLemonsvilleScene } from "./scene-runtime.js";
 
 const activityForConfidence = (confidence: number): CustomerActivity => {
   if (confidence <= 0) {
@@ -84,8 +83,17 @@ type SceneElements = Readonly<{
   equivalent: HTMLElement;
 }>;
 
+type SceneFactory = (
+  canvas: HTMLCanvasElement,
+  initialState: LemonsvilleSceneState,
+  options?: LemonsvilleSceneOptions,
+) =>
+  | LemonsvilleSceneController
+  | null
+  | Promise<LemonsvilleSceneController | null>;
+
 type SceneRuntime = Readonly<{
-  createLemonsvilleScene: typeof createLemonsvilleScene;
+  createLemonsvilleScene: SceneFactory;
 }>;
 
 let threeSceneRuntimePromise: Promise<SceneRuntime> | null = null;
@@ -191,7 +199,7 @@ export const createLemonsvilleSceneView = (
       const description = describeScene(lastInput);
       const state = createLemonsvilleSceneState(lastInput, reducedMotion);
       elements.canvas.dataset["rendererBackend"] = selectedSceneBackend();
-      const nextController = createScene(elements.canvas, state, options.sceneOptions);
+      const nextController = await createScene(elements.canvas, state, options.sceneOptions);
 
       if (nextController === null) {
         showFallback(description);
