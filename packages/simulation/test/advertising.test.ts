@@ -126,6 +126,98 @@ describe("advertising awareness", () => {
     expect(trusted - neutral).toBeLessThanOrEqual(500);
   });
 
+
+  it("applies bounded customer-type semantics to organic and advertising awareness", () => {
+    const withType = (type: CustomerTraits["type"]): CustomerTraits =>
+      Object.freeze({
+        ...traits,
+        type,
+      });
+    const context = Object.freeze({
+      confidence: 3 as const,
+      satisfaction: basisPoints(5000),
+    });
+
+    const impulseOrganic = Number(organicAwarenessProbability(withType("impulse"), context));
+    const regularOrganic = Number(organicAwarenessProbability(withType("regular"), context));
+    const destinationOrganic = Number(
+      organicAwarenessProbability(withType("destination"), context),
+    );
+
+    expect(regularOrganic).toBeGreaterThan(impulseOrganic);
+    expect(destinationOrganic).toBeGreaterThan(impulseOrganic);
+    expect(destinationOrganic).toBeGreaterThan(0);
+
+    const impulseAd = Number(
+      effectiveAdvertisingReach(
+        signCount(3),
+        withType("impulse"),
+        "sunny",
+        basisPoints(0),
+      ),
+    );
+    const priceSensitiveAd = Number(
+      effectiveAdvertisingReach(
+        signCount(3),
+        withType("price-sensitive"),
+        "sunny",
+        basisPoints(0),
+      ),
+    );
+    const regularAd = Number(
+      effectiveAdvertisingReach(
+        signCount(3),
+        withType("regular"),
+        "sunny",
+        basisPoints(0),
+      ),
+    );
+    const destinationAd = Number(
+      effectiveAdvertisingReach(
+        signCount(3),
+        withType("destination"),
+        "sunny",
+        basisPoints(0),
+      ),
+    );
+
+    expect(impulseAd).toBeGreaterThan(priceSensitiveAd);
+    expect(priceSensitiveAd).toBeGreaterThan(regularAd);
+    expect(regularAd).toBeGreaterThan(destinationAd);
+    expect(destinationAd).toBeGreaterThan(0);
+  });
+
+  it("keeps type-modified awareness probabilities bounded", () => {
+    for (const type of ["impulse", "price-sensitive", "regular", "destination"] as const) {
+      const customer = Object.freeze({
+        ...traits,
+        type,
+        familiarity: basisPoints(10_000),
+        loyalty: basisPoints(10_000),
+        advertisingResponsiveness: basisPoints(10_000),
+      });
+
+      expect(
+        Number(
+          organicAwarenessProbability(customer, {
+            confidence: 5,
+            satisfaction: basisPoints(10_000),
+          }),
+        ),
+      ).toBeLessThanOrEqual(10_000);
+      expect(
+        Number(
+          effectiveAdvertisingReach(
+            signCount(40),
+            customer,
+            "hot-and-dry",
+            basisPoints(0),
+          ),
+        ),
+      ).toBeLessThanOrEqual(10_000);
+    }
+  });
+
   it("can produce organic awareness with zero advertising", () => {
     let foundOrganic = false;
 
