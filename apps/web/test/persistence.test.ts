@@ -228,10 +228,14 @@ describe("run persistence", () => {
     const legacy = createLegacyReportFixture();
     const legacyNext =
       legacy.phase.kind === "report" ? legacy.phase.resolution.nextState : legacy.state;
+    const environmentRandom = createSeededRandom(RUN_SEED);
+    generateEnvironment(dayNumber(1), environmentRandom);
+    const legacyNextEnvironment = generateEnvironment(legacyNext.day, environmentRandom);
     const currentShape = createRunSaveDocument(
       Object.freeze({
         ...legacy,
         state: legacyNext,
+        environment: legacyNextEnvironment,
         phase: Object.freeze({ kind: "deciding" }),
       }),
     );
