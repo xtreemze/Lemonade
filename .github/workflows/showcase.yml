@@ -40,6 +40,7 @@ concurrency:
 jobs:
   media:
     name: Record and render showcase
+    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -65,22 +66,41 @@ jobs:
           sudo apt-get install --yes ffmpeg
 
       - name: Verify showcase contracts
+        id: contracts
         run: pnpm test:showcase-contract
 
       - name: Capture source-quality scene video and static screenshots
+        id: capture
         run: pnpm showcase:capture
 
       - name: Render source-resolution reels and presentation graphics
+        id: render
         run: pnpm showcase:render
 
       - name: Verify resolution, frame rate, and presentation payloads
+        id: verify
         run: pnpm showcase:verify
 
-      - name: Upload complete visual evidence
-        if: always()
+      - name: Upload verified visual evidence
+        if: ${{ always() && steps.contracts.outcome == 'success' && steps.capture.outcome == 'success' && steps.render.outcome == 'success' && steps.verify.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: lemonade-showcase-${{ github.sha }}
+          name: lemonade-showcase-latest
           path: artifacts/e2e-media
           if-no-files-found: error
           retention-days: 14
+
+      - name: Summarize showcase result
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Visual Showcase"
+            echo
+            echo "This workflow is informational and does not block CI or deployment."
+            echo
+            echo "- Contracts: ${{ steps.contracts.outcome }}"
+            echo "- Capture: ${{ steps.capture.outcome }}"
+            echo "- Render: ${{ steps.render.outcome }}"
+            echo "- Verification: ${{ steps.verify.outcome }}"
+          } >> "${GITHUB_STEP_SUMMARY}"

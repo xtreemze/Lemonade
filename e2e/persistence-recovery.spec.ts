@@ -75,6 +75,78 @@ const readStoredRun = async (page: Page, key: "current" | "recovery"): Promise<s
 
 test.use({ reducedMotion: "reduce" });
 
+
+test("schema 2 deciding storage migrates to an explicit v4 neutral-memory boundary", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
+
+  const current = await readStoredRun(page, "current");
+  if (current === null) {
+    throw new Error("Expected current persistence slot.");
+  }
+
+  const modern = JSON.parse(current) as {
+    saveSchemaVersion: number;
+    simulationSchemaVersion: number;
+    run: {
+      seed: number;
+      rulesetVersion?: number;
+      marketMemory?: unknown;
+      state: unknown;
+      environment: unknown;
+      draft: unknown;
+      phase: unknown;
+    };
+  };
+  const versionTwo = {
+    saveSchemaVersion: 2,
+    simulationSchemaVersion: modern.simulationSchemaVersion,
+    run: {
+      seed: modern.run.seed,
+      state: modern.run.state,
+      environment: modern.run.environment,
+      draft: modern.run.draft,
+      phase: modern.run.phase,
+    },
+  };
+
+  await putStoredRun(page, "current", JSON.stringify(versionTwo));
+  await page.reload();
+
+  await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
+  await expect(page.locator("#run-status")).toHaveText("Run saved locally.");
+
+  const migratedText = await readStoredRun(page, "current");
+  if (migratedText === null) {
+    throw new Error("Expected migrated current persistence slot.");
+  }
+  const migrated = JSON.parse(migratedText) as {
+    saveSchemaVersion: number;
+    run: {
+      rulesetVersion: number;
+      marketMemory: {
+        expectedPrice: number;
+        advertisingFatigue: number;
+        stockoutPressure: number;
+        excessPressure: number;
+        satisfaction: number;
+      };
+    };
+  };
+
+  expect(migrated.saveSchemaVersion).toBe(3);
+  expect(migrated.run.rulesetVersion).toBe(4);
+  expect(migrated.run.marketMemory).toEqual({
+    expectedPrice: 0,
+    advertisingFatigue: 0,
+    stockoutPressure: 0,
+    excessPressure: 0,
+    satisfaction: 5000,
+  });
+});
+
 test("corrupt current storage recovers the last known good snapshot and repairs current", async ({
   page,
 }) => {
