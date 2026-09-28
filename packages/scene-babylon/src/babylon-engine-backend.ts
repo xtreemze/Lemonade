@@ -1,5 +1,5 @@
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
+import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 
 export const BABYLON_ENGINE_STORAGE_KEY = "LEMONADE_BABYLON_ENGINE" as const;
 
@@ -48,6 +48,7 @@ const browserBabylonEnginePreference = (): BabylonEnginePreference => {
 const createWebGPUEngine = async (
   canvas: HTMLCanvasElement,
 ): Promise<WebGPUEngine | null> => {
+  const { WebGPUEngine } = await import("@babylonjs/core/Engines/webgpuEngine");
   if (!(await WebGPUEngine.IsSupportedAsync)) {
     return null;
   }
