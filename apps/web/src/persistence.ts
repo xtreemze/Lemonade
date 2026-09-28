@@ -659,6 +659,8 @@ const parsePhase = (
   state: GameState,
   environment: DayEnvironment,
   draft: DayDecision,
+  runSeed: Seed,
+  currentMarketMemory: MarketMemory,
   path: string,
 ): RunPhase => {
   const record = asRecord(value, path);
@@ -668,27 +670,67 @@ const parsePhase = (
   }
 
   const nextState = parseGameState(record["nextState"], `${path}["nextState"]`);
-  let expected: DayResolution;
-  try {
-    expected = simulateDay(state, draft, environment);
-  } catch (error) {
-    if (!(error instanceof DecisionOutsideOperatingScaleError)) {
-      throw error;
+  const rulesetVersion = parseRulesetVersion(
+    record["rulesetVersion"],
+    `${path}["rulesetVersion"]`,
+  );
+
+  if (rulesetVersion === LEGACY_SIMULATION_RULESET_VERSION) {
+    if (!marketMemoriesEqual(currentMarketMemory, neutralMarketMemory())) {
+      return invalidSave(
+        path,
+        "legacy report migration must begin v4 with neutral market memory",
+      );
     }
-    expected = replayLegacyDay(state, draft, environment);
-  }
-  if (!serializedStatesEqual(nextState, expected["nextState"])) {
-    return invalidSave(path, "report state does not match the deterministic day resolution");
+
+    let expected: DayResolution;
+    try {
+      expected = simulateDay(state, draft, environment);
+    } catch (error) {
+      if (!(error instanceof DecisionOutsideOperatingScaleError)) {
+        throw error;
+      }
+      expected = replayLegacyDay(state, draft, environment);
+    }
+    if (!serializedStatesEqual(nextState, expected["nextState"])) {
+      return invalidSave(path, "report state does not match the deterministic legacy day resolution");
+    }
+
+    const entry = nextState["ledger"].at(-1);
+    if (entry === undefined) {
+      return invalidSave(path, "report state must contain the resolved day");
+    }
+
+    return Object.freeze({
+      kind: "report",
+      rulesetVersion: LEGACY_SIMULATION_RULESET_VERSION,
+      resolution: Object.freeze({ previousState: state, nextState, entry }),
+    });
   }
 
-  const entry = nextState["ledger"].at(-1);
-  if (entry === undefined) {
-    return invalidSave(path, "report state must contain the resolved day");
+  const marketMemoryBefore = parseMarketMemory(
+    record["marketMemoryBefore"],
+    `${path}["marketMemoryBefore"]`,
+  );
+  const expected = simulateDayV4(
+    state,
+    draft,
+    environment,
+    runSeed,
+    marketMemoryBefore,
+  );
+  if (!serializedStatesEqual(nextState, expected.nextState)) {
+    return invalidSave(path, "report state does not match the deterministic v4 day resolution");
+  }
+  if (!marketMemoriesEqual(currentMarketMemory, expected.market.memoryAfter)) {
+    return invalidSave(path, "persisted market memory does not match v4 report replay");
   }
 
   return Object.freeze({
     kind: "report",
-    resolution: Object.freeze({ previousState: state, nextState, entry }),
+    rulesetVersion: SIMULATION_RULESET_VERSION,
+    marketMemoryBefore,
+    resolution: expected,
   });
 };
 
@@ -744,15 +786,37 @@ export const decodeRunSaveDocument = (value: unknown): RunSnapshot => {
   }
 
   const run = asRecord(migrated["run"], "save.run");
+  const runSeed = seed(asNonNegativeInteger(run["seed"], "save.run.seed"));
+  const rulesetVersion = parseRulesetVersion(
+    run["rulesetVersion"],
+    "save.run.rulesetVersion",
+  );
+  if (rulesetVersion !== SIMULATION_RULESET_VERSION) {
+    throw new RunPersistenceError(
+      "unsupported-ruleset-version",
+      `Current run ruleset ${String(rulesetVersion)} is not supported for continuation; expected ${String(SIMULATION_RULESET_VERSION)}.`,
+    );
+  }
+  const marketMemory = parseMarketMemory(run["marketMemory"], "save.run.marketMemory");
   const state = parseGameState(run["state"], "save.run.state");
   const environment = parseEnvironment(run["environment"], "save.run.environment");
   const draft = parseDecision(run["draft"], "save.run.draft");
   const snapshot = Object.freeze({
-    seed: seed(asNonNegativeInteger(run["seed"], "save.run.seed")),
+    seed: runSeed,
+    rulesetVersion: SIMULATION_RULESET_VERSION,
+    marketMemory,
     state,
     environment,
     draft,
-    phase: parsePhase(run["phase"], state, environment, draft, "save.run.phase"),
+    phase: parsePhase(
+      run["phase"],
+      state,
+      environment,
+      draft,
+      runSeed,
+      marketMemory,
+      "save.run.phase",
+    ),
   }) satisfies RunSnapshot;
 
   restoreEnvironmentRandom(snapshot);
@@ -844,7 +908,9 @@ const openDatabase = async (): Promise<IDBDatabase> => {
 
 const isUnsupportedStoredRun = (error: unknown): boolean =>
   error instanceof RunPersistenceError &&
-  (error.code === "unsupported-save-version" || error.code === "unsupported-simulation-version");
+  (error.code === "unsupported-save-version" ||
+    error.code === "unsupported-simulation-version" ||
+    error.code === "unsupported-ruleset-version");
 
 const decodeStoredRun = (stored: unknown, path: string): RunSnapshot | null => {
   if (stored === undefined) {
