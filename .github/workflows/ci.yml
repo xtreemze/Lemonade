@@ -145,13 +145,13 @@ jobs:
           install: false
       - run: pnpm install --frozen-lockfile
       - name: Install coverage provider
-        run: pnpm add -Dw --lockfile=false @vitest/coverage-v8@5.0.1
+        run: pnpm add -Dw --lockfile=false --save-exact vitest@5.0.1 @vitest/coverage-v8@5.0.1
       - name: Run test coverage
         shell: bash
         run: |
           set -o pipefail
           mkdir -p artifacts/coverage
-          pnpm exec vitest run apps/web/test packages/*/test \
+          ./node_modules/.bin/vitest run apps/web/test packages/*/test \
             --coverage.enabled=true \
             --coverage.provider=v8 \
             --coverage.reporter=text \
