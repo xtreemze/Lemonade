@@ -65,22 +65,13 @@ const ledgerLine = (
   direction: LedgerLine["direction"],
 ): LedgerLine => Object.freeze({ kind, label, amount, direction });
 
-export const resolveDayFromSales = (
+const decisionCostContext = (
   state: GameState,
   decision: DayDecision,
-  environment: DayEnvironment,
-  sold: GlassCount,
-  reportedDemand: GlassCount,
   enforceOperatingScale: boolean,
-): DayResolution => {
+) => {
   if (Number(decision.price) <= 0) {
     throw new RangeError("price must be greater than zero");
-  }
-  if (Number(sold) > Number(decision.glasses)) {
-    throw new RangeError("sold glasses cannot exceed prepared glasses");
-  }
-  if (Number(reportedDemand) < Number(sold)) {
-    throw new RangeError("reported demand cannot be lower than sold glasses");
   }
 
   if (enforceOperatingScale) {
@@ -107,6 +98,38 @@ export const resolveDayFromSales = (
   if (Number(predictableExpenses) > Number(operatingFunds)) {
     throw new UnaffordableDecisionError(Number(predictableExpenses), Number(operatingFunds));
   }
+
+  return Object.freeze({ finance, predictableExpenses });
+};
+
+export const assertDayDecisionResolvable = (
+  state: GameState,
+  decision: DayDecision,
+  enforceOperatingScale = true,
+): void => {
+  decisionCostContext(state, decision, enforceOperatingScale);
+};
+
+export const resolveDayFromSales = (
+  state: GameState,
+  decision: DayDecision,
+  environment: DayEnvironment,
+  sold: GlassCount,
+  reportedDemand: GlassCount,
+  enforceOperatingScale: boolean,
+): DayResolution => {
+  if (Number(sold) > Number(decision.glasses)) {
+    throw new RangeError("sold glasses cannot exceed prepared glasses");
+  }
+  if (Number(reportedDemand) < Number(sold)) {
+    throw new RangeError("reported demand cannot be lower than sold glasses");
+  }
+
+  const { finance, predictableExpenses } = decisionCostContext(
+    state,
+    decision,
+    enforceOperatingScale,
+  );
 
   const openingCashCents = Number(state.cash);
   const initialBorrowCents = Math.max(0, Number(predictableExpenses) - openingCashCents);
@@ -223,6 +246,7 @@ const resolveLegacyDay = (
   environment: DayEnvironment,
   enforceOperatingScale: boolean,
 ): DayResolution => {
+  assertDayDecisionResolvable(state, decision, enforceOperatingScale);
   const calculatedDemand = potentialDemand(
     decision.price,
     decision.signs,
