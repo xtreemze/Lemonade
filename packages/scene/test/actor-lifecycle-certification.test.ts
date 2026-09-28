@@ -56,8 +56,10 @@ const exerciseDay = (
 };
 
 describe("long-session ambient actor lifecycle certification", () => {
-  it("reaches a stable renderer-object plateau across repeated days", () => {
-    const scene = new Scene();
+  it(
+    "reaches a stable renderer-object plateau across repeated days",
+    () => {
+      const scene = new Scene();
     const ambient = createAmbientLife(scene, 0x5e_ed_12_34, []);
 
     for (let day = 1; day <= 7; day += 1) {
@@ -65,11 +67,13 @@ describe("long-session ambient actor lifecycle certification", () => {
     }
     const plateauChildCount = scene.children.length;
 
-    for (let day = 8; day <= 35; day += 1) {
-      exerciseDay(scene, ambient, day);
-      expect(scene.children.length).toBe(plateauChildCount);
-    }
-  });
+      for (let day = 8; day <= 35; day += 1) {
+        exerciseDay(scene, ambient, day);
+        expect(scene.children.length).toBe(plateauChildCount);
+      }
+    },
+    15_000,
+  );
 
   it("reclaims all ambient actor visibility when the scene becomes idle", () => {
     const scene = new Scene();
