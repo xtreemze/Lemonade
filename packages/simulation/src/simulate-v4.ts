@@ -14,7 +14,7 @@ import { nextMarketMemory } from "./memory.js";
 import type { DayDecision, DayEnvironment, DayResolution, GameState } from "./model.js";
 import { glassCount, type Seed } from "./primitives.js";
 import { operatingScaleForState } from "./scale.js";
-import { resolveDayFromSales } from "./simulate.js";
+import { assertDayDecisionResolvable, resolveDayFromSales } from "./simulate.js";
 import { SIMULATION_RULESET_VERSION } from "./version.js";
 
 export type V4MarketDayResolution = Readonly<{
@@ -133,6 +133,7 @@ export const simulateDayV4 = (
   runSeed: Seed,
   memory: MarketMemory,
 ): V4DayResolution => {
+  assertDayDecisionResolvable(state, decision);
   const market = customerOutcomesForDay(state, decision, environment, runSeed, memory);
   const sold = glassCount(market.summary.purchased);
   const willingDemand = glassCount(market.summary.willing);
