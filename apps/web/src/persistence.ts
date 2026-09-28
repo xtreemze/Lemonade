@@ -10,20 +10,26 @@ import {
   type GameState,
   generateEnvironment,
   glassCount,
+  LEGACY_SIMULATION_RULESET_VERSION,
   type LedgerLine,
+  type MarketMemory,
   moneyCents,
+  neutralMarketMemory,
   type ProgressionTier,
   type RandomSource,
   replayLegacyDay,
   type Seed,
+  SIMULATION_RULESET_VERSION,
   SIMULATION_SCHEMA_VERSION,
   seed,
   signCount,
   signedMoneyCents,
   simulateDay,
+  simulateDayV4,
+  type V4DayResolution,
 } from "@lemonade/simulation";
 
-export const RUN_SAVE_SCHEMA_VERSION = 2 as const;
+export const RUN_SAVE_SCHEMA_VERSION = 3 as const;
 
 const DATABASE_NAME = "lemonade";
 const DATABASE_VERSION = 1;
@@ -52,10 +58,22 @@ const phaseKinds = ["deciding", "report"] as const;
 
 export type RunPhase =
   | Readonly<{ kind: "deciding" }>
-  | Readonly<{ kind: "report"; resolution: DayResolution }>;
+  | Readonly<{
+      kind: "report";
+      rulesetVersion: typeof LEGACY_SIMULATION_RULESET_VERSION;
+      resolution: DayResolution;
+    }>
+  | Readonly<{
+      kind: "report";
+      rulesetVersion: typeof SIMULATION_RULESET_VERSION;
+      marketMemoryBefore: MarketMemory;
+      resolution: V4DayResolution;
+    }>;
 
 export type RunSnapshot = Readonly<{
   seed: Seed;
+  rulesetVersion: typeof SIMULATION_RULESET_VERSION;
+  marketMemory: MarketMemory;
   state: GameState;
   environment: DayEnvironment;
   draft: DayDecision;
@@ -110,6 +128,14 @@ type SerializedLedgerEntry = Readonly<{
   lines: readonly SerializedLedgerLine[];
 }>;
 
+type SerializedMarketMemory = Readonly<{
+  expectedPrice: number;
+  advertisingFatigue: number;
+  stockoutPressure: number;
+  excessPressure: number;
+  satisfaction: number;
+}>;
+
 type SerializedGameState = Readonly<{
   day: number;
   cash: number;
@@ -122,7 +148,12 @@ type SerializedGameState = Readonly<{
 
 type SerializedPhase =
   | Readonly<{ kind: "deciding" }>
-  | Readonly<{ kind: "report"; nextState: SerializedGameState }>;
+  | Readonly<{
+      kind: "report";
+      rulesetVersion: number;
+      nextState: SerializedGameState;
+      marketMemoryBefore?: SerializedMarketMemory;
+    }>;
 
 type RunSaveDocumentV1 = Readonly<{
   saveSchemaVersion: 1;
@@ -136,10 +167,24 @@ type RunSaveDocumentV1 = Readonly<{
 }>;
 
 type RunSaveDocumentV2 = Readonly<{
+  saveSchemaVersion: 2;
+  simulationSchemaVersion: number;
+  run: Readonly<{
+    seed: number;
+    state: unknown;
+    environment: unknown;
+    draft: unknown;
+    phase: unknown;
+  }>;
+}>;
+
+type RunSaveDocumentV3 = Readonly<{
   saveSchemaVersion: typeof RUN_SAVE_SCHEMA_VERSION;
   simulationSchemaVersion: typeof SIMULATION_SCHEMA_VERSION;
   run: Readonly<{
     seed: number;
+    rulesetVersion: typeof SIMULATION_RULESET_VERSION;
+    marketMemory: SerializedMarketMemory;
     state: SerializedGameState;
     environment: SerializedEnvironment;
     draft: SerializedDecision;
