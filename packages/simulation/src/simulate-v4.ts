@@ -10,7 +10,7 @@ import {
 } from "./audience.js";
 import { conversionForCustomer } from "./conversion.js";
 import { legacyConfidenceForState } from "./legacy.js";
-import { nextMarketMemory, neutralMarketMemory } from "./memory.js";
+import { nextMarketMemory } from "./memory.js";
 import type { DayDecision, DayEnvironment, DayResolution, GameState } from "./model.js";
 import { glassCount, type Seed } from "./primitives.js";
 import { operatingScaleForState } from "./scale.js";
@@ -131,7 +131,7 @@ export const simulateDayV4 = (
   decision: DayDecision,
   environment: DayEnvironment,
   runSeed: Seed,
-  memory: MarketMemory = neutralMarketMemory(),
+  memory: MarketMemory,
 ): V4DayResolution => {
   const market = customerOutcomesForDay(state, decision, environment, runSeed, memory);
   const sold = glassCount(market.summary.purchased);
