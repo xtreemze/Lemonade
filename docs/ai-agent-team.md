@@ -4,6 +4,8 @@ This project benefits from multiple specialized AI agents rather than a pool of 
 
 The role contract matters more than the model vendor. The default routing below uses Codex for implementation-heavy, test-heavy work and Claude for architecture, synthesis, product/game-design reasoning, and independent review. Either model may fill another role when necessary, but an implementation should normally be reviewed by the other model family before merge.
 
+The repository's gated readiness plan for a future GPT-6-family rollout is documented in [GPT-6 migration readiness plan](gpt-6-migration-plan.md). Do not replace these role defaults with an inferred model identifier before that plan's official-documentation, compatibility, evaluation, and review-independence gates pass.
+
 ## Core team
 
 | Agent | Default model | Ideal background | Primary ownership |
