@@ -197,6 +197,7 @@ type PersistenceErrorCode =
   | "invalid-save"
   | "unsupported-save-version"
   | "unsupported-simulation-version"
+  | "unsupported-ruleset-version"
   | "storage-unavailable"
   | "storage-failed";
 
@@ -234,6 +235,56 @@ const asNonNegativeInteger = (value: unknown, path: string): number => {
     return invalidSave(path, "expected a non-negative integer");
   }
   return integer;
+};
+
+const asMarketBasisPoints = (value: unknown, path: string) => {
+  const integer = asNonNegativeInteger(value, path);
+  if (integer > 10_000) {
+    return invalidSave(path, "expected market basis points from 0 through 10000");
+  }
+  return basisPoints(integer);
+};
+
+const parseMarketMemory = (value: unknown, path: string): MarketMemory => {
+  const record = asRecord(value, path);
+  return Object.freeze({
+    expectedPrice: moneyCents(
+      asNonNegativeInteger(record["expectedPrice"], `${path}["expectedPrice"]`),
+    ),
+    advertisingFatigue: asMarketBasisPoints(
+      record["advertisingFatigue"],
+      `${path}["advertisingFatigue"]`,
+    ),
+    stockoutPressure: asMarketBasisPoints(
+      record["stockoutPressure"],
+      `${path}["stockoutPressure"]`,
+    ),
+    excessPressure: asMarketBasisPoints(
+      record["excessPressure"],
+      `${path}["excessPressure"]`,
+    ),
+    satisfaction: asMarketBasisPoints(
+      record["satisfaction"],
+      `${path}["satisfaction"]`,
+    ),
+  });
+};
+
+const parseRulesetVersion = (
+  value: unknown,
+  path: string,
+): typeof LEGACY_SIMULATION_RULESET_VERSION | typeof SIMULATION_RULESET_VERSION => {
+  const version = asSafeInteger(value, path);
+  if (
+    version !== LEGACY_SIMULATION_RULESET_VERSION &&
+    version !== SIMULATION_RULESET_VERSION
+  ) {
+    throw new RunPersistenceError(
+      "unsupported-ruleset-version",
+      `Ruleset version ${String(version)} at ${path} is not supported.`,
+    );
+  }
+  return version;
 };
 
 const asString = (value: unknown, path: string): string => {
@@ -404,6 +455,18 @@ const serializeDecision = (decision: DayDecision): SerializedDecision =>
     price: Number(decision["price"]),
   });
 
+const serializeMarketMemory = (memory: MarketMemory): SerializedMarketMemory =>
+  Object.freeze({
+    expectedPrice: Number(memory.expectedPrice),
+    advertisingFatigue: Number(memory.advertisingFatigue),
+    stockoutPressure: Number(memory.stockoutPressure),
+    excessPressure: Number(memory.excessPressure),
+    satisfaction: Number(memory.satisfaction),
+  });
+
+const marketMemoriesEqual = (left: MarketMemory, right: MarketMemory): boolean =>
+  JSON.stringify(serializeMarketMemory(left)) === JSON.stringify(serializeMarketMemory(right));
+
 const serializeEnvironment = (environment: DayEnvironment): SerializedEnvironment =>
   Object.freeze({
     weather: Object.freeze({
@@ -459,20 +522,35 @@ const serializeGameState = (state: GameState): SerializedGameState =>
     ledger: Object.freeze(state["ledger"].map(serializeLedgerEntry)),
   });
 
-const serializePhase = (phase: RunPhase): SerializedPhase =>
-  phase["kind"] === "deciding"
-    ? Object.freeze({ kind: "deciding" })
-    : Object.freeze({
-        kind: "report",
-        nextState: serializeGameState(phase.resolution["nextState"]),
-      });
+const serializePhase = (phase: RunPhase): SerializedPhase => {
+  if (phase["kind"] === "deciding") {
+    return Object.freeze({ kind: "deciding" });
+  }
 
-export const createRunSaveDocument = (snapshot: RunSnapshot): RunSaveDocumentV2 =>
+  if (phase.rulesetVersion === LEGACY_SIMULATION_RULESET_VERSION) {
+    return Object.freeze({
+      kind: "report",
+      rulesetVersion: LEGACY_SIMULATION_RULESET_VERSION,
+      nextState: serializeGameState(phase.resolution["nextState"]),
+    });
+  }
+
+  return Object.freeze({
+    kind: "report",
+    rulesetVersion: SIMULATION_RULESET_VERSION,
+    nextState: serializeGameState(phase.resolution["nextState"]),
+    marketMemoryBefore: serializeMarketMemory(phase.marketMemoryBefore),
+  });
+};
+
+export const createRunSaveDocument = (snapshot: RunSnapshot): RunSaveDocumentV3 =>
   Object.freeze({
     saveSchemaVersion: RUN_SAVE_SCHEMA_VERSION,
     simulationSchemaVersion: SIMULATION_SCHEMA_VERSION,
     run: Object.freeze({
       seed: Number(snapshot["seed"]),
+      rulesetVersion: snapshot.rulesetVersion,
+      marketMemory: serializeMarketMemory(snapshot.marketMemory),
       state: serializeGameState(snapshot["state"]),
       environment: serializeEnvironment(snapshot["environment"]),
       draft: serializeDecision(snapshot["draft"]),
@@ -498,16 +576,46 @@ const migrateVersionZero = (value: Record<string, unknown>): RunSaveDocumentV1 =
   });
 };
 
-const migrateVersionOne = (value: Record<string, unknown>): Record<string, unknown> => {
+const migrateVersionOne = (value: Record<string, unknown>): RunSaveDocumentV2 => {
   const run = asRecord(value["run"], "save.run");
-  return {
+  return Object.freeze({
+    saveSchemaVersion: 2,
+    simulationSchemaVersion: asSafeInteger(
+      value["simulationSchemaVersion"],
+      "save.simulationSchemaVersion",
+    ),
+    run: Object.freeze({
+      seed: asNonNegativeInteger(run["seed"], "save.run.seed"),
+      state: run["state"],
+      environment: run["environment"],
+      draft: run["draft"],
+      phase: Object.freeze({ kind: "deciding" }),
+    }),
+  });
+};
+
+const migrateVersionTwo = (value: Record<string, unknown>): Record<string, unknown> => {
+  const run = asRecord(value["run"], "save.run");
+  const phase = asRecord(run["phase"], 'save.run["phase"]');
+  const kind = asLiteral(phase["kind"], phaseKinds, 'save.run["phase"]["kind"]');
+  const migratedPhase =
+    kind === "deciding"
+      ? Object.freeze({ kind: "deciding" })
+      : Object.freeze({
+          ...phase,
+          rulesetVersion: LEGACY_SIMULATION_RULESET_VERSION,
+        });
+
+  return Object.freeze({
     ...value,
     saveSchemaVersion: RUN_SAVE_SCHEMA_VERSION,
-    run: {
+    run: Object.freeze({
       ...run,
-      phase: Object.freeze({ kind: "deciding" }),
-    },
-  };
+      rulesetVersion: SIMULATION_RULESET_VERSION,
+      marketMemory: serializeMarketMemory(neutralMarketMemory()),
+      phase: migratedPhase,
+    }),
+  });
 };
 
 export const migrateRunSaveDocument = (value: unknown): unknown => {
@@ -523,10 +631,15 @@ export const migrateRunSaveDocument = (value: unknown): unknown => {
   }
 
   if (version === 0) {
-    return migrateVersionOne(asRecord(migrateVersionZero(record), "save"));
+    const versionOne = asRecord(migrateVersionZero(record), "save");
+    const versionTwo = asRecord(migrateVersionOne(versionOne), "save");
+    return migrateVersionTwo(versionTwo);
   }
   if (version === 1) {
-    return migrateVersionOne(record);
+    return migrateVersionTwo(asRecord(migrateVersionOne(record), "save"));
+  }
+  if (version === 2) {
+    return migrateVersionTwo(record);
   }
   if (version === RUN_SAVE_SCHEMA_VERSION) {
     return record;
