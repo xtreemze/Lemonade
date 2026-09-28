@@ -121,7 +121,9 @@ test("verifier enforces source resolution and high-frame-rate output", async () 
   assert.ok(verifier.includes("probeAnimatedWebp"));
   assert.ok(verifier.includes('"VP8X"'));
   assert.ok(verifier.includes('"ANMF"'));
-  assert.ok(verifier.includes("WebP millisecond-duration quantization"));
+  assert.ok(verifier.includes("frameDurationsMs"));
+  assert.ok(verifier.includes("sourceFrameMs"));
+  assert.ok(verifier.includes("representedSourceFrames"));
   assert.ok(verifier.includes("expected exactly"));
   assert.ok(verifier.includes('"deterministic-webcodecs-vp8"'));
   assert.ok(verifier.includes("metadata.capturedFrames"));

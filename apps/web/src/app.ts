@@ -7,6 +7,7 @@ import {
   availableOperatingFunds,
   createInitialState,
   createSeededRandom,
+  dayNumber,
   type DayEnvironment,
   type DayResolution,
   financeRulesForTier,
@@ -46,16 +47,7 @@ import {
 } from "./environment-audio.js";
 import type { HapticCue, HapticEngine } from "./haptics.js";
 import { createLazyProceduralAudioEngine } from "./lazy-audio.js";
-import {
-  clearCurrentRun,
-  exportRunSnapshot,
-  importRunSnapshot,
-  RunPersistenceError,
-  type RunPhase,
-  type RunSnapshot,
-  restoreEnvironmentRandom,
-  saveCurrentRun,
-} from "./persistence.js";
+import type { RunPhase, RunSnapshot } from "./persistence.js";
 import { createPresentationDeadline } from "./presentation-deadline.js";
 import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import {
@@ -146,8 +138,28 @@ const financeSummary = (state: GameState): string => {
     : parts.join(" · ");
 };
 
+type PersistenceModule = typeof import("./persistence.js");
+
+let persistenceModulePromise: Promise<PersistenceModule> | null = null;
+
+const loadPersistence = (): Promise<PersistenceModule> => {
+  persistenceModulePromise ??= import("./persistence.js");
+  return persistenceModulePromise;
+};
+
+const restoreEnvironmentRandom = (
+  snapshot: Pick<RunSnapshot, "seed" | "state">,
+): RandomSource => {
+  const random = createSeededRandom(snapshot.seed);
+  const currentDay = Number(snapshot.state.day);
+  for (let day = 1; day <= currentDay; day += 1) {
+    generateEnvironment(dayNumber(day), random);
+  }
+  return random;
+};
+
 const persistenceMessage = (error: unknown): string =>
-  error instanceof RunPersistenceError
+  error instanceof Error
     ? error.message
     : "Run storage failed unexpectedly. Export your run before leaving this page.";
 
@@ -651,7 +663,12 @@ export class LemonadeApp {
   };
 
   readonly #onExportRun = (): void => {
+    void this.#exportRun();
+  };
+
+  async #exportRun(): Promise<void> {
     try {
+      const { exportRunSnapshot } = await loadPersistence();
       const documentText = exportRunSnapshot(this.#snapshot());
       const blob = new Blob([documentText], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -666,7 +683,7 @@ export class LemonadeApp {
     } catch (error) {
       this.#showPersistenceError(persistenceMessage(error));
     }
-  };
+  }
 
   readonly #onImportFile = (event: Event): void => {
     if (!(event instanceof RunImportFileEvent)) {
@@ -684,6 +701,7 @@ export class LemonadeApp {
 
   async #importFile(file: File): Promise<void> {
     try {
+      const { importRunSnapshot, saveCurrentRun } = await loadPersistence();
       const imported = importRunSnapshot(await file.text());
       await this.#saveChain;
       await saveCurrentRun(imported);
@@ -695,6 +713,7 @@ export class LemonadeApp {
 
   async #resetRun(): Promise<void> {
     try {
+      const { clearCurrentRun } = await loadPersistence();
       await this.#saveChain;
       await clearCurrentRun();
       window.location.reload();
@@ -726,6 +745,7 @@ export class LemonadeApp {
     const snapshot = this.#snapshot();
     this.#saveChain = this.#saveChain
       .then(async () => {
+        const { saveCurrentRun } = await loadPersistence();
         await saveCurrentRun(snapshot);
         if (!this.#disposed) {
           this.#showPersistenceStatus(successMessage);

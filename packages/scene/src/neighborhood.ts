@@ -164,8 +164,22 @@ const distanceLod = (
   return root;
 };
 
+// The active simulation camera can see the residential grid almost to the
+// hill backdrop. Keep full house geometry throughout that authored
+// neighborhood depth and reserve the simplified shell for viewpoints beyond
+// the hills / unusually wide developer-camera framing.
+const HOUSE_DETAIL_LOD_DISTANCE = 176;
+
 const houseLod = (x: number, z: number, color: number, scale: number, rotationY: number): Group =>
-  distanceLod(detailedHouse(color), distantHouse(color), 34, x, z, scale, rotationY);
+  distanceLod(
+    detailedHouse(color),
+    distantHouse(color),
+    HOUSE_DETAIL_LOD_DISTANCE,
+    x,
+    z,
+    scale,
+    rotationY,
+  );
 
 const plantUnit = (seed: number, salt: number): number => {
   let value = Math.imul((seed ^ salt) >>> 0, 0x9e_37_79_b1);
