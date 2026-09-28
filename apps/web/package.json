@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "build": "vite build",
     "verify:pages-bundle": "node ./scripts/verify-pages-bundle.mjs"
   },
