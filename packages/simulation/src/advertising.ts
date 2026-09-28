@@ -1,5 +1,6 @@
 import type { AwarenessOutcome, CustomerTraits } from "./audience.js";
 import { createMarketRandom } from "./audience.js";
+import type { LegacyConfidence } from "./legacy.js";
 import type { Weather } from "./model.js";
 import {
   type BasisPoints,
@@ -13,6 +14,10 @@ import type { OperatingScaleLevel } from "./scale.js";
 const BASE_REACH_RATE = 0.11;
 const FATIGUE_DECAY = 0.78;
 const MAX_FATIGUE_REACH_PENALTY_BPS = 1800;
+const ORGANIC_CONFIDENCE_NEUTRAL = 3;
+const ORGANIC_CONFIDENCE_STEP_BPS = 100;
+const ORGANIC_SATISFACTION_MAX_ADJUSTMENT_BPS = 250;
+const ORGANIC_HISTORY_MAX_ADJUSTMENT_BPS = 500;
 
 const MAX_SIGNS_BY_LEVEL: Readonly<Record<OperatingScaleLevel, number>> = Object.freeze({
   1: 3,
@@ -63,8 +68,36 @@ export const advertisingFatigueReachPenalty = (fatigue: BasisPoints): BasisPoint
 export const weatherAdvertisingAttention = (weather: Weather["kind"]): BasisPoints =>
   basisPoints(WEATHER_ATTENTION_BPS[weather]);
 
-export const organicAwarenessProbability = (traits: CustomerTraits): BasisPoints =>
-  boundedBasisPoints(800 + Number(traits.familiarity) * 0.32 + Number(traits.loyalty) * 0.12);
+export type OrganicAwarenessContext = Readonly<{
+  confidence: LegacyConfidence;
+  satisfaction: BasisPoints;
+}>;
+
+const organicHistoryAdjustment = (context: OrganicAwarenessContext): number => {
+  const confidenceAdjustment =
+    (context.confidence - ORGANIC_CONFIDENCE_NEUTRAL) * ORGANIC_CONFIDENCE_STEP_BPS;
+  const satisfaction = Math.min(10_000, Math.max(0, Number(context.satisfaction)));
+  const satisfactionAdjustment =
+    ((satisfaction - 5000) / 5000) * ORGANIC_SATISFACTION_MAX_ADJUSTMENT_BPS;
+  return Math.min(
+    ORGANIC_HISTORY_MAX_ADJUSTMENT_BPS,
+    Math.max(
+      -ORGANIC_HISTORY_MAX_ADJUSTMENT_BPS,
+      confidenceAdjustment + satisfactionAdjustment,
+    ),
+  );
+};
+
+export const organicAwarenessProbability = (
+  traits: CustomerTraits,
+  context: OrganicAwarenessContext,
+): BasisPoints =>
+  boundedBasisPoints(
+    800 +
+      Number(traits.familiarity) * 0.32 +
+      Number(traits.loyalty) * 0.12 +
+      organicHistoryAdjustment(context),
+  );
 
 export const effectiveAdvertisingReach = (
   signs: SignCount,
@@ -89,6 +122,8 @@ export type AwarenessDecisionInput = Readonly<{
   signs: SignCount;
   weather: Weather["kind"];
   advertisingFatigue: BasisPoints;
+  confidence: LegacyConfidence;
+  satisfaction: BasisPoints;
 }>;
 
 export const awarenessForCustomer = (input: AwarenessDecisionInput): AwarenessOutcome => {
@@ -97,7 +132,16 @@ export const awarenessForCustomer = (input: AwarenessDecisionInput): AwarenessOu
     customerId: input.traits.id,
   });
 
-  if (random.nextUnit() < Number(organicAwarenessProbability(input.traits)) / 10_000) {
+  if (
+    random.nextUnit() <
+    Number(
+      organicAwarenessProbability(input.traits, {
+        confidence: input.confidence,
+        satisfaction: input.satisfaction,
+      }),
+    ) /
+      10_000
+  ) {
     return Object.freeze({ kind: "organic" });
   }
 
