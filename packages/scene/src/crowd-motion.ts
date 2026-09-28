@@ -392,7 +392,7 @@ const cellKey = (x: number, z: number): string =>
 
 const separateCrowd = (poses: (MutableCrowdPose | undefined)[]): number => {
   let neighborChecks = 0;
-  for (let pass = 0; pass < 3; pass += 1) {
+  for (let pass = 0; pass < 4; pass += 1) {
     const cells = new Map<string, number[]>();
     poses.forEach((pose, index) => {
       if (pose === undefined) {
