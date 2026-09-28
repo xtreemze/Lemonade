@@ -253,8 +253,7 @@ const basePose = (
     .sort(
       (left, right) =>
         routeFocusDistance(left) - routeFocusDistance(right) || left.id.localeCompare(right.id),
-    )
-    ;
+    );
   const requestedSide: SidewalkSide = actorIndex % 2 === 0 ? "near" : "far";
   const mainRoute =
     mainRoutes
