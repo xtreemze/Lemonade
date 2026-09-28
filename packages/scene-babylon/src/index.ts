@@ -1,5 +1,4 @@
 import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
-import { Engine } from "@babylonjs/core/Engines/engine";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
@@ -23,6 +22,7 @@ import {
 } from "@lemonade/scene/storyboard";
 import { generateStreetNetwork } from "@lemonade/scene/street-layout";
 
+import { createBabylonEngineBackend } from "./babylon-engine-backend.js";
 import { createBabylonStreetSurfaceField } from "./babylon-street-surface-field.js";
 
 export type {
@@ -49,26 +49,16 @@ const clearColorForWeather = (weather: SceneWeather): Color4 => {
   }
 };
 
-export const createBabylonLemonsvilleScene = (
+export const createBabylonLemonsvilleScene = async (
   canvas: HTMLCanvasElement,
   initialState: LemonsvilleSceneState,
   _options: LemonsvilleSceneOptions = {},
-): LemonsvilleSceneControllerContract | null => {
-  let engine: Engine;
-  try {
-    engine = new Engine(
-      canvas,
-      true,
-      {
-        preserveDrawingBuffer: false,
-        powerPreference: "high-performance",
-        stencil: true,
-      },
-      true,
-    );
-  } catch {
+): Promise<LemonsvilleSceneControllerContract | null> => {
+  const rendererBackend = await createBabylonEngineBackend(canvas);
+  if (rendererBackend === null) {
     return null;
   }
+  const { engine } = rendererBackend;
 
   const pixelRatio = clampPixelRatio(globalThis.devicePixelRatio);
   engine.setHardwareScalingLevel(1 / pixelRatio);
@@ -122,6 +112,7 @@ export const createBabylonLemonsvilleScene = (
   seller.material = sellerMaterial;
 
   canvas.dataset["rendererBackend"] = "babylon";
+  canvas.dataset["rendererEngine"] = rendererBackend.kind;
 
   let state = initialState;
   let disposed = false;
@@ -243,6 +234,7 @@ export const createBabylonLemonsvilleScene = (
       scene.dispose();
       engine.dispose();
       canvas.removeAttribute("data-renderer-backend");
+      canvas.removeAttribute("data-renderer-engine");
     },
   });
 };
