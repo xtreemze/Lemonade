@@ -52,16 +52,20 @@ describe("neighborhood distance LOD", () => {
     expect(near.visible).toBe(true);
     expect(far.visible).toBe(false);
 
-    camera.position.set(root.position.x, 5, root.position.z + 90);
+    camera.position.set(root.position.x, 5, root.position.z + 220);
     camera.updateMatrixWorld(true);
     lod.update(camera);
     expect(near.visible).toBe(false);
     expect(far.visible).toBe(true);
   });
-  it("keeps central front-house detail active throughout the simulation camera shot", () => {
+  it("keeps residential house detail active through the neighborhood to the hill line", () => {
     const scene = new Scene();
     populateNeighborhood(scene, DEFAULT_RESIDENTIAL_SEED);
     scene.updateMatrixWorld(true);
+
+    const houses = scene.children.filter((object) => object.name.startsWith("building-"));
+    expect(houses.length).toBeGreaterThan(20);
+    expect(houses.some((house) => house.position.z <= -65)).toBe(true);
 
     const viewports = [
       [360, 740],
@@ -69,7 +73,6 @@ describe("neighborhood distance LOD", () => {
       [1024, 768],
       [1440, 900],
     ] as const;
-    const detailedFrontRoles = ["west-near", "stand-home", "stand-neighbor", "east-mid"] as const;
 
     for (const [width, height] of viewports) {
       const composition = sceneCameraComposition(width, height, "stand");
@@ -78,8 +81,12 @@ describe("neighborhood distance LOD", () => {
       camera.lookAt(...composition.lookAt);
       camera.updateMatrixWorld(true);
 
-      for (const role of detailedFrontRoles) {
-        const lod = distanceLodChild(role, scene);
+      for (const house of houses) {
+        const lod = house.children.find((child) => child instanceof LOD);
+        expect(lod).toBeInstanceOf(LOD);
+        if (!(lod instanceof LOD)) {
+          continue;
+        }
         const near = lod.levels[0]?.object;
         const far = lod.levels[1]?.object;
         expect(near).toBeDefined();
@@ -94,5 +101,4 @@ describe("neighborhood distance LOD", () => {
       }
     }
   });
-
 });
