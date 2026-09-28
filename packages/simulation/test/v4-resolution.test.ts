@@ -11,6 +11,7 @@ import {
   OPERATING_SCALE_THRESHOLDS_CENTS,
   seed,
   signCount,
+  signedMoneyCents,
   simulateDayV4,
   type DailyLedgerEntry,
   type DayDecision,
@@ -61,8 +62,8 @@ const stateAtScale = (level: 1 | 2 | 3 | 4): GameState => {
     revenue: moneyCents(operatingProfit),
     financeIncome: moneyCents(0),
     expenses: moneyCents(0),
-    net: operatingProfit as DailyLedgerEntry["net"],
-    cashDelta: operatingProfit as DailyLedgerEntry["cashDelta"],
+    net: signedMoneyCents(operatingProfit),
+    cashDelta: signedMoneyCents(operatingProfit),
     borrowed: moneyCents(0),
     repaid: moneyCents(0),
     endingCash: moneyCents(targetBalance),
@@ -251,7 +252,7 @@ describe("v4 customer-funnel day resolution", () => {
     for (let value = 1; value <= 128 && exactResult === undefined; value += 1) {
       const runSeed = seed(value);
       const probe = simulateDayV4(state, decision(15, 0, 299), environment, runSeed, memory);
-      if (probe.market.summary.willing <= 15) {
+      if (probe.market.summary.willing > 0 && probe.market.summary.willing <= 15) {
         exactResult = simulateDayV4(
           state,
           decision(probe.market.summary.willing, 0, 299),
