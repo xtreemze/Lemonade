@@ -80,8 +80,8 @@ describe("crowd motion", () => {
         .filter((routeId): routeId is string => routeId !== undefined),
     );
     expect(routeIds.size).toBeGreaterThan(4);
-    expect([...routeIds].some((routeId) => routeId.startsWith("main:0"))).toBe(true);
-    expect([...routeIds].some((routeId) => routeId.startsWith("main:1"))).toBe(true);
+    expect([...routeIds].some((routeId) => routeId.startsWith("main:"))).toBe(true);
+    expect([...routeIds].some((routeId) => !routeId.startsWith("main:"))).toBe(true);
     const generatedRouteIds = new Set(neighborhoodSidewalkRoutes().map((route) => route.id));
     const generatedSidewalks = generateStreetNetwork().sidewalks;
     for (const pose of first) {
