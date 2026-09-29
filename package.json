@@ -22,6 +22,7 @@
     "test": "pnpm -r --if-present test",
     "test:e2e": "playwright test",
     "certify": "pnpm --filter @lemonade/simulation build && node scripts/certify.mjs",
+    "certify:v4": "pnpm --filter @lemonade/simulation build && node scripts/certify-v4.mjs",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
     "lint:antipatterns": "node scripts/lint-antipatterns.mjs",
     "lint:mobile-contract": "node scripts/lint-mobile-contract.mjs",
