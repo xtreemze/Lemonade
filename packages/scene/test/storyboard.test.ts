@@ -15,7 +15,11 @@ import {
   sceneShotAt,
   sceneViewportClass,
 } from "../src/storyboard.js";
-import { createStreetStoryboard, formatPriceLabel } from "../src/storyboard-create.js";
+import {
+  createAuthoritativeStreetStoryboard,
+  createStreetStoryboard,
+  formatPriceLabel,
+} from "../src/storyboard-create.js";
 import { STREET_LAYOUT } from "../src/street-layout.js";
 
 const projectedScreenY = (
@@ -167,6 +171,64 @@ describe("street simulation storyboard", () => {
     expect(unadvertised.passersBy.length).toBeGreaterThan(unadvertised.sales.length);
     expect(unadvertised.adViewerCount).toBe(0);
     expect(unadvertised.passersBy.some((pedestrian) => pedestrian.seesAdvertisement)).toBe(false);
+  });
+
+  it("projects every authoritative v4 customer exactly once without renderer-side economics", () => {
+    const storyboard = createAuthoritativeStreetStoryboard({
+      durationMs: 6000,
+      prepared: 3,
+      visibleSigns: 2,
+      priceCents: 175,
+      outcomes: Object.freeze([
+        Object.freeze({
+          id: 1,
+          visualSeed: 101,
+          awareness: Object.freeze({ kind: "unaware" as const }),
+          conversion: Object.freeze({ kind: "not-evaluated" as const }),
+          fulfillment: Object.freeze({ kind: "none" as const }),
+        }),
+        Object.freeze({
+          id: 2,
+          visualSeed: 102,
+          awareness: Object.freeze({ kind: "advertising" as const, signIndex: 1 }),
+          conversion: Object.freeze({ kind: "price-rejected" as const }),
+          fulfillment: Object.freeze({ kind: "none" as const }),
+        }),
+        Object.freeze({
+          id: 3,
+          visualSeed: 103,
+          awareness: Object.freeze({ kind: "organic" as const }),
+          conversion: Object.freeze({ kind: "willing" as const }),
+          fulfillment: Object.freeze({ kind: "purchased" as const, saleIndex: 0 }),
+        }),
+        Object.freeze({
+          id: 4,
+          visualSeed: 104,
+          awareness: Object.freeze({ kind: "advertising" as const, signIndex: 0 }),
+          conversion: Object.freeze({ kind: "willing" as const }),
+          fulfillment: Object.freeze({ kind: "stockout" as const }),
+        }),
+      ]),
+    });
+
+    expect(storyboard.sold).toBe(1);
+    expect(storyboard.sales).toHaveLength(1);
+    expect(storyboard.sales[0]?.customerId).toBe(3);
+    expect(storyboard.passersBy).toHaveLength(3);
+    expect(storyboard.passersBy.map((beat) => beat.customerId)).toEqual([1, 2, 4]);
+    expect(storyboard.passersBy.map((beat) => beat.intentKind)).toEqual([
+      "pass-through",
+      "price-reject",
+      "stockout",
+    ]);
+    expect(storyboard.adViewerCount).toBe(2);
+    expect(storyboard.passersBy[1]?.signIndex).toBe(1);
+    expect(storyboard.passersBy[2]?.signIndex).toBe(0);
+    expect(
+      [...storyboard.sales, ...storyboard.passersBy]
+        .map((beat) => beat.customerId)
+        .sort((left, right) => Number(left) - Number(right)),
+    ).toEqual([1, 2, 3, 4]);
   });
 
   it("formats the actual selected price for every advertising sign", () => {
