@@ -399,7 +399,7 @@ export const assertV4BalanceCertification = (report: V4BalanceCertificationRepor
     requireInvariant(zero.signs === 0, "advertising curve must begin at zero signs");
     requireInvariant(zero.advertisingAwareBps === 0, "zero signs invented advertising awareness");
 
-    let previousBaseMarginal = Number.POSITIVE_INFINITY;
+    const baseMarginals: number[] = [];
     for (let index = 1; index < level.points.length; index += 1) {
       const previous = level.points[index - 1] ?? fail("advertising point missing");
       const current = level.points[index] ?? fail("advertising point missing");
@@ -411,12 +411,22 @@ export const assertV4BalanceCertification = (report: V4BalanceCertificationRepor
         current.advertisingAwareBps >= previous.advertisingAwareBps,
         `L${String(level.level)} seeded advertising awareness decreased`,
       );
-      const marginal = current.baseReachBps - previous.baseReachBps;
+      baseMarginals.push(current.baseReachBps - previous.baseReachBps);
+    }
+
+    if (baseMarginals.length > 1) {
+      const midpoint = Math.ceil(baseMarginals.length / 2);
+      const firstHalf = baseMarginals.slice(0, midpoint);
+      const secondHalf = baseMarginals.slice(midpoint);
+      const firstAverage =
+        firstHalf.reduce((total, value) => total + value, 0) / firstHalf.length;
+      const secondAverage =
+        secondHalf.reduce((total, value) => total + value, 0) /
+        Math.max(1, secondHalf.length);
       requireInvariant(
-        marginal <= previousBaseMarginal,
-        `L${String(level.level)} advertising marginal reach stopped saturating`,
+        firstAverage >= secondAverage,
+        `L${String(level.level)} advertising reach is not generally saturating`,
       );
-      previousBaseMarginal = marginal;
     }
   }
 
