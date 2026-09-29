@@ -120,20 +120,21 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
       ? `${String(Math.max(0, input.priceCents))}¢`
       : `$${(Math.max(0, input.priceCents) / 100).toFixed(2)}`;
 
+  const customerOutcomes = input.customerOutcomes;
   const outcomeSummary =
-    input.customerOutcomes === undefined
+    customerOutcomes === undefined
       ? ""
       : (() => {
-          const advertisingAware = input.customerOutcomes.filter(
+          const advertisingAware = customerOutcomes.filter(
             (outcome) => outcome.awareness.kind === "advertising",
           ).length;
-          const priceRejected = input.customerOutcomes.filter(
+          const priceRejected = customerOutcomes.filter(
             (outcome) => outcome.conversion.kind === "price-rejected",
           ).length;
-          const purchased = input.customerOutcomes.filter(
+          const purchased = customerOutcomes.filter(
             (outcome) => outcome.fulfillment.kind === "purchased",
           ).length;
-          const stockout = input.customerOutcomes.filter(
+          const stockout = customerOutcomes.filter(
             (outcome) => outcome.fulfillment.kind === "stockout",
           ).length;
           return ` ${String(advertisingAware)} noticed advertising; ${String(priceRejected)} rejected the price; ${String(purchased)} purchased; ${String(stockout)} encountered a stockout.`;
