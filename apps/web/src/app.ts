@@ -1127,6 +1127,10 @@ export class LemonadeApp {
           : scenePhase === "forecast"
             ? WEATHER_FORECAST_DURATION_MS
             : 0,
+      customerOutcomes:
+        phase.kind === "report" && phase.rulesetVersion === SIMULATION_RULESET_VERSION
+          ? phase.resolution.market.outcomes
+          : undefined,
     });
   }
 }
