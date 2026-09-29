@@ -5,7 +5,12 @@ import type {
   LemonsvilleSceneState,
   ScenePhase,
 } from "@lemonade/scene";
-import { createStreetStoryboard, MIN_STREET_PEDESTRIANS } from "@lemonade/scene/storyboard-create";
+import type { AuthoritativeCustomerOutcome } from "@lemonade/scene/crowd-director";
+import {
+  createAuthoritativeStreetStoryboard,
+  createStreetStoryboard,
+  MIN_STREET_PEDESTRIANS,
+} from "@lemonade/scene/storyboard-create";
 import type { DayEnvironment } from "@lemonade/simulation";
 
 import type { createLemonsvilleScene } from "./scene-runtime.js";
@@ -65,6 +70,7 @@ export type LemonsvilleSceneInput = Readonly<{
   characterSeed: number;
   dayNumber: number;
   durationMs: number;
+  customerOutcomes?: readonly AuthoritativeCustomerOutcome[];
 }>;
 
 export type LemonsvilleSceneViewOptions = Readonly<{
@@ -114,7 +120,26 @@ const describeScene = (input: LemonsvilleSceneInput): string => {
       ? `${String(Math.max(0, input.priceCents))}¢`
       : `$${(Math.max(0, input.priceCents) / 100).toFixed(2)}`;
 
-  return `${weather} weather; the seller looks ${sellerMoodForConfidence(input.confidence)}; ${String(input.visibleSigns)} advertising signs at ${price} per cup; ${String(input.prepared)} glasses prepared; ${activity}.`;
+  const outcomeSummary =
+    input.customerOutcomes === undefined
+      ? ""
+      : (() => {
+          const advertisingAware = input.customerOutcomes.filter(
+            (outcome) => outcome.awareness.kind === "advertising",
+          ).length;
+          const priceRejected = input.customerOutcomes.filter(
+            (outcome) => outcome.conversion.kind === "price-rejected",
+          ).length;
+          const purchased = input.customerOutcomes.filter(
+            (outcome) => outcome.fulfillment.kind === "purchased",
+          ).length;
+          const stockout = input.customerOutcomes.filter(
+            (outcome) => outcome.fulfillment.kind === "stockout",
+          ).length;
+          return ` ${String(advertisingAware)} noticed advertising; ${String(priceRejected)} rejected the price; ${String(purchased)} purchased; ${String(stockout)} encountered a stockout.`;
+        })();
+
+  return `${weather} weather; the seller looks ${sellerMoodForConfidence(input.confidence)}; ${String(input.visibleSigns)} advertising signs at ${price} per cup; ${String(input.prepared)} glasses prepared; ${activity}.${outcomeSummary}`;
 };
 
 export const createLemonsvilleSceneState = (
@@ -135,14 +160,23 @@ export const createLemonsvilleSceneState = (
     nextConfidence: Math.max(0, Math.min(5, input.nextConfidence)),
     characterSeed: input.characterSeed >>> 0,
     dayNumber: Math.max(1, Math.trunc(input.dayNumber)),
-    storyboard: createStreetStoryboard({
-      durationMs: Math.max(1, durationMs),
-      prepared,
-      sold: input.phase === "forecast" ? 0 : sold,
-      visibleSigns: input.visibleSigns,
-      priceCents,
-      ambientPedestrianCount: pedestrianCount[customerActivity],
-    }),
+    storyboard:
+      input.phase !== "forecast" && input.customerOutcomes !== undefined
+        ? createAuthoritativeStreetStoryboard({
+            durationMs: Math.max(1, durationMs),
+            prepared,
+            visibleSigns: input.visibleSigns,
+            priceCents,
+            outcomes: input.customerOutcomes,
+          })
+        : createStreetStoryboard({
+            durationMs: Math.max(1, durationMs),
+            prepared,
+            sold: input.phase === "forecast" ? 0 : sold,
+            visibleSigns: input.visibleSigns,
+            priceCents,
+            ambientPedestrianCount: pedestrianCount[customerActivity],
+          }),
     phase: input.phase,
     reducedMotion,
   });
