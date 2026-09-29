@@ -284,7 +284,7 @@ const sumLines = (entry: DailyLedgerEntry, kinds: readonly LedgerLineKind[]): nu
 const lineAmount = (entry: DailyLedgerEntry, kind: LedgerLineKind): number =>
   entry.lines.reduce((total, line) => total + (line.kind === kind ? Number(line.amount) : 0), 0);
 
-const certifyDailyResolution = (resolution: DayResolution): void => {
+export const certifyDailyResolution = (resolution: DayResolution): void => {
   const { previousState, nextState, entry } = resolution;
   const prepared = Number(entry.decision.glasses);
   const sold = Number(entry.sold);
