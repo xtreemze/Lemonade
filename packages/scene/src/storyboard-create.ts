@@ -1,3 +1,4 @@
+import type { AuthoritativeCustomerOutcome } from "./crowd-director.js";
 import {
   BUYER_POOL_SIZE,
   type PasserbyBeat,
@@ -14,6 +15,14 @@ export type StreetStoryboardInput = Readonly<{
   visibleSigns: number;
   priceCents: number;
   ambientPedestrianCount: number;
+}>;
+
+export type AuthoritativeStreetStoryboardInput = Readonly<{
+  durationMs: number;
+  prepared: number;
+  visibleSigns: number;
+  priceCents: number;
+  outcomes: readonly AuthoritativeCustomerOutcome[];
 }>;
 
 export const MAX_STORYBOARD_CUPS = 400 as const;
@@ -163,6 +172,110 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
     priceCents,
     priceLabel: formatPriceLabel(priceCents),
     shots: createShots(durationMs, activeDurationMs),
+    sales: Object.freeze(sales),
+    passersBy: Object.freeze(passersBy),
+    adViewerCount,
+  });
+};
+
+
+const authoritativePasserbyIntent = (
+  outcome: AuthoritativeCustomerOutcome,
+): "pass-through" | "price-reject" | "stockout" => {
+  if (outcome.awareness.kind === "unaware") {
+    return "pass-through";
+  }
+  if (outcome.conversion.kind === "price-rejected") {
+    return "price-reject";
+  }
+  return "stockout";
+};
+
+export const createAuthoritativeStreetStoryboard = (
+  input: AuthoritativeStreetStoryboardInput,
+): StreetStoryboard => {
+  const purchased = input.outcomes
+    .filter(
+      (outcome): outcome is AuthoritativeCustomerOutcome &
+        Readonly<{ fulfillment: Readonly<{ kind: "purchased"; saleIndex: number }> }> =>
+        outcome.fulfillment.kind === "purchased",
+    )
+    .sort((left, right) => left.fulfillment.saleIndex - right.fulfillment.saleIndex);
+
+  for (let index = 0; index < purchased.length; index += 1) {
+    if (purchased[index]?.fulfillment.saleIndex !== index) {
+      throw new RangeError("authoritative purchase saleIndex values must be contiguous from zero");
+    }
+  }
+
+  const base = createStreetStoryboard({
+    durationMs: input.durationMs,
+    prepared: input.prepared,
+    sold: purchased.length,
+    visibleSigns: input.visibleSigns,
+    priceCents: input.priceCents,
+    ambientPedestrianCount: Math.max(MIN_STREET_PEDESTRIANS, input.outcomes.length),
+  });
+
+  if (base.sold !== purchased.length) {
+    throw new RangeError("authoritative purchases cannot exceed prepared inventory");
+  }
+
+  const sales = base.sales.map((sale, index): SaleBeat => {
+    const outcome = purchased[index];
+    if (outcome === undefined) {
+      throw new Error("missing authoritative purchase outcome");
+    }
+    const seesAdvertisement = outcome.awareness.kind === "advertising";
+    return Object.freeze({
+      ...sale,
+      customerId: Number(outcome.id),
+      visualSeed: Number(outcome.visualSeed),
+      seesAdvertisement,
+      signIndex: seesAdvertisement ? outcome.awareness.signIndex : -1,
+    });
+  });
+
+  const nonPurchasers = input.outcomes.filter(
+    (outcome) => outcome.fulfillment.kind !== "purchased",
+  );
+  const initialPasserbyCount = Math.min(MIN_STREET_PEDESTRIANS, nonPurchasers.length);
+  const additionalPasserbyCount = Math.max(0, nonPurchasers.length - initialPasserbyCount);
+  const passersBy = nonPurchasers.map((outcome, index): PasserbyBeat => {
+    const additionalIndex = index - initialPasserbyCount;
+    const startAtMs =
+      index < initialPasserbyCount
+        ? 0
+        : Math.round(
+            (base.activeDurationMs * (additionalIndex + 1)) /
+              Math.max(1, additionalPasserbyCount + 1),
+          );
+    const seesAdvertisement = outcome.awareness.kind === "advertising";
+    return Object.freeze({
+      pedestrianIndex: index,
+      startAtMs,
+      endAtMs: base.activeDurationMs,
+      direction: Number(outcome.id) % 2 === 0 ? -1 : 1,
+      lane: Number(outcome.id) % 4,
+      seesAdvertisement,
+      signIndex: seesAdvertisement ? outcome.awareness.signIndex : -1,
+      customerId: Number(outcome.id),
+      visualSeed: Number(outcome.visualSeed),
+      intentKind: authoritativePasserbyIntent(outcome),
+    });
+  });
+
+  const adViewerCount = input.outcomes.filter(
+    (outcome) => outcome.awareness.kind === "advertising",
+  ).length;
+
+  if (sales.length + passersBy.length !== input.outcomes.length) {
+    throw new Error("authoritative storyboard must project every customer exactly once");
+  }
+
+  return Object.freeze({
+    ...base,
+    sold: sales.length,
     sales: Object.freeze(sales),
     passersBy: Object.freeze(passersBy),
     adViewerCount,
