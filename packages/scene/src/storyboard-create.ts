@@ -178,7 +178,6 @@ export const createStreetStoryboard = (input: StreetStoryboardInput): StreetStor
   });
 };
 
-
 const authoritativePasserbyIntent = (
   outcome: AuthoritativeCustomerOutcome,
 ): "pass-through" | "price-reject" | "stockout" => {
