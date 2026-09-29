@@ -1,5 +1,6 @@
 import { advertisingBaseReach } from "./advertising.js";
-import { type MarketMemory, neutralMarketMemory } from "./audience.js";
+import type { MarketMemory } from "./audience.js";
+import { neutralMarketMemory } from "./memory.js";
 import { certifyDailyResolution } from "./certification.js";
 import { neutralEnvironment } from "./environment.js";
 import type {
