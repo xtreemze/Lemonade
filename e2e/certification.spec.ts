@@ -58,6 +58,13 @@ test("release artifact completes a day without uncaught runtime failures", async
 
   await page.getByRole("button", { name: "Sell for the day" }).click();
   await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
+  await expect(page.locator("#report-funnel")).toBeVisible();
+  await expect(page.locator("#report-funnel")).toContainText("Audience");
+  await expect(page.locator("#report-funnel")).toContainText("aware");
+  await expect(page.locator("#report-funnel")).toContainText("willing");
+  await expect(page.locator("#report-funnel")).toContainText("served");
+  await expect(page.locator("#report-funnel")).toContainText("price rejects");
+  await expect(page.locator("#report-funnel")).toContainText("stockouts");
   await page.getByRole("button", { name: "Review sales history" }).click();
   await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
   await page.getByRole("button", { name: "Plan next day" }).click();

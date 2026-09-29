@@ -1,4 +1,4 @@
-import type { DayEnvironment, DayResolution } from "@lemonade/simulation";
+import type { AudienceSummary, DayEnvironment, DayResolution } from "@lemonade/simulation";
 import type { WeeklyReport } from "@lemonade/ui";
 import { html, LitElement } from "lit";
 
@@ -525,6 +525,7 @@ export type ReportMilestoneKind = "progression" | "warning" | "bankruptcy";
 
 export type DayReportModel = Readonly<{
   report: DayResolution | null;
+  marketSummary: AudienceSummary | null;
   weeklyReport: WeeklyReport | null;
   milestoneMessage: string | null;
   milestoneKind: ReportMilestoneKind | null;
@@ -532,6 +533,7 @@ export type DayReportModel = Readonly<{
 
 const DEFAULT_REPORT_MODEL: DayReportModel = Object.freeze({
   report: null,
+  marketSummary: null,
   weeklyReport: null,
   milestoneMessage: null,
   milestoneKind: null,
@@ -576,7 +578,7 @@ export class LemonadeDayReport extends LitElement {
   };
 
   protected override render(): ReturnType<typeof html> {
-    const { report, weeklyReport, milestoneMessage, milestoneKind } = this.model;
+    const { report, marketSummary, weeklyReport, milestoneMessage, milestoneKind } = this.model;
     if (report === null) {
       return html`<section
         id="report-panel"
@@ -598,6 +600,18 @@ export class LemonadeDayReport extends LitElement {
             <h2 id="report-title" tabindex="-1">
               ${String(Number(entry.sold))} of ${String(Number(entry.decision.glasses))} sold
             </h2>
+            ${
+              marketSummary === null || weeklyReport !== null
+                ? null
+                : html`<p id="report-funnel" class="report-funnel">
+                    Audience ${String(marketSummary.audience)} → ${String(marketSummary.aware)} aware
+                    (${String(marketSummary.advertisingAware)} ads +
+                    ${String(marketSummary.organicAware)} organic) → ${String(marketSummary.willing)}
+                    willing → ${String(marketSummary.purchased)} served ·
+                    ${String(marketSummary.priceRejected)} price rejects ·
+                    ${String(marketSummary.stockout)} stockouts
+                  </p>`
+            }
           </div>
           <strong id="report-net" class=${net >= 0 ? "profit" : "loss"}>
             ${net >= 0 ? "+" : "−"}${formatMoney(Math.abs(net))}
