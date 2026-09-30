@@ -18,6 +18,7 @@ import {
 import {
   DEFAULT_RESIDENTIAL_SEED,
   generateResidentialLayout,
+  RESIDENTIAL_HOUSE_PALETTE,
   type ResidentialPropertySpec,
   residentialAccessLayout,
   residentialFootprintIntersectsHardscape,
@@ -470,9 +471,6 @@ export type NeighborhoodStats = Readonly<{
 
 export type FrontPropertySpec = ResidentialPropertySpec;
 
-const HOUSE_PALETTE = [
-  0xc9_7d_65, 0xd5_6f_52, 0xd4_aa_61, 0xd5_a6_6d, 0x8d_a9_a1, 0xc2_7a_68, 0xdf_b7_6f,
-] as const;
 const TREE_PALETTE = [
   0x66_8e_53, 0x5f_8d_56, 0x50_7f_4b, 0x6d_98_5e, 0x58_85_4f, 0x67_8f_52, 0x4f_81_4c,
 ] as const;
@@ -680,7 +678,8 @@ export const populateNeighborhood = (
       );
       roadSegments += 2;
     }
-    const color = HOUSE_PALETTE[property.color] ?? HOUSE_PALETTE[0];
+    const color =
+      RESIDENTIAL_HOUSE_PALETTE[property.color] ?? RESIDENTIAL_HOUSE_PALETTE[0];
     const home = houseLod(
       property.houseX,
       property.houseZ,
