@@ -52,7 +52,10 @@ export type ResidentialLayout = Readonly<{
 
 export const DEFAULT_RESIDENTIAL_SEED = 0x4c_45_4d_4f;
 
-const HOUSE_PALETTE_SIZE = 7;
+export const RESIDENTIAL_HOUSE_PALETTE = Object.freeze([
+  0xc9_7d_65, 0xd5_6f_52, 0xd4_aa_61, 0xd5_a6_6d, 0x8d_a9_a1, 0xc2_7a_68, 0xdf_b7_6f,
+] as const);
+const HOUSE_PALETTE_SIZE = RESIDENTIAL_HOUSE_PALETTE.length;
 export const HOUSE_FOOTPRINT_WIDTH = 6.4;
 export const HOUSE_FOOTPRINT_DEPTH = 6.8;
 export const DRIVEWAY_HALF_WIDTH = WORLD_SCALE.street.drivewayWidth / 2;

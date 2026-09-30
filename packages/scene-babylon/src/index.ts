@@ -24,6 +24,7 @@ import {
 
 import { createBabylonEngineBackend } from "./babylon-engine-backend.js";
 import { createBabylonPropertyAccessField } from "./babylon-property-access-field.js";
+import { createBabylonResidentialHouseField } from "./babylon-residential-house-field.js";
 import { createBabylonStreetSurfaceField } from "./babylon-street-surface-field.js";
 
 export type {
@@ -90,6 +91,7 @@ export const createBabylonLemonsvilleScene = async (
   const neighborhood = generateNeighborhoodTopology(initialState.characterSeed ^ 0x4c_45_4d_4f);
   createBabylonStreetSurfaceField(scene, neighborhood.roads, neighborhood.sidewalks);
   createBabylonPropertyAccessField(scene, neighborhood.properties);
+  createBabylonResidentialHouseField(scene, neighborhood.properties);
 
   const stand = MeshBuilder.CreateBox(
     "stand-migration-shell",
