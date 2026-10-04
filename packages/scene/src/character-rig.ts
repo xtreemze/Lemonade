@@ -254,7 +254,7 @@ export const rebindThreeCharacterRig = (
 
   const identityIndex = characterIdentityIndexForVisualSeed(visualSeed);
   const currentSeed: unknown = rig.root.userData["authoritativeVisualSeed"];
-  if (currentSeed === visualSeed) {
+  if (currentSeed === visualSeed && rig.root.userData["characterDecorated"] === true) {
     return Object.freeze({
       visualSeed,
       identityIndex,
