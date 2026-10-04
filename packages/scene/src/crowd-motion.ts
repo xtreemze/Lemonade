@@ -567,6 +567,7 @@ export const createCrowdSimulation = (
                   side: pose.side,
                   routeId: pose.routeId,
                   seesAdvertisement: pose.seesAdvertisement,
+                  intentKind: pose.intentKind,
                 }),
           ),
         ),
