@@ -2,7 +2,7 @@
 
 > A modern revival of the classic Lemonade Stand business simulation: three decisions, one day of sales, immediate consequences.
 
-**MVP:** [Play Lemonade on GitHub Pages](https://xtreemze.github.io/Lemonade/)
+**MVP:** [Play Lemonade on GitHub Pages](https://xtreemze.github.io/Lemonade/) · [Learn the economics and history](https://xtreemze.github.io/Lemonade/learn/)
 
 Lemonade rebuilds the design strength of the 1979 Apple II game around a deliberately small operating surface. Each day, the player reads the conditions, chooses how many glasses to prepare, how much to advertise, and what price to charge, then commits the day and sees what happened.
 
