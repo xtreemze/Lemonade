@@ -115,7 +115,7 @@ test("verifier enforces source resolution and high-frame-rate output", async () 
   assert.ok(verifier.includes('"ffprobe"'));
   assert.ok(verifier.includes("assertFrameProfile"));
   assert.ok(verifier.includes("assertCapturedFrameCadence"));
-  assert.ok(verifier.includes("no duplication or interpolation"));
+  assert.ok(verifier.includes("no sustained duplication or interpolation"));
   assert.ok(verifier.includes("metadata.measuredAnimationFrameFps"));
   assert.ok(verifier.includes("best_effort_timestamp_time"));
   assert.ok(verifier.includes("probeAnimatedWebp"));
