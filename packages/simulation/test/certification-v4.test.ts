@@ -29,6 +29,9 @@ describe("ruleset-v4 balance certification", () => {
     ]);
     expect(first.memory.fatigueBps.at(-1)).toBeGreaterThan(first.memory.fatigueBps[0] ?? 0);
     expect(first.memory.recoveryBps.at(-1)).toBeLessThan(first.memory.recoveryBps[0] ?? 0);
+    expect(first.memory.repeatedAdRoiBps).toHaveLength(first.memory.fatigueBps.length);
+    expect(first.memory.repeatedAdAwarenessBps).toHaveLength(first.memory.fatigueBps.length);
+    expect(first.memory.fatigueRecoveryHalfLifeDays).not.toBeNull();
   });
 
   it("formats separate human-reviewable v4 evidence without rewriting the 2017 report", () => {
@@ -40,6 +43,8 @@ describe("ruleset-v4 balance certification", () => {
     expect(text).toContain("Advertising saturation");
     expect(text).toContain("Price / weather probes");
     expect(text).toContain("Market-memory recovery");
+    expect(text).toContain("Repeated max-ad incremental ROI");
+    expect(text).toContain("Fatigue recovery half-life");
     expect(text).toContain("Integrated accounting + v4 funnel invariants: PASS");
   });
 });
