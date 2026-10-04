@@ -25,6 +25,7 @@ export type CrowdPose = Readonly<{
   side: SidewalkSide;
   routeId: string;
   seesAdvertisement: boolean;
+  intentKind: "pass-through" | "price-reject" | "stockout";
 }>;
 
 export type CrowdSample = Readonly<{
@@ -344,7 +345,21 @@ const basePose = (
   const signSide = beat.signIndex >= 0 && beat.signIndex % 2 === 0 ? -1 : 1;
   const signPull = attention * signSide * 0.22;
   const attentionHeading = signSide * (selectedRoute.side === "near" ? 0.48 : 0.32) * attention;
-  const heading = Math.PI / 2 - travelYaw + attentionHeading;
+
+  const intentKind = beat.intentKind ?? "pass-through";
+  const presentationProgress = Math.min(
+    1,
+    Math.max(0, (elapsedMs - beat.startAtMs) / safeDuration),
+  );
+  const intentAttention =
+    intentKind === "pass-through"
+      ? 0
+      : Math.exp(-(((presentationProgress - 0.55) / 0.14) ** 2));
+  const intentHeadingMagnitude =
+    intentKind === "stockout" ? 0.62 : intentKind === "price-reject" ? 0.34 : 0;
+  const standFacingDirection = selectedRoute.side === "near" ? -1 : 1;
+  const intentHeading = standFacingDirection * intentHeadingMagnitude * intentAttention;
+  const heading = Math.PI / 2 - travelYaw + attentionHeading + intentHeading;
 
   return {
     x: sampled.x + normalX * lateralOffset + (selectedRoute.streetId === "main" ? signPull : 0),
@@ -356,6 +371,7 @@ const basePose = (
     side: selectedRoute.side,
     routeId: selectedRoute.id,
     seesAdvertisement: beat.seesAdvertisement,
+    intentKind,
     centerX: sampled.x,
     centerZ: sampled.z,
     normalX,
@@ -377,6 +393,7 @@ interface MutableCrowdPose {
   side: SidewalkSide;
   routeId: string;
   seesAdvertisement: boolean;
+  intentKind: "pass-through" | "price-reject" | "stockout";
   centerX: number;
   centerZ: number;
   normalX: number;
@@ -550,6 +567,7 @@ export const createCrowdSimulation = (
                   side: pose.side,
                   routeId: pose.routeId,
                   seesAdvertisement: pose.seesAdvertisement,
+                  intentKind: pose.intentKind,
                 }),
           ),
         ),

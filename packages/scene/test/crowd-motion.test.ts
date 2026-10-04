@@ -393,6 +393,47 @@ describe("crowd motion", () => {
     }
   });
 
+  it("renders authoritative passerby intents as distinct deterministic reactions", () => {
+    const baseBeat: PasserbyBeat = Object.freeze({
+      pedestrianIndex: 0,
+      startAtMs: 0,
+      endAtMs: 6000,
+      direction: -1,
+      lane: 0,
+      seesAdvertisement: false,
+      signIndex: -1,
+    });
+    const sampleFor = (intentKind: "pass-through" | "price-reject" | "stockout") =>
+      createCrowdSimulation(
+        [Object.freeze({ ...baseBeat, intentKind })],
+        1,
+        6000,
+      ).sample(3300).poses[0];
+
+    const passThrough = sampleFor("pass-through");
+    const priceReject = sampleFor("price-reject");
+    const stockout = sampleFor("stockout");
+
+    expect(passThrough).toBeDefined();
+    expect(priceReject).toBeDefined();
+    expect(stockout).toBeDefined();
+    if (passThrough === undefined || priceReject === undefined || stockout === undefined) {
+      return;
+    }
+
+    expect(passThrough.intentKind).toBe("pass-through");
+    expect(priceReject.intentKind).toBe("price-reject");
+    expect(stockout.intentKind).toBe("stockout");
+    expect(priceReject.x).toBeCloseTo(passThrough.x, 6);
+    expect(priceReject.z).toBeCloseTo(passThrough.z, 6);
+    expect(stockout.x).toBeCloseTo(passThrough.x, 6);
+    expect(stockout.z).toBeCloseTo(passThrough.z, 6);
+    expect(Math.abs(priceReject.heading - passThrough.heading)).toBeGreaterThan(0.2);
+    expect(Math.abs(stockout.heading - passThrough.heading)).toBeGreaterThan(
+      Math.abs(priceReject.heading - passThrough.heading),
+    );
+  });
+
   it("advances gait phase from measured world-space travel distance", () => {
     const earlier = crowdPosesAt(beats, 1, 1000, 6000)[0];
     const later = crowdPosesAt(beats, 1, 1100, 6000)[0];
