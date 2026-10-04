@@ -1090,8 +1090,14 @@ export class LemonadeApp {
           ? null
           : "progression";
 
+    const marketSummary =
+      this.#phase.kind === "report" && this.#phase.rulesetVersion === SIMULATION_RULESET_VERSION
+        ? this.#phase.resolution.market.summary
+        : null;
+
     this.#elements.reportPanel.model = Object.freeze({
       report,
+      marketSummary,
       weeklyReport: report === null ? null : summarizeCompletedWeek(report.nextState.ledger),
       milestoneMessage,
       milestoneKind,
