@@ -422,6 +422,12 @@ for (const viewport of viewports) {
     try {
       await page.goto("./?play=1", { waitUntil: "commit" });
 
+      const main = page.getByRole("main");
+      await expect(main).toBeVisible();
+      await expect(main).toHaveAttribute("data-view", "forecast");
+
+      // waitUntil: "commit" intentionally returns before module bootstrap.
+      // Measure only after the game shell owns the page.
       const initialViewport = await page.evaluate(() => ({
         width: window.innerWidth,
         height: window.innerHeight,
@@ -435,9 +441,6 @@ for (const viewport of viewports) {
         screenHeight: viewport.height,
       });
 
-      const main = page.getByRole("main");
-      await expect(main).toBeVisible();
-      await expect(main).toHaveAttribute("data-view", "forecast");
       await expectViewportContract(page, "forecast");
       await expect(page.locator("#scene-canvas")).toHaveAttribute(
         "data-presentation-duration-ms",
