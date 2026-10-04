@@ -42,6 +42,10 @@ import {
 } from "./character-rig.js";
 import type { StreetMotion } from "./crowd-motion.js";
 import {
+  type CharacterWeatherPresentation,
+  syncCharacterWeatherPresentation,
+} from "./character-weather.js";
+import {
   attachLemonadeCupToHand,
   type CupInventory,
   keepLemonadeCupUpright,
@@ -136,6 +140,9 @@ const createStand = (): StandModel => {
 type PersonRig = ThreeCharacterRig &
   Readonly<{
     cup: Group;
+    weatherHeadRoot: Group;
+    weatherBodyRoot: Group;
+    weatherCarryRoot: Group;
   }>;
 
 type SellerRig = Readonly<{
@@ -171,6 +178,39 @@ const applyPersonExpression = (
 const personGroundY = (person: PersonRig): number =>
   characterGroundClearance(person.profile.heightScale);
 
+const personVisualSeed = (person: PersonRig): number => {
+  const authoritative: unknown = person.root.userData["authoritativeVisualSeed"];
+  if (typeof authoritative === "number" && Number.isFinite(authoritative)) {
+    return authoritative;
+  }
+  return personExpressionSeed(person);
+};
+
+const syncPersonWeather = (
+  person: PersonRig,
+  weather: SceneWeather,
+): CharacterWeatherPresentation =>
+  syncCharacterWeatherPresentation(
+    Object.freeze({
+      head: person.weatherHeadRoot,
+      body: person.weatherBodyRoot,
+      carry: person.weatherCarryRoot,
+    }),
+    personVisualSeed(person),
+    weather,
+  );
+
+const applyWeatherPosture = (
+  person: PersonRig,
+  presentation: CharacterWeatherPresentation,
+): void => {
+  if (presentation.hunch <= 0) {
+    return;
+  }
+  person.chest.rotation.x += presentation.hunch;
+  person.headPivot.rotation.x -= presentation.hunch * 0.45;
+};
+
 const createPerson = (
   geometries: ReturnType<typeof createCharacterGeometrySet>,
   characterSeed: number,
@@ -178,9 +218,21 @@ const createPerson = (
 ): PersonRig => {
   const rig = createThreeCharacterRig(geometries, characterSeed, index);
   const cup = new Group();
+  const weatherHeadRoot = new Group();
+  const weatherBodyRoot = new Group();
+  const weatherCarryRoot = new Group();
   attachLemonadeCupToHand(rig.arms[1].extremity, cup);
+  rig.headPivot.add(weatherHeadRoot);
+  rig.chest.add(weatherBodyRoot);
+  rig.arms[0].extremity.add(weatherCarryRoot);
   cup.visible = false;
-  return Object.freeze({ ...rig, cup });
+  return Object.freeze({
+    ...rig,
+    cup,
+    weatherHeadRoot,
+    weatherBodyRoot,
+    weatherCarryRoot,
+  });
 };
 
 const createSeller = (geometries: CharacterGeometrySet, characterSeed: number): SellerRig => {
@@ -240,19 +292,33 @@ const applyBuyerPose = (
   travelDistance: number,
   index: number,
   elapsedMs: number,
+  weatherPresentation: CharacterWeatherPresentation,
 ): void => {
   resetPersonPose(person);
   if (phase === "approaching") {
-    applyWalkingPose(person, travelDistance, false, elapsedMs, index);
+    applyWalkingPose(
+      person,
+      travelDistance * weatherPresentation.gaitRate,
+      false,
+      elapsedMs,
+      index,
+    );
   } else if (phase === "purchasing" || phase === "drinking") {
     const pose = buyerInteractionPose(phase, index);
     applyThreeCharacterPose(person, pose);
     person.cup.visible = pose.rightHandOccupancy === "cup";
     applyPersonExpression(person, pose.expression, elapsedMs, index);
   } else if (phase === "departing") {
-    applyWalkingPose(person, travelDistance, true, elapsedMs, index);
+    applyWalkingPose(
+      person,
+      travelDistance * weatherPresentation.gaitRate,
+      true,
+      elapsedMs,
+      index,
+    );
   }
 
+  applyWeatherPosture(person, weatherPresentation);
   if (person.cup.visible) {
     keepLemonadeCupUpright(person.cup);
   }
@@ -843,9 +909,17 @@ export const createLemonsvilleScene = (
       }
 
       activeBuyerPositions.push(finalPos);
+      const weatherPresentation = syncPersonWeather(buyer, state.weather);
       buyer.root.position.set(finalPos.x, personGroundY(buyer), finalPos.z);
       buyer.root.rotation.y = motion.heading;
-      applyBuyerPose(buyer, motion.phase, motion.travelDistance, sale.saleNumber, elapsedMs);
+      applyBuyerPose(
+        buyer,
+        motion.phase,
+        motion.travelDistance,
+        sale.saleNumber,
+        elapsedMs,
+        weatherPresentation,
+      );
       activeBuyerCount += 1;
     }
     return activeBuyerCount;
@@ -883,9 +957,17 @@ export const createLemonsvilleScene = (
         rebindThreeCharacterRig(customer, pose.visualSeed);
       }
 
+      const weatherPresentation = syncPersonWeather(customer, state.weather);
       customer.root.position.set(pose.x, personGroundY(customer), pose.z);
       customer.root.rotation.y = pose.heading;
-      applyWalkingPose(customer, pose.travelDistance, false, elapsedMs, index);
+      applyWalkingPose(
+        customer,
+        pose.travelDistance * weatherPresentation.gaitRate,
+        false,
+        elapsedMs,
+        index,
+      );
+      applyWeatherPosture(customer, weatherPresentation);
     });
   };
 
