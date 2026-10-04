@@ -6,7 +6,7 @@ const html = await readFile(new URL("index.html", distUrl), "utf8");
 const learnHtml = await readFile(new URL("learn/index.html", distUrl), "utf8");
 const learnIllustration = await stat(new URL("learn/apple-ii-lab.svg", distUrl));
 
-if (!html.includes("/Lemonade/assets/")) {
+if (!html.includes("Learn by running the stand.")) {\n  throw new Error("GitHub Pages root must render the project landing page.");\n}\nif (!html.includes('get("play") === "1"')) {\n  throw new Error("GitHub Pages root must expose explicit game mode.");\n}\nif (!html.includes("/Lemonade/assets/")) {
   throw new Error("GitHub Pages bundle must use the /Lemonade/ asset base.");
 }
 
