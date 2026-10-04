@@ -422,6 +422,14 @@ for (const viewport of viewports) {
     try {
       await page.goto("./?play=1", { waitUntil: "commit" });
 
+      const main = page.getByRole("main");
+      await expect(main).toBeVisible();
+      await expect(main).toHaveAttribute("data-view", "forecast");
+
+      // The Pages entry is intentionally split into cacheable production chunks.
+      // Wait for the game shell before measuring the layout viewport so this
+      // assertion observes the application document rather than the wider
+      // landing markup while module requests are still resolving.
       const initialViewport = await page.evaluate(() => ({
         width: window.innerWidth,
         height: window.innerHeight,
@@ -435,9 +443,6 @@ for (const viewport of viewports) {
         screenHeight: viewport.height,
       });
 
-      const main = page.getByRole("main");
-      await expect(main).toBeVisible();
-      await expect(main).toHaveAttribute("data-view", "forecast");
       await expectViewportContract(page, "forecast");
       await expect(page.locator("#scene-canvas")).toHaveAttribute(
         "data-presentation-duration-ms",
