@@ -9,8 +9,8 @@ const learnIllustration = await stat(new URL("learn/apple-ii-lab.svg", distUrl))
 if (!html.includes("Learn by running the stand.")) {
   throw new Error("GitHub Pages root must render the project landing page.");
 }
-if (!html.includes('get("play") === "1"')) {
-  throw new Error("GitHub Pages root must expose explicit game mode.");
+if (!html.includes('href="/Lemonade/?play=1"')) {
+  throw new Error("GitHub Pages root must expose a direct game entry.");
 }
 if (!html.includes("/Lemonade/assets/")) {
   throw new Error("GitHub Pages bundle must use the /Lemonade/ asset base.");
