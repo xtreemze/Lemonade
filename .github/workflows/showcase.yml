@@ -40,7 +40,6 @@ concurrency:
 jobs:
   media:
     name: Record and render showcase
-    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -97,7 +96,7 @@ jobs:
           {
             echo "### Visual Showcase"
             echo
-            echo "This workflow is informational and does not block CI or deployment."
+            echo "This workflow certifies publishable showcase media and fails when capture, rendering, or verification fails."
             echo
             echo "- Contracts: ${{ steps.contracts.outcome }}"
             echo "- Capture: ${{ steps.capture.outcome }}"
