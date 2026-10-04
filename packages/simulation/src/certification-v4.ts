@@ -1,5 +1,6 @@
 import { advertisingBaseReach } from "./advertising.js";
 import type { MarketMemory } from "./audience.js";
+import { LEGACY_SIGN_COST_CENTS } from "./legacy.js";
 import { neutralMarketMemory } from "./memory.js";
 import { certifyDailyResolution } from "./certification.js";
 import { neutralEnvironment } from "./environment.js";
@@ -73,6 +74,9 @@ export type V4PriceWeatherProbe = Readonly<{
 export type V4MemoryProbe = Readonly<{
   fatigueBps: readonly number[];
   recoveryBps: readonly number[];
+  repeatedAdRoiBps: readonly number[];
+  repeatedAdAwarenessBps: readonly number[];
+  fatigueRecoveryHalfLifeDays: number | null;
   stockoutPressureBps: readonly number[];
   satisfactionBps: readonly number[];
 }>;
@@ -324,18 +328,41 @@ const memoryProbe = (runSeed: Seed): V4MemoryProbe => {
   let memory: MarketMemory = neutralMarketMemory();
   const fatigueBps: number[] = [];
   const recoveryBps: number[] = [];
+  const repeatedAdRoiBps: number[] = [];
+  const repeatedAdAwarenessBps: number[] = [];
   const stockoutPressureBps: number[] = [];
   const satisfactionBps: number[] = [];
 
   for (let index = 0; index < 6; index += 1) {
-    const result = simulateDayV4(
+    const scale = operatingScaleForState(state);
+    const noAdResult = simulateDayV4(
       state,
-      decision(0, 3, 100),
+      decision(scale.maxGlasses, 0, 150),
       neutralEnvironment(),
       runSeed,
       memory,
     );
+    const result = simulateDayV4(
+      state,
+      decision(scale.maxGlasses, scale.maxSigns, 150),
+      neutralEnvironment(),
+      runSeed,
+      memory,
+    );
+    certifyResolution(noAdResult);
     certifyResolution(result);
+
+    const advertisingCostCents = scale.maxSigns * LEGACY_SIGN_COST_CENTS;
+    const incrementalNetCents = Number(result.entry.net) - Number(noAdResult.entry.net);
+    repeatedAdRoiBps.push(
+      advertisingCostCents === 0
+        ? 0
+        : Math.round((incrementalNetCents * 10_000) / advertisingCostCents),
+    );
+    repeatedAdAwarenessBps.push(
+      ratioBps(result.market.summary.advertisingAware, result.market.summary.audience),
+    );
+
     state = result.nextState;
     memory = result.market.memoryAfter;
     fatigueBps.push(Number(memory.advertisingFatigue));
@@ -359,9 +386,16 @@ const memoryProbe = (runSeed: Seed): V4MemoryProbe => {
     satisfactionBps.push(Number(memory.satisfaction));
   }
 
+  const peakFatigue = fatigueBps.at(-1) ?? 0;
+  const halfFatigue = peakFatigue / 2;
+  const halfLifeIndex = recoveryBps.findIndex((value) => value <= halfFatigue);
+
   return Object.freeze({
     fatigueBps: Object.freeze(fatigueBps),
     recoveryBps: Object.freeze(recoveryBps),
+    repeatedAdRoiBps: Object.freeze(repeatedAdRoiBps),
+    repeatedAdAwarenessBps: Object.freeze(repeatedAdAwarenessBps),
+    fatigueRecoveryHalfLifeDays: halfLifeIndex === -1 ? null : halfLifeIndex + 1,
     stockoutPressureBps: Object.freeze(stockoutPressureBps),
     satisfactionBps: Object.freeze(satisfactionBps),
   });
@@ -458,6 +492,22 @@ export const assertV4BalanceCertification = (report: V4BalanceCertificationRepor
     (recovery.at(-1) ?? 10_000) < (recovery[0] ?? 0),
     "advertising fatigue did not recover after reduced advertising",
   );
+  requireInvariant(
+    report.memory.fatigueRecoveryHalfLifeDays !== null,
+    "advertising fatigue did not reach its recovery half-life inside the probe window",
+  );
+  requireInvariant(
+    report.memory.repeatedAdRoiBps.length === fatigue.length,
+    "repeated-ad ROI evidence is incomplete",
+  );
+  requireInvariant(
+    report.memory.repeatedAdAwarenessBps.length === fatigue.length,
+    "repeated-ad awareness evidence is incomplete",
+  );
+  requireInvariant(
+    report.memory.repeatedAdRoiBps.every(Number.isFinite),
+    "repeated-ad ROI produced a non-finite value",
+  );
   for (const value of [
     ...report.memory.fatigueBps,
     ...report.memory.recoveryBps,
@@ -514,7 +564,10 @@ export const formatV4BalanceCertification = (report: V4BalanceCertificationRepor
     "## Market-memory recovery",
     "",
     `Max-ad fatigue sequence: ${report.memory.fatigueBps.join(", ")} bps`,
+    `Repeated max-ad incremental ROI: ${report.memory.repeatedAdRoiBps.join(", ")} bps`,
+    `Repeated max-ad awareness: ${report.memory.repeatedAdAwarenessBps.join(", ")} bps`,
     `Zero-ad recovery sequence: ${report.memory.recoveryBps.join(", ")} bps`,
+    `Fatigue recovery half-life: ${report.memory.fatigueRecoveryHalfLifeDays === null ? "not reached" : `${String(report.memory.fatigueRecoveryHalfLifeDays)} day(s)`}`,
     `Stockout-pressure sequence: ${report.memory.stockoutPressureBps.join(", ")} bps`,
     "",
     "Integrated accounting + v4 funnel invariants: PASS",
