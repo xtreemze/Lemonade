@@ -427,9 +427,7 @@ for (const viewport of viewports) {
       await expect(main).toHaveAttribute("data-view", "forecast");
 
       // waitUntil: "commit" intentionally returns before module bootstrap.
-      // Re-apply the requested viewport after the game shell owns the page so
-      // Chromium cannot retain a transient layout viewport from landing markup.
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      // Measure only after the game shell owns the page.
       const initialViewport = await page.evaluate(() => ({
         width: window.innerWidth,
         height: window.innerHeight,
