@@ -128,6 +128,34 @@ const characterBodyDecorationRoot = (root: Group): Group => {
   return anchor ?? root;
 };
 
+const disposeDecorationTree = (root: Object3D): void => {
+  root.traverse((object) => {
+    if (!(object instanceof Mesh)) {
+      return;
+    }
+    object.geometry.dispose();
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const entry of materials) {
+      entry.dispose();
+    }
+  });
+};
+
+const clearDecorationChildren = (root: Object3D): void => {
+  for (const child of [...root.children]) {
+    root.remove(child);
+    disposeDecorationTree(child);
+  }
+};
+
+export const clearCharacterDecorations = (root: Group, head: Mesh): void => {
+  clearDecorationChildren(head);
+  clearDecorationChildren(characterBodyDecorationRoot(root));
+  delete root.userData["characterGender"];
+  delete root.userData["characterAgeGroup"];
+  root.userData["characterDecorated"] = false;
+};
+
 const addFaceBar = (
   head: Mesh,
   width: number,
@@ -492,6 +520,7 @@ export const decorateCharacter = (
   const identity = characterIdentityFor(index, profile);
   decorateCharacterBody(root, profile, identity);
   decorateCharacterHead(head, profile, identity, includeExpression);
+  root.userData["characterDecorated"] = true;
 };
 
 export const decorateSellerExpression = (
@@ -538,6 +567,9 @@ export const decorateSceneCharacters = (
   mouth: readonly [Group, Group],
 ): void => {
   customers.forEach((person, index) => {
+    if (person.root.userData["characterDecorated"] === true) {
+      return;
+    }
     decorateCharacter(
       person.root,
       person.head,
@@ -546,6 +578,9 @@ export const decorateSceneCharacters = (
     );
   });
   buyers.forEach((person, index) => {
+    if (person.root.userData["characterDecorated"] === true) {
+      return;
+    }
     decorateCharacter(
       person.root,
       person.head,
