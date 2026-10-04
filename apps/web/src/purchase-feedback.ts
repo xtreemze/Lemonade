@@ -1,5 +1,6 @@
 export type PurchaseFeedbackBeat = Readonly<{
   saleNumber: number;
+  customerId?: number;
   iceClinkAtMs: number;
   pourAtMs: number;
   serveAtMs: number;
@@ -24,6 +25,14 @@ const sampledSaleIndexes = (sold: number): readonly number[] => {
   }
   return Object.freeze([...indexes].sort((left, right) => left - right));
 };
+
+export type AuthoritativePurchaseFeedbackOutcome = Readonly<{
+  id: number;
+  fulfillment:
+    | Readonly<{ kind: "none" }>
+    | Readonly<{ kind: "stockout" }>
+    | Readonly<{ kind: "purchased"; saleIndex: number }>;
+}>;
 
 export const createPurchaseFeedbackSchedule = (
   soldValue: number,
@@ -51,6 +60,42 @@ export const createPurchaseFeedbackSchedule = (
         serveAtMs,
         paymentAtMs,
         drinkAtMs: Math.min(durationMs, Math.round(paymentAtMs + drinkDelayMs)),
+      });
+    }),
+  );
+};
+
+
+export const createAuthoritativePurchaseFeedbackSchedule = (
+  outcomes: readonly AuthoritativePurchaseFeedbackOutcome[],
+  durationValueMs: number,
+): readonly PurchaseFeedbackBeat[] => {
+  const purchased = outcomes
+    .filter(
+      (
+        outcome,
+      ): outcome is AuthoritativePurchaseFeedbackOutcome &
+        Readonly<{ fulfillment: Readonly<{ kind: "purchased"; saleIndex: number }> }> =>
+        outcome.fulfillment.kind === "purchased",
+    )
+    .sort((left, right) => left.fulfillment.saleIndex - right.fulfillment.saleIndex);
+
+  for (let index = 0; index < purchased.length; index += 1) {
+    if (purchased[index]?.fulfillment.saleIndex !== index) {
+      throw new RangeError("authoritative purchase saleIndex values must be contiguous from zero");
+    }
+  }
+
+  const base = createPurchaseFeedbackSchedule(purchased.length, durationValueMs);
+  return Object.freeze(
+    base.map((beat) => {
+      const purchase = purchased[beat.saleNumber - 1];
+      if (purchase === undefined) {
+        throw new Error("missing authoritative purchase outcome for feedback beat");
+      }
+      return Object.freeze({
+        ...beat,
+        customerId: purchase.id,
       });
     }),
   );
