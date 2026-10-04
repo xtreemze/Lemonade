@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test.use({ reducedMotion: "reduce" });
 
 test("keyboard focus follows the active phase through the daily loop", async ({ page }) => {
-  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.goto("./?play=1", { waitUntil: "domcontentloaded" });
 
   const main = page.getByRole("main");
   await expect(main).toHaveAttribute("data-view", "planning");
@@ -45,7 +45,7 @@ test("keyboard focus follows the active phase through the daily loop", async ({ 
 });
 
 test("native reset dialog contains keyboard focus and restores it on cancel", async ({ page }) => {
-  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.goto("./?play=1", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
 
   const runSummary = page.locator(".run-tools-summary");
