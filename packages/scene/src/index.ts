@@ -719,6 +719,9 @@ export const createLemonsvilleScene = (
       if (pose.visualSeed !== undefined) {
         rebindThreeCharacterRig(customer, pose.visualSeed);
       }
+      if (pose.customerId !== undefined) {
+        customer.root.userData["authoritativeCustomerId"] = pose.customerId;
+      }
       customer.root.position.set(pose.x, personGroundY(customer), pose.z);
       customer.root.rotation.y = pose.heading;
       applyPersonExpression(customer, neutralExpression, 0, index);
@@ -804,6 +807,9 @@ export const createLemonsvilleScene = (
       }
       if (sale.visualSeed !== undefined) {
         rebindThreeCharacterRig(buyer, sale.visualSeed);
+      }
+      if (sale.customerId !== undefined) {
+        buyer.root.userData["authoritativeCustomerId"] = sale.customerId;
       }
 
       const fade = buyerFadeState.get(buyer);
