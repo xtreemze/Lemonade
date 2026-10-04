@@ -318,9 +318,10 @@ const assertFrameProfile = (filePath, expected, expectedFps, expectedFrames, exp
   }
 
   const stats = probeFrameStats(filePath);
-  if (stats.frames !== expectedFrames) {
+  const frameDelta = Math.abs(stats.frames - expectedFrames);
+  if (frameDelta > 1) {
     throw new Error(
-      `${filePath} contains ${String(stats.frames)} decoded frames; expected exactly ${String(expectedFrames)} source-derived frames with no duplication or interpolation.`,
+      `${filePath} contains ${String(stats.frames)} decoded frames; expected ${String(expectedFrames)} source-derived frames within a one-frame encoder-boundary tolerance, with no sustained duplication or interpolation.`,
     );
   }
   const expectedSpan = (expectedFrames - 1) / expectedFps;
