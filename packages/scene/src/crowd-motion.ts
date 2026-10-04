@@ -26,6 +26,8 @@ export type CrowdPose = Readonly<{
   routeId: string;
   seesAdvertisement: boolean;
   intentKind: "pass-through" | "price-reject" | "stockout";
+  customerId?: number;
+  visualSeed?: number;
 }>;
 
 export type CrowdSample = Readonly<{
@@ -372,6 +374,8 @@ const basePose = (
     routeId: selectedRoute.id,
     seesAdvertisement: beat.seesAdvertisement,
     intentKind,
+    ...(beat.customerId === undefined ? {} : { customerId: beat.customerId }),
+    ...(beat.visualSeed === undefined ? {} : { visualSeed: beat.visualSeed }),
     centerX: sampled.x,
     centerZ: sampled.z,
     normalX,
@@ -394,6 +398,8 @@ interface MutableCrowdPose {
   routeId: string;
   seesAdvertisement: boolean;
   intentKind: "pass-through" | "price-reject" | "stockout";
+  customerId?: number;
+  visualSeed?: number;
   centerX: number;
   centerZ: number;
   normalX: number;
@@ -568,6 +574,8 @@ export const createCrowdSimulation = (
                   routeId: pose.routeId,
                   seesAdvertisement: pose.seesAdvertisement,
                   intentKind: pose.intentKind,
+                  ...(pose.customerId === undefined ? {} : { customerId: pose.customerId }),
+                  ...(pose.visualSeed === undefined ? {} : { visualSeed: pose.visualSeed }),
                 }),
           ),
         ),
