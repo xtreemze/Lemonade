@@ -36,6 +36,7 @@ import {
 import {
   applyThreeCharacterPose,
   createThreeCharacterRig,
+  rebindThreeCharacterRig,
   resetThreeCharacterPose,
   type ThreeCharacterRig,
 } from "./character-rig.js";
@@ -715,6 +716,9 @@ export const createLemonsvilleScene = (
       if (pose === undefined) {
         return;
       }
+      if (pose.visualSeed !== undefined) {
+        rebindThreeCharacterRig(customer, pose.visualSeed);
+      }
       customer.root.position.set(pose.x, personGroundY(customer), pose.z);
       customer.root.rotation.y = pose.heading;
       applyPersonExpression(customer, neutralExpression, 0, index);
@@ -798,6 +802,9 @@ export const createLemonsvilleScene = (
       if (buyer === undefined) {
         continue;
       }
+      if (sale.visualSeed !== undefined) {
+        rebindThreeCharacterRig(buyer, sale.visualSeed);
+      }
 
       const fade = buyerFadeState.get(buyer);
       if (fade) {
@@ -865,6 +872,9 @@ export const createLemonsvilleScene = (
       resetPersonPose(customer);
       if (pose === undefined) {
         return;
+      }
+      if (pose.visualSeed !== undefined) {
+        rebindThreeCharacterRig(customer, pose.visualSeed);
       }
 
       customer.root.position.set(pose.x, personGroundY(customer), pose.z);
