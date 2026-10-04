@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("shows a weekly report after each completed seven-day cycle", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("./");
+  await page.goto("./?play=1");
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
 
   for (let day = 1; day <= 7; day += 1) {

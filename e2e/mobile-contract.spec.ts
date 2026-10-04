@@ -420,7 +420,7 @@ for (const viewport of viewports) {
     const page = await context.newPage();
 
     try {
-      await page.goto("./", { waitUntil: "commit" });
+      await page.goto("./?play=1", { waitUntil: "commit" });
 
       const initialViewport = await page.evaluate(() => ({
         width: window.innerWidth,
@@ -520,7 +520,7 @@ for (const viewport of bankruptcyViewports) {
     const page = await context.newPage();
 
     try {
-      await page.goto("./", { waitUntil: "commit" });
+      await page.goto("./?play=1", { waitUntil: "commit" });
       const main = page.getByRole("main");
       await expect(main).toHaveAttribute("data-view", "planning");
 
@@ -584,7 +584,7 @@ for (const viewport of desktopViewports) {
     const page = await context.newPage();
 
     try {
-      await page.goto("./", { waitUntil: "commit" });
+      await page.goto("./?play=1", { waitUntil: "commit" });
 
       const main = page.getByRole("main");
       await expect(main).toBeVisible();

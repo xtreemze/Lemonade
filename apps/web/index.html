@@ -1,20 +1,192 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#f4c542" />
-    <meta
-      name="description"
-      content="Lemonade — three decisions, one day of sales, immediate consequences."
-    />
-    <title>Lemonade</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f4c542" />
+  <meta name="description" content="Learn how Lemonade turns price, production, advertising, weather, and confidence into a compact business simulation, and trace its roots from MECC to the Apple II." />
+  <title>Lemonade — economics, history, and the Apple II</title>
+  <style id="landing-style">
+    :root { color-scheme: light; font-family: "Avenir Next","Segoe UI",system-ui,sans-serif; color:#211d14; background:#f3e8c8; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:radial-gradient(circle at 10% 0%,#fff9e7 0 18rem,transparent 36rem),linear-gradient(#f2df97,#f7f0d7 42%,#cbd9a4); }
+    a { color:inherit; }
+    a:focus-visible, button:focus-visible { outline:3px solid #1d6d5d; outline-offset:4px; }
+    img { max-width:100%; display:block; }
+    .skip { position:absolute; left:1rem; top:-5rem; z-index:10; padding:.75rem 1rem; background:#211d14; color:#fff9e4; }
+    .skip:focus { top:1rem; }
+    .wrap { width:min(1180px,calc(100% - 32px)); margin-inline:auto; }
+    header { padding:1rem 0; border-bottom:2px solid #211d14; background:rgb(255 249 228 / 82%); backdrop-filter:blur(12px); position:sticky; top:0; z-index:5; }
+    nav { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+    nav ul { display:flex; flex-wrap:wrap; gap:.9rem; margin:0; padding:0; list-style:none; font-weight:800; }
+    .brand { font-family:ui-monospace,Menlo,monospace; font-weight:950; letter-spacing:-.06em; text-transform:uppercase; text-decoration:none; }
+    .play { padding:.7rem 1rem; border:2px solid #211d14; background:#236f5e; color:#fff9e4; box-shadow:4px 4px 0 #211d14; text-decoration:none; font-weight:900; white-space:nowrap; }
+    main { overflow:hidden; }
+    .hero { padding:clamp(3.5rem,8vw,7rem) 0 3rem; display:grid; gap:2rem; }
+    .eyebrow { margin:0 0 .65rem; color:#3f5944; font-size:.76rem; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { max-width:11ch; margin-bottom:1rem; font-family:ui-monospace,Menlo,monospace; font-size:clamp(3rem,10vw,7.2rem); line-height:.85; letter-spacing:-.09em; text-transform:uppercase; }
+    h2 { font-size:clamp(2rem,5vw,4.5rem); line-height:.92; letter-spacing:-.055em; max-width:13ch; }
+    h3 { font-size:1.2rem; }
+    .lead { max-width:64ch; font-size:clamp(1.05rem,2vw,1.35rem); line-height:1.55; }
+    .cta { display:flex; flex-wrap:wrap; gap:.8rem; margin-top:1.5rem; }
+    .cta a { padding:.82rem 1rem; border:2px solid #211d14; background:#fff9e4; box-shadow:4px 4px 0 #211d14; font-weight:900; text-decoration:none; }
+    .cta a:first-child { background:#236f5e; color:#fff9e4; }
+    .hero-media { position:relative; border:2px solid #211d14; box-shadow:8px 8px 0 #211d14; background:#8ec7d3; }
+    .hero-media img { aspect-ratio:16/9; width:100%; object-fit:cover; }
+    .caption { padding:.8rem 1rem; border-top:2px solid #211d14; background:#fff9e4; font-size:.9rem; }
+    section { padding:clamp(3.5rem,7vw,6.5rem) 0; }
+    .section-head { display:grid; gap:1rem; margin-bottom:2rem; }
+    .section-head p { max-width:70ch; line-height:1.6; }
+    .grid { display:grid; gap:1rem; }
+    .card { padding:1.25rem; border:2px solid #211d14; background:#fff9e4; box-shadow:5px 5px 0 #211d14; }
+    .card strong.value { display:block; margin:.35rem 0 .7rem; font-family:ui-monospace,Menlo,monospace; font-size:clamp(1.8rem,4vw,3.2rem); line-height:1; }
+    .card p { line-height:1.55; }
+    .decision { position:relative; padding-top:3.5rem; }
+    .decision::before { position:absolute; top:1rem; left:1.25rem; font-family:ui-monospace,Menlo,monospace; font-size:.75rem; font-weight:900; letter-spacing:.12em; text-transform:uppercase; color:#3f5944; }
+    .decision:nth-child(1)::before { content:"01 · production"; }
+    .decision:nth-child(2)::before { content:"02 · advertising"; }
+    .decision:nth-child(3)::before { content:"03 · price"; }
+    .formula { overflow:auto; margin:1rem 0; padding:1rem; border-left:6px solid #236f5e; background:#eef1d6; font-family:ui-monospace,Menlo,monospace; font-size:.86rem; }
+    .signal { display:grid; grid-template-columns:auto 1fr; gap:.8rem 1rem; align-items:start; padding:1rem 0; border-top:1px solid #a99d7d; }
+    .signal b { min-width:7rem; }
+    .note { padding:1rem 1.1rem; border:2px dashed #6f5a3f; background:#f8eecb; }
+    .lab { border:2px solid #211d14; background:#211d14; box-shadow:8px 8px 0 #6a543b; }
+    .lab img { width:100%; background:#cbb68f; }
+    .timeline { display:grid; gap:0; border-left:4px solid #211d14; margin-left:.6rem; }
+    .event { position:relative; padding:0 0 2rem 2rem; }
+    .event::before { content:""; position:absolute; left:-.62rem; top:.25rem; width:1rem; height:1rem; border:3px solid #211d14; border-radius:50%; background:#f4c542; }
+    .year { font-family:ui-monospace,Menlo,monospace; font-size:1.5rem; font-weight:950; }
+    .sources { font-size:.94rem; line-height:1.6; }
+    .sources li { margin-bottom:.7rem; }
+    footer { padding:2.5rem 0 4rem; border-top:2px solid #211d14; background:#211d14; color:#fff9e4; }
+    @media (width >= 46rem) {
+      .hero { grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); align-items:center; }
+      .grid.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .grid.two { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .section-head { grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); align-items:end; }
+    }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+  </style>
+</head>
+<body>
+  <div id="landing">
+  <a class="skip" href="#content">Skip to content</a>
+  <header>
+    <nav class="wrap" aria-label="Project navigation">
+      <a class="brand" href="/Lemonade/">Lemonade</a>
+      <ul>
+        <li><a href="#economics">Economics</a></li>
+        <li><a href="#history">History</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ul>
+      <a class="play" href="/Lemonade/?play=1">Play the simulation</a>
+    </nav>
+  </header>
+  <main id="content">
+    <section class="hero wrap">
+      <div>
+        <p class="eyebrow">Three decisions. One uncertain market.</p>
+        <h1>Learn by running the stand.</h1>
+        <p class="lead">Lemonade is a modern revival of the classic business simulation. Each day asks you to commit cash before demand is known: choose how much lemonade to prepare, how much to advertise, and what price to charge. Weather and market confidence change the conditions; your choices determine the consequences.</p>
+        <div class="cta">
+          <a href="/Lemonade/?play=1">Start a run</a>
+          <a href="#economics">Understand the model</a>
+        </div>
+      </div>
+      <figure class="hero-media">
+        <img src="/Lemonade/showcase/desktop/03-lemonsville-simulation.webp" alt="Modern Lemonade simulation showing the Lemonsville neighborhood and lemonade stand" />
+        <figcaption class="caption">The modern project turns the compact economic loop into a visible neighborhood simulation while keeping the player-facing decisions deliberately small.</figcaption>
+      </figure>
+    </section>
+
+    <section id="economics">
+      <div class="wrap">
+        <div class="section-head">
+          <div><p class="eyebrow">Economic onboarding</p><h2>What you are actually managing</h2></div>
+          <p>The simulation is a miniature operating business. You spend before you know the day’s demand, then learn from the result. There is no single “correct” number: the point is to balance risk, margin, reach, and uncertainty.</p>
+        </div>
+
+        <div class="grid three">
+          <article class="card decision"><h3>Glasses prepared</h3><strong class="value">Capacity vs. waste</strong><p>Every glass you prepare is an upfront cost. Too few creates an inventory ceiling: you cannot sell what you did not make. Too many leaves sunk cost in unsold lemonade. This is the basic inventory-risk problem.</p></article>
+          <article class="card decision"><h3>Advertising signs</h3><strong class="value">Reach vs. acquisition cost</strong><p>Signs cost money to deploy, so advertising only helps if the extra demand is worth more than the spend. In the classic-compatible model, signs directly increase demand through the restored historical equation. The planned v4 model instead moves toward saturating reach and bounded advertising fatigue.</p></article>
+          <article class="card decision"><h3>Price per glass</h3><strong class="value">Margin vs. conversion</strong><p>A higher price raises the contribution from each sale but reduces demand. A lower price can move more volume while shrinking unit margin. The decision is a compact form of price elasticity.</p></article>
+        </div>
+
+        <div class="grid two" style="margin-top:1rem">
+          <article class="card">
+            <p class="eyebrow">Weather</p><h3>An external demand condition</h3>
+            <p>You do not control the forecast. In the shipping classic-compatible ruleset, weather is a strong multiplier inside potential demand. That teaches a simple point: identical operating decisions can perform very differently when an external condition changes.</p>
+            <div class="signal"><b>Sunny / hot</b><span>Higher thirst and stronger demand opportunity justify reconsidering both price and capacity.</span></div>
+            <div class="signal"><b>Cloud / storm</b><span>Demand can weaken sharply, so committing the same inventory and advertising budget can become expensive.</span></div>
+          </article>
+          <article class="card">
+            <p class="eyebrow">Confidence</p><h3>A compact market-receptivity signal</h3>
+            <p>The project preserves a recognizable 0–5 confidence system. In the current classic-compatible model, a seeded daily confidence roll contributes directly to aggregate demand. In the intended v4 design, confidence becomes a bounded trust/familiarity input rather than a large customer-count generator.</p>
+            <div class="note"><strong>Practical lesson:</strong> confidence is not cash. Treat it as information about how receptive the market may be, then still test that signal against price, advertising cost, inventory, and weather.</div>
+          </article>
+        </div>
+
+        <article class="card" style="margin-top:1rem">
+          <p class="eyebrow">Shipping compatibility model</p><h3>The restored demand core</h3>
+          <div class="formula">((signs² / log1p(signs) + confidenceRoll × confidence) / priceDollars) × (weatherVariant² + 1)</div>
+          <p>Demand is rounded and capped by prepared inventory. This makes the daily loop easy to understand while exposing several real business tensions: capacity constraints, price sensitivity, promotional spend, random variation, and external shocks.</p>
+          <p class="note"><strong>Design direction:</strong> the repository also contains a v4 audience model under development. It replaces aggregate demand with a finite customer funnel—audience → awareness → price conversion → willingness → fulfillment → market memory—while keeping the same three daily controls. The page does not present that work as already released.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="history">
+      <div class="wrap">
+        <div class="section-head">
+          <div><p class="eyebrow">From timesharing to the Apple II</p><h2>A small simulation with a long classroom life</h2></div>
+          <p>Lemonade Stand predates the home-computer boom. Its lineage runs from educational mainframes to the Apple II, where simple graphics, sound, keyboard input, and 5¼-inch disks made the business lesson tangible to students sharing early microcomputer labs.</p>
+        </div>
+
+        <div class="timeline" aria-label="Lemonade Stand history timeline">
+          <article class="event"><div class="year">1973</div><h3>Bob Jamison and MECC</h3><p>Bob Jamison created the original program at the Minnesota Educational Computing Consortium for time-shared mainframe systems. The core idea was already there: read the conditions, commit resources, set a price, advertise, and see the business result.</p></article>
+          <article class="event"><div class="year">1979</div><h3>Charlie Kellner adapts it for Apple II</h3><p>The surviving Applesoft BASIC source credits Jamison’s original and states that Charlie Kellner modified it for the Apple in February 1979. The Apple II version added the immediacy of a personal machine: color graphics, sound, local keyboard input, and disk-based software.</p></article>
+          <article class="event"><div class="year">1980s</div><h3>The computer-lab setting</h3><p>Apple II systems spread widely through schools. Educational software—including MECC titles—became part of the ritual of scheduled lab time: find a machine, insert a floppy, boot or catalog the disk, type a command, and take turns around one screen.</p></article>
+          <article class="event"><div class="year">Today</div><h3>The same decisions, a richer projection</h3><p>This project keeps the classic three-decision loop but makes the consequences visible in a persistent 3D neighborhood, with deterministic simulation, accessible reports, modern browser presentation, and explicit ruleset certification.</p></article>
+        </div>
+
+        <figure class="lab">
+          <img src="/Lemonade/learn/apple-ii-lab.svg" alt="Interpretive late-1970s school Apple II computer lab with students and a foreground machine loading Lemonade Stand from a floppy disk" />
+          <figcaption class="caption"><strong>What loading the game could feel like:</strong> a shared beige microcomputer, a CRT, a 5¼-inch disk, a keyboard command, and the program appearing line by line. This is an interpretive illustration, not an archival photograph.</figcaption>
+        </figure>
+
+        <div class="grid two" style="margin-top:1rem">
+          <article class="card"><p class="eyebrow">Period context</p><h3>Microcomputers were becoming school infrastructure</h3><p>Contemporary education reports describe labs equipped with Apple II/II+ systems, disk drives, monitors, printers, and scheduled student access. The machine was not a personal device in the modern sense; it was often a shared classroom resource.</p></article>
+          <article class="card"><p class="eyebrow">Why the format worked</p><h3>Fast feedback made the lesson memorable</h3><p>The simulation compresses a business cycle into minutes. You form a hypothesis, commit scarce resources, observe a market outcome, and revise. That repeated decision-feedback loop is the educational mechanism that still makes the design useful.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="sources">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow">Research notes</p><h2>Historical sources</h2></div><p>The project page separates repository-supported simulation facts from historical context. External references are provided so the lineage and classroom setting can be checked independently.</p></div>
+        <ul class="sources">
+          <li><a href="https://www.mobygames.com/game/24035/lemonade-stand/">MobyGames — Lemonade Stand (Apple II, 1979)</a>: release/platform context and contemporary game description.</li>
+          <li><a href="https://gist.github.com/mreider/c7cf24ee3cccd509f76217154af2ae49">Applesoft BASIC source transcript</a>: comments credit Bob Jamison’s original MECC program and Charlie Kellner’s February 1979 Apple modification.</li>
+          <li><a href="https://www.pcworld.com/article/423125/9-awesome-photos-of-school-computer-labs-from-the-1980s.html">PCWorld — 1980s school computer labs</a>: visual/historical context for Apple II-era education.</li>
+          <li><a href="https://www.loc.gov/item/2011636104/">Library of Congress — School Computer Lab</a>: archival classroom-computing photograph with no known publication restrictions listed by the Library.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+  <footer><div class="wrap"><p><strong>Lemonade</strong> — a modern revival of a classic business simulation.</p><p><a href="/Lemonade/?play=1">Play the simulation</a> · <a href="https://github.com/xtreemze/Lemonade">View the repository</a></p></div></footer>
+</div>
+  <div id="root"></div>
+  <script type="module">
+    const isPlayMode = new URLSearchParams(window.location.search).get("play") === "1";
+    if (isPlayMode) {
+      document.querySelector("#landing")?.remove();
+      document.querySelector("#landing-style")?.remove();
+      await import("/src/main.ts");
+    } else {
+      document.querySelector("#root")?.remove();
+    }
+  </script>
+</body>
 </html>

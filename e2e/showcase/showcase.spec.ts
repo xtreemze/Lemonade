@@ -823,7 +823,7 @@ const openPlanning = async (page: Page, fast = false): Promise<void> => {
   if (fast) {
     await page.emulateMedia({ reducedMotion: "reduce" });
   }
-  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.goto("./?play=1", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning", {
     timeout: 10_000,
   });
@@ -851,7 +851,7 @@ test("01-weather-forecast", async ({ page }, testInfo) => {
   await page.addInitScript(() => {
     window.localStorage.setItem("LEMONADE_DEV_SCENE_LAUNCHER", "1");
   });
-  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.goto("./?play=1", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "forecast");
 
   await recordFeature(page, testInfo, feature, async () => {

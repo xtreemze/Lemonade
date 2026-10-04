@@ -6,6 +6,12 @@ const html = await readFile(new URL("index.html", distUrl), "utf8");
 const learnHtml = await readFile(new URL("learn/index.html", distUrl), "utf8");
 const learnIllustration = await stat(new URL("learn/apple-ii-lab.svg", distUrl));
 
+if (!html.includes("Learn by running the stand.")) {
+  throw new Error("GitHub Pages root must render the project landing page.");
+}
+if (!html.includes('href="/Lemonade/?play=1"')) {
+  throw new Error("GitHub Pages root must expose a direct game entry.");
+}
 if (!html.includes("/Lemonade/assets/")) {
   throw new Error("GitHub Pages bundle must use the /Lemonade/ asset base.");
 }
@@ -13,8 +19,8 @@ if (!html.includes("/Lemonade/assets/")) {
 if (!learnHtml.includes("Learn by running the stand.")) {
   throw new Error("GitHub Pages bundle must include the project learning route.");
 }
-if (!learnHtml.includes('href="/Lemonade/"')) {
-  throw new Error("Learning route must preserve the repository Pages base for game navigation.");
+if (!learnHtml.includes('href="/Lemonade/?play=1"')) {
+  throw new Error("Learning route must link to explicit game mode.");
 }
 if (!learnIllustration.isFile() || learnIllustration.size === 0) {
   throw new Error("Learning route must include the Apple II lab illustration.");
