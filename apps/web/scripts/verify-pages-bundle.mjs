@@ -12,6 +12,15 @@ if (!html.includes("Learn by running the stand.")) {
 if (!html.includes('href="/Lemonade/?play=1"')) {
   throw new Error("GitHub Pages root must expose a direct game entry.");
 }
+if (!html.includes("luum-embed-timeline") || !html.includes("luum-embed-graph")) {
+  throw new Error("GitHub Pages root must embed the Lūm timeline and relationship graph.");
+}
+if (!html.includes("https://xtreemze.github.io/timeline/embed/luum-embed.js")) {
+  throw new Error("GitHub Pages root must use the stable Lūm embed module.");
+}
+if (!html.includes("relationship-fallback")) {
+  throw new Error("Lūm embeds must retain semantic fallback content.");
+}
 if (!html.includes("/Lemonade/assets/")) {
   throw new Error("GitHub Pages bundle must use the /Lemonade/ asset base.");
 }
