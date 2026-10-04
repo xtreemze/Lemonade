@@ -1,7 +1,7 @@
 import { advertisingBaseReach } from "./advertising.js";
 import type { MarketMemory } from "./audience.js";
 import { LEGACY_SIGN_COST_CENTS } from "./legacy.js";
-import { neutralMarketMemory } from "./memory.js";
+import { neutralMarketMemory, nextMarketMemory } from "./memory.js";
 import { certifyDailyResolution } from "./certification.js";
 import { neutralEnvironment } from "./environment.js";
 import type {
@@ -81,12 +81,28 @@ export type V4MemoryProbe = Readonly<{
   satisfactionBps: readonly number[];
 }>;
 
+export type V4InventoryProbe = Readonly<{
+  stockouts: readonly number[];
+  stockoutPressureAfterShortageBps: readonly number[];
+  stockoutPressureAfterRecoveryBps: readonly number[];
+  excessPressureAfterOverproductionBps: readonly number[];
+}>;
+
+export type V4PriceMemoryProbe = Readonly<{
+  stableExpectedPriceCents: number;
+  suddenExpectedPriceCents: number;
+  stableWilling: number;
+  suddenWilling: number;
+}>;
+
 export type V4BalanceCertificationReport = Readonly<{
   rulesetVersion: typeof SIMULATION_RULESET_VERSION;
   seeds: readonly number[];
   advertising: readonly V4AdvertisingLevelProbe[];
   price: readonly V4PriceWeatherProbe[];
   memory: V4MemoryProbe;
+  inventory: V4InventoryProbe;
+  priceMemory: V4PriceMemoryProbe;
 }>;
 
 const fail = (message: string): never => {
@@ -401,6 +417,113 @@ const memoryProbe = (runSeed: Seed): V4MemoryProbe => {
   });
 };
 
+const inventoryProbe = (seeds: readonly number[]): V4InventoryProbe => {
+  const stockouts: number[] = [];
+  const stockoutPressureAfterShortageBps: number[] = [];
+  const stockoutPressureAfterRecoveryBps: number[] = [];
+  const excessPressureAfterOverproductionBps: number[] = [];
+
+  for (const seedValue of seeds) {
+    const state = stateAtScale(1);
+    const scale = operatingScaleForState(state);
+    const runSeed = seed(seedValue);
+
+    const shortage = simulateDayV4(
+      state,
+      decision(0, 1, 150),
+      neutralEnvironment(),
+      runSeed,
+      neutralMarketMemory(),
+    );
+    certifyResolution(shortage);
+    stockouts.push(shortage.market.summary.stockout);
+    stockoutPressureAfterShortageBps.push(Number(shortage.market.memoryAfter.stockoutPressure));
+
+    const recovery = simulateDayV4(
+      shortage.nextState,
+      decision(scale.maxGlasses, 0, 299),
+      neutralEnvironment(),
+      runSeed,
+      shortage.market.memoryAfter,
+    );
+    certifyResolution(recovery);
+    stockoutPressureAfterRecoveryBps.push(Number(recovery.market.memoryAfter.stockoutPressure));
+
+    const overproduction = simulateDayV4(
+      state,
+      decision(scale.maxGlasses, 0, 299),
+      neutralEnvironment(),
+      runSeed,
+      neutralMarketMemory(),
+    );
+    certifyResolution(overproduction);
+    excessPressureAfterOverproductionBps.push(Number(overproduction.market.memoryAfter.excessPressure));
+  }
+
+  return Object.freeze({
+    stockouts: Object.freeze(stockouts),
+    stockoutPressureAfterShortageBps: Object.freeze(stockoutPressureAfterShortageBps),
+    stockoutPressureAfterRecoveryBps: Object.freeze(stockoutPressureAfterRecoveryBps),
+    excessPressureAfterOverproductionBps: Object.freeze(excessPressureAfterOverproductionBps),
+  });
+};
+
+const priceMemoryProbe = (seedValue: number): V4PriceMemoryProbe => {
+  const state = stateAtScale(1);
+  const scale = operatingScaleForState(state);
+  const observation = {
+    signs: signCount(0),
+    level: scale.level,
+    prepared: glassCount(scale.maxGlasses),
+    willing: 10,
+    purchased: 10,
+  };
+
+  let stableMemory: MarketMemory = neutralMarketMemory();
+  for (let index = 0; index < 4; index += 1) {
+    stableMemory = nextMarketMemory(stableMemory, {
+      ...observation,
+      price: moneyCents(250),
+    });
+  }
+
+  let suddenMemory: MarketMemory = neutralMarketMemory();
+  for (let index = 0; index < 3; index += 1) {
+    suddenMemory = nextMarketMemory(suddenMemory, {
+      ...observation,
+      price: moneyCents(100),
+    });
+  }
+  suddenMemory = nextMarketMemory(suddenMemory, {
+    ...observation,
+    price: moneyCents(250),
+  });
+
+  const stable = simulateDayV4(
+    state,
+    decision(scale.maxGlasses, 1, 250),
+    neutralEnvironment(),
+    seed(seedValue),
+    stableMemory,
+  );
+  const sudden = simulateDayV4(
+    state,
+    decision(scale.maxGlasses, 1, 250),
+    neutralEnvironment(),
+    seed(seedValue),
+    suddenMemory,
+  );
+  certifyResolution(stable);
+  certifyResolution(sudden);
+
+  return Object.freeze({
+    stableExpectedPriceCents: Number(stableMemory.expectedPrice),
+    suddenExpectedPriceCents: Number(suddenMemory.expectedPrice),
+    stableWilling: stable.market.summary.willing,
+    suddenWilling: sudden.market.summary.willing,
+  });
+};
+
 export const runV4BalanceCertification = (
   seedValues: readonly number[] = V4_CERTIFICATION_SEEDS,
 ): V4BalanceCertificationReport => {
@@ -418,6 +541,8 @@ export const runV4BalanceCertification = (
     advertising,
     price,
     memory: memoryProbe(seed(seedValues[0] ?? 1)),
+    inventory: inventoryProbe(seedValues),
+    priceMemory: priceMemoryProbe(seedValues[0] ?? 1),
   });
 };
 
@@ -513,9 +638,35 @@ export const assertV4BalanceCertification = (report: V4BalanceCertificationRepor
     ...report.memory.recoveryBps,
     ...report.memory.stockoutPressureBps,
     ...report.memory.satisfactionBps,
+    ...report.inventory.stockoutPressureAfterShortageBps,
+    ...report.inventory.stockoutPressureAfterRecoveryBps,
+    ...report.inventory.excessPressureAfterOverproductionBps,
   ]) {
     requireInvariant(value >= 0 && value <= 10_000, "market memory escaped bounded basis points");
   }
+
+  requireInvariant(
+    report.inventory.stockouts.some((value) => value > 0),
+    "underproduction probe produced no stockouts",
+  );
+  requireInvariant(
+    report.inventory.stockoutPressureAfterRecoveryBps.every(
+      (value, index) => value <= (report.inventory.stockoutPressureAfterShortageBps[index] ?? value),
+    ),
+    "stockout pressure failed to recover after a well-supplied day",
+  );
+  requireInvariant(
+    report.inventory.excessPressureAfterOverproductionBps.some((value) => value > 0),
+    "overproduction probe produced no excess-inventory pressure",
+  );
+  requireInvariant(
+    report.priceMemory.stableExpectedPriceCents > report.priceMemory.suddenExpectedPriceCents,
+    "stable pricing did not establish a higher expected price than a sudden increase",
+  );
+  requireInvariant(
+    report.priceMemory.stableWilling >= report.priceMemory.suddenWilling,
+    "sudden price increase was not at least as difficult to convert as stable pricing",
+  );
 };
 
 const percent = (bps: number): string => `${(bps / 100).toFixed(1)}%`;
@@ -569,6 +720,15 @@ export const formatV4BalanceCertification = (report: V4BalanceCertificationRepor
     `Zero-ad recovery sequence: ${report.memory.recoveryBps.join(", ")} bps`,
     `Fatigue recovery half-life: ${report.memory.fatigueRecoveryHalfLifeDays === null ? "not reached" : `${String(report.memory.fatigueRecoveryHalfLifeDays)} day(s)`}`,
     `Stockout-pressure sequence: ${report.memory.stockoutPressureBps.join(", ")} bps`,
+    "",
+    "## Inventory and price-memory probes",
+    "",
+    `Underproduction stockouts: ${report.inventory.stockouts.join(", ")}`,
+    `Stockout pressure after shortage: ${report.inventory.stockoutPressureAfterShortageBps.join(", ")} bps`,
+    `Stockout pressure after recovery: ${report.inventory.stockoutPressureAfterRecoveryBps.join(", ")} bps`,
+    `Excess pressure after overproduction: ${report.inventory.excessPressureAfterOverproductionBps.join(", ")} bps`,
+    `Stable expected price: ${(report.priceMemory.stableExpectedPriceCents / 100).toFixed(2)}; willing: ${String(report.priceMemory.stableWilling)}`,
+    `Sudden-increase expected price: ${(report.priceMemory.suddenExpectedPriceCents / 100).toFixed(2)}; willing: ${String(report.priceMemory.suddenWilling)}`,
     "",
     "Integrated accounting + v4 funnel invariants: PASS",
   );
