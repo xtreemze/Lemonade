@@ -788,9 +788,11 @@ export const createLemonsvilleScene = (
       if (pose.customerId !== undefined) {
         customer.root.userData["authoritativeCustomerId"] = pose.customerId;
       }
+      const weatherPresentation = syncPersonWeather(customer, state.weather);
       customer.root.position.set(pose.x, personGroundY(customer), pose.z);
       customer.root.rotation.y = pose.heading;
       applyPersonExpression(customer, neutralExpression, 0, index);
+      applyWeatherPosture(customer, weatherPresentation);
     });
     for (const buyer of buyers) {
       resetPersonPose(buyer);
