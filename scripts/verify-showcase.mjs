@@ -301,7 +301,10 @@ const assertFrameProfile = (filePath, expected, expectedFps, expectedFrames, exp
     // still align to source-frame multiples above, while total duration is
     // converted to source frames only once.
     const representedSourceFrames = Math.round(webp.durationMs / sourceFrameMs);
-    if (Math.abs(representedSourceFrames - expectedFrames) > 1) {
+    // RIFF WebP stores ANMF durations in whole milliseconds. At 60 fps a
+    // long animation can accumulate up to a couple of source-frame intervals
+    // of representation error even though every chunk is source-aligned.
+    if (Math.abs(representedSourceFrames - expectedFrames) > 2) {
       throw new Error(
         `${filePath} WebP timing represents ${String(
           representedSourceFrames,
