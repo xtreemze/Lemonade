@@ -253,7 +253,10 @@ test("narrow viewport keeps the complete planning surface above the fold", async
     "true",
   );
   await expect(page.locator(".report-explorer-chart")).toHaveAttribute("data-mode", "inventory");
-  await expect(page.locator(".report-explorer-summary")).toContainText("Prepared");
+  await expect(page.locator(".report-explorer-chart .chart-axis-label-x")).toHaveCount(1);
+  await expect(page.locator(".report-explorer-chart .chart-axis-label-y")).toHaveCount(5);
+  await expect(page.locator(".report-explorer-chart .chart-point")).toHaveCount(2);
+  await expect(page.locator(".report-explorer-chart")).toContainText("Day 1");
   await expectNoHorizontalOverflow(page);
   await expectNoVerticalOverflow(page);
 
