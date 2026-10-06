@@ -12,6 +12,15 @@ if (!html.includes("Learn by running the stand.")) {
 if (!html.includes('href="/Lemonade/?play=1"')) {
   throw new Error("GitHub Pages root must expose a direct game entry.");
 }
+if (!html.includes("xt-project-timeline") || !html.includes("xt-project-graph")) {
+  throw new Error("GitHub Pages root must expose the shared project timeline and relationship graph.");
+}
+if (!html.includes("https://xtreemze.github.io/timeline/project-site/xtreemze-project-site.js")) {
+  throw new Error("GitHub Pages root must use the neutral project-site module.");
+}
+if (!html.includes("data-project-history-fallback") || !html.includes("relationship-fallback")) {
+  throw new Error("Project-site enhancements must retain semantic fallback content.");
+}
 if (!html.includes("/Lemonade/assets/")) {
   throw new Error("GitHub Pages bundle must use the /Lemonade/ asset base.");
 }
