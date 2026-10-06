@@ -34,7 +34,7 @@
     .cta a { padding:.82rem 1rem; border:2px solid #211d14; background:#fff9e4; box-shadow:4px 4px 0 #211d14; font-weight:900; text-decoration:none; }
     .cta a:first-child { background:#236f5e; color:#fff9e4; }
     .hero-media { position:relative; border:2px solid #211d14; box-shadow:8px 8px 0 #211d14; background:#8ec7d3; }
-    .hero-media img, .hero-media video { aspect-ratio:16/9; width:100%; object-fit:cover; display:block; }
+    .hero-media img { max-width:100%; display:block; }\n    .hero-game { width:100%; height:min(72svh,720px); min-height:520px; border:0; display:block; background:#211d14; }
     .caption { padding:.8rem 1rem; border-top:2px solid #211d14; background:#fff9e4; font-size:.9rem; }
     section { padding:clamp(3.5rem,7vw,6.5rem) 0; }
     .section-head { display:grid; gap:1rem; margin-bottom:2rem; }
@@ -98,12 +98,15 @@
         </div>
       </div>
       <figure class="hero-media">
-        <video autoplay muted loop playsinline preload="auto" aria-label="Modern Lemonade simulation showing the Lemonsville neighborhood and lemonade stand">
-          <source media="(max-width: 767px)" src="/Lemonade/showcase/videos/mobile/03-lemonsville-simulation.mp4" type="video/mp4" />
-          <source src="/Lemonade/showcase/videos/desktop/03-lemonsville-simulation.mp4" type="video/mp4" />
-          Your browser does not support embedded video.
-        </video>
-        <figcaption class="caption">The modern project turns the compact economic loop into a visible neighborhood simulation while keeping the player-facing decisions deliberately small.</figcaption>
+        <iframe
+          class="hero-game"
+          src="/Lemonade/?play=1"
+          title="Playable Lemonade simulation"
+          loading="eager"
+          allow="autoplay; fullscreen"
+          allowfullscreen
+        ></iframe>
+        <figcaption class="caption">The live game is embedded directly here. Set production, advertising, and price, then run the stand without leaving the presentation.</figcaption>
       </figure>
     </section>
 
