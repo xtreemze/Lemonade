@@ -20,14 +20,14 @@ for (const [name, document] of [
   ["root", html],
   ["learning", learnHtml],
 ]) {
-  if (!document.includes("<video autoplay muted loop playsinline")) {
-    throw new Error(`GitHub Pages ${name} presentation must use native video playback for Showcase motion.`);
+  if (!document.includes('<iframe')) {
+    throw new Error(`GitHub Pages ${name} presentation must embed the playable game.`);
   }
-  if (!document.includes("/Lemonade/showcase/videos/mobile/03-lemonsville-simulation.mp4")) {
-    throw new Error(`GitHub Pages ${name} presentation must expose the mobile Showcase video source.`);
+  if (!document.includes('src="/Lemonade/?play=1"')) {
+    throw new Error(`GitHub Pages ${name} presentation must embed explicit game mode.`);
   }
-  if (!document.includes("/Lemonade/showcase/videos/desktop/03-lemonsville-simulation.mp4")) {
-    throw new Error(`GitHub Pages ${name} presentation must expose the desktop Showcase video source.`);
+  if (!document.includes('title="Playable Lemonade simulation"')) {
+    throw new Error(`GitHub Pages ${name} game iframe must have an accessible title.`);
   }
 }
 
