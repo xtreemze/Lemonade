@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f4c542" />
   <meta name="description" content="Learn how Lemonade turns price, production, advertising, weather, and confidence into a compact business simulation, and trace its roots from MECC to the Apple II." />
   <title>Learn Lemonade — economics, history, and the Apple II</title>
+  <link rel="stylesheet" href="https://xtreemze.github.io/timeline/project-site/project-site.css" />
   <style>
     :root { color-scheme: light; font-family: "Avenir Next","Segoe UI",system-ui,sans-serif; color:#211d14; background:#f3e8c8; }
     * { box-sizing:border-box; }
@@ -58,6 +59,27 @@
     .event { position:relative; padding:0 0 2rem 2rem; }
     .event::before { content:""; position:absolute; left:-.62rem; top:.25rem; width:1rem; height:1rem; border:3px solid #211d14; border-radius:50%; background:#f4c542; }
     .year { font-family:ui-monospace,Menlo,monospace; font-size:1.5rem; font-weight:950; }
+    xt-project-timeline,
+    xt-project-graph {
+      display:block;
+      margin-block:1.5rem;
+      --xt-project-font:"Avenir Next","Segoe UI",system-ui,sans-serif;
+      --xt-project-ink:#211d14;
+      --xt-project-muted:#655f50;
+      --xt-project-paper:#fff9e4;
+      --xt-project-panel:#f6df8f;
+      --xt-project-line:#211d14;
+      --xt-project-accent:#236f5e;
+      --xt-project-focus:#1d6d5d;
+      --xt-project-radius:0px;
+      --xt-project-shadow:5px 5px 0 #211d14;
+      --xt-project-graph-height:21rem;
+    }
+    .relationship-fallback { display:grid; gap:.65rem; padding:1rem; border:2px solid #211d14; background:#fff9e4; box-shadow:5px 5px 0 #211d14; }
+    .relationship-fallback p { margin:0; line-height:1.45; }
+    @view-transition { navigation:auto; }
+    .brand { view-transition-name:lemonade-brand; }
+    ::view-transition-old(root),::view-transition-new(root){animation-duration:180ms;animation-timing-function:ease-out;}
     .sources { font-size:.94rem; line-height:1.6; }
     .sources li { margin-bottom:.7rem; }
     footer { padding:2.5rem 0 4rem; border-top:2px solid #211d14; background:#211d14; color:#fff9e4; }
@@ -67,7 +89,7 @@
       .grid.two { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .section-head { grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); align-items:end; }
     }
-    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } ::view-transition-old(root),::view-transition-new(root){animation-duration:1ms;} }
   </style>
 </head>
 <body>
@@ -143,11 +165,28 @@
           <p>Lemonade Stand predates the home-computer boom. Its lineage runs from educational mainframes to the Apple II, where simple graphics, sound, keyboard input, and 5¼-inch disks made the business lesson tangible to students sharing early microcomputer labs.</p>
         </div>
 
-        <div class="timeline" aria-label="Lemonade Stand history timeline">
+        <xt-project-timeline
+          id="lemonade-history-timeline"
+          hidden
+          aria-label="Lemonade Stand history overview"
+        ></xt-project-timeline>
+        <div class="timeline" data-project-history-fallback aria-label="Lemonade Stand history timeline">
           <article class="event"><div class="year">1973</div><h3>Bob Jamison and MECC</h3><p>Bob Jamison created the original program at the Minnesota Educational Computing Consortium for time-shared mainframe systems. The core idea was already there: read the conditions, commit resources, set a price, advertise, and see the business result.</p></article>
           <article class="event"><div class="year">1979</div><h3>Charlie Kellner adapts it for Apple II</h3><p>The surviving Applesoft BASIC source credits Jamison’s original and states that Charlie Kellner modified it for the Apple in February 1979. The Apple II version added the immediacy of a personal machine: color graphics, sound, local keyboard input, and disk-based software.</p></article>
           <article class="event"><div class="year">1980s</div><h3>The computer-lab setting</h3><p>Apple II systems spread widely through schools. Educational software—including MECC titles—became part of the ritual of scheduled lab time: find a machine, insert a floppy, boot or catalog the disk, type a command, and take turns around one screen.</p></article>
           <article class="event"><div class="year">Today</div><h3>The same decisions, a richer projection</h3><p>This project keeps the classic three-decision loop but makes the consequences visible in a persistent 3D neighborhood, with deterministic simulation, accessible reports, modern browser presentation, and explicit ruleset certification.</p></article>
+        </div>
+
+        <xt-project-graph
+          id="lemonade-history-graph"
+          hidden
+          aria-label="Lemonade Stand historical relationships"
+        ></xt-project-graph>
+        <div class="relationship-fallback" aria-label="Historical relationships">
+          <p><strong>Bob Jamison → MECC:</strong> original educational business simulation.</p>
+          <p><strong>Charlie Kellner → Apple II:</strong> 1979 adaptation for classroom microcomputers.</p>
+          <p><strong>MECC → school computer labs:</strong> educational software reached shared classroom machines.</p>
+          <p><strong>Apple II → modern revival:</strong> the compact decision loop remains the design reference.</p>
         </div>
 
         <figure class="lab">
@@ -175,5 +214,44 @@
     </section>
   </main>
   <footer><div class="wrap"><p><strong>Lemonade</strong> — a modern revival of a classic business simulation.</p><p><a href="/Lemonade/?play=1">Play the simulation</a> · <a href="https://github.com/xtreemze/Lemonade">View the repository</a></p></div></footer>
+  <script type="module">
+    const hydrateProjectSite = async () => {
+      const timeline = document.querySelector("#lemonade-history-timeline");
+      const graph = document.querySelector("#lemonade-history-graph");
+      if (!(timeline instanceof HTMLElement) || !(graph instanceof HTMLElement)) return;
+      try {
+        await import("https://xtreemze.github.io/timeline/project-site/xtreemze-project-site.js");
+        await Promise.all([
+          customElements.whenDefined("xt-project-timeline"),
+          customElements.whenDefined("xt-project-graph"),
+        ]);
+        timeline.items = Object.freeze([
+          Object.freeze({ id:"mainframe", timeLabel:"1973", label:"Bob Jamison and MECC", detail:"Original educational business simulation for time-shared systems.", color:"#e3a538" }),
+          Object.freeze({ id:"apple-ii", timeLabel:"1979", label:"Apple II adaptation", detail:"Charlie Kellner adapts the program for Apple II classroom use.", color:"#236f5e" }),
+          Object.freeze({ id:"computer-labs", timeLabel:"1980s", label:"School computer labs", detail:"Apple II educational software becomes part of scheduled shared-computer learning.", color:"#3f5944" }),
+          Object.freeze({ id:"modern-revival", timeLabel:"Today", label:"Modern revival", detail:"The three-decision loop becomes a deterministic browser and 3D neighborhood simulation.", color:"#236f5e" }),
+        ]);
+        graph.nodes = Object.freeze([
+          Object.freeze({ id:"bob-jamison", label:"Bob Jamison", detail:"Original creator", color:"#e3a538", position:Object.freeze({ x:15, y:55 }) }),
+          Object.freeze({ id:"mecc", label:"MECC", detail:"Educational computing", color:"#3f5944", position:Object.freeze({ x:38, y:24 }) }),
+          Object.freeze({ id:"charlie-kellner", label:"Charlie Kellner", detail:"Apple II adapter", color:"#236f5e", position:Object.freeze({ x:63, y:55 }) }),
+          Object.freeze({ id:"apple-ii", label:"Apple II", detail:"Classroom platform", color:"#e3a538", position:Object.freeze({ x:82, y:28 }) }),
+          Object.freeze({ id:"modern-revival", label:"Modern Lemonade", detail:"Browser revival", color:"#236f5e", position:Object.freeze({ x:72, y:82 }) }),
+        ]);
+        graph.edges = Object.freeze([
+          Object.freeze({ id:"jamison-mecc", sourceId:"bob-jamison", targetId:"mecc", label:"created at" }),
+          Object.freeze({ id:"mecc-kellner", sourceId:"mecc", targetId:"charlie-kellner", label:"lineage" }),
+          Object.freeze({ id:"kellner-apple", sourceId:"charlie-kellner", targetId:"apple-ii", label:"adapted for" }),
+          Object.freeze({ id:"apple-modern", sourceId:"apple-ii", targetId:"modern-revival", label:"inspires" }),
+        ]);
+        timeline.hidden = false;
+        graph.hidden = false;
+      } catch {
+        timeline.hidden = true;
+        graph.hidden = true;
+      }
+    };
+    void hydrateProjectSite();
+  </script>
 </body>
 </html>
