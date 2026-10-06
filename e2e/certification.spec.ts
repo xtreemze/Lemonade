@@ -1,5 +1,20 @@
 import { expect, type Page, test } from "@playwright/test";
 
+test("Pages root preserves semantic project history when the shared project-site bundle is unavailable", async ({ page }) => {
+  await page.route(
+    "https://xtreemze.github.io/timeline/project-site/xtreemze-project-site.js",
+    (route) => route.abort(),
+  );
+  await page.goto("./");
+
+  await expect(page.getByRole("heading", { name: "Learn by running the stand." })).toBeVisible();
+  await expect(page.locator("xt-project-timeline")).toBeHidden();
+  await expect(page.locator("xt-project-graph")).toBeHidden();
+  await expect(page.locator("[data-project-history-fallback]")).toContainText("Bob Jamison and MECC");
+  await expect(page.locator(".relationship-fallback")).toContainText(/Charlie Kellner.*Apple II/i);
+});
+
+
 const FORECAST_PRESENTATION_MS = 6000;
 const SIMULATION_PRESENTATION_MS = 14_000;
 const PHASE_SETTLE_MARGIN_MS = 2000;
