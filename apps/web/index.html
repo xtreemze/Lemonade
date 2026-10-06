@@ -229,13 +229,13 @@
       document.querySelector("#root")?.remove();
     }
   </script>
+  <script type="module" src="https://xtreemze.github.io/timeline/project-site/xtreemze-project-site.js"></script>
   <script type="module">
     const hydrateProjectSite = async () => {
       const timeline = document.querySelector("#lemonade-history-timeline");
       const graph = document.querySelector("#lemonade-history-graph");
       if (!(timeline instanceof HTMLElement) || !(graph instanceof HTMLElement)) return;
       try {
-        await import("https://xtreemze.github.io/timeline/project-site/xtreemze-project-site.js");
         await Promise.all([
           customElements.whenDefined("xt-project-timeline"),
           customElements.whenDefined("xt-project-graph"),
