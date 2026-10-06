@@ -32,7 +32,7 @@ test("keyboard focus follows the active phase through the daily loop", async ({ 
   await page.keyboard.press("Enter");
 
   await expect(main).toHaveAttribute("data-view", "history");
-  const history = page.getByRole("region", { name: "Sales history" });
+  const history = page.locator(".report-explorer");
   await expect(history).toBeFocused();
 
   await page.keyboard.press("Tab");
