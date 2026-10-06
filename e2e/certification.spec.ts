@@ -240,6 +240,20 @@ test("narrow viewport keeps the complete planning surface above the fold", async
   await reviewHistoryButton.locator("svg").click();
   await expect(main).toHaveAttribute("data-view", "history");
   await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Report explorer" })).toBeVisible();
+  const metricTabs = page.getByRole("group", { name: "Report metric" }).getByRole("button");
+  await expect(metricTabs).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Performance" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("button", { name: "Inventory" }).click();
+  await expect(page.getByRole("button", { name: "Inventory" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.locator(".report-explorer-chart")).toHaveAttribute("data-mode", "inventory");
+  await expect(page.locator(".report-explorer-summary")).toContainText("Prepared");
   await expectNoHorizontalOverflow(page);
   await expectNoVerticalOverflow(page);
 
