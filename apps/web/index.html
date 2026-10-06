@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f4c542" />
-  <meta name="description" content="Learn how Lemonade turns price, production, advertising, weather, and confidence into a compact business simulation, and trace its roots from MECC to the Apple II." />
+  <meta name="description" content="A modern revival of Lemonade Stand: choose glasses, signs, and price, sell the day, and see the consequences." />
   <title>Lemonade — economics, history, and the Apple II</title>
   <link rel="stylesheet" href="https://xtreemze.github.io/timeline/project-site/project-site.css" />
   <style id="landing-style">
@@ -111,9 +111,9 @@
   <main id="content">
     <section class="hero wrap">
       <div>
-        <p class="eyebrow">Three decisions. One uncertain market.</p>
+        <p class="eyebrow">Three decisions. One day of sales.</p>
         <h1>Learn by running the stand.</h1>
-        <p class="lead">Lemonade is a modern revival of the classic business simulation. Each day asks you to commit cash before demand is known: choose how much lemonade to prepare, how much to advertise, and what price to charge. Weather and market confidence change the conditions; your choices determine the consequences.</p>
+        <p class="lead">Lemonade revives the classic business simulation around the same compact loop: choose how many glasses to prepare, how many signs to buy, and what price to charge. Sell the day, then read the result and adjust.</p>
         <div class="cta">
           <a href="/Lemonade/?play=1">Start a run</a>
           <a href="#economics">Understand the model</a>
@@ -121,21 +121,21 @@
       </div>
       <figure class="hero-media">
         <img src="/Lemonade/showcase/desktop/03-lemonsville-simulation.webp" alt="Modern Lemonade simulation showing the Lemonsville neighborhood and lemonade stand" />
-        <figcaption class="caption">The modern project turns the compact economic loop into a visible neighborhood simulation while keeping the player-facing decisions deliberately small.</figcaption>
+        <figcaption class="caption">Lemonsville makes demand, weather, inventory, and sales visible without adding more decisions to the daily loop.</figcaption>
       </figure>
     </section>
 
     <section id="economics">
       <div class="wrap">
         <div class="section-head">
-          <div><p class="eyebrow">Economic onboarding</p><h2>What you are actually managing</h2></div>
-          <p>The simulation is a miniature operating business. You spend before you know the day’s demand, then learn from the result. There is no single “correct” number: the point is to balance risk, margin, reach, and uncertainty.</p>
+          <div><p class="eyebrow">Daily decisions</p><h2>Three controls, immediate consequences</h2></div>
+          <p>You commit resources before demand is known. Production sets capacity, signs affect demand, and price trades volume for margin. Weather changes the conditions, but it is not another control.</p>
         </div>
 
         <div class="grid three">
-          <article class="card decision"><h3>Glasses prepared</h3><strong class="value">Capacity vs. waste</strong><p>Every glass you prepare is an upfront cost. Too few creates an inventory ceiling: you cannot sell what you did not make. Too many leaves sunk cost in unsold lemonade. This is the basic inventory-risk problem.</p></article>
-          <article class="card decision"><h3>Advertising signs</h3><strong class="value">Reach vs. acquisition cost</strong><p>Signs cost money to deploy, so advertising only helps if the extra demand is worth more than the spend. In the classic-compatible model, signs directly increase demand through the restored historical equation. The planned v4 model instead moves toward saturating reach and bounded advertising fatigue.</p></article>
-          <article class="card decision"><h3>Price per glass</h3><strong class="value">Margin vs. conversion</strong><p>A higher price raises the contribution from each sale but reduces demand. A lower price can move more volume while shrinking unit margin. The decision is a compact form of price elasticity.</p></article>
+          <article class="card decision"><h3>Glasses prepared</h3><strong class="value">Inventory risk</strong><p>Every glass you prepare is an upfront cost. Too few creates an inventory ceiling: you cannot sell what you did not make. Too many leaves sunk cost in unsold lemonade. This is the basic inventory-risk problem.</p></article>
+          <article class="card decision"><h3>Advertising signs</h3><strong class="value">Advertising return</strong><p>Signs cost money to deploy, so advertising only helps if the extra demand is worth more than the spend. In the classic-compatible model, signs directly increase demand through the restored historical equation. The planned v4 model instead moves toward saturating reach and bounded advertising fatigue.</p></article>
+          <article class="card decision"><h3>Price per glass</h3><strong class="value">Price elasticity</strong><p>A higher price raises the contribution from each sale but reduces demand. A lower price can move more volume while shrinking unit margin. The decision is a compact form of price elasticity.</p></article>
         </div>
 
         <div class="grid two" style="margin-top:1rem">
@@ -146,16 +146,16 @@
             <div class="signal"><b>Cloud / storm</b><span>Demand can weaken sharply, so committing the same inventory and advertising budget can become expensive.</span></div>
           </article>
           <article class="card">
-            <p class="eyebrow">Confidence</p><h3>A compact market-receptivity signal</h3>
+            <p class="eyebrow">Confidence</p><h3>A market-receptivity signal</h3>
             <p>The project preserves a recognizable 0–5 confidence system. In the current classic-compatible model, a seeded daily confidence roll contributes directly to aggregate demand. In the intended v4 design, confidence becomes a bounded trust/familiarity input rather than a large customer-count generator.</p>
             <div class="note"><strong>Practical lesson:</strong> confidence is not cash. Treat it as information about how receptive the market may be, then still test that signal against price, advertising cost, inventory, and weather.</div>
           </article>
         </div>
 
         <article class="card" style="margin-top:1rem">
-          <p class="eyebrow">Shipping compatibility model</p><h3>The restored demand core</h3>
+          <p class="eyebrow">Current model</p><h3>How demand is calculated</h3>
           <div class="formula">((signs² / log1p(signs) + confidenceRoll × confidence) / priceDollars) × (weatherVariant² + 1)</div>
-          <p>Demand is rounded and capped by prepared inventory. This makes the daily loop easy to understand while exposing several real business tensions: capacity constraints, price sensitivity, promotional spend, random variation, and external shocks.</p>
+          <p>Demand is rounded and capped by prepared inventory. Demand is rounded and capped by prepared inventory. The result connects the three decisions directly to capacity, price sensitivity, advertising, uncertainty, and weather.</p>
           <p class="note"><strong>Design direction:</strong> the repository also contains a v4 audience model under development. It replaces aggregate demand with a finite customer funnel—audience → awareness → price conversion → willingness → fulfillment → market memory—while keeping the same three daily controls. The page does not present that work as already released.</p>
         </article>
       </div>
@@ -177,7 +177,7 @@
           <article class="event"><div class="year">1973</div><h3>Bob Jamison and MECC</h3><p>Bob Jamison created the original program at the Minnesota Educational Computing Consortium for time-shared mainframe systems. The core idea was already there: read the conditions, commit resources, set a price, advertise, and see the business result.</p></article>
           <article class="event"><div class="year">1979</div><h3>Charlie Kellner adapts it for Apple II</h3><p>The surviving Applesoft BASIC source credits Jamison’s original and states that Charlie Kellner modified it for the Apple in February 1979. The Apple II version added the immediacy of a personal machine: color graphics, sound, local keyboard input, and disk-based software.</p></article>
           <article class="event"><div class="year">1980s</div><h3>The computer-lab setting</h3><p>Apple II systems spread widely through schools. Educational software—including MECC titles—became part of the ritual of scheduled lab time: find a machine, insert a floppy, boot or catalog the disk, type a command, and take turns around one screen.</p></article>
-          <article class="event"><div class="year">Today</div><h3>The same decisions, a richer projection</h3><p>This project keeps the classic three-decision loop but makes the consequences visible in a persistent 3D neighborhood, with deterministic simulation, accessible reports, modern browser presentation, and explicit ruleset certification.</p></article>
+          <article class="event"><div class="year">Today</div><h3>The same loop, rebuilt for the web</h3><p>The revival keeps the three-decision loop, adds deterministic simulation and accessible reports, and shows the day resolving in a 3D Lemonsville neighborhood.</p></article>
         </div>
 
         <xt-project-graph
@@ -206,7 +206,7 @@
 
     <section id="sources">
       <div class="wrap">
-        <div class="section-head"><div><p class="eyebrow">Research notes</p><h2>Historical sources</h2></div><p>The project page separates repository-supported simulation facts from historical context. External references are provided so the lineage and classroom setting can be checked independently.</p></div>
+        <div class="section-head"><div><p class="eyebrow">Research notes</p><h2>Historical sources</h2></div><p>Simulation claims on this page follow the repository. Historical references are listed separately so the game’s lineage and classroom context can be checked independently.</p></div>
         <ul class="sources">
           <li><a href="https://www.mobygames.com/game/24035/lemonade-stand/">MobyGames — Lemonade Stand (Apple II, 1979)</a>: release/platform context and contemporary game description.</li>
           <li><a href="https://gist.github.com/mreider/c7cf24ee3cccd509f76217154af2ae49">Applesoft BASIC source transcript</a>: comments credit Bob Jamison’s original MECC program and Charlie Kellner’s February 1979 Apple modification.</li>
@@ -262,6 +262,8 @@
         ]);
         timeline.hidden = false;
         graph.hidden = false;
+        document.querySelector("[data-project-history-fallback]")?.setAttribute("hidden", "");
+        document.querySelector(".relationship-fallback")?.setAttribute("hidden", "");
       } catch {
         timeline.hidden = true;
         graph.hidden = true;
