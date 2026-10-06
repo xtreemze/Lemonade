@@ -6,8 +6,8 @@ const html = await readFile(new URL("index.html", distUrl), "utf8");
 const learnHtml = await readFile(new URL("learn/index.html", distUrl), "utf8");
 const learnIllustration = await stat(new URL("learn/apple-ii-lab.svg", distUrl));
 
-if (!html.includes("Learn by running the stand.")) {
-  throw new Error("GitHub Pages root must render the project landing page.");
+if (!html.includes("Run your lemonade stand.")) {
+  throw new Error("GitHub Pages root must render the player guide.");
 }
 if (!html.includes('href="/Lemonade/?play=1"')) {
   throw new Error("GitHub Pages root must expose a direct game entry.");
@@ -31,8 +31,34 @@ for (const [name, document] of [
   }
 }
 
-if (!learnHtml.includes("Learn by running the stand.")) {
-  throw new Error("GitHub Pages bundle must include the project learning route.");
+if (!learnHtml.includes("Run your lemonade stand.")) {
+  throw new Error("GitHub Pages bundle must include the player-guide route.");
+}
+for (const [name, document] of [
+  ["root", html],
+  ["learning", learnHtml],
+]) {
+  for (const required of [
+    "One day takes six steps",
+    "Everything you control",
+    "Read the day before you spend",
+    "How to read the day report",
+    "Starter tactics",
+  ]) {
+    if (!document.includes(required)) {
+      throw new Error(`GitHub Pages ${name} player guide is missing: ${required}`);
+    }
+  }
+  for (const developerCopy of [
+    "Shipping compatibility model",
+    "finite customer funnel",
+    "ruleset-v4",
+    "potentialDemand =",
+  ]) {
+    if (document.includes(developerCopy)) {
+      throw new Error(`GitHub Pages ${name} must not expose developer-facing onboarding copy: ${developerCopy}`);
+    }
+  }
 }
 if (!learnHtml.includes('href="/Lemonade/?play=1"')) {
   throw new Error("Learning route must link to explicit game mode.");
