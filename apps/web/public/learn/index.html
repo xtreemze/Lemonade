@@ -56,6 +56,13 @@
     .year { font-family:ui-monospace,Menlo,monospace; font-size:1.5rem; font-weight:950; }
     .lab { border:2px solid #211d14; background:#211d14; box-shadow:8px 8px 0 #6a543b; }
     .lab img { width:100%; background:#cbb68f; }
+
+    .equation { overflow:auto; margin:1rem 0; padding:1rem; border:2px solid #211d14; background:#eef1d6; box-shadow:4px 4px 0 #211d14; font:800 .86rem/1.55 ui-monospace,Menlo,monospace; }
+    .compare-table { width:100%; border-collapse:collapse; background:#fff9e4; border:2px solid #211d14; }
+    .compare-table th,.compare-table td { padding:.85rem; border-top:1px solid #a99d7d; text-align:left; vertical-align:top; line-height:1.45; }
+    .compare-table thead th { border-top:0; background:#f4c542; font-weight:950; }
+    .compare-table th:first-child { width:24%; }
+
     .sources { font-size:.94rem; line-height:1.6; }
     .sources li { margin-bottom:.7rem; }
     footer { padding:2.5rem 0 4rem; border-top:2px solid #211d14; background:#211d14; color:#fff9e4; }
@@ -83,6 +90,7 @@
         <li><a href="#conditions">Weather & confidence</a></li>
         <li><a href="#report">Day report</a></li>
         <li><a href="#strategy">Tips</a></li>
+        <li><a href="#behind-the-game">Behind the game</a></li>
         <li><a href="#history">History</a></li>
       </ul>
       <a class="play" href="/Lemonade/?play=1">Play full screen</a>
@@ -220,6 +228,46 @@
         </div>
       </div>
     </section>
+
+
+    <section id="behind-the-game">
+      <div class="wrap">
+        <div class="section-head">
+          <div><p class="eyebrow">Behind the game</p><h2>The math is part of the fun</h2></div>
+          <p>You never need the equation to play well, but it explains why signs, confidence, price, and weather can combine into surprisingly different days.</p>
+        </div>
+
+        <article class="card">
+          <h3>The demand equation used by this version</h3>
+          <div class="equation">((signs² / log1p(signs) + confidenceRoll × confidence) / priceDollars) × (weatherVariant² + 1)</div>
+          <p>The result is rounded to a whole number of potential customers, then actual sales are capped by the number of glasses you prepared. In other words: advertising and confidence push demand upward, price pushes it downward, weather can amplify everything, and inventory still sets the final ceiling.</p>
+          <p class="tip"><strong>A useful curiosity:</strong> advertising is deliberately nonlinear here. The sign term is <code>signs² / log1p(signs)</code>, so signs can become very powerful instead of following a simple diminishing-return curve.</p>
+        </article>
+
+        <div class="section-head" style="margin-top:2.5rem">
+          <div><p class="eyebrow">Then and now</p><h2>How the Apple II game differs</h2></div>
+          <p>The modern game keeps the original spirit—three decisions, weather, uncertainty, and immediate consequences—but it does not copy the Apple II economics exactly.</p>
+        </div>
+
+        <div class="card" style="overflow:auto">
+          <table class="compare-table">
+            <thead>
+              <tr><th>System</th><th>Apple II version</th><th>This Lemonade revival</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Price</th><td>Used a 10-cent reference price and a much steeper inverse-square penalty above it.</td><td>Price enters continuously as an inverse term. There is no special breakpoint where the rules suddenly change.</td></tr>
+              <tr><th scope="row">Advertising</th><td>Used an exponential response with diminishing returns.</td><td>Uses the unusual <code>signs² / log1p(signs)</code> term, so advertising behaves very differently and can scale aggressively.</td></tr>
+              <tr><th scope="row">Demand base</th><td>Started from a baseline demand of 30 before price, signs, weather, and events changed it.</td><td>Builds potential demand from advertising plus confidence, divided by price, then multiplied by weather.</td></tr>
+              <tr><th scope="row">Confidence</th><td>Not the same persistent operating-confidence system used here.</td><td>Recent business performance changes confidence, and a seeded daily confidence roll feeds demand.</td></tr>
+              <tr><th scope="row">Weather</th><td>Weather and special events changed demand through the original BASIC rules.</td><td>Uses four weather strengths—1×, 2×, 5×, and 10×—with the opening day starting at the strongest state.</td></tr>
+              <tr><th scope="row">Randomness</th><td>Used the period program's random draws.</td><td>Uses seeded randomness, so the same starting seed and decisions can reproduce a run.</td></tr>
+              <tr><th scope="row">Presentation</th><td>Text, simple color graphics, sound cues, and keyboard interaction on the Apple II.</td><td>A live 3D Lemonsville, visible customers and signs, accessible reports, charts, progression, and later finance systems around the same three daily choices.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
 
     <section id="history">
       <div class="wrap">
