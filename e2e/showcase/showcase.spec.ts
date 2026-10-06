@@ -843,7 +843,7 @@ const openHistory = async (page: Page): Promise<void> => {
   await openReport(page);
   await page.getByRole("button", { name: "Review sales history" }).click();
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "history");
-  await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Report explorer" })).toBeVisible();
 };
 
 test("01-weather-forecast", async ({ page }, testInfo) => {
@@ -929,7 +929,7 @@ test("04-day-report", async ({ page }, testInfo) => {
 test("05-sales-history", async ({ page }, testInfo) => {
   const feature = getFeature("05-sales-history");
   await openHistory(page);
-  const history = page.getByRole("region", { name: "Sales history" });
+  const history = page.getByRole("region", { name: "Report explorer" });
 
   await recordFeature(page, testInfo, feature, async () => {
     if (getFormFactor(testInfo) === "desktop") {
