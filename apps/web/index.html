@@ -34,7 +34,7 @@
     .cta a { padding:.82rem 1rem; border:2px solid #211d14; background:#fff9e4; box-shadow:4px 4px 0 #211d14; font-weight:900; text-decoration:none; }
     .cta a:first-child { background:#236f5e; color:#fff9e4; }
     .hero-media { position:relative; border:2px solid #211d14; box-shadow:8px 8px 0 #211d14; background:#8ec7d3; }
-    .hero-media img { aspect-ratio:16/9; width:100%; object-fit:cover; }
+    .hero-media img, .hero-media video { aspect-ratio:16/9; width:100%; object-fit:cover; display:block; }
     .caption { padding:.8rem 1rem; border-top:2px solid #211d14; background:#fff9e4; font-size:.9rem; }
     section { padding:clamp(3.5rem,7vw,6.5rem) 0; }
     .section-head { display:grid; gap:1rem; margin-bottom:2rem; }
@@ -98,7 +98,11 @@
         </div>
       </div>
       <figure class="hero-media">
-        <img src="/Lemonade/showcase/desktop/03-lemonsville-simulation.webp" alt="Modern Lemonade simulation showing the Lemonsville neighborhood and lemonade stand" />
+        <video autoplay muted loop playsinline preload="auto" aria-label="Modern Lemonade simulation showing the Lemonsville neighborhood and lemonade stand">
+          <source media="(max-width: 767px)" src="/Lemonade/showcase/videos/mobile/03-lemonsville-simulation.mp4" type="video/mp4" />
+          <source src="/Lemonade/showcase/videos/desktop/03-lemonsville-simulation.mp4" type="video/mp4" />
+          Your browser does not support embedded video.
+        </video>
         <figcaption class="caption">The modern project turns the compact economic loop into a visible neighborhood simulation while keeping the player-facing decisions deliberately small.</figcaption>
       </figure>
     </section>
