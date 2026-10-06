@@ -15,9 +15,6 @@ if (!html.includes('href="/Lemonade/?play=1"')) {
 if (!html.includes("xt-project-timeline") || !html.includes("xt-project-graph")) {
   throw new Error("GitHub Pages root must expose the shared project timeline and relationship graph.");
 }
-if (!html.includes("https://xtreemze.github.io/timeline/project-site/xtreemze-project-site.js")) {
-  throw new Error("GitHub Pages root must use the neutral project-site module.");
-}
 if (!html.includes("data-project-history-fallback") || !html.includes("relationship-fallback")) {
   throw new Error("Project-site enhancements must retain semantic fallback content.");
 }
@@ -41,6 +38,20 @@ if (entryMatch?.[1] === undefined) {
 }
 
 const assets = await readdir(assetsUrl);
+const projectSiteUrl = "https://xtreemze.github.io/timeline/project-site/xtreemze-project-site.js";
+const javascriptAssets = assets.filter((name) => name.endsWith(".js"));
+const builtJavascript = (
+  await Promise.all(
+    javascriptAssets.map((name) => readFile(new URL(name, assetsUrl), "utf8")),
+  )
+).join("\n");
+if (!html.includes(projectSiteUrl) && !builtJavascript.includes(projectSiteUrl)) {
+  throw new Error("GitHub Pages root must conditionally load the neutral project-site module.");
+}
+if (!learnHtml.includes(projectSiteUrl)) {
+  throw new Error("Learning route must conditionally load the neutral project-site module.");
+}
+
 const sceneChunks = assets.filter((name) => /^scene-runtime-[^/]+\.js$/u.test(name));
 if (sceneChunks.length !== 1) {
   throw new Error(`Expected one lazy scene runtime chunk, found ${String(sceneChunks.length)}.`);
