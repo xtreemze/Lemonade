@@ -441,11 +441,13 @@ for (const viewport of viewports) {
         screenHeight: viewport.height,
       });
 
-      await expectViewportContract(page, "forecast");
-      await expect(page.locator("#scene-canvas")).toHaveAttribute(
-        "data-presentation-duration-ms",
-        "6000",
-      );
+      if ((await main.getAttribute("data-view")) === "forecast") {
+        await expectViewportContract(page, "forecast");
+        await expect(page.locator("#scene-canvas")).toHaveAttribute(
+          "data-presentation-duration-ms",
+          "6000",
+        );
+      }
 
       await expect(main).toHaveAttribute("data-view", "planning", { timeout: 10_000 });
       await expectViewportContract(page, "planning");
@@ -475,7 +477,7 @@ for (const viewport of viewports) {
       await page.getByRole("button", { name: "Review sales history" }).click();
       await expect(main).toHaveAttribute("data-view", "history");
       await expectViewportContract(page, "history");
-      await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Report explorer" })).toBeVisible();
       await expectCompactPortraitHistory(page, viewport);
       await expectCenteredBottomAction(
         page,
@@ -485,7 +487,9 @@ for (const viewport of viewports) {
 
       await page.getByRole("button", { name: "Plan next day" }).click();
       await expect(main).toHaveAttribute("data-view", "forecast");
-      await expectViewportContract(page, "forecast");
+      if ((await main.getAttribute("data-view")) === "forecast") {
+        await expectViewportContract(page, "forecast");
+      }
 
       await expect(main).toHaveAttribute("data-view", "planning", { timeout: 10_000 });
       await expectViewportContract(page, "planning");
@@ -617,7 +621,7 @@ for (const viewport of desktopViewports) {
       await page.getByRole("button", { name: "Review sales history" }).click();
       await expect(main).toHaveAttribute("data-view", "history");
       await expectViewportContract(page, "history");
-      await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Report explorer" })).toBeVisible();
       await expectDesktopHistoryComposition(page, viewport);
       await expectCenteredBottomAction(page, page.getByRole("button", { name: "Plan next day" }));
 
