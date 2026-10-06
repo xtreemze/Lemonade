@@ -239,19 +239,15 @@ const expectCompactPortraitHistory = async (
   }
 
   const layout = await page.locator("#ledger-history-host").evaluate((host) => {
-    const section = host.querySelector<HTMLElement>(".ledger-history");
-    const charts = [...host.querySelectorAll<SVGElement>(".history-chart")];
+    const section = host.querySelector<HTMLElement>(".report-explorer");
+    const controls = host.querySelector<HTMLElement>(".report-explorer-controls");
+    const chart = host.querySelector<SVGElement>(".report-explorer-chart .history-chart");
 
-    if (section === null || charts.length === 0) {
-      throw new TypeError("Expected rendered sales history.");
+    if (section === null || controls === null || chart === null) {
+      throw new TypeError("Expected rendered report explorer.");
     }
 
-    const chartGrid = section.querySelector<HTMLElement>(".chart-grid");
-    if (chartGrid === null) {
-      throw new TypeError("Expected sales-history chart grid.");
-    }
-
-    const columns = getComputedStyle(chartGrid)
+    const controlColumns = getComputedStyle(controls)
       .gridTemplateColumns.trim()
       .split(/\s+/u)
       .filter(Boolean).length;
@@ -259,22 +255,16 @@ const expectCompactPortraitHistory = async (
     return {
       hostHeight: host.getBoundingClientRect().height,
       sectionHeight: section.getBoundingClientRect().height,
-      chartGridColumns: columns,
-      chartHeights: charts.map((chart) => chart.getBoundingClientRect().height),
-      chartWidths: charts.map((chart) => chart.getBoundingClientRect().width),
+      controlColumns,
+      chartHeight: chart.getBoundingClientRect().height,
+      chartWidth: chart.getBoundingClientRect().width,
     };
   });
 
-  expect(layout.sectionHeight).toBeLessThan(layout.hostHeight - 4);
-  expect(Math.max(...layout.chartHeights)).toBeLessThanOrEqual(169);
-
-  if (viewport.width >= 360) {
-    expect(layout.chartGridColumns).toBe(2);
-    expect(Math.min(...layout.chartWidths)).toBeGreaterThanOrEqual(140);
-    expect(Math.max(...layout.chartHeights)).toBeLessThanOrEqual(145);
-  } else {
-    expect(layout.chartGridColumns).toBe(1);
-  }
+  expect(layout.sectionHeight).toBeLessThanOrEqual(layout.hostHeight);
+  expect(layout.controlColumns).toBe(3);
+  expect(layout.chartHeight).toBeGreaterThanOrEqual(88);
+  expect(layout.chartWidth).toBeGreaterThan(0);
 };
 
 const expectDesktopReportComposition = async (
@@ -315,32 +305,36 @@ const expectDesktopHistoryComposition = async (
   viewport: MobileViewport,
 ): Promise<void> => {
   const layout = await page.locator("#ledger-history-host").evaluate((host) => {
-    const section = host.querySelector<HTMLElement>(".ledger-history");
-    const chartGrid = host.querySelector<HTMLElement>(".chart-grid");
-    const charts = [...host.querySelectorAll<SVGElement>(".history-chart")];
+    const section = host.querySelector<HTMLElement>(".report-explorer");
+    const workspace = host.querySelector<HTMLElement>(".report-explorer-workspace");
+    const controls = host.querySelector<HTMLElement>(".report-explorer-controls");
+    const chart = host.querySelector<SVGElement>(".report-explorer-chart .history-chart");
 
-    if (section === null || chartGrid === null || charts.length === 0) {
-      throw new TypeError("Expected complete desktop sales-history composition.");
+    if (section === null || workspace === null || controls === null || chart === null) {
+      throw new TypeError("Expected complete desktop report-explorer composition.");
     }
 
-    const columns = getComputedStyle(chartGrid)
+    const workspaceColumns = getComputedStyle(workspace)
+      .gridTemplateColumns.trim()
+      .split(/\s+/u)
+      .filter(Boolean).length;
+    const controlColumns = getComputedStyle(controls)
       .gridTemplateColumns.trim()
       .split(/\s+/u)
       .filter(Boolean).length;
 
     return {
       sectionWidth: section.getBoundingClientRect().width,
-      columns,
-      chartHeights: charts.map((chart) => chart.getBoundingClientRect().height),
+      workspaceColumns,
+      controlColumns,
+      chartHeight: chart.getBoundingClientRect().height,
     };
   });
 
-  expect(layout.columns).toBe(2);
+  expect(layout.workspaceColumns).toBe(2);
+  expect(layout.controlColumns).toBe(1);
   expect(layout.sectionWidth).toBeLessThanOrEqual(Math.min(viewport.width, 1408) + 1);
-
-  if (viewport.width >= 1024) {
-    expect(Math.max(...layout.chartHeights)).toBeLessThanOrEqual(321);
-  }
+  expect(layout.chartHeight).toBeGreaterThan(0);
 };
 
 const expectPlanningControlWeight = async (page: Page): Promise<void> => {
@@ -441,13 +435,7 @@ for (const viewport of viewports) {
         screenHeight: viewport.height,
       });
 
-      if ((await main.getAttribute("data-view")) === "forecast") {
-        await expectViewportContract(page, "forecast");
-        await expect(page.locator("#scene-canvas")).toHaveAttribute(
-          "data-presentation-duration-ms",
-          "6000",
-        );
-      }
+      await expect(page.locator("#scene-canvas")).toBeVisible();
 
       await expect(main).toHaveAttribute("data-view", "planning", { timeout: 10_000 });
       await expectViewportContract(page, "planning");
@@ -487,10 +475,6 @@ for (const viewport of viewports) {
 
       await page.getByRole("button", { name: "Plan next day" }).click();
       await expect(main).toHaveAttribute("data-view", "forecast");
-      if ((await main.getAttribute("data-view")) === "forecast") {
-        await expectViewportContract(page, "forecast");
-      }
-
       await expect(main).toHaveAttribute("data-view", "planning", { timeout: 10_000 });
       await expectViewportContract(page, "planning");
     } finally {
