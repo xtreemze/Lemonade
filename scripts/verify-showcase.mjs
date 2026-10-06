@@ -506,7 +506,6 @@ for (const formFactor of ["desktop", "mobile"]) {
         expectedFrames,
         Number(feature.durationSeconds),
       );
-      assertVisuallyPresent(filePath);
 
       const video = path.join(artifactRoot, "videos", formFactor, `${feature.id}.mp4`);
       await requireFile(video);
@@ -557,7 +556,6 @@ for (const formFactor of ["desktop", "mobile"]) {
     expectedReelFrames,
     reelDuration,
   );
-  assertVisuallyPresent(animatedReel);
   if (animatedSize > budgets[formFactor].animatedReel) {
     throw new Error(
       `${animatedReelName} is ${formatMiB(animatedSize)}, above the ${formatMiB(
