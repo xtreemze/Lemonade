@@ -16,6 +16,21 @@ if (!html.includes("/Lemonade/assets/")) {
   throw new Error("GitHub Pages bundle must use the /Lemonade/ asset base.");
 }
 
+for (const [name, document] of [
+  ["root", html],
+  ["learning", learnHtml],
+]) {
+  if (!document.includes("<video autoplay muted loop playsinline")) {
+    throw new Error(`GitHub Pages ${name} presentation must use native video playback for Showcase motion.`);
+  }
+  if (!document.includes("/Lemonade/showcase/videos/mobile/03-lemonsville-simulation.mp4")) {
+    throw new Error(`GitHub Pages ${name} presentation must expose the mobile Showcase video source.`);
+  }
+  if (!document.includes("/Lemonade/showcase/videos/desktop/03-lemonsville-simulation.mp4")) {
+    throw new Error(`GitHub Pages ${name} presentation must expose the desktop Showcase video source.`);
+  }
+}
+
 if (!learnHtml.includes("Learn by running the stand.")) {
   throw new Error("GitHub Pages bundle must include the project learning route.");
 }
