@@ -1,5 +1,27 @@
 import { expect, type Page, test } from "@playwright/test";
 
+test("Pages root presents the landing page and keeps semantic history when Lūm is unavailable", async ({
+  page,
+}) => {
+  await page.route("https://xtreemze.github.io/timeline/embed/luum-embed.js", (route) =>
+    route.abort(),
+  );
+  await page.goto("./");
+
+  await expect(page.getByRole("heading", { name: "Learn by running the stand." })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Play the simulation" })).toHaveAttribute(
+    "href",
+    "/Lemonade/?play=1",
+  );
+
+  const timeline = page.locator("luum-embed-timeline");
+  const graph = page.locator("luum-embed-graph");
+  await expect(timeline).toHaveAttribute("data-luum-embed", "fallback");
+  await expect(timeline.getByText("Bob Jamison and MECC")).toBeVisible();
+  await expect(graph).toHaveAttribute("data-luum-embed", "fallback");
+  await expect(graph.getByText(/Charlie Kellner.*Apple II/i)).toBeVisible();
+});
+
 const FORECAST_PRESENTATION_MS = 6000;
 const SIMULATION_PRESENTATION_MS = 14_000;
 const PHASE_SETTLE_MARGIN_MS = 2000;
