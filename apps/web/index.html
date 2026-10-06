@@ -58,6 +58,23 @@
     .event { position:relative; padding:0 0 2rem 2rem; }
     .event::before { content:""; position:absolute; left:-.62rem; top:.25rem; width:1rem; height:1rem; border:3px solid #211d14; border-radius:50%; background:#f4c542; }
     .year { font-family:ui-monospace,Menlo,monospace; font-size:1.5rem; font-weight:950; }
+    luum-embed-timeline,
+    luum-embed-graph {
+      display:block;
+      --luum-embed-font:"Avenir Next","Segoe UI",system-ui,sans-serif;
+      --luum-embed-ink:#211d14;
+      --luum-embed-muted:#655f50;
+      --luum-embed-paper:#fff9e4;
+      --luum-embed-panel:#f6df8f;
+      --luum-embed-line:#211d14;
+      --luum-embed-accent:#236f5e;
+      --luum-embed-focus:#1d6d5d;
+      --luum-embed-radius:0px;
+      --luum-embed-shadow:5px 5px 0 #211d14;
+    }
+    luum-embed-graph { --luum-embed-graph-height:21rem; margin-top:1.5rem; }
+    .relationship-fallback { display:grid; gap:.65rem; padding:1rem; border:2px solid #211d14; background:#fff9e4; box-shadow:5px 5px 0 #211d14; }
+    .relationship-fallback p { margin:0; line-height:1.45; }
     .sources { font-size:.94rem; line-height:1.6; }
     .sources li { margin-bottom:.7rem; }
     footer { padding:2.5rem 0 4rem; border-top:2px solid #211d14; background:#211d14; color:#fff9e4; }
@@ -69,7 +86,13 @@
       .grid.two { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .section-head { grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); align-items:end; }
     }
-    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+    @view-transition { navigation: auto; }
+    .brand { view-transition-name: lemonade-brand; }
+    main { view-transition-name: lemonade-main; }
+    @media (prefers-reduced-motion:reduce) {
+      html { scroll-behavior:auto; }
+      ::view-transition-group(*) { animation-duration:0.001ms; }
+    }
   </style>
 </head>
 <body>
@@ -146,12 +169,26 @@
           <p>Lemonade Stand predates the home-computer boom. Its lineage runs from educational mainframes to the Apple II, where simple graphics, sound, keyboard input, and 5¼-inch disks made the business lesson tangible to students sharing early microcomputer labs.</p>
         </div>
 
-        <div class="timeline" aria-label="Lemonade Stand history timeline">
-          <article class="event"><div class="year">1973</div><h3>Bob Jamison and MECC</h3><p>Bob Jamison created the original program at the Minnesota Educational Computing Consortium for time-shared mainframe systems. The core idea was already there: read the conditions, commit resources, set a price, advertise, and see the business result.</p></article>
-          <article class="event"><div class="year">1979</div><h3>Charlie Kellner adapts it for Apple II</h3><p>The surviving Applesoft BASIC source credits Jamison’s original and states that Charlie Kellner modified it for the Apple in February 1979. The Apple II version added the immediacy of a personal machine: color graphics, sound, local keyboard input, and disk-based software.</p></article>
-          <article class="event"><div class="year">1980s</div><h3>The computer-lab setting</h3><p>Apple II systems spread widely through schools. Educational software—including MECC titles—became part of the ritual of scheduled lab time: find a machine, insert a floppy, boot or catalog the disk, type a command, and take turns around one screen.</p></article>
-          <article class="event"><div class="year">Today</div><h3>The same decisions, a richer projection</h3><p>This project keeps the classic three-decision loop but makes the consequences visible in a persistent 3D neighborhood, with deterministic simulation, accessible reports, modern browser presentation, and explicit ruleset certification.</p></article>
+        <luum-embed-timeline aria-label="Lemonade Stand history timeline">
+          <div class="timeline" aria-label="Lemonade Stand history timeline">
+            <article class="event"><div class="year">1973</div><h3>Bob Jamison and MECC</h3><p>Bob Jamison created the original program at the Minnesota Educational Computing Consortium for time-shared mainframe systems. The core idea was already there: read the conditions, commit resources, set a price, advertise, and see the business result.</p></article>
+            <article class="event"><div class="year">1979</div><h3>Charlie Kellner adapts it for Apple II</h3><p>The surviving Applesoft BASIC source credits Jamison’s original and states that Charlie Kellner modified it for the Apple in February 1979. The Apple II version added the immediacy of a personal machine: color graphics, sound, local keyboard input, and disk-based software.</p></article>
+            <article class="event"><div class="year">1980s</div><h3>The computer-lab setting</h3><p>Apple II systems spread widely through schools. Educational software—including MECC titles—became part of the ritual of scheduled lab time: find a machine, insert a floppy, boot or catalog the disk, type a command, and take turns around one screen.</p></article>
+            <article class="event"><div class="year">Today</div><h3>The same decisions, a richer projection</h3><p>This project keeps the classic three-decision loop but makes the consequences visible in a persistent 3D neighborhood, with deterministic simulation, accessible reports, modern browser presentation, and explicit ruleset certification.</p></article>
+          </div>
+        </luum-embed-timeline>
+
+        <div class="section-head" style="margin-top:2.5rem">
+          <div><p class="eyebrow">People and lineage</p><h2>How the versions connect</h2></div>
+          <p>This relationship view separates the original creator, the educational institution, the Apple II adapter, and the modern revival instead of flattening them into a single authorship claim.</p>
         </div>
+        <luum-embed-graph aria-label="Lemonade Stand creator and adaptation relationships">
+          <div class="relationship-fallback" aria-label="Creator relationship summary">
+            <p><strong>Bob Jamison</strong> created the original Lemonade Stand program at <strong>MECC</strong>.</p>
+            <p><strong>Charlie Kellner</strong> adapted that program for the <strong>Apple II</strong> in 1979.</p>
+            <p><strong>Lemonade</strong> is the modern revival of that educational simulation lineage.</p>
+          </div>
+        </luum-embed-graph>
 
         <figure class="lab">
           <img src="/Lemonade/learn/apple-ii-lab.svg" alt="Interpretive late-1970s school Apple II computer lab with students and a foreground machine loading Lemonade Stand from a floppy disk" />
@@ -188,6 +225,43 @@
       await import("/src/main.ts");
     } else {
       document.querySelector("#root")?.remove();
+
+    const hydrateLuumEmbeds = async () => {
+      const timeline = document.querySelector("luum-embed-timeline");
+      const graph = document.querySelector("luum-embed-graph");
+      if (!(timeline instanceof HTMLElement) || !(graph instanceof HTMLElement)) return;
+      try {
+        await import(/* @vite-ignore */ "https://xtreemze.github.io/timeline/embed/luum-embed.js");
+        timeline.items = Object.freeze([
+          Object.freeze({ id:"mainframe", timeLabel:"1973", label:"Bob Jamison and MECC", detail:"Original educational business simulation for time-shared systems.", color:"#e3a538" }),
+          Object.freeze({ id:"apple-ii", timeLabel:"1979", label:"Apple II adaptation", detail:"Charlie Kellner adapts the program for Apple II classroom use.", color:"#236f5e" }),
+          Object.freeze({ id:"computer-labs", timeLabel:"1980s", label:"School computer labs", detail:"Apple II educational software becomes part of scheduled shared-computer learning.", color:"#3f5944" }),
+          Object.freeze({ id:"modern-revival", timeLabel:"Today", label:"Modern revival", detail:"The three-decision loop becomes a deterministic browser and 3D neighborhood simulation.", color:"#236f5e" }),
+        ]);
+        graph.nodes = Object.freeze([
+          Object.freeze({ id:"bob-jamison", label:"Bob Jamison", detail:"Original creator", color:"#e3a538", position:Object.freeze({ x:18, y:54 }) }),
+          Object.freeze({ id:"mecc", label:"MECC", detail:"Educational computing", color:"#3f5944", position:Object.freeze({ x:43, y:24 }) }),
+          Object.freeze({ id:"charlie-kellner", label:"Charlie Kellner", detail:"Apple II adapter", color:"#236f5e", position:Object.freeze({ x:68, y:54 }) }),
+          Object.freeze({ id:"apple-ii", label:"Apple II", detail:"1979 platform", color:"#f4c542", position:Object.freeze({ x:84, y:24 }) }),
+          Object.freeze({ id:"lemonade-modern", label:"Lemonade", detail:"Modern revival", color:"#236f5e", position:Object.freeze({ x:52, y:82 }) }),
+        ]);
+        graph.edges = Object.freeze([
+          Object.freeze({ id:"jamison-created", sourceId:"bob-jamison", targetId:"mecc", label:"created at" }),
+          Object.freeze({ id:"kellner-adapted", sourceId:"charlie-kellner", targetId:"mecc", label:"adapted original" }),
+          Object.freeze({ id:"apple-platform", sourceId:"charlie-kellner", targetId:"apple-ii", label:"adapted for" }),
+          Object.freeze({ id:"revival-lineage", sourceId:"mecc", targetId:"lemonade-modern", label:"simulation lineage" }),
+          Object.freeze({ id:"apple-lineage", sourceId:"apple-ii", targetId:"lemonade-modern", label:"interface inspiration" }),
+        ]);
+        timeline.dataset.luumEmbed = "ready";
+        graph.dataset.luumEmbed = "ready";
+      } catch {
+        timeline.dataset.luumEmbed = "fallback";
+        graph.dataset.luumEmbed = "fallback";
+      }
+    };
+
+      await hydrateLuumEmbeds();
+
     }
   </script>
 </body>
