@@ -6,7 +6,6 @@
   <meta name="theme-color" content="#f4c542" />
   <meta name="description" content="Learn how to play Lemonade: make, advertise, price, read the weather, review each day, and grow your stand." />
   <title>Lemonade — Player Guide</title>
-  <link rel="stylesheet" href="https://xtreemze.github.io/timeline/project-site/project-site.css" />
   <style id="landing-style">
     :root { color-scheme:light; font-family:"Avenir Next","Segoe UI",system-ui,sans-serif; color:#211d14; background:#f3e8c8; }
     * { box-sizing:border-box; }
@@ -353,6 +352,10 @@
       await import("/src/main.ts");
     } else {
       document.querySelector("#root")?.remove();
+      const projectSiteStyles = document.createElement("link");
+      projectSiteStyles.rel = "stylesheet";
+      projectSiteStyles.href = "https://xtreemze.github.io/timeline/project-site/project-site.css";
+      document.head.append(projectSiteStyles);
     }
   </script>
   <script type="module">
