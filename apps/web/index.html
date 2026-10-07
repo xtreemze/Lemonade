@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f4c542" />
   <meta name="description" content="Learn how to play Lemonade: make, advertise, price, read the weather, review each day, and grow your stand." />
   <title>Lemonade — Player Guide</title>
+  <link rel="stylesheet" href="https://xtreemze.github.io/timeline/project-site/project-site.css" />
   <style id="landing-style">
     :root { color-scheme:light; font-family:"Avenir Next","Segoe UI",system-ui,sans-serif; color:#211d14; background:#f3e8c8; }
     * { box-sizing:border-box; }
@@ -54,6 +55,27 @@
     .event { position:relative; padding:0 0 2rem 2rem; }
     .event::before { content:""; position:absolute; left:-.62rem; top:.25rem; width:1rem; height:1rem; border:3px solid #211d14; border-radius:50%; background:#f4c542; }
     .year { font-family:ui-monospace,Menlo,monospace; font-size:1.5rem; font-weight:950; }
+    xt-project-timeline,
+    xt-project-graph {
+      display:block;
+      margin-block:1.5rem;
+      --xt-project-font:"Avenir Next","Segoe UI",system-ui,sans-serif;
+      --xt-project-ink:#211d14;
+      --xt-project-muted:#655f50;
+      --xt-project-paper:#fff9e4;
+      --xt-project-panel:#f6df8f;
+      --xt-project-line:#211d14;
+      --xt-project-accent:#236f5e;
+      --xt-project-focus:#1d6d5d;
+      --xt-project-radius:0px;
+      --xt-project-shadow:5px 5px 0 #211d14;
+      --xt-project-graph-height:21rem;
+    }
+    .relationship-fallback { display:grid; gap:.65rem; padding:1rem; border:2px solid #211d14; background:#fff9e4; box-shadow:5px 5px 0 #211d14; }
+    .relationship-fallback p { margin:0; line-height:1.45; }
+    @view-transition { navigation:auto; }
+    .brand { view-transition-name:lemonade-brand; }
+    ::view-transition-old(root),::view-transition-new(root){animation-duration:180ms;animation-timing-function:ease-out;}
     .lab { border:2px solid #211d14; background:#211d14; box-shadow:8px 8px 0 #6a543b; }
     .lab img { width:100%; background:#cbb68f; }
 
@@ -74,7 +96,7 @@
       .grid.two { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .section-head { grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); align-items:end; }
     }
-    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } ::view-transition-old(root),::view-transition-new(root){animation-duration:1ms;} }
 
   </style>
 </head>
@@ -275,11 +297,27 @@
           <div><p class="eyebrow">Where the game came from</p><h2>A classroom business game with a long life</h2></div>
           <p>Lemonade keeps the quick decision-and-feedback spirit of the educational games that came before it. The history is here for players who want to know why the game is deliberately simple to learn and difficult to optimize.</p>
         </div>
-        <div class="history" aria-label="Lemonade Stand history timeline">
+        <xt-project-timeline
+          id="lemonade-history-timeline"
+          hidden
+          aria-label="Lemonade Stand history overview"
+        ></xt-project-timeline>
+        <div class="history" data-project-history-fallback aria-label="Lemonade Stand history timeline">
           <article class="event"><div class="year">1973</div><h3>Bob Jamison and MECC</h3><p>Bob Jamison created the original Lemonade Stand program at the Minnesota Educational Computing Consortium for time-shared computer systems.</p></article>
           <article class="event"><div class="year">1979</div><h3>Apple II adaptation</h3><p>Charlie Kellner adapted the program for the Apple II, bringing the business exercise into the early personal-computer classroom.</p></article>
           <article class="event"><div class="year">1980s</div><h3>Computer-lab learning</h3><p>Apple II computers became familiar school lab machines, where students learned by trying software, comparing results, and taking turns around shared screens.</p></article>
           <article class="event"><div class="year">Today</div><h3>Lemonade</h3><p>The modern revival keeps the small daily decision surface while making the neighborhood, customers, weather, reports, and progression visible around it.</p></article>
+        </div>
+        <xt-project-graph
+          id="lemonade-history-graph"
+          hidden
+          aria-label="Lemonade Stand historical relationships"
+        ></xt-project-graph>
+        <div class="relationship-fallback" data-project-relationship-fallback aria-label="Historical relationships">
+          <p><strong>Bob Jamison → MECC:</strong> original educational business simulation.</p>
+          <p><strong>Charlie Kellner → Apple II:</strong> 1979 adaptation for classroom microcomputers.</p>
+          <p><strong>MECC → school computer labs:</strong> educational software reached shared classroom machines.</p>
+          <p><strong>Apple II → modern revival:</strong> the compact decision loop remains the design reference.</p>
         </div>
         <figure class="lab">
           <img src="/Lemonade/learn/apple-ii-lab.svg" alt="Interpretive late-1970s school Apple II computer lab with students and a foreground machine loading Lemonade Stand from a floppy disk" />
@@ -316,6 +354,53 @@
     } else {
       document.querySelector("#root")?.remove();
     }
+  </script>
+  <script type="module">
+    const projectSiteUrl = "https://xtreemze.github.io/timeline/project-site/xtreemze-project-site.js";
+
+    async function hydrateProjectHistory() {
+      const timeline = document.querySelector("#lemonade-history-timeline");
+      const graph = document.querySelector("#lemonade-history-graph");
+      if (!(timeline instanceof HTMLElement) || !(graph instanceof HTMLElement)) return;
+
+      try {
+        await import(/* @vite-ignore */ projectSiteUrl);
+        await Promise.all([
+          customElements.whenDefined("xt-project-timeline"),
+          customElements.whenDefined("xt-project-graph"),
+        ]);
+
+        timeline.items = Object.freeze([
+          Object.freeze({ id:"mainframe", timeLabel:"1973", label:"Bob Jamison and MECC", detail:"Original educational business simulation for time-shared systems.", color:"#e3a538" }),
+          Object.freeze({ id:"apple-ii", timeLabel:"1979", label:"Apple II adaptation", detail:"Charlie Kellner adapts the program for Apple II classroom use.", color:"#236f5e" }),
+          Object.freeze({ id:"computer-labs", timeLabel:"1980s", label:"School computer labs", detail:"Apple II educational software becomes part of scheduled shared-computer learning.", color:"#3f5944" }),
+          Object.freeze({ id:"modern-revival", timeLabel:"Today", label:"Modern revival", detail:"The three-decision loop becomes a deterministic browser and 3D neighborhood simulation.", color:"#236f5e" }),
+        ]);
+        graph.nodes = Object.freeze([
+          Object.freeze({ id:"bob-jamison", label:"Bob Jamison", detail:"Original creator", color:"#e3a538", position:Object.freeze({ x:15, y:55 }) }),
+          Object.freeze({ id:"mecc", label:"MECC", detail:"Educational computing", color:"#3f5944", position:Object.freeze({ x:38, y:24 }) }),
+          Object.freeze({ id:"charlie-kellner", label:"Charlie Kellner", detail:"Apple II adapter", color:"#236f5e", position:Object.freeze({ x:63, y:55 }) }),
+          Object.freeze({ id:"apple-ii", label:"Apple II", detail:"Classroom platform", color:"#e3a538", position:Object.freeze({ x:82, y:28 }) }),
+          Object.freeze({ id:"modern-revival", label:"Modern Lemonade", detail:"Browser revival", color:"#236f5e", position:Object.freeze({ x:72, y:82 }) }),
+        ]);
+        graph.edges = Object.freeze([
+          Object.freeze({ id:"jamison-mecc", sourceId:"bob-jamison", targetId:"mecc", label:"created at" }),
+          Object.freeze({ id:"mecc-kellner", sourceId:"mecc", targetId:"charlie-kellner", label:"lineage" }),
+          Object.freeze({ id:"kellner-apple", sourceId:"charlie-kellner", targetId:"apple-ii", label:"adapted for" }),
+          Object.freeze({ id:"apple-modern", sourceId:"apple-ii", targetId:"modern-revival", label:"inspires" }),
+        ]);
+
+        timeline.hidden = false;
+        graph.hidden = false;
+        document.querySelector("[data-project-history-fallback]")?.setAttribute("hidden", "");
+        document.querySelector("[data-project-relationship-fallback]")?.setAttribute("hidden", "");
+      } catch {
+        timeline.hidden = true;
+        graph.hidden = true;
+      }
+    }
+
+    void hydrateProjectHistory();
   </script>
 </body>
 </html>
