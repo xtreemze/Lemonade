@@ -6,6 +6,7 @@ import {
 } from "../src/neighborhood-topology.js";
 import {
   generateResidentialLayout,
+  RESIDENTIAL_HOUSE_PALETTE,
   type ResidentialPropertySpec,
   residentialAccessLayout,
 } from "../src/residential-layout.js";
@@ -36,6 +37,11 @@ const assertPropertyAccess = (
 ): void => {
   const access = residentialAccessLayout(property, seed);
   expect(projected.house.center).toEqual({ x: property.houseX, z: property.houseZ });
+  expect(projected.house.color).toBe(
+    RESIDENTIAL_HOUSE_PALETTE[property.color] ?? RESIDENTIAL_HOUSE_PALETTE[0],
+  );
+  expect(projected.house.scale).toBeCloseTo(property.scale);
+  expect(projected.house.rotationY).toBeCloseTo(property.rotationY);
   expect(projected.frontDirection).toBe(access.frontDirection);
   expect(projected.door).toEqual({ x: access.doorX, z: access.doorZ });
   expect(projected.entry).toEqual({ x: access.entryX, z: access.entryZ });
