@@ -7,6 +7,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Scene } from "@babylonjs/core/scene";
 
+import { generateNeighborhoodTopology } from "@lemonade/scene/neighborhood-topology";
 import type {
   LemonsvilleSceneControllerContract,
   LemonsvilleSceneOptions,
@@ -20,9 +21,9 @@ import {
   sceneCameraComposition,
   sceneShotAt,
 } from "@lemonade/scene/storyboard";
-import { generateStreetNetwork } from "@lemonade/scene/street-layout";
 
 import { createBabylonEngineBackend } from "./babylon-engine-backend.js";
+import { createBabylonPropertyAccessField } from "./babylon-property-access-field.js";
 import { createBabylonStreetSurfaceField } from "./babylon-street-surface-field.js";
 
 export type {
@@ -86,8 +87,9 @@ export const createBabylonLemonsvilleScene = async (
   groundMaterial.specularColor = Color3.Black();
   ground.material = groundMaterial;
 
-  const streetNetwork = generateStreetNetwork(initialState.characterSeed ^ 0x4c_45_4d_4f);
-  createBabylonStreetSurfaceField(scene, streetNetwork.roads, streetNetwork.sidewalks);
+  const neighborhood = generateNeighborhoodTopology(initialState.characterSeed ^ 0x4c_45_4d_4f);
+  createBabylonStreetSurfaceField(scene, neighborhood.roads, neighborhood.sidewalks);
+  createBabylonPropertyAccessField(scene, neighborhood.properties);
 
   const stand = MeshBuilder.CreateBox(
     "stand-migration-shell",
