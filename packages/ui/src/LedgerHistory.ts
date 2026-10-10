@@ -4,7 +4,9 @@ import { type LedgerPoint, projectLedger, sellThroughBasisPoints } from "./ledge
 
 const CHART_WIDTH = 600;
 const CHART_HEIGHT = 260;
-const CHART_PADDING = 20;
+const CHART_PADDING_X = 64;
+const CHART_PADDING_TOP = 20;
+const CHART_PADDING_BOTTOM = 44;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
@@ -101,24 +103,34 @@ const HISTORY_MODES: Readonly<Record<HistoryMode, ModeSpec>> = Object.freeze({
   }),
 });
 
+const pointPosition = (
+  index: number,
+  value: number,
+  count: number,
+  minimum: number,
+  maximum: number,
+): Readonly<{ x: number; y: number }> => {
+  const usableWidth = CHART_WIDTH - CHART_PADDING_X * 2;
+  const usableHeight = CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
+  const span = Math.max(1, maximum - minimum);
+  const denominator = Math.max(1, count - 1);
+  return Object.freeze({
+    x: CHART_PADDING_X + (index / denominator) * usableWidth,
+    y: CHART_PADDING_TOP + (1 - (value - minimum) / span) * usableHeight,
+  });
+};
+
 const seriesPoints = (
   values: readonly number[],
   minimum: number,
   maximum: number,
-): string => {
-  const usableWidth = CHART_WIDTH - CHART_PADDING * 2;
-  const usableHeight = CHART_HEIGHT - CHART_PADDING * 2;
-  const span = Math.max(1, maximum - minimum);
-  const denominator = Math.max(1, values.length - 1);
-
-  return values
+): string =>
+  values
     .map((value, index) => {
-      const x = CHART_PADDING + (index / denominator) * usableWidth;
-      const y = CHART_PADDING + (1 - (value - minimum) / span) * usableHeight;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
+      const point = pointPosition(index, value, values.length, minimum, maximum);
+      return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
     })
     .join(" ");
-};
 
 const createElement = <K extends keyof HTMLElementTagNameMap>(
   tagName: K,
@@ -152,11 +164,18 @@ const modeBounds = (
   mode: ModeSpec,
 ): Readonly<{ minimum: number; maximum: number }> => {
   const values = mode.series.flatMap((series) => points.map((point) => Number(point[series.key])));
+  const rawMinimum = Math.min(0, ...values);
+  const rawMaximum = Math.max(1, ...values);
+  const span = Math.max(1, rawMaximum - rawMinimum);
+  const padding = span * 0.08;
   return Object.freeze({
-    minimum: Math.min(0, ...values),
-    maximum: Math.max(1, ...values),
+    minimum: rawMinimum < 0 ? rawMinimum - padding : 0,
+    maximum: rawMaximum + padding,
   });
 };
+
+const axisFormat = (mode: HistoryMode, value: number): string =>
+  mode === "inventory" ? String(Math.round(value)) : formatMoney(Math.round(value));
 
 const createUnifiedChart = (
   points: readonly LedgerPoint[],
@@ -178,21 +197,90 @@ const createUnifiedChart = (
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", `${spec.label}: ${spec.description}`);
 
+  const bounds = modeBounds(points, spec);
+  const plotBottom = CHART_HEIGHT - CHART_PADDING_BOTTOM;
+  const plotRight = CHART_WIDTH - CHART_PADDING_X;
+
+  for (let tick = 0; tick <= 4; tick += 1) {
+    const ratio = tick / 4;
+    const y = CHART_PADDING_TOP + ratio * (plotBottom - CHART_PADDING_TOP);
+    const value = bounds.maximum - ratio * (bounds.maximum - bounds.minimum);
+
+    const grid = createSvgElement("line");
+    grid.classList.add("chart-grid-line");
+    grid.setAttribute("x1", String(CHART_PADDING_X));
+    grid.setAttribute("y1", y.toFixed(1));
+    grid.setAttribute("x2", String(plotRight));
+    grid.setAttribute("y2", y.toFixed(1));
+    svg.append(grid);
+
+    const label = createSvgElement("text");
+    label.classList.add("chart-axis-label", "chart-axis-label-y");
+    label.setAttribute("x", String(CHART_PADDING_X - 10));
+    label.setAttribute("y", (y + 4).toFixed(1));
+    label.setAttribute("text-anchor", "end");
+    label.textContent = axisFormat(mode, value);
+    svg.append(label);
+  }
+
   const axis = createSvgElement("line");
   axis.classList.add("chart-axis");
-  axis.setAttribute("x1", String(CHART_PADDING));
-  axis.setAttribute("y1", String(CHART_HEIGHT - CHART_PADDING));
-  axis.setAttribute("x2", String(CHART_WIDTH - CHART_PADDING));
-  axis.setAttribute("y2", String(CHART_HEIGHT - CHART_PADDING));
+  axis.setAttribute("x1", String(CHART_PADDING_X));
+  axis.setAttribute("y1", String(plotBottom));
+  axis.setAttribute("x2", String(plotRight));
+  axis.setAttribute("y2", String(plotBottom));
   svg.append(axis);
 
-  const bounds = modeBounds(points, spec);
+  points.forEach((point, index) => {
+    const x = pointPosition(index, 0, points.length, 0, 1).x;
+    const tick = createSvgElement("line");
+    tick.classList.add("chart-x-tick");
+    tick.setAttribute("x1", x.toFixed(1));
+    tick.setAttribute("y1", String(plotBottom));
+    tick.setAttribute("x2", x.toFixed(1));
+    tick.setAttribute("y2", String(plotBottom + 5));
+    svg.append(tick);
+
+    const label = createSvgElement("text");
+    label.classList.add("chart-axis-label", "chart-axis-label-x");
+    label.setAttribute("x", x.toFixed(1));
+    label.setAttribute("y", String(plotBottom + 20));
+    label.setAttribute("text-anchor", "middle");
+    label.textContent = `Day ${String(point.day)}`;
+    svg.append(label);
+  });
+
+  if (bounds.minimum < 0 && bounds.maximum > 0) {
+    const zero = pointPosition(0, 0, 2, bounds.minimum, bounds.maximum).y;
+    const zeroLine = createSvgElement("line");
+    zeroLine.classList.add("chart-zero-line");
+    zeroLine.setAttribute("x1", String(CHART_PADDING_X));
+    zeroLine.setAttribute("y1", zero.toFixed(1));
+    zeroLine.setAttribute("x2", String(plotRight));
+    zeroLine.setAttribute("y2", zero.toFixed(1));
+    svg.append(zeroLine);
+  }
+
+
   for (const series of spec.series) {
     const values = points.map((point) => Number(point[series.key]));
     const line = createSvgElement("polyline");
     line.setAttribute("class", `chart-line ${series.className}`);
     line.setAttribute("points", seriesPoints(values, bounds.minimum, bounds.maximum));
     svg.append(line);
+
+    values.forEach((value, index) => {
+      const position = pointPosition(index, value, values.length, bounds.minimum, bounds.maximum);
+      const marker = createSvgElement("circle");
+      marker.setAttribute("class", `chart-point ${series.className}`);
+      marker.setAttribute("cx", position.x.toFixed(1));
+      marker.setAttribute("cy", position.y.toFixed(1));
+      marker.setAttribute("r", "5");
+      const title = createSvgElement("title");
+      title.textContent = `Day ${String(points[index]?.day ?? index + 1)} · ${series.label}: ${series.format(value)}`;
+      marker.append(title);
+      svg.append(marker);
+    });
   }
 
   card.append(svg);

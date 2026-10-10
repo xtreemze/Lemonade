@@ -270,6 +270,117 @@
   }
 }
 
+
+/* Report explorer legibility: prioritize the plot, use full-width desktop composition, and keep the ledger readable. */
+.chart-grid-line {
+  stroke: rgb(110 101 78 / 35%);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-zero-line {
+  stroke: #6e654e;
+  stroke-dasharray: 5 5;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-x-tick {
+  stroke: #6e654e;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-axis-label {
+  fill: #4d4738;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chart-point {
+  fill: #fff9e4;
+  stroke: currentColor;
+  stroke-width: 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.game-shell[data-view="history"] .report-explorer-controls {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.game-shell[data-view="history"] .report-explorer-tab {
+  min-height: 44px;
+  text-align: center;
+}
+
+.game-shell[data-view="history"] .report-explorer-chart {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.game-shell[data-view="history"] .report-explorer-summary {
+  display: none;
+}
+
+.game-shell[data-view="history"] .report-explorer-chart .history-chart {
+  min-height: 10rem;
+}
+
+@media (orientation: landscape), (width >= 47.5625rem) {
+  .game-shell[data-view="history"] .report-explorer-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .game-shell[data-view="history"] .report-explorer-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .game-shell[data-view="history"] .report-explorer-tab {
+    text-align: center;
+  }
+}
+
+@media (width >= 64rem) {
+  .game-shell[data-view="history"] .report-explorer {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "heading"
+      "workspace"
+      "table";
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .game-shell[data-view="history"] .history-table-wrap {
+    width: 100%;
+    height: auto;
+    max-height: 10rem;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+
+  .game-shell[data-view="history"] .history-table {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    table-layout: fixed;
+  }
+
+  .game-shell[data-view="history"] .history-table th,
+  .game-shell[data-view="history"] .history-table td {
+    padding: 6px 4px;
+    overflow: hidden;
+    font-size: clamp(0.58rem, 0.7vw, 0.72rem);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .game-shell[data-view="history"] .history-table thead th {
+    font-size: clamp(0.5rem, 0.62vw, 0.66rem);
+    letter-spacing: 0.04em;
+  }
+}
+
 .game-shell[data-view="history"] .chart-legend {
   gap: 5px 7px;
   margin-top: 1px;
