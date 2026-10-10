@@ -221,6 +221,34 @@ const assertAudio = (filePath) => {
   }
 };
 
+const assertVisuallyPresent = (filePath) => {
+  const result = spawnSync(
+    "ffmpeg",
+    [
+      "-hide_banner",
+      "-loglevel",
+      "info",
+      "-i",
+      filePath,
+      "-vf",
+      "blackdetect=d=0.5:pic_th=0.98:pix_th=0.02",
+      "-an",
+      "-f",
+      "null",
+      "-",
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error(`ffmpeg visual decode failed for ${filePath}: ${result.stderr}`);
+  }
+  if (/black_start:/u.test(result.stderr)) {
+    throw new Error(
+      `${filePath} contains a sustained near-blank segment; showcase motion must remain visibly rendered.`,
+    );
+  }
+};
+
 const assertAudible = (filePath) => {
   const result = spawnSync(
     "ffmpeg",
@@ -490,6 +518,7 @@ for (const formFactor of ["desktop", "mobile"]) {
       );
       assertAudio(video);
       assertAudible(video);
+      assertVisuallyPresent(video);
     }
   }
 
@@ -518,6 +547,7 @@ for (const formFactor of ["desktop", "mobile"]) {
   assertFrameProfile(reel, expectedDimensions, profile.fps, expectedReelFrames, reelDuration);
   assertAudio(reel);
   assertAudible(reel);
+  assertVisuallyPresent(reel);
   const animatedSize = await requireFile(animatedReel);
   assertFrameProfile(
     animatedReel,

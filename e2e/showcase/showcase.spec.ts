@@ -843,6 +843,7 @@ const openHistory = async (page: Page): Promise<void> => {
   await openReport(page);
   await page.getByRole("button", { name: "Review sales history" }).click();
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "history");
+  await expect(page.getByRole("heading", { name: "Report explorer" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Report explorer" })).toBeVisible();
 };
 
