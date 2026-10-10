@@ -1,4 +1,4 @@
-import { Vector3 } from "three";
+import { Group, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
 import { decorateCharacter } from "../src/character-detail.js";
@@ -61,6 +61,25 @@ describe("shared Three procedural character rig", () => {
     ).toBe(false);
   });
 
+
+  it("rebinds a composed person wrapper using its stable root and live profile", () => {
+    const geometries = createCharacterGeometrySet();
+    const core = createThreeCharacterRig(geometries, 0x1e_ad_20_26, 7);
+    const person = Object.freeze({
+      ...core,
+      cup: new Group(),
+      get profile() {
+        return core.profile;
+      },
+    });
+
+    const binding = rebindThreeCharacterRig(person, 0x7a_31_92_f0);
+
+    expect(person.profile).toEqual(binding.profile);
+    expect(person.profile).toBe(core.profile);
+    expect(person.root.userData["authoritativeVisualSeed"]).toBe(0x7a_31_92_f0);
+    expect(rebindThreeCharacterRig(core, 0x7a_31_92_f0).profile).toEqual(binding.profile);
+  });
 
   it("binds different pool slots to the same authoritative visual identity", () => {
     const geometries = createCharacterGeometrySet();

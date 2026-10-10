@@ -180,7 +180,15 @@ const createPerson = (
   const cup = new Group();
   attachLemonadeCupToHand(rig.arms[1].extremity, cup);
   cup.visible = false;
-  return Object.freeze({ ...rig, cup });
+  return Object.freeze({
+    ...rig,
+    cup,
+    // Spreading the frozen core rig copies accessor values. Retain its live
+    // profile getter so walking and ground clearance use the rebound identity.
+    get profile(): CharacterProfile {
+      return rig.profile;
+    },
+  });
 };
 
 const createSeller = (geometries: CharacterGeometrySet, characterSeed: number): SellerRig => {
