@@ -47,7 +47,8 @@ type MutableVisualState = {
   profile: CharacterProfile;
 };
 
-const visualStateByRig = new WeakMap<ThreeCharacterRig, MutableVisualState>();
+// The root is stable even when the scene composes a frozen person wrapper.
+const visualStateByRig = new WeakMap<Group, MutableVisualState>();
 
 export const characterRotationYForRouteYaw = (routeYaw: number): number =>
   Math.PI / 2 - (Number.isFinite(routeYaw) ? routeYaw : 0);
@@ -197,7 +198,7 @@ export const createThreeCharacterRig = (
       return visualState.profile;
     },
   });
-  visualStateByRig.set(rig, visualState);
+  visualStateByRig.set(rig.root, visualState);
   return rig;
 };
 
@@ -247,7 +248,7 @@ export const rebindThreeCharacterRig = (
   visualSeedValue: number,
 ): CharacterVisualBinding => {
   const visualSeed = (Number.isFinite(visualSeedValue) ? Math.trunc(visualSeedValue) : 0) >>> 0;
-  const visualState = visualStateByRig.get(rig);
+  const visualState = visualStateByRig.get(rig.root);
   if (visualState === undefined) {
     throw new TypeError("character rig was not created by createThreeCharacterRig");
   }

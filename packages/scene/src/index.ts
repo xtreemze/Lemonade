@@ -232,6 +232,10 @@ const createPerson = (
     weatherHeadRoot,
     weatherBodyRoot,
     weatherCarryRoot,
+    // Keep the core rig's mutable profile visible through this composed wrapper.
+    get profile(): CharacterProfile {
+      return rig.profile;
+    },
   });
 };
 
