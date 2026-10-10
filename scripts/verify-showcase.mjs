@@ -221,6 +221,34 @@ const assertAudio = (filePath) => {
   }
 };
 
+const assertVisuallyPresent = (filePath) => {
+  const result = spawnSync(
+    "ffmpeg",
+    [
+      "-hide_banner",
+      "-loglevel",
+      "info",
+      "-i",
+      filePath,
+      "-vf",
+      "blackdetect=d=0.5:pic_th=0.98:pix_th=0.02",
+      "-an",
+      "-f",
+      "null",
+      "-",
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error(`ffmpeg visual decode failed for ${filePath}: ${result.stderr}`);
+  }
+  if (/black_start:/u.test(result.stderr)) {
+    throw new Error(
+      `${filePath} contains a sustained near-blank segment; showcase motion must remain visibly rendered.`,
+    );
+  }
+};
+
 const assertAudible = (filePath) => {
   const result = spawnSync(
     "ffmpeg",
@@ -294,12 +322,17 @@ const assertFrameProfile = (filePath, expected, expectedFps, expectedFrames, exp
       }
     }
 
-    const representedSourceFrames = webp.frameDurationsMs.reduce(
-      (total, frameDurationMs) =>
-        total + Math.max(1, Math.round(frameDurationMs / sourceFrameMs)),
-      0,
-    );
-    if (Math.abs(representedSourceFrames - expectedFrames) > 1) {
+    // WebP stores frame durations as integer milliseconds. Summing a rounded
+    // source-frame count for every ANMF chunk accumulates quantization error
+    // across long reels (for example, 1500 source frames can appear as 1502).
+    // Validate the aggregate animation timeline instead: individual chunks must
+    // still align to source-frame multiples above, while total duration is
+    // converted to source frames only once.
+    const representedSourceFrames = Math.round(webp.durationMs / sourceFrameMs);
+    // RIFF WebP stores ANMF durations in whole milliseconds. At 60 fps a
+    // long animation can accumulate up to a couple of source-frame intervals
+    // of representation error even though every chunk is source-aligned.
+    if (Math.abs(representedSourceFrames - expectedFrames) > 2) {
       throw new Error(
         `${filePath} WebP timing represents ${String(
           representedSourceFrames,
@@ -485,6 +518,7 @@ for (const formFactor of ["desktop", "mobile"]) {
       );
       assertAudio(video);
       assertAudible(video);
+      assertVisuallyPresent(video);
     }
   }
 
@@ -513,6 +547,7 @@ for (const formFactor of ["desktop", "mobile"]) {
   assertFrameProfile(reel, expectedDimensions, profile.fps, expectedReelFrames, reelDuration);
   assertAudio(reel);
   assertAudible(reel);
+  assertVisuallyPresent(reel);
   const animatedSize = await requireFile(animatedReel);
   assertFrameProfile(
     animatedReel,
