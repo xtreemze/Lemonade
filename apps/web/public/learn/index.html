@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f4c542" />
-  <meta name="description" content="Learn how to play Lemonade: make, advertise, price, read the weather, review each day, and grow your stand." />
+  <meta name="description" content="Play Lemonade and learn the daily loop: read the forecast and market sentiment, choose glasses, signs, and price, then review the result." />
   <title>Lemonade — Player Guide</title>
   <link rel="icon" href="../lemonade-simulate.svg" type="image/svg+xml" />
   <style>
@@ -88,7 +88,7 @@
       <ul>
         <li><a href="#how-to-play">How to play</a></li>
         <li><a href="#controls">Your choices</a></li>
-        <li><a href="#conditions">Weather & confidence</a></li>
+        <li><a href="#conditions">Weather & sentiment</a></li>
         <li><a href="#report">Day report</a></li>
         <li><a href="#strategy">Tips</a></li>
         <li><a href="#behind-the-game">Behind the game</a></li>
@@ -102,7 +102,7 @@
       <div>
         <p class="eyebrow">Player guide</p>
         <h1>Run your lemonade stand.</h1>
-        <p class="lead">Every morning gives you a forecast and one simple problem: decide how much lemonade to make, how much to advertise, and what to charge. Then open the stand, watch the day play out, read the results, and adjust tomorrow.</p>
+        <p class="lead">Each day starts with conditions to read and three decisions to make: how many glasses to prepare, how much to advertise, and what price to charge. Commit the day, see what happened, and use the report to plan the next one.</p>
         <div class="cta">
           <a href="/Lemonade/?play=1">Start playing</a>
           <a href="#how-to-play">Read the quick guide</a>
@@ -117,7 +117,7 @@
           allow="autoplay; fullscreen"
           allowfullscreen
         ></iframe>
-        <figcaption class="caption"><strong>You can play here.</strong> The embedded game is the real simulation. Use the guide below when you want help deciding what to change next.</figcaption>
+        <figcaption class="caption"><strong>Play here or open the game full screen.</strong> The guide below explains the same daily loop shown in the embedded game.</figcaption>
       </figure>
     </section>
 
@@ -125,10 +125,10 @@
       <div class="wrap">
         <div class="section-head">
           <div><p class="eyebrow">Quick start</p><h2>One day takes six steps</h2></div>
-          <p>You do not need to understand a formula before playing. Read the conditions, make three choices, and use the next report as feedback.</p>
+          <p>Read the conditions, make three choices, sell for the day, and use the report as feedback.</p>
         </div>
         <div class="grid two">
-          <article class="card manual-step"><span class="step-number">1</span><div><h3>Check the forecast</h3><p>Look at the day’s weather and the seller’s confidence before spending money. Conditions can make the same plan perform very differently.</p></div></article>
+          <article class="card manual-step"><span class="step-number">1</span><div><h3>Check the forecast</h3><p>Look at the day’s weather and market sentiment before spending money. Conditions can make the same plan perform very differently.</p></div></article>
           <article class="card manual-step"><span class="step-number">2</span><div><h3>Choose glasses</h3><p>Decide how many cups to prepare. You pay to make them before you know exactly how many people will buy.</p></div></article>
           <article class="card manual-step"><span class="step-number">3</span><div><h3>Choose signs</h3><p>Advertising can bring in more demand, but every sign costs money. Spend only what the day can reasonably earn back.</p></div></article>
           <article class="card manual-step"><span class="step-number">4</span><div><h3>Set the price</h3><p>Higher prices earn more per sale but reduce demand. Lower prices attract more buyers but leave less revenue per cup.</p></div></article>
@@ -142,14 +142,14 @@
       <div class="wrap">
         <div class="section-head">
           <div><p class="eyebrow">Your three choices</p><h2>Everything you control</h2></div>
-          <p>The daily game deliberately stays small. Weather and confidence matter, but they are conditions to react to—not extra knobs to manage.</p>
+          <p>The daily operating surface stays deliberately small. Weather and market sentiment are conditions to interpret, not extra controls.</p>
         </div>
         <div class="grid three">
           <article class="card control-card"><h3>Glasses</h3><strong>How much to make</strong><p>Prepared glasses set your maximum possible sales for the day. If demand is higher than your inventory, you sell out. If demand is lower, the unused production cost is already spent.</p></article>
-          <article class="card control-card"><h3>Signs</h3><strong>How hard to advertise</strong><p>Signs increase potential demand, but each sign costs <strong>$0.50</strong>. Advertising can be powerful, especially when the rest of your plan can support the extra customers.</p></article>
-          <article class="card control-card"><h3>Price</h3><strong>What each cup costs</strong><p>Price directly trades volume for margin. Raising it reduces potential demand; lowering it can attract more buyers. The best price depends on weather, confidence, inventory, and your available cash.</p></article>
+          <article class="card control-card"><h3>Signs</h3><strong>How hard to advertise</strong><p>Advertising can increase demand, but it costs cash before the day resolves. Spend only what the rest of the plan can support.</p></article>
+          <article class="card control-card"><h3>Price</h3><strong>What each cup costs</strong><p>Price directly trades volume for margin. Raising it reduces potential demand; lowering it can attract more buyers. The best price depends on weather, market sentiment, inventory, and your available cash.</p></article>
         </div>
-        <p class="tip" style="margin-top:1rem"><strong>Starting point:</strong> a new stand begins with a $10 operating balance. Each prepared cup costs $1.00. Avoid committing all of your cash at once; you need enough room to recover from a weak day.</p>
+        <p class="tip" style="margin-top:1rem"><strong>Cash matters:</strong> production and advertising are paid before demand is known. Keep enough operating balance to recover from a weak day.</p>
       </div>
     </section>
 
@@ -157,7 +157,7 @@
       <div class="wrap">
         <div class="section-head">
           <div><p class="eyebrow">Conditions</p><h2>Read the day before you spend</h2></div>
-          <p>Weather and confidence can change how much demand your price and advertising produce. Treat them as signals about risk and opportunity.</p>
+          <p>Weather and market sentiment change the context around the same three decisions. Read both before committing cash.</p>
         </div>
         <div class="grid two">
           <article class="card">
@@ -167,10 +167,10 @@
             <div class="signal"><b>Weak weather</b><span>Protect cash. Smaller production and a more cautious spend can reduce waste when fewer customers are likely to buy.</span></div>
           </article>
           <article class="card">
-            <h3>Confidence</h3>
-            <p>Confidence reflects recent operating performance. Strong results can improve it; weak results can reduce it. Higher confidence helps potential demand, but it does not guarantee a profitable day.</p>
-            <div class="signal"><b>Rising confidence</b><span>Your recent results are giving the stand a stronger demand signal. Use it, but still respect price and production cost.</span></div>
-            <div class="signal"><b>Low confidence</b><span>Do not try to fix everything by spending more at once. Stabilize the stand with smaller, easier-to-read experiments.</span></div>
+            <h3>Market sentiment</h3>
+            <p>Sentiment is a demand signal, not a promise of profit. Treat stronger sentiment as more room to test a plan and weaker sentiment as a reason to protect cash.</p>
+            <div class="signal"><b>Stronger sentiment</b><span>Demand conditions are more favorable, but price, production cost, and inventory still matter.</span></div>
+            <div class="signal"><b>Weaker sentiment</b><span>Use smaller commitments and clearer experiments instead of trying to buy your way out of a weak signal.</span></div>
           </article>
         </div>
       </div>
@@ -180,7 +180,7 @@
       <div class="wrap">
         <div class="section-head">
           <div><p class="eyebrow">After closing</p><h2>How to read the day report</h2></div>
-          <p>The report is your main learning tool. Do not judge a day only by revenue; compare sales with the money you committed to production and promotion.</p>
+          <p>Use the report to compare sales with the cash committed to production and advertising. Revenue alone does not tell you whether the day worked.</p>
         </div>
         <article class="card">
           <ul class="report-list">
@@ -202,13 +202,13 @@
     <section id="progression">
       <div class="wrap">
         <div class="section-head">
-          <div><p class="eyebrow">Growing the stand</p><h2>Success gives you more room to operate</h2></div>
-          <p>Your operating balance controls the scale of the stand. As it grows, the game raises the maximum number of glasses, signs, and price you can choose. Falling back below a threshold can reduce that capacity again.</p>
+          <div><p class="eyebrow">Growing the stand</p><h2>Progression adds responsibility</h2></div>
+          <p>As the stand grows, the game widens its operating scale and introduces more financial pressure without adding new daily decision variables.</p>
         </div>
         <div class="grid three">
-          <article class="card"><h3>Neighborhood stand</h3><p>Below $100, you can prepare up to 15 glasses, use up to 3 signs, and charge up to $2.99.</p></article>
-          <article class="card"><h3>Growing business</h3><p>At $100 and $500, larger operating ranges unlock. More capacity creates more upside—but also makes expensive mistakes possible.</p></article>
-          <article class="card"><h3>Established stand</h3><p>At $5,000 and above, the largest operating range becomes available. Later finance systems can also add fees, taxes, banking, credit, and interest around the same three daily decisions.</p></article>
+          <article class="card"><h3>Start small</h3><p>Early days keep the operating range narrow so the relationship between inventory, advertising, price, and demand stays easy to read.</p></article>
+          <article class="card"><h3>Scale carefully</h3><p>More capacity creates more upside and more exposure. Larger production and promotion decisions can make mistakes more expensive.</p></article>
+          <article class="card"><h3>Manage the business</h3><p>Later progression adds supplier costs, taxes, banking charges, interest, and credit around the same three daily decisions.</p></article>
         </div>
       </div>
     </section>
@@ -216,16 +216,16 @@
     <section id="strategy">
       <div class="wrap">
         <div class="section-head">
-          <div><p class="eyebrow">Starter tactics</p><h2>Make the game readable</h2></div>
-          <p>The fastest way to improve is not to chase a perfect formula. Make controlled changes, watch the report, and learn how each condition changes the result.</p>
+          <div><p class="eyebrow">Starter tactics</p><h2>Learn from each day</h2></div>
+          <p>Make controlled changes, read the report, and compare similar conditions. The point is to understand the trade-offs, not memorize one fixed setup.</p>
         </div>
         <div class="grid two">
           <article class="card"><h3>Protect your cash</h3><p>Production and advertising are paid before the day resolves. Keep enough balance to survive a bad forecast or a poor experiment.</p></article>
           <article class="card"><h3>Change one big thing at a time</h3><p>If you radically change glasses, signs, and price together, the report cannot tell you which change mattered most.</p></article>
           <article class="card"><h3>Use sell-outs as information</h3><p>Selling every glass is not automatically optimal, but repeated sell-outs in similar conditions suggest your inventory ceiling is constraining sales.</p></article>
-          <article class="card"><h3>Use leftovers as information</h3><p>Unsold glasses mean you paid for capacity the market did not use. Compare leftovers with price, advertising, weather, and confidence before the next day.</p></article>
+          <article class="card"><h3>Use leftovers as information</h3><p>Unsold glasses mean you paid for capacity the market did not use. Compare leftovers with price, advertising, weather, and market sentiment before the next day.</p></article>
           <article class="card"><h3>Price is not just profit</h3><p>A higher price increases revenue per sale while reducing demand. Watch total profit, not just the price tag.</p></article>
-          <article class="card"><h3>Let conditions change your plan</h3><p>The same setup should not be repeated automatically every day. Weather and confidence are there to make yesterday’s answer uncertain today.</p></article>
+          <article class="card"><h3>Let conditions change your plan</h3><p>The same setup should not be repeated automatically every day. Weather and market sentiment make yesterday’s answer uncertain today.</p></article>
         </div>
       </div>
     </section>
@@ -234,15 +234,15 @@
     <section id="behind-the-game">
       <div class="wrap">
         <div class="section-head">
-          <div><p class="eyebrow">Behind the game</p><h2>The math is part of the fun</h2></div>
-          <p>You never need the equation to play well, but it explains why signs, confidence, price, and weather can combine into surprisingly different days.</p>
+          <div><p class="eyebrow">Behind the game</p><h2>How demand is calculated</h2></div>
+          <p>The current model combines advertising, confidence, price, weather, seeded randomness, and the inventory cap. This section is reference material for players who want the mechanics.</p>
         </div>
 
         <article class="card">
           <h3>The demand equation used by this version</h3>
           <div class="equation">((signs² / log1p(signs) + confidenceRoll × confidence) / priceDollars) × (weatherVariant² + 1)</div>
           <p>The result is rounded to a whole number of potential customers, then actual sales are capped by the number of glasses you prepared. In other words: advertising and confidence push demand upward, price pushes it downward, weather can amplify everything, and inventory still sets the final ceiling.</p>
-          <p class="tip"><strong>A useful curiosity:</strong> advertising is deliberately nonlinear here. The sign term is <code>signs² / log1p(signs)</code>, so signs can become very powerful instead of following a simple diminishing-return curve.</p>
+          <p class="tip"><strong>Advertising is nonlinear.</strong> The sign term is <code>signs² / log1p(signs)</code>, so this revival does not use the original Apple II diminishing-return advertising curve.</p>
         </article>
 
         <div class="section-head" style="margin-top:2.5rem">
@@ -274,7 +274,7 @@
       <div class="wrap">
         <div class="section-head">
           <div><p class="eyebrow">Where the game came from</p><h2>A classroom business game with a long life</h2></div>
-          <p>Lemonade keeps the quick decision-and-feedback spirit of the educational games that came before it. The history is here for players who want to know why the game is deliberately simple to learn and difficult to optimize.</p>
+          <p>The revival keeps the original game’s short decision-and-feedback loop while rebuilding its presentation for the modern web.</p>
         </div>
         <div class="history" aria-label="Lemonade Stand history timeline">
           <article class="event"><div class="year">1973</div><h3>Bob Jamison and MECC</h3><p>Bob Jamison created the original Lemonade Stand program at the Minnesota Educational Computing Consortium for time-shared computer systems.</p></article>
@@ -293,7 +293,7 @@
       <div class="wrap">
         <div class="section-head">
           <div><p class="eyebrow">Historical references</p><h2>About the original game</h2></div>
-          <p>These links support the historical section. They are optional reading and are not required to understand or play Lemonade.</p>
+          <p>References for the historical notes and original program.</p>
         </div>
         <ul class="sources">
           <li><a href="https://www.mobygames.com/game/24035/lemonade-stand/">MobyGames — Lemonade Stand (Apple II, 1979)</a></li>
