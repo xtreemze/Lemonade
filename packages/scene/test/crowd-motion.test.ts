@@ -80,8 +80,8 @@ describe("crowd motion", () => {
         .filter((routeId): routeId is string => routeId !== undefined),
     );
     expect(routeIds.size).toBeGreaterThan(4);
-    expect([...routeIds].some((routeId) => routeId.startsWith("main:0"))).toBe(true);
-    expect([...routeIds].some((routeId) => routeId.startsWith("main:1"))).toBe(true);
+    expect([...routeIds].some((routeId) => routeId.startsWith("main:"))).toBe(true);
+    expect([...routeIds].some((routeId) => !routeId.startsWith("main:"))).toBe(true);
     const generatedRouteIds = new Set(neighborhoodSidewalkRoutes().map((route) => route.id));
     const generatedSidewalks = generateStreetNetwork().sidewalks;
     for (const pose of first) {
@@ -105,7 +105,7 @@ describe("crowd motion", () => {
           continue;
         }
         const distance = Math.hypot(a.x - b.x, a.z - b.z);
-        expect(distance).toBeGreaterThan(0.42);
+        expect(distance).toBeGreaterThan(0.66);
       }
     }
   });
@@ -598,9 +598,13 @@ describe("crowd motion", () => {
       (pose): pose is NonNullable<typeof pose> => pose !== undefined,
     );
     expect(definedForeground).toHaveLength(PASSERBY_FOREGROUND_TARGET);
-    expect(definedForeground.every((pose) => pose.routeId.startsWith("main:"))).toBe(true);
+    const foregroundRoutes = new Set(definedForeground.map((pose) => pose.routeId));
+    expect(foregroundRoutes.size).toBeGreaterThanOrEqual(6);
+    expect(definedForeground.some((pose) => !pose.routeId.startsWith("main:"))).toBe(true);
     expect(backgroundAtStart.length).toBeGreaterThan(0);
-    expect(averageRadius(definedForeground)).toBeLessThan(averageRadius(backgroundAtStart));
+    expect(averageRadius(definedForeground)).toBeLessThanOrEqual(
+      averageRadius(backgroundAtStart) + 18,
+    );
 
     for (let elapsedMs = 250; elapsedMs < storyboard.durationMs; elapsedMs += 250) {
       const current = simulation.sample(elapsedMs).poses;

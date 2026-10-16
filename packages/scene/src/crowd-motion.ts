@@ -38,7 +38,7 @@ export type CrowdSimulation = Readonly<{
 }>;
 
 const CROWD_CELL_SIZE = 0.72;
-const CROWD_SEPARATION = 0.46;
+const CROWD_SEPARATION = 0.72;
 
 type PedestrianRoute = Readonly<{
   id: string;
@@ -254,8 +254,7 @@ const basePose = (
     .sort(
       (left, right) =>
         routeFocusDistance(left) - routeFocusDistance(right) || left.id.localeCompare(right.id),
-    )
-    .slice(0, Math.min(6, sideEntryRoutes.length));
+    );
   const requestedSide: SidewalkSide = actorIndex % 2 === 0 ? "near" : "far";
   const mainRoute =
     mainRoutes
@@ -290,7 +289,7 @@ const basePose = (
   const usesForegroundCohort = actorIndex < PASSERBY_FOREGROUND_TARGET && beat.startAtMs === 0;
   const selectedRoute =
     (usesForegroundCohort
-      ? (mainRoute ?? foregroundRoute)
+      ? (foregroundRoute ?? mainRoute)
       : beat.seesAdvertisement
         ? mainRoute
         : neighborhoodRoute) ?? fallbackRoutes[actorIndex % Math.max(1, fallbackRoutes.length)];
@@ -304,7 +303,7 @@ const basePose = (
   const minimumStartDistance = beat.direction === -1 ? 0 : requiredTravelDistance;
   const maximumStartDistance =
     beat.direction === -1 ? selectedRoute.total - requiredTravelDistance : selectedRoute.total;
-  const foregroundSpread = Math.min(28, Math.max(0, maximumStartDistance - minimumStartDistance));
+  const foregroundSpread = Math.max(0, maximumStartDistance - minimumStartDistance);
   const centeredStartDistance = Math.max(
     minimumStartDistance,
     Math.min(
@@ -410,7 +409,7 @@ const cellKey = (x: number, z: number): string =>
 
 const separateCrowd = (poses: (MutableCrowdPose | undefined)[]): number => {
   let neighborChecks = 0;
-  for (let pass = 0; pass < 3; pass += 1) {
+  for (let pass = 0; pass < 4; pass += 1) {
     const cells = new Map<string, number[]>();
     poses.forEach((pose, index) => {
       if (pose === undefined) {

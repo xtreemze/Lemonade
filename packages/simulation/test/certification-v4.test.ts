@@ -32,6 +32,15 @@ describe("ruleset-v4 balance certification", () => {
     expect(first.memory.repeatedAdRoiBps).toHaveLength(first.memory.fatigueBps.length);
     expect(first.memory.repeatedAdAwarenessBps).toHaveLength(first.memory.fatigueBps.length);
     expect(first.memory.fatigueRecoveryHalfLifeDays).not.toBeNull();
+    expect(first.inventory.stockouts).toHaveLength(TEST_SEEDS.length);
+    expect(first.inventory.stockoutPressureAfterShortageBps).toHaveLength(TEST_SEEDS.length);
+    expect(first.inventory.stockoutPressureAfterRecoveryBps).toHaveLength(TEST_SEEDS.length);
+    expect(first.inventory.excessPressureAfterOverproductionBps).toHaveLength(TEST_SEEDS.length);
+    expect(first.inventory.stockouts.some((value) => value > 0)).toBe(true);
+    expect(first.priceMemory.stableExpectedPriceCents).toBeGreaterThan(
+      first.priceMemory.suddenExpectedPriceCents,
+    );
+    expect(first.priceMemory.stableWilling).toBeGreaterThanOrEqual(first.priceMemory.suddenWilling);
   });
 
   it("formats separate human-reviewable v4 evidence without rewriting the 2017 report", () => {
@@ -45,6 +54,9 @@ describe("ruleset-v4 balance certification", () => {
     expect(text).toContain("Market-memory recovery");
     expect(text).toContain("Repeated max-ad incremental ROI");
     expect(text).toContain("Fatigue recovery half-life");
+    expect(text).toContain("Inventory and price-memory probes");
+    expect(text).toContain("Underproduction stockouts");
+    expect(text).toContain("Stable expected price");
     expect(text).toContain("Integrated accounting + v4 funnel invariants: PASS");
   });
 });
