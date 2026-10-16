@@ -51,7 +51,7 @@ test("deterministic maximum-load scene produces renderer certification evidence"
   });
 
   await page.setViewportSize({ width: 844, height: 390 });
-  await page.goto("./");
+  await page.goto("./?play=1");
   await page.evaluate(() => {
     window.localStorage.setItem("LEMONADE_DEV_SCENE_VIEWER", "1");
     window.localStorage.setItem("LEMONADE_DEV_RENDERER_STRESS", "1");

@@ -80,8 +80,8 @@ describe("crowd motion", () => {
         .filter((routeId): routeId is string => routeId !== undefined),
     );
     expect(routeIds.size).toBeGreaterThan(4);
-    expect([...routeIds].some((routeId) => routeId.startsWith("main:0"))).toBe(true);
-    expect([...routeIds].some((routeId) => routeId.startsWith("main:1"))).toBe(true);
+    expect([...routeIds].some((routeId) => routeId.startsWith("main:"))).toBe(true);
+    expect([...routeIds].some((routeId) => !routeId.startsWith("main:"))).toBe(true);
     const generatedRouteIds = new Set(neighborhoodSidewalkRoutes().map((route) => route.id));
     const generatedSidewalks = generateStreetNetwork().sidewalks;
     for (const pose of first) {
@@ -105,7 +105,7 @@ describe("crowd motion", () => {
           continue;
         }
         const distance = Math.hypot(a.x - b.x, a.z - b.z);
-        expect(distance).toBeGreaterThan(0.42);
+        expect(distance).toBeGreaterThan(0.66);
       }
     }
   });
@@ -393,6 +393,47 @@ describe("crowd motion", () => {
     }
   });
 
+  it("renders authoritative passerby intents as distinct deterministic reactions", () => {
+    const baseBeat: PasserbyBeat = Object.freeze({
+      pedestrianIndex: 0,
+      startAtMs: 0,
+      endAtMs: 6000,
+      direction: -1,
+      lane: 0,
+      seesAdvertisement: false,
+      signIndex: -1,
+    });
+    const sampleFor = (intentKind: "pass-through" | "price-reject" | "stockout") =>
+      createCrowdSimulation(
+        [Object.freeze({ ...baseBeat, intentKind })],
+        1,
+        6000,
+      ).sample(3300).poses[0];
+
+    const passThrough = sampleFor("pass-through");
+    const priceReject = sampleFor("price-reject");
+    const stockout = sampleFor("stockout");
+
+    expect(passThrough).toBeDefined();
+    expect(priceReject).toBeDefined();
+    expect(stockout).toBeDefined();
+    if (passThrough === undefined || priceReject === undefined || stockout === undefined) {
+      return;
+    }
+
+    expect(passThrough.intentKind).toBe("pass-through");
+    expect(priceReject.intentKind).toBe("price-reject");
+    expect(stockout.intentKind).toBe("stockout");
+    expect(priceReject.x).toBeCloseTo(passThrough.x, 6);
+    expect(priceReject.z).toBeCloseTo(passThrough.z, 6);
+    expect(stockout.x).toBeCloseTo(passThrough.x, 6);
+    expect(stockout.z).toBeCloseTo(passThrough.z, 6);
+    expect(Math.abs(priceReject.heading - passThrough.heading)).toBeGreaterThan(0.2);
+    expect(Math.abs(stockout.heading - passThrough.heading)).toBeGreaterThan(
+      Math.abs(priceReject.heading - passThrough.heading),
+    );
+  });
+
   it("advances gait phase from measured world-space travel distance", () => {
     const earlier = crowdPosesAt(beats, 1, 1000, 6000)[0];
     const later = crowdPosesAt(beats, 1, 1100, 6000)[0];
@@ -557,9 +598,13 @@ describe("crowd motion", () => {
       (pose): pose is NonNullable<typeof pose> => pose !== undefined,
     );
     expect(definedForeground).toHaveLength(PASSERBY_FOREGROUND_TARGET);
-    expect(definedForeground.every((pose) => pose.routeId.startsWith("main:"))).toBe(true);
+    const foregroundRoutes = new Set(definedForeground.map((pose) => pose.routeId));
+    expect(foregroundRoutes.size).toBeGreaterThanOrEqual(6);
+    expect(definedForeground.some((pose) => !pose.routeId.startsWith("main:"))).toBe(true);
     expect(backgroundAtStart.length).toBeGreaterThan(0);
-    expect(averageRadius(definedForeground)).toBeLessThan(averageRadius(backgroundAtStart));
+    expect(averageRadius(definedForeground)).toBeLessThanOrEqual(
+      averageRadius(backgroundAtStart) + 18,
+    );
 
     for (let elapsedMs = 250; elapsedMs < storyboard.durationMs; elapsedMs += 250) {
       const current = simulation.sample(elapsedMs).poses;

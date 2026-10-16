@@ -86,6 +86,9 @@ jobs:
       - name: Balance certification
         continue-on-error: true
         run: pnpm certify
+      - name: Ruleset-v4 balance certification
+        continue-on-error: true
+        run: pnpm certify:v4
 
   browser:
     if: github.event_name == 'push' || github.event.pull_request.draft == false

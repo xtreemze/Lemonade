@@ -1,0 +1,736 @@
+import { advertisingBaseReach } from "./advertising.js";
+import type { MarketMemory } from "./audience.js";
+import { LEGACY_SIGN_COST_CENTS } from "./legacy.js";
+import { neutralMarketMemory, nextMarketMemory } from "./memory.js";
+import { certifyDailyResolution } from "./certification.js";
+import { neutralEnvironment } from "./environment.js";
+import type {
+  DailyLedgerEntry,
+  DayDecision,
+  DayEnvironment,
+  GameState,
+  Weather,
+} from "./model.js";
+import {
+  basisPoints,
+  dayNumber,
+  glassCount,
+  moneyCents,
+  type Seed,
+  seed,
+  signCount,
+  signedMoneyCents,
+} from "./primitives.js";
+import {
+  OPERATING_SCALE_THRESHOLDS_CENTS,
+  type OperatingScaleLevel,
+  operatingScaleForState,
+} from "./scale.js";
+import { simulateDayV4, type V4DayResolution } from "./simulate-v4.js";
+import { createInitialState } from "./state.js";
+import { SIMULATION_RULESET_VERSION } from "./version.js";
+
+export const V4_CERTIFICATION_SEEDS = Object.freeze([
+  0x1e_ad_20_26, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987,
+] as const);
+
+const PRICE_POINTS_CENTS = Object.freeze([50, 100, 150, 200, 250, 299] as const);
+const WEATHER_KINDS = Object.freeze([
+  "sunny",
+  "cloudy",
+  "hot-and-dry",
+  "thunderstorm",
+] as const);
+
+export type V4AdvertisingPoint = Readonly<{
+  signs: number;
+  baseReachBps: number;
+  advertisingAwareBps: number;
+  organicAwareBps: number;
+}>;
+
+export type V4AdvertisingLevelProbe = Readonly<{
+  level: OperatingScaleLevel;
+  audiencePerSeed: number;
+  points: readonly V4AdvertisingPoint[];
+}>;
+
+export type V4PricePoint = Readonly<{
+  priceCents: number;
+  aware: number;
+  willing: number;
+  purchased: number;
+  revenueCents: number;
+  netCents: number;
+}>;
+
+export type V4PriceWeatherProbe = Readonly<{
+  weather: Weather["kind"];
+  points: readonly V4PricePoint[];
+  bestRevenuePriceCents: number;
+  bestNetPriceCents: number;
+}>;
+
+export type V4MemoryProbe = Readonly<{
+  fatigueBps: readonly number[];
+  recoveryBps: readonly number[];
+  repeatedAdRoiBps: readonly number[];
+  repeatedAdAwarenessBps: readonly number[];
+  fatigueRecoveryHalfLifeDays: number | null;
+  stockoutPressureBps: readonly number[];
+  satisfactionBps: readonly number[];
+}>;
+
+export type V4InventoryProbe = Readonly<{
+  stockouts: readonly number[];
+  stockoutPressureAfterShortageBps: readonly number[];
+  stockoutPressureAfterRecoveryBps: readonly number[];
+  excessPressureAfterOverproductionBps: readonly number[];
+}>;
+
+export type V4PriceMemoryProbe = Readonly<{
+  stableExpectedPriceCents: number;
+  suddenExpectedPriceCents: number;
+  stableWilling: number;
+  suddenWilling: number;
+}>;
+
+export type V4BalanceCertificationReport = Readonly<{
+  rulesetVersion: typeof SIMULATION_RULESET_VERSION;
+  seeds: readonly number[];
+  advertising: readonly V4AdvertisingLevelProbe[];
+  price: readonly V4PriceWeatherProbe[];
+  memory: V4MemoryProbe;
+  inventory: V4InventoryProbe;
+  priceMemory: V4PriceMemoryProbe;
+}>;
+
+const fail = (message: string): never => {
+  throw new Error(`V4 balance certification failed: ${message}`);
+};
+
+const requireInvariant = (condition: boolean, message: string): void => {
+  if (!condition) {
+    fail(message);
+  }
+};
+
+const ratioBps = (numerator: number, denominator: number): number =>
+  denominator === 0 ? 0 : Math.round((numerator * 10_000) / denominator);
+
+const decision = (glasses: number, signs: number, priceCents: number): DayDecision =>
+  Object.freeze({
+    glasses: glassCount(glasses),
+    signs: signCount(signs),
+    price: moneyCents(priceCents),
+  });
+
+const stateAtScale = (level: OperatingScaleLevel): GameState => {
+  const initial = createInitialState();
+  if (level === 1) {
+    return Object.freeze({ ...initial, cash: moneyCents(1_000_000) });
+  }
+
+  const targetBalance =
+    level === 2
+      ? OPERATING_SCALE_THRESHOLDS_CENTS.level2
+      : level === 3
+        ? OPERATING_SCALE_THRESHOLDS_CENTS.level3
+        : OPERATING_SCALE_THRESHOLDS_CENTS.level4;
+  const operatingProfit = targetBalance - 1000;
+  const historicalEntry: DailyLedgerEntry = Object.freeze({
+    day: dayNumber(1),
+    tier: 0,
+    decision: decision(1, 0, 150),
+    environment: neutralEnvironment(),
+    potentialDemand: glassCount(1),
+    sold: glassCount(1),
+    revenue: moneyCents(operatingProfit),
+    financeIncome: moneyCents(0),
+    expenses: moneyCents(0),
+    net: signedMoneyCents(operatingProfit),
+    cashDelta: signedMoneyCents(operatingProfit),
+    borrowed: moneyCents(0),
+    repaid: moneyCents(0),
+    endingCash: moneyCents(targetBalance),
+    endingLoanBalance: moneyCents(0),
+    lines: Object.freeze([
+      Object.freeze({
+        kind: "revenue" as const,
+        label: "V4 certification scale fixture",
+        amount: moneyCents(operatingProfit),
+        direction: "credit" as const,
+      }),
+    ]),
+  });
+
+  const state = Object.freeze({
+    ...initial,
+    day: dayNumber(2),
+    cash: moneyCents(1_000_000),
+    ledger: Object.freeze([historicalEntry]),
+  });
+  requireInvariant(
+    operatingScaleForState(state).level === level,
+    `scale fixture failed for level ${String(level)}`,
+  );
+  return state;
+};
+
+const environmentForWeather = (kind: Weather["kind"]): DayEnvironment => {
+  const neutral = neutralEnvironment();
+  return Object.freeze({
+    weather: Object.freeze({
+      kind,
+      demandMultiplier: basisPoints(10_000),
+    }),
+    sentiment: neutral.sentiment,
+    event: neutral.event,
+  });
+};
+
+const certifyResolution = (resolution: V4DayResolution): void => {
+  certifyDailyResolution(resolution);
+  const summary = resolution.market.summary;
+  requireInvariant(
+    summary.audience === summary.unaware + summary.aware,
+    "audience partition is not exhaustive",
+  );
+  requireInvariant(
+    summary.aware === summary.priceRejected + summary.willing,
+    "awareness/conversion partition is not exhaustive",
+  );
+  requireInvariant(
+    summary.willing === summary.purchased + summary.stockout,
+    "willing/fulfillment partition is not exhaustive",
+  );
+  requireInvariant(
+    summary.purchased === Number(resolution.entry.sold),
+    "authoritative purchases do not match ledger sales",
+  );
+  requireInvariant(
+    resolution.market.outcomes.length === summary.audience,
+    "customer outcomes do not cover the daily audience",
+  );
+};
+
+const aggregateAdvertisingPoint = (
+  state: GameState,
+  seeds: readonly number[],
+  signs: number,
+): V4AdvertisingPoint => {
+  let audience = 0;
+  let advertisingAware = 0;
+  let organicAware = 0;
+  for (const seedValue of seeds) {
+    const result = simulateDayV4(
+      state,
+      decision(0, signs, 150),
+      neutralEnvironment(),
+      seed(seedValue),
+      neutralMarketMemory(),
+    );
+    certifyResolution(result);
+    audience += result.market.summary.audience;
+    advertisingAware += result.market.summary.advertisingAware;
+    organicAware += result.market.summary.organicAware;
+  }
+
+  return Object.freeze({
+    signs,
+    baseReachBps: Number(advertisingBaseReach(signCount(signs))),
+    advertisingAwareBps: ratioBps(advertisingAware, audience),
+    organicAwareBps: ratioBps(organicAware, audience),
+  });
+};
+
+const advertisingProbe = (
+  level: OperatingScaleLevel,
+  seeds: readonly number[],
+): V4AdvertisingLevelProbe => {
+  const state = stateAtScale(level);
+  const scale = operatingScaleForState(state);
+  const points = Object.freeze(
+    Array.from({ length: scale.maxSigns + 1 }, (_, signs) =>
+      aggregateAdvertisingPoint(state, seeds, signs),
+    ),
+  );
+  const baseline = simulateDayV4(
+    state,
+    decision(0, 0, 150),
+    neutralEnvironment(),
+    seed(seeds[0] ?? 1),
+    neutralMarketMemory(),
+  );
+
+  return Object.freeze({
+    level,
+    audiencePerSeed: baseline.market.summary.audience,
+    points,
+  });
+};
+
+const aggregatePricePoint = (
+  state: GameState,
+  environment: DayEnvironment,
+  seeds: readonly number[],
+  priceCents: number,
+): V4PricePoint => {
+  const scale = operatingScaleForState(state);
+  let aware = 0;
+  let willing = 0;
+  let purchased = 0;
+  let revenueCents = 0;
+  let netCents = 0;
+
+  for (const seedValue of seeds) {
+    const result = simulateDayV4(
+      state,
+      decision(scale.maxGlasses, Math.min(1, scale.maxSigns), priceCents),
+      environment,
+      seed(seedValue),
+      neutralMarketMemory(),
+    );
+    certifyResolution(result);
+    aware += result.market.summary.aware;
+    willing += result.market.summary.willing;
+    purchased += result.market.summary.purchased;
+    revenueCents += Number(result.entry.revenue);
+    netCents += Number(result.entry.net);
+  }
+
+  return Object.freeze({ priceCents, aware, willing, purchased, revenueCents, netCents });
+};
+
+const bestPoint = (
+  points: readonly V4PricePoint[],
+  selector: (point: V4PricePoint) => number,
+): V4PricePoint => {
+  const first = points[0];
+  if (first === undefined) {
+    return fail("price probe is empty");
+  }
+  return points.slice(1).reduce(
+    (best, point) =>
+      selector(point) > selector(best) ||
+      (selector(point) === selector(best) && point.priceCents < best.priceCents)
+        ? point
+        : best,
+    first,
+  );
+};
+
+const priceProbe = (
+  weather: Weather["kind"],
+  seeds: readonly number[],
+): V4PriceWeatherProbe => {
+  const state = stateAtScale(1);
+  const environment = environmentForWeather(weather);
+  const points = Object.freeze(
+    PRICE_POINTS_CENTS.map((priceCents) =>
+      aggregatePricePoint(state, environment, seeds, priceCents),
+    ),
+  );
+  return Object.freeze({
+    weather,
+    points,
+    bestRevenuePriceCents: bestPoint(points, (point) => point.revenueCents).priceCents,
+    bestNetPriceCents: bestPoint(points, (point) => point.netCents).priceCents,
+  });
+};
+
+const memoryProbe = (runSeed: Seed): V4MemoryProbe => {
+  let state = stateAtScale(1);
+  let memory: MarketMemory = neutralMarketMemory();
+  const fatigueBps: number[] = [];
+  const recoveryBps: number[] = [];
+  const repeatedAdRoiBps: number[] = [];
+  const repeatedAdAwarenessBps: number[] = [];
+  const stockoutPressureBps: number[] = [];
+  const satisfactionBps: number[] = [];
+
+  for (let index = 0; index < 6; index += 1) {
+    const scale = operatingScaleForState(state);
+    const noAdResult = simulateDayV4(
+      state,
+      decision(scale.maxGlasses, 0, 150),
+      neutralEnvironment(),
+      runSeed,
+      memory,
+    );
+    const result = simulateDayV4(
+      state,
+      decision(scale.maxGlasses, scale.maxSigns, 150),
+      neutralEnvironment(),
+      runSeed,
+      memory,
+    );
+    certifyResolution(noAdResult);
+    certifyResolution(result);
+
+    const advertisingCostCents = scale.maxSigns * LEGACY_SIGN_COST_CENTS;
+    const incrementalNetCents = Number(result.entry.net) - Number(noAdResult.entry.net);
+    repeatedAdRoiBps.push(
+      advertisingCostCents === 0
+        ? 0
+        : Math.round((incrementalNetCents * 10_000) / advertisingCostCents),
+    );
+    repeatedAdAwarenessBps.push(
+      ratioBps(result.market.summary.advertisingAware, result.market.summary.audience),
+    );
+
+    state = result.nextState;
+    memory = result.market.memoryAfter;
+    fatigueBps.push(Number(memory.advertisingFatigue));
+    stockoutPressureBps.push(Number(memory.stockoutPressure));
+    satisfactionBps.push(Number(memory.satisfaction));
+  }
+
+  for (let index = 0; index < 8; index += 1) {
+    const result = simulateDayV4(
+      state,
+      decision(15, 0, 150),
+      neutralEnvironment(),
+      runSeed,
+      memory,
+    );
+    certifyResolution(result);
+    state = result.nextState;
+    memory = result.market.memoryAfter;
+    recoveryBps.push(Number(memory.advertisingFatigue));
+    stockoutPressureBps.push(Number(memory.stockoutPressure));
+    satisfactionBps.push(Number(memory.satisfaction));
+  }
+
+  const peakFatigue = fatigueBps.at(-1) ?? 0;
+  const halfFatigue = peakFatigue / 2;
+  const halfLifeIndex = recoveryBps.findIndex((value) => value <= halfFatigue);
+
+  return Object.freeze({
+    fatigueBps: Object.freeze(fatigueBps),
+    recoveryBps: Object.freeze(recoveryBps),
+    repeatedAdRoiBps: Object.freeze(repeatedAdRoiBps),
+    repeatedAdAwarenessBps: Object.freeze(repeatedAdAwarenessBps),
+    fatigueRecoveryHalfLifeDays: halfLifeIndex === -1 ? null : halfLifeIndex + 1,
+    stockoutPressureBps: Object.freeze(stockoutPressureBps),
+    satisfactionBps: Object.freeze(satisfactionBps),
+  });
+};
+
+const inventoryProbe = (seeds: readonly number[]): V4InventoryProbe => {
+  const stockouts: number[] = [];
+  const stockoutPressureAfterShortageBps: number[] = [];
+  const stockoutPressureAfterRecoveryBps: number[] = [];
+  const excessPressureAfterOverproductionBps: number[] = [];
+
+  for (const seedValue of seeds) {
+    const state = stateAtScale(1);
+    const scale = operatingScaleForState(state);
+    const runSeed = seed(seedValue);
+
+    const shortage = simulateDayV4(
+      state,
+      decision(0, 1, 150),
+      neutralEnvironment(),
+      runSeed,
+      neutralMarketMemory(),
+    );
+    certifyResolution(shortage);
+    stockouts.push(shortage.market.summary.stockout);
+    stockoutPressureAfterShortageBps.push(Number(shortage.market.memoryAfter.stockoutPressure));
+
+    const recovery = simulateDayV4(
+      shortage.nextState,
+      decision(scale.maxGlasses, 0, 299),
+      neutralEnvironment(),
+      runSeed,
+      shortage.market.memoryAfter,
+    );
+    certifyResolution(recovery);
+    stockoutPressureAfterRecoveryBps.push(Number(recovery.market.memoryAfter.stockoutPressure));
+
+    const overproduction = simulateDayV4(
+      state,
+      decision(scale.maxGlasses, 0, 299),
+      neutralEnvironment(),
+      runSeed,
+      neutralMarketMemory(),
+    );
+    certifyResolution(overproduction);
+    excessPressureAfterOverproductionBps.push(Number(overproduction.market.memoryAfter.excessPressure));
+  }
+
+  return Object.freeze({
+    stockouts: Object.freeze(stockouts),
+    stockoutPressureAfterShortageBps: Object.freeze(stockoutPressureAfterShortageBps),
+    stockoutPressureAfterRecoveryBps: Object.freeze(stockoutPressureAfterRecoveryBps),
+    excessPressureAfterOverproductionBps: Object.freeze(excessPressureAfterOverproductionBps),
+  });
+};
+
+const priceMemoryProbe = (seedValue: number): V4PriceMemoryProbe => {
+  const state = stateAtScale(1);
+  const scale = operatingScaleForState(state);
+  const observation = {
+    signs: signCount(0),
+    level: scale.level,
+    prepared: glassCount(scale.maxGlasses),
+    willing: 10,
+    purchased: 10,
+  };
+
+  let stableMemory: MarketMemory = neutralMarketMemory();
+  for (let index = 0; index < 4; index += 1) {
+    stableMemory = nextMarketMemory(stableMemory, {
+      ...observation,
+      price: moneyCents(250),
+    });
+  }
+
+  let suddenMemory: MarketMemory = neutralMarketMemory();
+  for (let index = 0; index < 3; index += 1) {
+    suddenMemory = nextMarketMemory(suddenMemory, {
+      ...observation,
+      price: moneyCents(100),
+    });
+  }
+  suddenMemory = nextMarketMemory(suddenMemory, {
+    ...observation,
+    price: moneyCents(250),
+  });
+
+  const stable = simulateDayV4(
+    state,
+    decision(scale.maxGlasses, 1, 250),
+    neutralEnvironment(),
+    seed(seedValue),
+    stableMemory,
+  );
+  const sudden = simulateDayV4(
+    state,
+    decision(scale.maxGlasses, 1, 250),
+    neutralEnvironment(),
+    seed(seedValue),
+    suddenMemory,
+  );
+  certifyResolution(stable);
+  certifyResolution(sudden);
+
+  return Object.freeze({
+    stableExpectedPriceCents: Number(stableMemory.expectedPrice),
+    suddenExpectedPriceCents: Number(suddenMemory.expectedPrice),
+    stableWilling: stable.market.summary.willing,
+    suddenWilling: sudden.market.summary.willing,
+  });
+};
+
+export const runV4BalanceCertification = (
+  seedValues: readonly number[] = V4_CERTIFICATION_SEEDS,
+): V4BalanceCertificationReport => {
+  requireInvariant(seedValues.length > 0, "certification requires deterministic seeds");
+  const advertising = Object.freeze(
+    ([1, 2, 3, 4] as const).map((level) => advertisingProbe(level, seedValues)),
+  );
+  const price = Object.freeze(
+    WEATHER_KINDS.map((weather) => priceProbe(weather, seedValues)),
+  );
+
+  return Object.freeze({
+    rulesetVersion: SIMULATION_RULESET_VERSION,
+    seeds: Object.freeze([...seedValues]),
+    advertising,
+    price,
+    memory: memoryProbe(seed(seedValues[0] ?? 1)),
+    inventory: inventoryProbe(seedValues),
+    priceMemory: priceMemoryProbe(seedValues[0] ?? 1),
+  });
+};
+
+export const assertV4BalanceCertification = (report: V4BalanceCertificationReport): void => {
+  requireInvariant(
+    report.rulesetVersion === SIMULATION_RULESET_VERSION,
+    "report ruleset does not match the running v4 engine",
+  );
+  requireInvariant(report.advertising.length === 4, "advertising probes must cover L1-L4");
+
+  for (const level of report.advertising) {
+    const zero = level.points[0] ?? fail(`missing L${String(level.level)} zero-sign probe`);
+    requireInvariant(zero.signs === 0, "advertising curve must begin at zero signs");
+    requireInvariant(zero.advertisingAwareBps === 0, "zero signs invented advertising awareness");
+
+    const baseMarginals: number[] = [];
+    for (let index = 1; index < level.points.length; index += 1) {
+      const previous = level.points[index - 1] ?? fail("advertising point missing");
+      const current = level.points[index] ?? fail("advertising point missing");
+      requireInvariant(
+        current.baseReachBps >= previous.baseReachBps,
+        `L${String(level.level)} base advertising reach decreased`,
+      );
+      requireInvariant(
+        current.advertisingAwareBps >= previous.advertisingAwareBps,
+        `L${String(level.level)} seeded advertising awareness decreased`,
+      );
+      baseMarginals.push(current.baseReachBps - previous.baseReachBps);
+    }
+
+    if (baseMarginals.length > 1) {
+      const midpoint = Math.ceil(baseMarginals.length / 2);
+      const firstHalf = baseMarginals.slice(0, midpoint);
+      const secondHalf = baseMarginals.slice(midpoint);
+      const firstAverage =
+        firstHalf.reduce((total, value) => total + value, 0) / firstHalf.length;
+      const secondAverage =
+        secondHalf.reduce((total, value) => total + value, 0) /
+        Math.max(1, secondHalf.length);
+      requireInvariant(
+        firstAverage >= secondAverage,
+        `L${String(level.level)} advertising reach is not generally saturating`,
+      );
+    }
+  }
+
+  for (const weather of report.price) {
+    for (let index = 1; index < weather.points.length; index += 1) {
+      const previous = weather.points[index - 1] ?? fail("price point missing");
+      const current = weather.points[index] ?? fail("price point missing");
+      requireInvariant(
+        current.willing <= previous.willing,
+        `${weather.weather} price conversion increased as price rose`,
+      );
+    }
+    const first = weather.points[0] ?? fail("price probe missing low price");
+    const last = weather.points.at(-1) ?? fail("price probe missing high price");
+    requireInvariant(
+      first.willing > last.willing,
+      `${weather.weather} price algebraically cancelled out of conversion`,
+    );
+  }
+
+  const fatigue = report.memory.fatigueBps;
+  const recovery = report.memory.recoveryBps;
+  requireInvariant(fatigue.length > 1 && recovery.length > 1, "memory probe is incomplete");
+  requireInvariant(
+    (fatigue.at(-1) ?? 0) > (fatigue[0] ?? 0),
+    "repeated maximum advertising did not accumulate fatigue",
+  );
+  requireInvariant(
+    (recovery.at(-1) ?? 10_000) < (recovery[0] ?? 0),
+    "advertising fatigue did not recover after reduced advertising",
+  );
+  requireInvariant(
+    report.memory.fatigueRecoveryHalfLifeDays !== null,
+    "advertising fatigue did not reach its recovery half-life inside the probe window",
+  );
+  requireInvariant(
+    report.memory.repeatedAdRoiBps.length === fatigue.length,
+    "repeated-ad ROI evidence is incomplete",
+  );
+  requireInvariant(
+    report.memory.repeatedAdAwarenessBps.length === fatigue.length,
+    "repeated-ad awareness evidence is incomplete",
+  );
+  requireInvariant(
+    report.memory.repeatedAdRoiBps.every(Number.isFinite),
+    "repeated-ad ROI produced a non-finite value",
+  );
+  for (const value of [
+    ...report.memory.fatigueBps,
+    ...report.memory.recoveryBps,
+    ...report.memory.stockoutPressureBps,
+    ...report.memory.satisfactionBps,
+    ...report.inventory.stockoutPressureAfterShortageBps,
+    ...report.inventory.stockoutPressureAfterRecoveryBps,
+    ...report.inventory.excessPressureAfterOverproductionBps,
+  ]) {
+    requireInvariant(value >= 0 && value <= 10_000, "market memory escaped bounded basis points");
+  }
+
+  requireInvariant(
+    report.inventory.stockouts.some((value) => value > 0),
+    "underproduction probe produced no stockouts",
+  );
+  requireInvariant(
+    report.inventory.stockoutPressureAfterRecoveryBps.every(
+      (value, index) => value <= (report.inventory.stockoutPressureAfterShortageBps[index] ?? value),
+    ),
+    "stockout pressure failed to recover after a well-supplied day",
+  );
+  requireInvariant(
+    report.inventory.excessPressureAfterOverproductionBps.some((value) => value > 0),
+    "overproduction probe produced no excess-inventory pressure",
+  );
+  requireInvariant(
+    report.priceMemory.stableExpectedPriceCents > report.priceMemory.suddenExpectedPriceCents,
+    "stable pricing did not establish a higher expected price than a sudden increase",
+  );
+  requireInvariant(
+    report.priceMemory.stableWilling >= report.priceMemory.suddenWilling,
+    "sudden price increase was not at least as difficult to convert as stable pricing",
+  );
+};
+
+const percent = (bps: number): string => `${(bps / 100).toFixed(1)}%`;
+
+export const formatV4BalanceCertification = (report: V4BalanceCertificationReport): string => {
+  const lines = [
+    "# Lemonade ruleset-v4 balance certification",
+    "",
+    `Ruleset: ${String(report.rulesetVersion)}`,
+    `Deterministic seeds: ${String(report.seeds.length)}`,
+    "",
+    "## Advertising saturation",
+    "",
+    "| Level | Signs | Base reach | Seeded ad awareness | Organic awareness |",
+    "| ---: | ---: | ---: | ---: | ---: |",
+  ];
+
+  for (const level of report.advertising) {
+    for (const point of level.points) {
+      lines.push(
+        `| ${String(level.level)} | ${String(point.signs)} | ${percent(point.baseReachBps)} | ${percent(point.advertisingAwareBps)} | ${percent(point.organicAwareBps)} |`,
+      );
+    }
+  }
+
+  lines.push(
+    "",
+    "## Price / weather probes",
+    "",
+    "| Weather | Price | Aware | Willing | Purchased | Revenue | Net |",
+    "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+  );
+  for (const weather of report.price) {
+    for (const point of weather.points) {
+      lines.push(
+        `| ${weather.weather} | $${(point.priceCents / 100).toFixed(2)} | ${String(point.aware)} | ${String(point.willing)} | ${String(point.purchased)} | $${(point.revenueCents / 100).toFixed(2)} | $${(point.netCents / 100).toFixed(2)} |`,
+      );
+    }
+    lines.push(
+      `| ${weather.weather} optimum | — | — | — | — | revenue @ $${(weather.bestRevenuePriceCents / 100).toFixed(2)} | net @ $${(weather.bestNetPriceCents / 100).toFixed(2)} |`,
+    );
+  }
+
+  lines.push(
+    "",
+    "## Market-memory recovery",
+    "",
+    `Max-ad fatigue sequence: ${report.memory.fatigueBps.join(", ")} bps`,
+    `Repeated max-ad incremental ROI: ${report.memory.repeatedAdRoiBps.join(", ")} bps`,
+    `Repeated max-ad awareness: ${report.memory.repeatedAdAwarenessBps.join(", ")} bps`,
+    `Zero-ad recovery sequence: ${report.memory.recoveryBps.join(", ")} bps`,
+    `Fatigue recovery half-life: ${report.memory.fatigueRecoveryHalfLifeDays === null ? "not reached" : `${String(report.memory.fatigueRecoveryHalfLifeDays)} day(s)`}`,
+    `Stockout-pressure sequence: ${report.memory.stockoutPressureBps.join(", ")} bps`,
+    "",
+    "## Inventory and price-memory probes",
+    "",
+    `Underproduction stockouts: ${report.inventory.stockouts.join(", ")}`,
+    `Stockout pressure after shortage: ${report.inventory.stockoutPressureAfterShortageBps.join(", ")} bps`,
+    `Stockout pressure after recovery: ${report.inventory.stockoutPressureAfterRecoveryBps.join(", ")} bps`,
+    `Excess pressure after overproduction: ${report.inventory.excessPressureAfterOverproductionBps.join(", ")} bps`,
+    `Stable expected price: ${(report.priceMemory.stableExpectedPriceCents / 100).toFixed(2)}; willing: ${String(report.priceMemory.stableWilling)}`,
+    `Sudden-increase expected price: ${(report.priceMemory.suddenExpectedPriceCents / 100).toFixed(2)}; willing: ${String(report.priceMemory.suddenWilling)}`,
+    "",
+    "Integrated accounting + v4 funnel invariants: PASS",
+  );
+  return lines.join("\n");
+};

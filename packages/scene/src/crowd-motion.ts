@@ -25,6 +25,7 @@ export type CrowdPose = Readonly<{
   side: SidewalkSide;
   routeId: string;
   seesAdvertisement: boolean;
+  intentKind: "pass-through" | "price-reject" | "stockout";
 }>;
 
 export type CrowdSample = Readonly<{
@@ -37,7 +38,7 @@ export type CrowdSimulation = Readonly<{
 }>;
 
 const CROWD_CELL_SIZE = 0.72;
-const CROWD_SEPARATION = 0.46;
+const CROWD_SEPARATION = 0.72;
 
 type PedestrianRoute = Readonly<{
   id: string;
@@ -253,8 +254,7 @@ const basePose = (
     .sort(
       (left, right) =>
         routeFocusDistance(left) - routeFocusDistance(right) || left.id.localeCompare(right.id),
-    )
-    .slice(0, Math.min(6, sideEntryRoutes.length));
+    );
   const requestedSide: SidewalkSide = actorIndex % 2 === 0 ? "near" : "far";
   const mainRoute =
     mainRoutes
@@ -289,7 +289,7 @@ const basePose = (
   const usesForegroundCohort = actorIndex < PASSERBY_FOREGROUND_TARGET && beat.startAtMs === 0;
   const selectedRoute =
     (usesForegroundCohort
-      ? (mainRoute ?? foregroundRoute)
+      ? (foregroundRoute ?? mainRoute)
       : beat.seesAdvertisement
         ? mainRoute
         : neighborhoodRoute) ?? fallbackRoutes[actorIndex % Math.max(1, fallbackRoutes.length)];
@@ -303,7 +303,7 @@ const basePose = (
   const minimumStartDistance = beat.direction === -1 ? 0 : requiredTravelDistance;
   const maximumStartDistance =
     beat.direction === -1 ? selectedRoute.total - requiredTravelDistance : selectedRoute.total;
-  const foregroundSpread = Math.min(28, Math.max(0, maximumStartDistance - minimumStartDistance));
+  const foregroundSpread = Math.max(0, maximumStartDistance - minimumStartDistance);
   const centeredStartDistance = Math.max(
     minimumStartDistance,
     Math.min(
@@ -344,7 +344,21 @@ const basePose = (
   const signSide = beat.signIndex >= 0 && beat.signIndex % 2 === 0 ? -1 : 1;
   const signPull = attention * signSide * 0.22;
   const attentionHeading = signSide * (selectedRoute.side === "near" ? 0.48 : 0.32) * attention;
-  const heading = Math.PI / 2 - travelYaw + attentionHeading;
+
+  const intentKind = beat.intentKind ?? "pass-through";
+  const presentationProgress = Math.min(
+    1,
+    Math.max(0, (elapsedMs - beat.startAtMs) / safeDuration),
+  );
+  const intentAttention =
+    intentKind === "pass-through"
+      ? 0
+      : Math.exp(-(((presentationProgress - 0.55) / 0.14) ** 2));
+  const intentHeadingMagnitude =
+    intentKind === "stockout" ? 0.62 : intentKind === "price-reject" ? 0.34 : 0;
+  const standFacingDirection = selectedRoute.side === "near" ? -1 : 1;
+  const intentHeading = standFacingDirection * intentHeadingMagnitude * intentAttention;
+  const heading = Math.PI / 2 - travelYaw + attentionHeading + intentHeading;
 
   return {
     x: sampled.x + normalX * lateralOffset + (selectedRoute.streetId === "main" ? signPull : 0),
@@ -356,6 +370,7 @@ const basePose = (
     side: selectedRoute.side,
     routeId: selectedRoute.id,
     seesAdvertisement: beat.seesAdvertisement,
+    intentKind,
     centerX: sampled.x,
     centerZ: sampled.z,
     normalX,
@@ -377,6 +392,7 @@ interface MutableCrowdPose {
   side: SidewalkSide;
   routeId: string;
   seesAdvertisement: boolean;
+  intentKind: "pass-through" | "price-reject" | "stockout";
   centerX: number;
   centerZ: number;
   normalX: number;
@@ -393,7 +409,7 @@ const cellKey = (x: number, z: number): string =>
 
 const separateCrowd = (poses: (MutableCrowdPose | undefined)[]): number => {
   let neighborChecks = 0;
-  for (let pass = 0; pass < 3; pass += 1) {
+  for (let pass = 0; pass < 4; pass += 1) {
     const cells = new Map<string, number[]>();
     poses.forEach((pose, index) => {
       if (pose === undefined) {
@@ -550,6 +566,7 @@ export const createCrowdSimulation = (
                   side: pose.side,
                   routeId: pose.routeId,
                   seesAdvertisement: pose.seesAdvertisement,
+                  intentKind: pose.intentKind,
                 }),
           ),
         ),

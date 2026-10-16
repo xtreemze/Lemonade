@@ -4,7 +4,7 @@ import { expect, type Page, test } from "@playwright/test";
 
 const openPlanningView = async (page: Page): Promise<void> => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("./");
+  await page.goto("./?play=1");
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
 };
 
