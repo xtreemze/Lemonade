@@ -190,6 +190,9 @@ importers:
       '@lemonade/scene':
         specifier: workspace:*
         version: link:../../packages/scene
+      '@lemonade/scene-babylon':
+        specifier: workspace:*
+        version: link:../../packages/scene-babylon
       '@lemonade/simulation':
         specifier: workspace:*
         version: link:../../packages/simulation
@@ -208,6 +211,19 @@ importers:
         version: 5.0.1(@types/node@24.13.6)(vite@8.3.0(@types/node@24.13.6))
 
   packages/audio:
+    devDependencies:
+      vitest:
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@24.13.6)(vite@8.3.0(@types/node@24.13.6))
+
+  packages/scene-babylon:
+    dependencies:
+      '@babylonjs/core':
+        specifier: ^9.27.1
+        version: 9.27.1
+      '@lemonade/scene':
+        specifier: workspace:*
+        version: link:../scene
     devDependencies:
       vitest:
         specifier: ^5.0.1
@@ -243,6 +259,9 @@ importers:
         version: 5.0.1(@types/node@24.13.6)(vite@8.3.0(@types/node@24.13.6))
 
 packages:
+
+  '@babylonjs/core@9.27.1':
+    resolution: {integrity: sha512-bcHeB7YNrYRiD+pEhZjEfzm8tT/N4dC8oYhlENFVa9fnP/XiHEbmt7h2U6Es/vs8x/Aju+9vgpcmq2qnLv+3Hw==}
 
   '@biomejs/biome@2.5.13':
     resolution: {integrity: sha512-+SEC/mFk1a+5mvUANZgbZTaiZXs1nj4iMhL/PHiqDT5TPUEPFIlliEtkKKZB4N862yylHC3UI+/Sj2I0HJEqhA==}
@@ -757,6 +776,8 @@ packages:
     hasBin: true
 
 snapshots:
+
+  '@babylonjs/core@9.27.1': {}
 
   '@biomejs/biome@2.5.13':
     optionalDependencies:
