@@ -19,6 +19,7 @@ const property = (
     group: "front",
     house: Object.freeze({
       center: point(offset, -8),
+      color: 0xc9_7d_65,
       scale: 1,
       rotationY: 0,
     }),
