@@ -40,7 +40,7 @@ test("release artifact completes a day without uncaught runtime failures", async
     pageErrors.push(error.message);
   });
 
-  await page.goto("./");
+  await page.goto("./?play=1");
   await expect(page.getByRole("main")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Lemonade", level: 1 })).toBeVisible();
   const litComponents = page.locator(
@@ -58,6 +58,13 @@ test("release artifact completes a day without uncaught runtime failures", async
 
   await page.getByRole("button", { name: "Sell for the day" }).click();
   await expect(page.getByRole("button", { name: "Review sales history" })).toBeVisible();
+  await expect(page.locator("#report-funnel")).toBeVisible();
+  await expect(page.locator("#report-funnel")).toContainText("Audience");
+  await expect(page.locator("#report-funnel")).toContainText("aware");
+  await expect(page.locator("#report-funnel")).toContainText("willing");
+  await expect(page.locator("#report-funnel")).toContainText("served");
+  await expect(page.locator("#report-funnel")).toContainText("price rejects");
+  await expect(page.locator("#report-funnel")).toContainText("stockouts");
   await page.getByRole("button", { name: "Review sales history" }).click();
   await expect(page.getByRole("button", { name: "Plan next day" })).toBeVisible();
   await page.getByRole("button", { name: "Plan next day" }).click();
@@ -69,7 +76,7 @@ test("release artifact completes a day without uncaught runtime failures", async
 
 test("narrow viewport keeps the complete planning surface above the fold", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 740 });
-  await page.goto("./", { waitUntil: "commit" });
+  await page.goto("./?play=1", { waitUntil: "commit" });
 
   const main = page.getByRole("main");
   await expect(main).toHaveAttribute("data-view", "forecast");
@@ -232,7 +239,21 @@ test("narrow viewport keeps the complete planning surface above the fold", async
 
   await reviewHistoryButton.locator("svg").click();
   await expect(main).toHaveAttribute("data-view", "history");
-  await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+  await expect(page.locator(".report-explorer")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Report explorer" })).toBeVisible();
+  const metricTabs = page.getByRole("group", { name: "Report metric" }).getByRole("button");
+  await expect(metricTabs).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Performance" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("button", { name: "Inventory" }).click();
+  await expect(page.getByRole("button", { name: "Inventory" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.locator(".report-explorer-chart")).toHaveAttribute("data-mode", "inventory");
+  await expect(page.locator(".report-explorer-summary")).toContainText("Prepared");
   await expectNoHorizontalOverflow(page);
   await expectNoVerticalOverflow(page);
 
@@ -267,7 +288,7 @@ test("narrow viewport keeps the complete planning surface above the fold", async
 test("mobile landscape uses the full viewport without scrolling", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 740, height: 360 });
-  await page.goto("./");
+  await page.goto("./?play=1");
 
   const main = page.getByRole("main");
   await expect(main).toHaveAttribute("data-view", "planning");
@@ -292,7 +313,7 @@ test("mobile landscape uses the full viewport without scrolling", async ({ page 
 
 test("reset requires explicit in-page confirmation", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("./");
+  await page.goto("./?play=1");
   await expectPlanningReady(page);
 
   await page.locator(".run-tools-summary").click();
@@ -313,7 +334,7 @@ test("reduced-motion preference collapses decorative transition and animation du
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("./");
+  await page.goto("./?play=1");
 
   await expect
     .poll(() => page.evaluate(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches))
@@ -346,7 +367,7 @@ test("storage failure degrades to a playable in-memory run", async ({ page }) =>
     });
   });
 
-  await page.goto("./");
+  await page.goto("./?play=1");
   await expectPlanningReady(page);
   await expect(page.locator("#run-error")).toContainText("Unable to open browser run storage");
   await expect(page.getByRole("button", { name: "Sell for the day" })).toBeEnabled();
@@ -361,7 +382,7 @@ test("scene runtime failure falls back without blocking gameplay", async ({ page
     await route.abort();
   });
 
-  await page.goto("./");
+  await page.goto("./?play=1");
 
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "forecast");
   await expect(page.locator("#scene-fallback")).toBeVisible();

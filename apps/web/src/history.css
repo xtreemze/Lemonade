@@ -405,3 +405,200 @@
     display: table-cell;
   }
 }
+
+
+/* Unified report explorer: one multifunctional chart surface instead of parallel chart cards. */
+.report-explorer-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.report-explorer-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.report-explorer-tab {
+  min-width: 0;
+  min-height: 40px;
+  padding: 7px 8px;
+  border: 2px solid #211d14;
+  background: #fff9e4;
+  color: #211d14;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.report-explorer-tab[aria-pressed="true"] {
+  background: #236f5e;
+  color: #fffbee;
+}
+
+.report-explorer-visual,
+.report-explorer-chart {
+  min-width: 0;
+  min-height: 0;
+}
+
+.report-explorer-chart {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  height: 100%;
+  padding: 8px;
+}
+
+.report-explorer-caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.report-explorer-title {
+  flex: none;
+}
+
+.report-explorer-description {
+  min-width: 0;
+  color: #655f50;
+  font-size: 0.72rem;
+  text-align: right;
+}
+
+.report-explorer-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 6px 0 0;
+}
+
+.report-explorer-summary > div {
+  min-width: 0;
+  padding: 5px 6px;
+  border: 1px solid #211d14;
+  background: rgb(255 249 228 / 72%);
+}
+
+.report-explorer-summary dt {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.report-explorer-summary dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+.chart-sales,
+.legend-sales,
+.chart-cash,
+.legend-cash,
+.chart-sold,
+.legend-sold,
+.chart-net,
+.legend-net {
+  color: #236f5e;
+}
+
+.chart-expenses,
+.legend-expenses,
+.chart-debt,
+.legend-debt {
+  color: #9a2e26;
+}
+
+.chart-prepared,
+.legend-prepared {
+  color: #a9631a;
+}
+
+.game-shell[data-view="history"] .report-explorer {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.game-shell[data-view="history"] .report-explorer-workspace {
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.game-shell[data-view="history"] .report-explorer-visual {
+  height: 100%;
+}
+
+.game-shell[data-view="history"] .report-explorer-chart {
+  height: 100%;
+  padding: 6px;
+}
+
+.game-shell[data-view="history"] .report-explorer-chart .history-chart {
+  height: 100%;
+  min-height: 5.5rem;
+}
+
+.game-shell[data-view="history"] .report-explorer-description {
+  display: none;
+}
+
+.game-shell[data-view="history"] .report-explorer-summary {
+  margin-top: 3px;
+}
+
+@media (orientation: landscape), (width >= 47.5625rem) {
+  .game-shell[data-view="history"] .report-explorer-workspace {
+    grid-template-columns: minmax(8.5rem, 0.22fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .game-shell[data-view="history"] .report-explorer-controls {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+  }
+
+  .game-shell[data-view="history"] .report-explorer-tab {
+    min-height: 44px;
+    text-align: left;
+  }
+
+  .game-shell[data-view="history"] .report-explorer-description {
+    display: inline;
+  }
+}
+
+@media (width >= 64rem) {
+  .game-shell[data-view="history"] .report-explorer {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.34fr);
+    grid-template-areas:
+      "heading heading"
+      "workspace table";
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+  }
+
+  .game-shell[data-view="history"] .history-heading {
+    grid-area: heading;
+  }
+
+  .game-shell[data-view="history"] .report-explorer-workspace {
+    grid-area: workspace;
+  }
+
+  .game-shell[data-view="history"] .history-table-wrap {
+    grid-area: table;
+    height: 100%;
+  }
+
+  .game-shell[data-view="history"] .history-table {
+    height: 100%;
+  }
+}

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Interpretive Apple II computer lab loading Lemonade Stand</title>
+  <desc id="desc">A warm late-1970s school computer lab with rows of beige Apple II-style computers, CRT displays, floppy disks, students, and a foreground screen showing an Applesoft BASIC loading sequence for Lemonade Stand.</desc>
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#efe3c8"/><stop offset="1" stop-color="#cbb68f"/></linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8a6b4b"/><stop offset="1" stop-color="#5f4937"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="12" stdDeviation="12" flood-opacity=".2"/></filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#wall)"/>
+  <rect y="620" width="1600" height="280" fill="url(#floor)"/>
+  <g opacity=".22" stroke="#6c5d4a" stroke-width="4"><path d="M0 690h1600M0 760h1600M0 830h1600"/><path d="M180 620v280M480 620v280M780 620v280M1080 620v280M1380 620v280"/></g>
+
+  <g fill="#f6edd8" stroke="#695947" stroke-width="8" filter="url(#shadow)">
+    <rect x="100" y="110" width="350" height="190" rx="10"/>
+    <rect x="625" y="105" width="350" height="190" rx="10"/>
+    <rect x="1150" y="115" width="350" height="190" rx="10"/>
+  </g>
+  <g fill="#96b5a7" stroke="#695947" stroke-width="8">
+    <rect x="126" y="136" width="298" height="138"/><rect x="651" y="131" width="298" height="138"/><rect x="1176" y="141" width="298" height="138"/>
+  </g>
+  <g fill="#31423a" font-family="monospace" font-size="28">
+    <text x="154" y="190">APPLE ][</text><text x="154" y="228">READY.</text>
+    <text x="679" y="185">CATALOG</text><text x="679" y="223">LEMONADE</text>
+    <text x="1204" y="195">RUN LEMONADE</text><text x="1204" y="233">LOADING...</text>
+  </g>
+
+  <g fill="#b98b55" stroke="#5e4937" stroke-width="8">
+    <rect x="45" y="330" width="470" height="44" rx="8"/>
+    <rect x="565" y="325" width="470" height="44" rx="8"/>
+    <rect x="1085" y="335" width="470" height="44" rx="8"/>
+  </g>
+  <g fill="#d8c8a6" stroke="#5e4937" stroke-width="8">
+    <path d="M125 300h300l36 40H88z"/><path d="M645 295h300l36 40H608z"/><path d="M1165 305h300l36 40h-373z"/>
+  </g>
+  <g fill="#4f5e6c" stroke="#4b3f34" stroke-width="7">
+    <rect x="160" y="378" width="150" height="36" rx="5"/><rect x="680" y="373" width="150" height="36" rx="5"/><rect x="1200" y="383" width="150" height="36" rx="5"/>
+  </g>
+
+  <g stroke="#4d4033" stroke-width="8" fill="#7a9a78">
+    <circle cx="245" cy="480" r="42"/><path d="M207 520q38-28 76 0l25 100H182z"/>
+    <circle cx="760" cy="478" r="42"/><path d="M722 518q38-28 76 0l25 100H697z"/>
+    <circle cx="1285" cy="488" r="42"/><path d="M1247 528q38-28 76 0l25 92h-126z"/>
+  </g>
+
+  <g transform="translate(430 450)" filter="url(#shadow)">
+    <rect x="0" y="0" width="740" height="375" rx="18" fill="#dac8a6" stroke="#4f4338" stroke-width="12"/>
+    <rect x="58" y="45" width="624" height="238" rx="12" fill="#17241e" stroke="#4f4338" stroke-width="12"/>
+    <g fill="#8fe0a6" font-family="monospace" font-size="32">
+      <text x="92" y="102">APPLE ][</text>
+      <text x="92" y="148">] CATALOG</text>
+      <text x="92" y="194">A 002 LEMONADE</text>
+      <text x="92" y="240">] RUN LEMONADE</text>
+      <text x="92" y="272">LEM0NSVILLE WEATHER...</text>
+    </g>
+    <rect x="88" y="314" width="564" height="34" rx="6" fill="#b29b76" stroke="#4f4338" stroke-width="6"/>
+    <g stroke="#6b5c4a" stroke-width="3"><path d="M110 326h520M120 338h500"/></g>
+  </g>
+
+  <g transform="translate(1220 690) rotate(-8)">
+    <rect width="170" height="170" rx="4" fill="#2d2b29" stroke="#e9d9b8" stroke-width="8"/>
+    <circle cx="85" cy="78" r="35" fill="#171616" stroke="#bfb29b" stroke-width="6"/>
+    <rect x="48" y="132" width="74" height="20" fill="#e7d7a9"/>
+    <text x="85" y="148" text-anchor="middle" font-family="monospace" font-size="14" fill="#392f25">LEMONADE</text>
+  </g>
+  <text x="56" y="862" fill="#f6ead0" font-family="system-ui,sans-serif" font-size="25">Interpretive illustration — inspired by late-1970s/early-1980s school microcomputer labs; not an archival photograph.</text>
+</svg>

@@ -25,6 +25,10 @@ export type SaleBeat = Readonly<{
   direction: StreetDirection;
   lane: number;
   remainingCups: number;
+  customerId?: number;
+  visualSeed?: number;
+  seesAdvertisement?: boolean;
+  signIndex?: number;
 }>;
 
 export type PasserbyBeat = Readonly<{
@@ -35,6 +39,9 @@ export type PasserbyBeat = Readonly<{
   lane: number;
   seesAdvertisement: boolean;
   signIndex: number;
+  customerId?: number;
+  visualSeed?: number;
+  intentKind?: "pass-through" | "price-reject" | "stockout";
 }>;
 
 export type StreetStoryboard = Readonly<{

@@ -4,6 +4,10 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Visual Showcase"]
+    types: [completed]
+    branches: [master]
 
 permissions:
   contents: read
@@ -18,6 +22,7 @@ concurrency:
 jobs:
   build:
     name: Build Pages artifact
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -40,48 +45,45 @@ jobs:
       - name: Build project-page bundle
         run: pnpm --filter @lemonade/web exec vite build --base=/Lemonade/
 
-      - name: Restore latest valid showcase artifact
-        continue-on-error: true
+      - name: Restore certified showcase artifact
         env:
           GH_TOKEN: ${{ github.token }}
+          SHOWCASE_RUN_ID: ${{ github.event.workflow_run.id || '' }}
         shell: bash
         run: |
-          set -u
+          set -euo pipefail
           rm -rf artifacts/e2e-media
           mkdir -p artifacts/e2e-media
 
-          found=false
-          while read -r run_id head_sha; do
-            [ -z "${run_id}" ] && continue
-
-            rm -rf artifacts/e2e-media
-            mkdir -p artifacts/e2e-media
-            if gh run download "${run_id}" --name lemonade-showcase-latest --dir artifacts/e2e-media; then
-              found=true
-              echo "Restored verified showcase artifact from run ${run_id}."
-              break
-            fi
-
-            rm -rf artifacts/e2e-media
-            mkdir -p artifacts/e2e-media
-            if gh run download "${run_id}" --name "lemonade-showcase-${head_sha}" --dir artifacts/e2e-media; then
-              found=true
-              echo "Restored legacy showcase artifact from run ${run_id}."
-              break
-            fi
-          done < <(
-            gh run list \
+          run_id="$SHOWCASE_RUN_ID"
+          require_current=false
+          if [ -n "$run_id" ]; then
+            require_current=true
+            echo "Using certified showcase artifact from triggering run $run_id."
+          else
+            run_id="$(gh run list \
               --workflow "Visual Showcase" \
               --branch master \
               --status success \
-              --limit 10 \
-              --json databaseId,headSha \
-              --jq '.[] | "\(.databaseId) \(.headSha)"'
-          )
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty')"
+          fi
 
-          if [ "${found}" != "true" ]; then
-            rm -rf artifacts/e2e-media
+          if [ -z "$run_id" ]; then
             echo "No valid completed showcase artifact was available; continuing with the application build."
+            rm -rf artifacts/e2e-media
+            exit 0
+          fi
+
+          if ! gh run download "$run_id" --name lemonade-showcase-latest --dir artifacts/e2e-media; then
+            if [ "$require_current" = true ]; then
+              echo "Successful triggering showcase run $run_id did not expose lemonade-showcase-latest."
+              exit 1
+            fi
+            echo "Latest certified showcase artifact could not be restored; continuing with the application build."
+            rm -rf artifacts/e2e-media
+            exit 0
           fi
 
       - name: Publish showcase into Pages bundle when available

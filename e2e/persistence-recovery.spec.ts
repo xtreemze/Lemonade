@@ -79,7 +79,7 @@ test.use({ reducedMotion: "reduce" });
 test("schema 2 deciding storage migrates to an explicit v4 neutral-memory boundary", async ({
   page,
 }) => {
-  await page.goto("./");
+  await page.goto("./?play=1");
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
 
   const current = await readStoredRun(page, "current");
@@ -150,7 +150,7 @@ test("schema 2 deciding storage migrates to an explicit v4 neutral-memory bounda
 test("corrupt current storage recovers the last known good snapshot and repairs current", async ({
   page,
 }) => {
-  await page.goto("./");
+  await page.goto("./?play=1");
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
 
   await page.getByRole("button", { name: "Sell for the day" }).click();
@@ -176,7 +176,7 @@ test("corrupt current storage recovers the last known good snapshot and repairs 
 test("an unsupported current schema is never replaced by an older recovery snapshot", async ({
   page,
 }) => {
-  await page.goto("./");
+  await page.goto("./?play=1");
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
 
   await page.getByRole("button", { name: "Sell for the day" }).click();
@@ -203,7 +203,7 @@ test("an unsupported current schema is never replaced by an older recovery snaps
 });
 
 test("reset clears the recovery slot before the fresh run is persisted", async ({ page }) => {
-  await page.goto("./");
+  await page.goto("./?play=1");
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
 
   await page.getByRole("button", { name: "Sell for the day" }).click();

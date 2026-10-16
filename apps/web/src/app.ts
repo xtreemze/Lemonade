@@ -28,6 +28,7 @@ import {
   signCount,
   SIMULATION_RULESET_VERSION,
   simulateDayV4,
+  type V4DayResolution,
 } from "@lemonade/simulation";
 import { renderLedgerHistory, summarizeCompletedWeek } from "@lemonade/ui";
 
@@ -49,7 +50,7 @@ import type { HapticCue, HapticEngine } from "./haptics.js";
 import { createLazyProceduralAudioEngine } from "./lazy-audio.js";
 import type { RunPhase, RunSnapshot } from "./persistence.js";
 import { createPresentationDeadline } from "./presentation-deadline.js";
-import { createPurchaseFeedbackSchedule } from "./purchase-feedback.js";
+import { createAuthoritativePurchaseFeedbackSchedule } from "./purchase-feedback.js";
 import {
   affordabilityShortfallMessage,
   bankruptcyMessage,
@@ -876,10 +877,10 @@ export class LemonadeApp {
       .catch(() => undefined);
   }
 
-  #schedulePurchaseFeedback(resolution: DayResolution): void {
+  #schedulePurchaseFeedback(resolution: V4DayResolution): void {
     this.#clearFeedbackTimers();
-    const schedule = createPurchaseFeedbackSchedule(
-      Number(resolution.entry.sold),
+    const schedule = createAuthoritativePurchaseFeedbackSchedule(
+      resolution.market.outcomes,
       ACTIVE_SIMULATION_PRESENTATION_MS,
     );
     for (const beat of schedule) {
@@ -1090,8 +1091,14 @@ export class LemonadeApp {
           ? null
           : "progression";
 
+    const marketSummary =
+      this.#phase.kind === "report" && this.#phase.rulesetVersion === SIMULATION_RULESET_VERSION
+        ? this.#phase.resolution.market.summary
+        : null;
+
     this.#elements.reportPanel.model = Object.freeze({
       report,
+      marketSummary,
       weeklyReport: report === null ? null : summarizeCompletedWeek(report.nextState.ledger),
       milestoneMessage,
       milestoneKind,
@@ -1127,6 +1134,10 @@ export class LemonadeApp {
           : scenePhase === "forecast"
             ? WEATHER_FORECAST_DURATION_MS
             : 0,
+      customerOutcomes:
+        phase.kind === "report" && phase.rulesetVersion === SIMULATION_RULESET_VERSION
+          ? phase.resolution.market.outcomes
+          : undefined,
     });
   }
 }

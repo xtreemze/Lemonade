@@ -2,9 +2,9 @@ import type { DailyLedgerEntry } from "@lemonade/simulation";
 
 import { type LedgerPoint, projectLedger, sellThroughBasisPoints } from "./ledger.js";
 
-const CHART_WIDTH = 300;
-const CHART_HEIGHT = 200;
-const CHART_PADDING = 12;
+const CHART_WIDTH = 600;
+const CHART_HEIGHT = 260;
+const CHART_PADDING = 20;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
@@ -15,64 +15,109 @@ const moneyFormatter = new Intl.NumberFormat("en-US", {
 
 const formatMoney = (cents: number): string => moneyFormatter.format(cents / 100);
 
+type HistoryMode = "performance" | "inventory" | "balances";
+
+type SeriesSpec = Readonly<{
+  key: keyof LedgerPoint;
+  label: string;
+  className: string;
+  legendClass: string;
+  format: (value: number) => string;
+}>;
+
+type ModeSpec = Readonly<{
+  label: string;
+  description: string;
+  series: readonly SeriesSpec[];
+}>;
+
+const HISTORY_MODES: Readonly<Record<HistoryMode, ModeSpec>> = Object.freeze({
+  performance: Object.freeze({
+    label: "Performance",
+    description: "Revenue, expenses, and net result by day",
+    series: Object.freeze([
+      Object.freeze({
+        key: "revenueCents",
+        label: "Sales",
+        className: "chart-sales",
+        legendClass: "legend-sales",
+        format: formatMoney,
+      }),
+      Object.freeze({
+        key: "expensesCents",
+        label: "Expenses",
+        className: "chart-expenses",
+        legendClass: "legend-expenses",
+        format: formatMoney,
+      }),
+      Object.freeze({
+        key: "netCents",
+        label: "Net",
+        className: "chart-net",
+        legendClass: "legend-net",
+        format: formatMoney,
+      }),
+    ]),
+  }),
+  inventory: Object.freeze({
+    label: "Inventory",
+    description: "Prepared inventory and glasses sold by day",
+    series: Object.freeze([
+      Object.freeze({
+        key: "prepared",
+        label: "Prepared",
+        className: "chart-prepared",
+        legendClass: "legend-prepared",
+        format: String,
+      }),
+      Object.freeze({
+        key: "sold",
+        label: "Sold",
+        className: "chart-sold",
+        legendClass: "legend-sold",
+        format: String,
+      }),
+    ]),
+  }),
+  balances: Object.freeze({
+    label: "Balances",
+    description: "Ending cash and debt by day",
+    series: Object.freeze([
+      Object.freeze({
+        key: "endingCashCents",
+        label: "Cash",
+        className: "chart-cash",
+        legendClass: "legend-cash",
+        format: formatMoney,
+      }),
+      Object.freeze({
+        key: "endingDebtCents",
+        label: "Debt",
+        className: "chart-debt",
+        legendClass: "legend-debt",
+        format: formatMoney,
+      }),
+    ]),
+  }),
+});
+
 const seriesPoints = (
   values: readonly number[],
-  minValue: number,
-  maxValue: number,
-  chartHeight: number,
+  minimum: number,
+  maximum: number,
 ): string => {
-  if (values.length === 0) {
-    return "";
-  }
-
   const usableWidth = CHART_WIDTH - CHART_PADDING * 2;
-  const usableHeight = chartHeight - CHART_PADDING * 2;
-  const span = Math.max(1, maxValue - minValue);
+  const usableHeight = CHART_HEIGHT - CHART_PADDING * 2;
+  const span = Math.max(1, maximum - minimum);
   const denominator = Math.max(1, values.length - 1);
 
   return values
     .map((value, index) => {
       const x = CHART_PADDING + (index / denominator) * usableWidth;
-      const y = CHART_PADDING + (1 - (value - minValue) / span) * usableHeight;
+      const y = CHART_PADDING + (1 - (value - minimum) / span) * usableHeight;
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
-};
-
-const calculateChartHeight = (dataPoints: number): number => {
-  // Use a minimum height and add height based on number of points
-  // This ensures charts with more data use more vertical space
-  const baseHeight = 120;
-  const pointHeight = Math.min(dataPoints - 1, 5) * 10;
-  return baseHeight + pointHeight;
-};
-
-const balanceTrends = (
-  points: readonly LedgerPoint[],
-): Readonly<{ cash: string; debt: string; height: number }> => {
-  const cash = points.map((point) => point.endingCashCents);
-  const debt = points.map((point) => point.endingDebtCents);
-  const maximum = Math.max(1, ...cash, ...debt);
-  const chartHeight = calculateChartHeight(points.length);
-  return Object.freeze({
-    cash: seriesPoints(cash, 0, maximum, chartHeight),
-    debt: seriesPoints(debt, 0, maximum, chartHeight),
-    height: chartHeight,
-  });
-};
-
-const inventoryTrends = (
-  points: readonly LedgerPoint[],
-): Readonly<{ prepared: string; sold: string; height: number }> => {
-  const prepared = points.map((point) => point.prepared);
-  const sold = points.map((point) => point.sold);
-  const maximum = Math.max(1, ...prepared, ...sold);
-  const chartHeight = calculateChartHeight(points.length);
-  return Object.freeze({
-    prepared: seriesPoints(prepared, 0, maximum, chartHeight),
-    sold: seriesPoints(sold, 0, maximum, chartHeight),
-    height: chartHeight,
-  });
 };
 
 const createElement = <K extends keyof HTMLElementTagNameMap>(
@@ -102,50 +147,79 @@ const createSvgElement = <K extends keyof SVGElementTagNameMap>(
   tagName: K,
 ): SVGElementTagNameMap[K] => document.createElementNS(SVG_NAMESPACE, tagName);
 
-const createChart = (
-  caption: string,
-  ariaLabel: string,
-  firstSeries: Readonly<{ className: string; points: string; label: string; legendClass: string }>,
-  secondSeries: Readonly<{ className: string; points: string; label: string; legendClass: string }>,
-  chartHeight: number = CHART_HEIGHT,
+const modeBounds = (
+  points: readonly LedgerPoint[],
+  mode: ModeSpec,
+): Readonly<{ minimum: number; maximum: number }> => {
+  const values = mode.series.flatMap((series) => points.map((point) => Number(point[series.key])));
+  return Object.freeze({
+    minimum: Math.min(0, ...values),
+    maximum: Math.max(1, ...values),
+  });
+};
+
+const createUnifiedChart = (
+  points: readonly LedgerPoint[],
+  mode: HistoryMode,
 ): HTMLElement => {
-  const figure = createElement("figure", "chart-card");
-  appendText(figure, "figcaption", caption);
+  const spec = HISTORY_MODES[mode];
+  const card = createElement("figure", "chart-card report-explorer-chart");
+  card.dataset["mode"] = mode;
+
+  const caption = createElement("figcaption", "report-explorer-caption");
+  const title = appendText(caption, "strong", spec.label);
+  title.className = "report-explorer-title";
+  appendText(caption, "span", spec.description, "report-explorer-description");
+  card.append(caption);
 
   const svg = createSvgElement("svg");
   svg.classList.add("history-chart");
-  svg.setAttribute("viewBox", `0 0 ${String(CHART_WIDTH)} ${String(chartHeight)}`);
+  svg.setAttribute("viewBox", `0 0 ${String(CHART_WIDTH)} ${String(CHART_HEIGHT)}`);
   svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", ariaLabel);
+  svg.setAttribute("aria-label", `${spec.label}: ${spec.description}`);
 
   const axis = createSvgElement("line");
   axis.classList.add("chart-axis");
   axis.setAttribute("x1", String(CHART_PADDING));
-  axis.setAttribute("y1", String(chartHeight - CHART_PADDING));
+  axis.setAttribute("y1", String(CHART_HEIGHT - CHART_PADDING));
   axis.setAttribute("x2", String(CHART_WIDTH - CHART_PADDING));
-  axis.setAttribute("y2", String(chartHeight - CHART_PADDING));
+  axis.setAttribute("y2", String(CHART_HEIGHT - CHART_PADDING));
+  svg.append(axis);
 
-  const firstLine = createSvgElement("polyline");
-  firstLine.setAttribute("class", `chart-line ${firstSeries.className}`);
-  firstLine.setAttribute("points", firstSeries.points);
+  const bounds = modeBounds(points, spec);
+  for (const series of spec.series) {
+    const values = points.map((point) => Number(point[series.key]));
+    const line = createSvgElement("polyline");
+    line.setAttribute("class", `chart-line ${series.className}`);
+    line.setAttribute("points", seriesPoints(values, bounds.minimum, bounds.maximum));
+    svg.append(line);
+  }
 
-  const secondLine = createSvgElement("polyline");
-  secondLine.setAttribute("class", `chart-line ${secondSeries.className}`);
-  secondLine.setAttribute("points", secondSeries.points);
-
-  svg.append(axis, firstLine, secondLine);
-  figure.append(svg);
+  card.append(svg);
 
   const legend = createElement("div", "chart-legend");
   legend.setAttribute("aria-hidden", "true");
-  for (const series of [firstSeries, secondSeries]) {
+  for (const series of spec.series) {
     const item = createElement("span");
     const marker = createElement("i", series.legendClass);
     item.append(marker, document.createTextNode(series.label));
     legend.append(item);
   }
-  figure.append(legend);
-  return figure;
+  card.append(legend);
+
+  const latest = points.at(-1);
+  if (latest !== undefined) {
+    const summary = createElement("dl", "report-explorer-summary");
+    for (const series of spec.series) {
+      const item = createElement("div");
+      appendText(item, "dt", series.label);
+      appendText(item, "dd", series.format(Number(latest[series.key])));
+      summary.append(item);
+    }
+    card.append(summary);
+  }
+
+  return card;
 };
 
 const createHistoryTable = (points: readonly LedgerPoint[]): HTMLDivElement => {
@@ -211,6 +285,22 @@ const createHistoryTable = (points: readonly LedgerPoint[]): HTMLDivElement => {
   return wrap;
 };
 
+const setExplorerMode = (
+  section: HTMLElement,
+  points: readonly LedgerPoint[],
+  mode: HistoryMode,
+): void => {
+  const chartHost = section.querySelector<HTMLElement>(".report-explorer-visual");
+  if (chartHost === null) {
+    return;
+  }
+  chartHost.replaceChildren(createUnifiedChart(points, mode));
+  for (const button of section.querySelectorAll<HTMLButtonElement>("[data-history-mode]")) {
+    const selected = button.dataset["historyMode"] === mode;
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
+  }
+};
+
 export const renderLedgerHistory = (
   host: HTMLElement,
   entries: readonly DailyLedgerEntry[],
@@ -223,16 +313,14 @@ export const renderLedgerHistory = (
     return;
   }
 
-  const balances = balanceTrends(points);
-  const inventory = inventoryTrends(points);
-  const section = createElement("section", "ledger-history");
+  const section = createElement("section", "ledger-history report-explorer");
   section.setAttribute("aria-labelledby", "ledger-history-title");
   section.tabIndex = -1;
 
   const heading = createElement("header", "history-heading");
   const headingText = createElement("div");
   appendText(headingText, "p", "Business memory", "eyebrow");
-  const title = appendText(headingText, "h2", "Sales history");
+  const title = appendText(headingText, "h2", "Report explorer");
   title.id = "ledger-history-title";
   const latestSellThrough = createElement("p");
   latestSellThrough.append(
@@ -244,43 +332,38 @@ export const renderLedgerHistory = (
   heading.append(headingText, latestSellThrough);
   section.append(heading);
 
-  const chartGrid = createElement("div", "chart-grid");
-  chartGrid.append(
-    createChart(
-      "Cash and debt over time",
-      `Balance history from ${formatMoney(first.endingCashCents)} cash and ${formatMoney(first.endingDebtCents)} debt to ${formatMoney(latest.endingCashCents)} cash and ${formatMoney(latest.endingDebtCents)} debt`,
-      Object.freeze({
-        className: "chart-cash",
-        points: balances.cash,
-        label: "Cash",
-        legendClass: "legend-cash",
-      }),
-      Object.freeze({
-        className: "chart-debt",
-        points: balances.debt,
-        label: "Debt",
-        legendClass: "legend-debt",
-      }),
-      balances.height,
-    ),
-    createChart(
-      "Prepared vs sold",
-      `Inventory history across ${String(points.length)} day${points.length === 1 ? "" : "s"}`,
-      Object.freeze({
-        className: "chart-prepared",
-        points: inventory.prepared,
-        label: "Prepared",
-        legendClass: "legend-prepared",
-      }),
-      Object.freeze({
-        className: "chart-sold",
-        points: inventory.sold,
-        label: "Sold",
-        legendClass: "legend-sold",
-      }),
-      inventory.height,
-    ),
-  );
-  section.append(chartGrid, createHistoryTable(points));
+  const workspace = createElement("div", "report-explorer-workspace");
+  const controls = createElement("div", "report-explorer-controls");
+  controls.setAttribute("role", "group");
+  controls.setAttribute("aria-label", "Report metric");
+  for (const mode of Object.keys(HISTORY_MODES) as HistoryMode[]) {
+    const button = createElement("button", "report-explorer-tab");
+    button.type = "button";
+    button.dataset["historyMode"] = mode;
+    button.textContent = HISTORY_MODES[mode].label;
+    button.setAttribute("aria-pressed", mode === "performance" ? "true" : "false");
+    controls.append(button);
+  }
+
+  const visual = createElement("div", "report-explorer-visual");
+  workspace.append(controls, visual);
+  section.append(workspace, createHistoryTable(points));
   host.replaceChildren(section);
+
+  section.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const button = target.closest<HTMLButtonElement>("[data-history-mode]");
+    if (button === null) {
+      return;
+    }
+    const mode = button.dataset["historyMode"];
+    if (mode === "performance" || mode === "inventory" || mode === "balances") {
+      setExplorerMode(section, points, mode);
+    }
+  });
+
+  setExplorerMode(section, points, "performance");
 };

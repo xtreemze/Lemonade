@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test.use({ reducedMotion: "reduce" });
 
 test("keyboard focus follows the active phase through the daily loop", async ({ page }) => {
-  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.goto("./?play=1", { waitUntil: "domcontentloaded" });
 
   const main = page.getByRole("main");
   await expect(main).toHaveAttribute("data-view", "planning");
@@ -32,9 +32,16 @@ test("keyboard focus follows the active phase through the daily loop", async ({ 
   await page.keyboard.press("Enter");
 
   await expect(main).toHaveAttribute("data-view", "history");
-  const history = page.getByRole("region", { name: "Sales history" });
+  const history = page.locator(".report-explorer");
   await expect(history).toBeFocused();
 
+  await page.keyboard.press("Tab");
+  const metricTabs = page.getByRole("group", { name: "Report metric" }).getByRole("button");
+  await expect(metricTabs.first()).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(metricTabs.nth(1)).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(metricTabs.nth(2)).toBeFocused();
   await page.keyboard.press("Tab");
   const nextDay = page.getByRole("button", { name: "Plan next day" });
   await expect(nextDay).toBeFocused();
@@ -45,7 +52,7 @@ test("keyboard focus follows the active phase through the daily loop", async ({ 
 });
 
 test("native reset dialog contains keyboard focus and restores it on cancel", async ({ page }) => {
-  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.goto("./?play=1", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning");
 
   const runSummary = page.locator(".run-tools-summary");

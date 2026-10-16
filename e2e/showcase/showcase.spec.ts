@@ -823,7 +823,7 @@ const openPlanning = async (page: Page, fast = false): Promise<void> => {
   if (fast) {
     await page.emulateMedia({ reducedMotion: "reduce" });
   }
-  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.goto("./?play=1", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "planning", {
     timeout: 10_000,
   });
@@ -843,7 +843,7 @@ const openHistory = async (page: Page): Promise<void> => {
   await openReport(page);
   await page.getByRole("button", { name: "Review sales history" }).click();
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "history");
-  await expect(page.getByRole("region", { name: "Sales history" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Report explorer" })).toBeVisible();
 };
 
 test("01-weather-forecast", async ({ page }, testInfo) => {
@@ -851,7 +851,7 @@ test("01-weather-forecast", async ({ page }, testInfo) => {
   await page.addInitScript(() => {
     window.localStorage.setItem("LEMONADE_DEV_SCENE_LAUNCHER", "1");
   });
-  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.goto("./?play=1", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("main")).toHaveAttribute("data-view", "forecast");
 
   await recordFeature(page, testInfo, feature, async () => {
@@ -929,7 +929,7 @@ test("04-day-report", async ({ page }, testInfo) => {
 test("05-sales-history", async ({ page }, testInfo) => {
   const feature = getFeature("05-sales-history");
   await openHistory(page);
-  const history = page.getByRole("region", { name: "Sales history" });
+  const history = page.locator(".report-explorer");
 
   await recordFeature(page, testInfo, feature, async () => {
     if (getFormFactor(testInfo) === "desktop") {

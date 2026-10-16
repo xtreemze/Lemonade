@@ -999,6 +999,15 @@ body:has(.game-shell[data-view="forecast"]) {
   line-height: 1;
 }
 
+.game-shell[data-view="report"] .report-funnel {
+  max-width: 72ch;
+  margin-top: 3px;
+  color: #3f5944;
+  font-size: clamp(0.58rem, 2vw, 0.7rem);
+  font-weight: 700;
+  line-height: 1.12;
+}
+
 .game-shell[data-view="report"] .profit,
 .game-shell[data-view="report"] .loss {
   flex: none;
