@@ -393,6 +393,28 @@ describe("crowd motion", () => {
     }
   });
 
+
+  it("carries authoritative customer identity through sampled passerby poses", () => {
+    const beat: PasserbyBeat = Object.freeze({
+      pedestrianIndex: 0,
+      customerId: 42,
+      visualSeed: 0x12_34_ab_cd,
+      startAtMs: 0,
+      endAtMs: 6000,
+      direction: -1,
+      lane: 0,
+      seesAdvertisement: false,
+      signIndex: -1,
+      intentKind: "pass-through",
+    });
+
+    const pose = createCrowdSimulation([beat], 1, 6000).sample(1500).poses[0];
+
+    expect(pose).toBeDefined();
+    expect(pose?.customerId).toBe(42);
+    expect(pose?.visualSeed).toBe(0x12_34_ab_cd);
+  });
+
   it("renders authoritative passerby intents as distinct deterministic reactions", () => {
     const baseBeat: PasserbyBeat = Object.freeze({
       pedestrianIndex: 0,

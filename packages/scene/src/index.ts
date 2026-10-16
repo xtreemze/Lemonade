@@ -25,6 +25,7 @@ import {
   writeSceneCameraZoomPreference,
 } from "./camera-zoom.js";
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
+import type { CharacterProfile } from "./characters.js";
 import {
   buyerInteractionPose,
   type CharacterExpressionPose,
@@ -36,6 +37,7 @@ import {
 import {
   applyThreeCharacterPose,
   createThreeCharacterRig,
+  rebindThreeCharacterRig,
   resetThreeCharacterPose,
   type ThreeCharacterRig,
 } from "./character-rig.js";
@@ -179,7 +181,15 @@ const createPerson = (
   const cup = new Group();
   attachLemonadeCupToHand(rig.arms[1].extremity, cup);
   cup.visible = false;
-  return Object.freeze({ ...rig, cup });
+  return Object.freeze({
+    ...rig,
+    cup,
+    // Spreading the frozen core rig copies accessor values. Retain its live
+    // profile getter so walking and ground clearance use the rebound identity.
+    get profile(): CharacterProfile {
+      return rig.profile;
+    },
+  });
 };
 
 const createSeller = (geometries: CharacterGeometrySet, characterSeed: number): SellerRig => {
@@ -715,6 +725,12 @@ export const createLemonsvilleScene = (
       if (pose === undefined) {
         return;
       }
+      if (pose.visualSeed !== undefined) {
+        rebindThreeCharacterRig(customer, pose.visualSeed);
+      }
+      if (pose.customerId !== undefined) {
+        customer.root.userData["authoritativeCustomerId"] = pose.customerId;
+      }
       customer.root.position.set(pose.x, personGroundY(customer), pose.z);
       customer.root.rotation.y = pose.heading;
       applyPersonExpression(customer, neutralExpression, 0, index);
@@ -798,6 +814,12 @@ export const createLemonsvilleScene = (
       if (buyer === undefined) {
         continue;
       }
+      if (sale.visualSeed !== undefined) {
+        rebindThreeCharacterRig(buyer, sale.visualSeed);
+      }
+      if (sale.customerId !== undefined) {
+        buyer.root.userData["authoritativeCustomerId"] = sale.customerId;
+      }
 
       const fade = buyerFadeState.get(buyer);
       if (fade) {
@@ -865,6 +887,9 @@ export const createLemonsvilleScene = (
       resetPersonPose(customer);
       if (pose === undefined) {
         return;
+      }
+      if (pose.visualSeed !== undefined) {
+        rebindThreeCharacterRig(customer, pose.visualSeed);
       }
 
       customer.root.position.set(pose.x, personGroundY(customer), pose.z);

@@ -59,3 +59,12 @@ export const characterProfileFor = (seed: number, index: number): CharacterProfi
     headHeightScale: 0.94 + ((secondary >>> 21) & 7) / 36,
   });
 };
+
+
+export const characterIdentityIndexForVisualSeed = (visualSeed: number): number =>
+  (Number.isFinite(visualSeed) ? Math.trunc(visualSeed) : 0) >>> 0 & 0x0f_ff;
+
+export const characterProfileForVisualSeed = (visualSeed: number): CharacterProfile => {
+  const normalizedSeed = (Number.isFinite(visualSeed) ? Math.trunc(visualSeed) : 0) >>> 0;
+  return characterProfileFor(normalizedSeed, characterIdentityIndexForVisualSeed(normalizedSeed));
+};
