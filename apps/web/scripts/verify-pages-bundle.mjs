@@ -44,7 +44,7 @@ for (const [name, document] of [
     "Read the day before you spend",
     "How to read the day report",
     "Starter tactics",
-    "The math is part of the fun",
+    "How demand is calculated",
     "How the Apple II game differs",
     "signs² / log1p(signs)",
   ]) {

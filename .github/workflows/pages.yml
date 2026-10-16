@@ -20,14 +20,55 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  resolve:
+    name: Resolve deployment source
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.source.outputs.should_deploy }}
+      source_sha: ${{ steps.source.outputs.source_sha }}
+    steps:
+      - name: Resolve source commit
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          TRIGGER_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          TRIGGER_CONCLUSION: ${{ github.event.workflow_run.conclusion || 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "workflow_run" ] && [ "$TRIGGER_CONCLUSION" != "success" ]; then
+            echo "Visual Showcase did not succeed; skipping Pages deployment."
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            echo "source_sha=$TRIGGER_SHA" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            master_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/master" --jq '.object.sha')"
+            if [ "$TRIGGER_SHA" != "$master_sha" ]; then
+              echo "Showcase commit $TRIGGER_SHA is no longer current master ($master_sha); refusing to roll Pages back."
+              echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+              echo "source_sha=$TRIGGER_SHA" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$TRIGGER_SHA" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build Pages artifact
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    needs: resolve
+    if: needs.resolve.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout
+      - name: Checkout deployment source
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve.outputs.source_sha }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -49,6 +90,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SHOWCASE_RUN_ID: ${{ github.event.workflow_run.id || '' }}
+          SOURCE_SHA: ${{ needs.resolve.outputs.source_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -63,7 +105,7 @@ jobs:
           else
             run_id="$(gh run list \
               --workflow "Visual Showcase" \
-              --branch master \
+              --commit "$SOURCE_SHA" \
               --status success \
               --limit 1 \
               --json databaseId \
@@ -71,7 +113,7 @@ jobs:
           fi
 
           if [ -z "$run_id" ]; then
-            echo "No valid completed showcase artifact was available; continuing with the application build."
+            echo "No certified showcase artifact exists for $SOURCE_SHA; deploying the application without showcase media."
             rm -rf artifacts/e2e-media
             exit 0
           fi
