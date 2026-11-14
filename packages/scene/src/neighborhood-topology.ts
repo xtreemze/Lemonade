@@ -1,6 +1,7 @@
 import {
   DEFAULT_RESIDENTIAL_SEED,
   generateResidentialLayout,
+  RESIDENTIAL_HOUSE_PALETTE,
   type ResidentialPoint,
   type ResidentialPropertySpec,
   residentialAccessLayout,
@@ -51,6 +52,7 @@ export type NeighborhoodPropertyTopology = Readonly<{
   group: NeighborhoodPropertyGroup;
   house: Readonly<{
     center: ResidentialPoint;
+    color: number;
     scale: number;
     rotationY: number;
   }>;
@@ -308,6 +310,7 @@ const projectProperty = (
     group,
     house: Object.freeze({
       center: point(property.houseX, property.houseZ),
+      color: RESIDENTIAL_HOUSE_PALETTE[property.color] ?? RESIDENTIAL_HOUSE_PALETTE[0],
       scale: property.scale,
       rotationY: property.rotationY,
     }),
