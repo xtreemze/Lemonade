@@ -1,4 +1,4 @@
-import { Vector3 } from "three";
+import { Group, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
 import { decorateCharacter } from "../src/character-detail.js";
@@ -8,6 +8,7 @@ import {
   applyThreeCharacterPose,
   characterRotationYForRouteYaw,
   createThreeCharacterRig,
+  rebindThreeCharacterRig,
 } from "../src/character-rig.js";
 import { WORLD_SCALE } from "../src/world-scale.js";
 
@@ -58,6 +59,68 @@ describe("shared Three procedural character rig", () => {
     expect(
       rig.root.children.some((child) => child.userData["sceneRole"] === "garment-detail"),
     ).toBe(false);
+  });
+
+
+  it("rebinds a composed person wrapper using its stable root and live profile", () => {
+    const geometries = createCharacterGeometrySet();
+    const core = createThreeCharacterRig(geometries, 0x1e_ad_20_26, 7);
+    const person = Object.freeze({
+      ...core,
+      cup: new Group(),
+      get profile() {
+        return core.profile;
+      },
+    });
+
+    const binding = rebindThreeCharacterRig(person, 0x7a_31_92_f0);
+
+    expect(person.profile).toEqual(binding.profile);
+    expect(person.profile).toBe(core.profile);
+    expect(person.root.userData["authoritativeVisualSeed"]).toBe(0x7a_31_92_f0);
+    expect(rebindThreeCharacterRig(core, 0x7a_31_92_f0).profile).toEqual(binding.profile);
+  });
+
+  it("binds different pool slots to the same authoritative visual identity", () => {
+    const geometries = createCharacterGeometrySet();
+    const left = createThreeCharacterRig(geometries, 0x1e_ad_20_26, 2);
+    const right = createThreeCharacterRig(geometries, 0x1e_ad_20_26, 19);
+
+    const leftBinding = rebindThreeCharacterRig(left, 0x7a_31_92_f0);
+    const rightBinding = rebindThreeCharacterRig(right, 0x7a_31_92_f0);
+
+    expect(leftBinding).toEqual(rightBinding);
+    expect(left.profile).toEqual(right.profile);
+    expect(left.root.scale.toArray()).toEqual(right.root.scale.toArray());
+    expect(left.head.scale.toArray()).toEqual(right.head.scale.toArray());
+    expect(left.root.userData["authoritativeVisualSeed"]).toBe(0x7a_31_92_f0);
+    expect(right.root.userData["authoritativeVisualSeed"]).toBe(0x7a_31_92_f0);
+  });
+
+  it("replaces identity decoration instead of accumulating it when a pooled rig is rebound", () => {
+    const geometries = createCharacterGeometrySet();
+    const rig = createThreeCharacterRig(geometries, 0x1e_ad_20_26, 7);
+
+    rebindThreeCharacterRig(rig, 101);
+    const firstHeadChildren = rig.head.children.length;
+    const firstBodyChildren = rig.bodyDecorationRoot.children.length;
+    const firstProfile = rig.profile;
+
+    rebindThreeCharacterRig(rig, 202);
+    const secondHeadChildren = rig.head.children.length;
+    const secondBodyChildren = rig.bodyDecorationRoot.children.length;
+    const secondProfile = rig.profile;
+
+    expect(secondProfile).not.toEqual(firstProfile);
+    expect(secondHeadChildren).toBeGreaterThan(0);
+    expect(secondBodyChildren).toBeGreaterThan(0);
+    expect(secondHeadChildren).toBeLessThanOrEqual(firstHeadChildren + 6);
+    expect(secondBodyChildren).toBeLessThanOrEqual(firstBodyChildren + 6);
+
+    const replay = rebindThreeCharacterRig(rig, 202);
+    expect(replay.profile).toEqual(secondProfile);
+    expect(rig.head.children).toHaveLength(secondHeadChildren);
+    expect(rig.bodyDecorationRoot.children).toHaveLength(secondBodyChildren);
   });
 
   it("applies seated articulation without changing body scale", () => {

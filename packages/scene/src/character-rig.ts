@@ -1,12 +1,21 @@
 import { Group, Mesh, MeshStandardMaterial } from "three";
+import { clearCharacterDecorations, decorateCharacter } from "./character-detail.js";
 import type { CharacterGeometrySet } from "./character-geometry.js";
 import { CHARACTER_ANATOMY, type CharacterPose } from "./character-model.js";
-import { type CharacterProfile, characterProfileFor } from "./characters.js";
+import {
+  characterIdentityIndexForVisualSeed,
+  type CharacterProfile,
+  characterProfileFor,
+  characterProfileForVisualSeed,
+} from "./characters.js";
 import { WORLD_SCALE } from "./world-scale.js";
 
 export type LimbRig = Readonly<{
   root: Group;
+  upper: Mesh;
+  joint: Mesh;
   lower: Group;
+  lowerMesh: Mesh;
   extremity: Mesh;
 }>;
 
@@ -31,6 +40,15 @@ const NECK_Y = CHARACTER_ANATOMY.torso.neckY - CHARACTER_ANATOMY.torso.centerY;
 const HEAD_Y = CHARACTER_ANATOMY.head.centerY - CHARACTER_ANATOMY.torso.neckY;
 const SHOULDER_Y = CHARACTER_ANATOMY.torso.shoulderY - CHARACTER_ANATOMY.torso.centerY;
 const BODY_DECORATION_Y = -CHARACTER_ANATOMY.torso.centerY;
+const BASE_HEAD_SCALE = Object.freeze([0.94, 1.04, 0.9] as const);
+const SHOE_COLOR = 0x30_38_3d;
+
+type MutableVisualState = {
+  profile: CharacterProfile;
+};
+
+// The root is stable even when the scene composes a frozen person wrapper.
+const visualStateByRig = new WeakMap<Group, MutableVisualState>();
 
 export const characterRotationYForRouteYaw = (routeYaw: number): number =>
   Math.PI / 2 - (Number.isFinite(routeYaw) ? routeYaw : 0);
@@ -75,7 +93,7 @@ const createLimb = (
   lower.add(extremity);
   root.add(lower);
 
-  return Object.freeze({ root, lower, extremity });
+  return Object.freeze({ root, upper, joint, lower, lowerMesh, extremity });
 };
 
 export const createThreeCharacterRig = (
@@ -112,7 +130,7 @@ export const createThreeCharacterRig = (
   chest.add(torso);
 
   const head = new Mesh(geometries.head, material(profile.skinColor));
-  head.scale.set(0.94, 1.04, 0.9);
+  head.scale.set(...BASE_HEAD_SCALE);
   headPivot.add(head);
 
   const leftArm = createLimb(
@@ -141,7 +159,7 @@ export const createThreeCharacterRig = (
     CHARACTER_ANATOMY.leg.lowerLength,
     profile.trouserColor,
     profile.trouserColor,
-    0x30_38_3d,
+    SHOE_COLOR,
     true,
   );
   const rightLeg = createLimb(
@@ -150,7 +168,7 @@ export const createThreeCharacterRig = (
     CHARACTER_ANATOMY.leg.lowerLength,
     profile.trouserColor,
     profile.trouserColor,
-    0x30_38_3d,
+    SHOE_COLOR,
     true,
   );
   leftLeg.root.position.set(-CHARACTER_ANATOMY.leg.hipOffsetX, 0, 0);
@@ -163,7 +181,8 @@ export const createThreeCharacterRig = (
     profile.widthScale * WORLD_SCALE.character.renderScale,
   );
 
-  return Object.freeze({
+  const visualState: MutableVisualState = { profile };
+  const rig: ThreeCharacterRig = Object.freeze({
     root,
     poseRoot,
     pelvis,
@@ -175,8 +194,84 @@ export const createThreeCharacterRig = (
     head,
     arms: [leftArm, rightArm] as const,
     legs: [leftLeg, rightLeg] as const,
-    profile,
+    get profile(): CharacterProfile {
+      return visualState.profile;
+    },
   });
+  visualStateByRig.set(rig.root, visualState);
+  return rig;
+};
+
+const setMeshColor = (mesh: Mesh, color: number): void => {
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  for (const entry of materials) {
+    if (entry instanceof MeshStandardMaterial) {
+      entry.color.setHex(color);
+    }
+  }
+};
+
+const applyCoreProfile = (rig: ThreeCharacterRig, profile: CharacterProfile): void => {
+  setMeshColor(rig.torso, profile.clothingColor);
+  setMeshColor(rig.head, profile.skinColor);
+
+  for (const arm of rig.arms) {
+    setMeshColor(arm.upper, profile.clothingColor);
+    setMeshColor(arm.joint, profile.skinColor);
+    setMeshColor(arm.lowerMesh, profile.skinColor);
+    setMeshColor(arm.extremity, profile.skinColor);
+  }
+
+  for (const leg of rig.legs) {
+    setMeshColor(leg.upper, profile.trouserColor);
+    setMeshColor(leg.joint, profile.trouserColor);
+    setMeshColor(leg.lowerMesh, profile.trouserColor);
+    setMeshColor(leg.extremity, SHOE_COLOR);
+  }
+
+  rig.root.scale.set(
+    profile.widthScale * WORLD_SCALE.character.renderScale,
+    profile.heightScale * WORLD_SCALE.character.renderScale,
+    profile.widthScale * WORLD_SCALE.character.renderScale,
+  );
+  rig.head.scale.set(...BASE_HEAD_SCALE);
+};
+
+export type CharacterVisualBinding = Readonly<{
+  visualSeed: number;
+  identityIndex: number;
+  profile: CharacterProfile;
+}>;
+
+export const rebindThreeCharacterRig = (
+  rig: ThreeCharacterRig,
+  visualSeedValue: number,
+): CharacterVisualBinding => {
+  const visualSeed = (Number.isFinite(visualSeedValue) ? Math.trunc(visualSeedValue) : 0) >>> 0;
+  const visualState = visualStateByRig.get(rig.root);
+  if (visualState === undefined) {
+    throw new TypeError("character rig was not created by createThreeCharacterRig");
+  }
+
+  const identityIndex = characterIdentityIndexForVisualSeed(visualSeed);
+  const currentSeed: unknown = rig.root.userData["authoritativeVisualSeed"];
+  if (currentSeed === visualSeed && rig.root.userData["characterDecorated"] === true) {
+    return Object.freeze({
+      visualSeed,
+      identityIndex,
+      profile: visualState.profile,
+    });
+  }
+
+  clearCharacterDecorations(rig.root, rig.head);
+  const profile = characterProfileForVisualSeed(visualSeed);
+  visualState.profile = profile;
+  applyCoreProfile(rig, profile);
+  rig.root.userData["authoritativeVisualSeed"] = visualSeed;
+  rig.root.userData["characterProfileIndex"] = identityIndex;
+  decorateCharacter(rig.root, rig.head, profile, identityIndex);
+
+  return Object.freeze({ visualSeed, identityIndex, profile });
 };
 
 export const resetThreeCharacterPose = (rig: ThreeCharacterRig): void => {
