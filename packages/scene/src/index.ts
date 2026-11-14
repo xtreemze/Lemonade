@@ -26,7 +26,6 @@ import {
 } from "./camera-zoom.js";
 import { type CharacterGeometrySet, createCharacterGeometrySet } from "./character-geometry.js";
 import type { CharacterProfile } from "./characters.js";
-import type { CharacterProfile } from "./characters.js";
 import {
   buyerInteractionPose,
   type CharacterExpressionPose,
