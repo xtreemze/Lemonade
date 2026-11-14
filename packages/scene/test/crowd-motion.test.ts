@@ -434,6 +434,31 @@ describe("crowd motion", () => {
     );
   });
 
+  it("preserves authoritative customer identity through crowd sampling", () => {
+    const identityBeat: PasserbyBeat = Object.freeze({
+      pedestrianIndex: 3,
+      startAtMs: 0,
+      endAtMs: 6000,
+      direction: -1,
+      lane: 1,
+      seesAdvertisement: false,
+      signIndex: -1,
+      customerId: 417,
+      visualSeed: 0x7a_19_c4_2d,
+      intentKind: "pass-through",
+    });
+
+    const pose = createCrowdSimulation([identityBeat], 1, 6000).sample(2500).poses[0];
+
+    expect(pose).toBeDefined();
+    if (pose === undefined) {
+      return;
+    }
+
+    expect(pose.customerId).toBe(identityBeat.customerId);
+    expect(pose.visualSeed).toBe(identityBeat.visualSeed);
+  });
+
   it("advances gait phase from measured world-space travel distance", () => {
     const earlier = crowdPosesAt(beats, 1, 1000, 6000)[0];
     const later = crowdPosesAt(beats, 1, 1100, 6000)[0];
