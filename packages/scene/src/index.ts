@@ -60,6 +60,13 @@ import {
   PASSERBY_VISUAL_POOL_SIZE,
 } from "./scene-capacity.js";
 import { disposeSceneResources } from "./scene-disposal.js";
+import type {
+  LemonsvilleSceneControllerContract,
+  LemonsvilleSceneOptions,
+  LemonsvilleSceneState,
+  ScenePhase,
+  SceneWeather,
+} from "./scene-state.js";
 import { createAdvertisingSignField } from "./sign-field.js";
 import { SELLER_Z, STAND_WORLD_Z } from "./stand-anchors.js";
 import type { StandDetailController } from "./stand-detail.js";
@@ -71,7 +78,6 @@ import {
   remainingCameraProgressAt,
   remainingCupsAt,
   type SceneShotKind,
-  type StreetStoryboard,
   sceneCameraComposition,
   sceneShotAt,
   sceneViewportClass,
@@ -81,32 +87,10 @@ import { createThreeRendererBackend } from "./three-renderer-backend.js";
 import { businessDayFrameAt, type WeatherDetailController } from "./weather-detail.js";
 import { characterGroundClearance } from "./world-scale.js";
 
-export type SceneWeather = "sunny" | "cloudy" | "hot-and-dry" | "thunderstorm";
+export type { LemonsvilleSceneOptions, LemonsvilleSceneState, ScenePhase, SceneWeather };
 export type CustomerActivity = "quiet" | "light" | "steady" | "lively" | "busy";
-export type ScenePhase = "idle" | "simulation" | "forecast";
 
-export type LemonsvilleSceneState = Readonly<{
-  weather: SceneWeather;
-  visibleSigns: number;
-  prepared: number;
-  durationMs: number;
-  confidence: number;
-  nextConfidence: number;
-  characterSeed: number;
-  storyboard: StreetStoryboard;
-  phase: ScenePhase;
-  reducedMotion: boolean;
-}>;
-
-export type LemonsvilleSceneOptions = Readonly<{
-  enableGizmo?: boolean;
-}>;
-
-export interface LemonsvilleSceneController {
-  update: (state: LemonsvilleSceneState) => void;
-  resize: (width: number, height: number) => void;
-  diagnostics: () => RendererDiagnostics;
-  dispose: () => void;
+export interface LemonsvilleSceneController extends LemonsvilleSceneControllerContract {
   scene?: Scene; // Three.js Scene for dev tools
   camera?: PerspectiveCamera; // Three.js Camera for dev tools
 }

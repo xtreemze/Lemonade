@@ -209,7 +209,7 @@
       }
     },
     {
-      "includes": ["apps/web/src/scene-runtime.ts"],
+      "includes": ["apps/web/src/scene-runtime.ts", "apps/web/src/scene-runtime-babylon.ts"],
       "linter": {
         "rules": {
           "performance": {
